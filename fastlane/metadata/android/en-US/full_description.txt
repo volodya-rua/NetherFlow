@@ -7,6 +7,14 @@ NetherFlow is a free, open-source music player with a look of its own. Search an
 <li>27 animated backgrounds, including fractals, galaxies and a plasma globe, that take their colors from the album cover, or a still gradient that is lightest on slower phones</li>
 <li>A beat ring and screen edges that move with the music</li>
 <li>Equalizer with presets, a volume booster, and each song at its original loudness</li>
+<li>Autoplay: when the list ends, songs like the one playing carry on, in its language and era, learning from what you skip and like</li>
+<li>Smooth mix: songs blend into each other on the beat, like a DJ mix</li>
+<li>Sing: karaoke, with the voice turned down as far as you like and the lyrics big</li>
+<li>Import playlists from Spotify, Apple Music or YouTube by pasting the link</li>
+<li>Your stats: minutes, plays, a streak, top songs, artists and genres, and a card to share</li>
+<li>Listen together: up to 10 people hear the same song at the same moment, end-to-end encrypted</li>
+<li>Phone ↔ PC sync of your library over your own Wi-Fi, with a 6-number code and no account</li>
+<li>A home-screen widget, lyrics on the lock screen, and liked songs saved for offline on Wi-Fi by themselves</li>
 <li>Liked songs, playlists, queue and history</li>
 <li>Save songs for offline listening, one at a time or a whole playlist at once</li>
 <li>Make a short video clip of a song with its lyrics for your story</li>
