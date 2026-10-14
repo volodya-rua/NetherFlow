@@ -22,8 +22,8 @@ NetherFlow is a free, open-source music player with a look of its own. Search an
 <li>No account, no ads of its own, no analytics or tracking</li>
 </ul>
 
-<b>Made with Claude</b>
-NetherFlow is mostly written by Claude, Anthropic's AI. Its developer, Volodya.rua, came up with it, decided what it does and how it looks, tests every build and publishes it.
+<b>A HuCla build (Human × Claude)</b>
+The idea and the vision are mine (Volodya.rua): what NetherFlow does, how it looks, how it feels. Most of the code is written by Claude, Anthropic's AI. I test every build and put it out.
 
 <b>How it works</b>
 NetherFlow doesn't host any music or lyrics. It finds songs in Apple's iTunes catalog and YouTube Music, plays them through YouTube's embedded player (or from Audius at 320 kbps when the artist's own upload is there), and gets lyrics from LRCLIB, NetEase Cloud Music, Kugou and YouTube Music (lyrics by LyricFind). Saving for offline downloads the audio from YouTube with yt-dlp.
