@@ -26,6 +26,7 @@
   <a href="#themes">Themes</a> ·
   <a href="#backgrounds">Backgrounds</a> ·
   <a href="#features">Features</a> ·
+  <a href="#vs">vs Spotify &amp; co</a> ·
   <a href="#hucla">HuCla</a> ·
   <a href="#hit-me-up">Hit me up</a>
 </p>
@@ -173,6 +174,153 @@ And this is it on a phone 👇 straight from the Android app:
 <p align="center">
   <img src="docs/media/phones.webp" width="100%" alt="NetherFlow on Android: the home screen on Smoke, the Spider theme, Settings, and the Blocks theme">
 </p>
+
+<a id="vs"></a>
+
+## 🥊 NetherFlow vs Spotify, Apple Music & YouTube Music
+
+Okay so how does it actually stack up against the big ones? I scored all four on the 10 things people really care about.
+And no cap, NetherFlow doesn't win everything. I'm not gonna pretend it does.
+
+<p align="center">
+  <img src="docs/media/score.png" width="100%" alt="The real score, out of 100: Apple Music 78.5, Spotify 78.0, NetherFlow 73.0, YouTube Music 66.5">
+</p>
+
+| | App | Score | Wins at |
+|:-:|:--|:-:|:--|
+| 🥇 | **Apple Music** | **78.5** | sound quality, offline, catalog |
+| 🥈 | **Spotify** | **78.0** | discovery, devices, listening together, catalog |
+| 🥉 | **NetherFlow** | **73.0** | price, lyrics, the look, privacy |
+| 4 | **YouTube Music** | **66.5** | catalog (covers, live versions, remixes) |
+
+So NetherFlow lands third overall, but it's **first in four categories**, and they're exactly the ones it was made for. Here's
+the deep version 👇
+
+<details open>
+<summary><b>💸 Price & what's free</b></summary>
+
+| | NetherFlow | Spotify | Apple Music | YouTube Music |
+|:--|:--|:--|:--|:--|
+| Price (US, a month) | ✅ **Free** | $12.99 | $11.99 | $11.99 |
+| Free version | ✅ everything, unlocked | ⚠️ ads, limited on phones | ❌ just a free trial | ⚠️ ads, no background play on phones |
+| Ads | ✅ none | ⚠️ on the free version | ✅ none | ⚠️ on the free version |
+| Account | ✅ not needed | needed | Apple ID | Google account |
+| **Score** | **10** | 6 | 4 | 5 |
+</details>
+
+<details open>
+<summary><b>🎵 Catalog</b></summary>
+
+| | NetherFlow | Spotify | Apple Music | YouTube Music |
+|:--|:--|:--|:--|:--|
+| Songs | everything on YouTube, found through Apple's catalog | 100M+ | 100M+ | 100M+, plus YouTube's covers, live versions and remixes |
+| Officially licensed | ❌ it plays through YouTube's own player | ✅ | ✅ | ✅ |
+| Podcasts & audiobooks | ❌ | ✅ both | ⚠️ podcasts, in a separate app | ✅ podcasts |
+| Can break when YouTube changes stuff | ⚠️ yes, until an update fixes it | ✅ no | ✅ no | ✅ no |
+| **Score** | 6 | **10** | **10** | **10** |
+</details>
+
+<details open>
+<summary><b>🔊 Sound quality</b></summary>
+
+| | NetherFlow | Spotify | Apple Music | YouTube Music |
+|:--|:--|:--|:--|:--|
+| Best quality | ~160 kbps Opus (320 kbps from Audius when the artist uploaded it there) | Lossless, up to 24-bit/44.1 kHz | Hi-Res Lossless up to 24-bit/192 kHz, plus Dolby Atmos | 256 kbps |
+| Equalizer | ✅ built in, presets and a volume booster | ⚠️ on phones | ✅ presets | ⚠️ the phone's own (Android) |
+| **Score** | 5 | 8 | **10** | 6 |
+</details>
+
+<details open>
+<summary><b>🎤 Lyrics</b></summary>
+
+| | NetherFlow | Spotify | Apple Music | YouTube Music |
+|:--|:--|:--|:--|:--|
+| Synced lyrics | ✅ word by word | ✅ line by line | ✅ word by word | ⚠️ line by line, on many songs |
+| Lyrics animations | ✅ 19, plus 58 Extreme looks | ❌ | ⚠️ one style (a really nice one) | ❌ |
+| Karaoke | ✅ Sing | ❌ | ✅ Apple Music Sing | ❌ |
+| Lyrics fonts | ✅ 13 | ❌ | ❌ | ❌ |
+| **Score** | **10** | 7 | 9 | 5 |
+</details>
+
+<details open>
+<summary><b>🌈 Look & vibe</b></summary>
+
+| | NetherFlow | Spotify | Apple Music | YouTube Music |
+|:--|:--|:--|:--|:--|
+| Moving backgrounds | ✅ 27, and they move with the beat | ⚠️ Canvas loops, when the artist made one | ⚠️ animated album covers | ⚠️ music videos |
+| Themes that change the whole app | ✅ 6 | ❌ | ❌ | ❌ |
+| Colour moods | ✅ 46 | ❌ | ❌ | ❌ |
+| **Score** | **10** | 6 | 7 | 6 |
+</details>
+
+<details open>
+<summary><b>🧭 Discovery</b></summary>
+
+| | NetherFlow | Spotify | Apple Music | YouTube Music |
+|:--|:--|:--|:--|:--|
+| Recommendations | ⚠️ Autoplay that learns from what you skip and like | ✅ Discover Weekly, AI DJ, daylist | ✅ stations, personal mixes | ✅ Supermix, strong recommendations |
+| Curated playlists | ❌ | ✅ | ✅ | ✅ |
+| Your year in music | ✅ your stats, any time | ✅ Wrapped | ✅ Replay | ✅ Recap |
+| **Score** | 4 | **10** | 8 | 9 |
+</details>
+
+<details open>
+<summary><b>🔒 Privacy & ads</b></summary>
+
+| | NetherFlow | Spotify | Apple Music | YouTube Music |
+|:--|:--|:--|:--|:--|
+| Tracking | ✅ none, no analytics at all | ⚠️ your listening shapes ads (free) and suggestions | ⚠️ your listening shapes suggestions | ⚠️ tied to your whole Google account |
+| Open source | ✅ MIT | ❌ | ❌ | ❌ |
+| **Score** | **10** | 4 | 7 | 3 |
+</details>
+
+<details open>
+<summary><b>📱 Devices</b></summary>
+
+| | NetherFlow | Spotify | Apple Music | YouTube Music |
+|:--|:--|:--|:--|:--|
+| Phone | Android | Android, iPhone | iPhone, Android | Android, iPhone |
+| Computer | Windows | Windows, Mac, Linux, web | Mac, Windows, web | ⚠️ web only |
+| TV, speakers, car, watch | ⚠️ lyrics on your car's display (Android) | ✅ basically everything | ✅ Apple's devices, and plenty more | ✅ lots |
+| **Score** | 3 | **10** | 8 | 8 |
+</details>
+
+<details open>
+<summary><b>📥 Offline & 🤝 together</b></summary>
+
+| | NetherFlow | Spotify | Apple Music | YouTube Music |
+|:--|:--|:--|:--|:--|
+| Download songs | ✅ free, whole playlists at once (⚠️ YouTube's terms don't allow it) | ✅ Premium, 10,000 a device | ✅ up to 100,000 in your library | ✅ Premium |
+| Listen together, live | ✅ up to 10 people, any phone or PC, no account, end-to-end encrypted | ✅ Jam | ✅ SharePlay (Apple devices) | ❌ not built in |
+| Shared playlists | ❌ | ✅ | ✅ | ✅ |
+| **Offline score** | 7 | 9 | **10** | 9 |
+| **Together score** | 7 | **9** | 7 | 5 |
+</details>
+
+### 😤 Where NetherFlow loses (real talk)
+- **It's not a licensed service.** It plays songs through YouTube's own player, so it depends on YouTube. If YouTube
+  changes something, stuff can break until an update fixes it
+- **The sound tops out around 160 kbps.** On good headphones, Apple Music's and Spotify's lossless is clearly better
+- **Windows and Android only.** No iPhone, no Mac (yet?)
+- **No podcasts, audiobooks or curated playlists**, and finding new music is basic next to Spotify
+- **Artists earn less from your plays** than on the paid apps, since YouTube's ads get skipped. If you love an artist,
+  show them some love: buy the merch, go to the show, or stream them on a paid app too 🫶
+
+### 🎯 So which one's for you?
+- **NetherFlow**: you want your music to *look and feel* insane, lyrics that hit, and all of it free, with no account and no ads
+- **Spotify**: the best all-rounder. Finding new music, podcasts, and it works on literally everything
+- **Apple Music**: the best sound, especially if you're on iPhone or Mac
+- **YouTube Music**: covers, live versions and remixes nobody else has, or you already pay for YouTube Premium
+
+And honestly? You can use NetherFlow **next to** any of them. Paste a playlist link from Spotify, Apple Music or YouTube
+and it's in.
+
+<sub>**How it's scored:** each app gets 0–10 in each category. Price and catalog count ×15 (they matter most to most
+people); sound, lyrics, look, discovery, privacy and devices ×10; offline and listening together ×5. That adds up to a
+total out of 100. US prices as of October 2026, from [Spotify](https://www.spotify.com/us/premium/),
+[Apple](https://www.apple.com/apple-music/) and [YouTube](https://www.youtube.com/musicpremium). Spotify, Apple Music and
+YouTube Music are trademarks of their respective owners. NetherFlow is not affiliated with, endorsed by or sponsored by
+any of them. The scores are the author's own opinion.</sub>
 
 <a id="hucla"></a>
 
