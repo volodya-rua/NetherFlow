@@ -1,0 +1,18 @@
+# Dependencies and build output
+node_modules/
+dist/
+www/
+
+# Signing keys never go in the repository (they live outside it, in ~/.netherflow-signing)
+*.jks
+*.keystore
+keystore.properties
+
+# The desktop app's yt-dlp.exe is downloaded by `npm run fetch-yt-dlp` (checked against its published SHA-256)
+vendor/yt-dlp/yt-dlp.exe
+
+# Local editor / tool settings
+.claude/
+.vscode/
+.idea/
+*.log

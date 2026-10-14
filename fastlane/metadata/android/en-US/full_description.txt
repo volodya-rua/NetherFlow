@@ -1,0 +1,20 @@
+NetherFlow is a free, open-source music player with a look of its own. Search any song, play it in full, and follow its lyrics word by word over moving, music-reactive backgrounds.
+
+<b>Features</b>
+<ul>
+<li>Search songs, artists and albums, and play them in full, with typos fixed and suggestions as you type</li>
+<li>Synced lyrics, word by word where available, with 19 lyric animations (Wave, Spiral, Shatter, Fireworks, Swarm, Black Hole, Cylinder, Globe, Helix, DNA, Tornado, Knot, Möbius, Ribbon, Orbit, Atom, Tunnel, Cube and Classic)</li>
+<li>27 animated backgrounds, including fractals, galaxies and a plasma globe, that take their colors from the album cover, or a still gradient that is lightest on slower phones</li>
+<li>A beat ring and screen edges that move with the music</li>
+<li>Equalizer with presets, a volume booster, and each song at its original loudness</li>
+<li>Liked songs, playlists, queue and history</li>
+<li>Save songs for offline listening, one at a time or a whole playlist at once</li>
+<li>Make a short video clip of a song with its lyrics for your story</li>
+<li>No account, no ads of its own, no analytics or tracking</li>
+</ul>
+
+<b>How it works</b>
+NetherFlow doesn't host any music or lyrics. It finds songs in Apple's iTunes catalog and YouTube Music, plays them through YouTube's embedded player (or from Audius at 320 kbps when the artist's own upload is there), and gets lyrics from LRCLIB, NetEase Cloud Music, Kugou and YouTube Music (lyrics by LyricFind). Saving for offline downloads the audio from YouTube with yt-dlp.
+
+<b>Please note</b>
+NetherFlow isn't affiliated with YouTube, Google, Apple or any of the services it uses. Downloading from YouTube isn't allowed by YouTube's Terms of Service, and copyright law where you live may not allow it either: whether to use offline saving is your choice and your responsibility. The full Terms of Use and Privacy Policy are in the app.

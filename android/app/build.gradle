@@ -1,0 +1,81 @@
+apply plugin: 'com.android.application'
+apply plugin: 'com.chaquo.python'
+
+android {
+    namespace = "io.github.volodya_rua.netherflow"
+    compileSdk = rootProject.ext.compileSdkVersion
+    defaultConfig {
+        applicationId "io.github.volodya_rua.netherflow"
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode 1
+        versionName "1.0.0"
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        // Python (Chaquopy) is native: built for 64-bit ARM phones (Python 3.12+ is 64-bit only); for an x86_64
+        // emulator too with -PnfEmulator (on Arm translation, Python crashes)
+        ndk { abiFilters(*(['arm64-v8a'] + (project.hasProperty('nfEmulator') ? ['x86_64'] : []))) }
+        aaptOptions {
+             // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
+             // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
+            ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+        }
+    }
+    // Release builds are signed with the key described in keystore.properties, kept OUTSIDE the project (so it can never
+    // be published with the code): ~/.netherflow-signing/, or the folder in NETHERFLOW_SIGNING. Keep that key: Android
+    // only installs an update over the app if it's signed with the same key. Without it, release builds come out unsigned
+    // (as F-Droid wants them: it signs the apps it builds).
+    def signingDir = new File(System.getenv('NETHERFLOW_SIGNING') ?: System.getProperty('user.home') + '/.netherflow-signing')
+    def keyProps = new File(signingDir, 'keystore.properties')
+    signingConfigs {
+        if (keyProps.exists()) {
+            def k = new Properties()
+            keyProps.withInputStream { k.load(it) }
+            release {
+                storeFile new File(signingDir, k.storeFile)
+                storePassword k.storePassword
+                keyAlias k.keyAlias
+                keyPassword k.keyPassword
+            }
+        }
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            if (keyProps.exists()) signingConfig signingConfigs.release
+        }
+    }
+}
+
+// Python for yt-dlp (src/main/python): saving songs for offline. No pip packages: yt_dlp and certifi are in the source
+// directory, so the build needs no Python of its own (its code is compiled on the phone, the first time it's used).
+chaquopy {
+    defaultConfig {
+        version = '3.13'
+        pyc { src = false }
+    }
+}
+
+repositories {
+    flatDir{
+        dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
+    }
+}
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+    implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
+    implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
+    implementation "androidx.core:core:$androidxCoreVersion"     // full-screen (system bars) control
+    implementation "androidx.webkit:webkit:$androidxWebkitVersion" // ad skipper inside the YouTube player
+    implementation "androidx.media:media:1.7.0"                   // song notification + lock-screen controls
+    implementation project(':capacitor-android')
+    testImplementation "junit:junit:$junitVersion"
+    androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
+    androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
+    implementation project(':capacitor-cordova-android-plugins')
+}
+
+apply from: 'capacitor.build.gradle'
+

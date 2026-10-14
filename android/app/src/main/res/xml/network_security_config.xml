@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Everything goes over HTTPS, but phone ↔ PC sync talks to the computer on the local network, which has no certificate:
+     plain HTTP is allowed for that (what passes is encrypted by the app itself, with a key made from the code shown). -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>

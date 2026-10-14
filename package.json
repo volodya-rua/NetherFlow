@@ -1,0 +1,62 @@
+{
+  "name": "netherflow",
+  "productName": "NetherFlow",
+  "version": "1.0.0",
+  "description": "NetherFlow by Volodya.rua: search any song, hear it in full, read the lyrics in sync.",
+  "author": "Volodya.rua",
+  "license": "MIT",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "electron selftest.js",
+    "dist": "node tools/fetch-yt-dlp.js && electron-builder --win portable",
+    "android:sync": "node -e \"const fs=require('fs');fs.mkdirSync('www',{recursive:true});for(const f of ['index.html','lib.js','legal.html','frame-helper.js','logo.png'])fs.copyFileSync(f,'www/'+f);for(const d of ['licenses','fonts'])fs.cpSync(d,'www/'+d,{recursive:true})\" && cap sync android",
+    "android": "android-build.cmd",
+    "fetch-yt-dlp": "node tools/fetch-yt-dlp.js"
+  },
+  "private": true,
+  "devDependencies": {
+    "@capacitor/android": "8.5.3",
+    "@capacitor/app": "8.1.2",
+    "@capacitor/cli": "8.5.3",
+    "@capacitor/core": "8.5.3",
+    "electron": "44.7.0",
+    "electron-builder": "26.15.3"
+  },
+  "build": {
+    "appId": "io.github.volodya_rua.netherflow",
+    "files": [
+      "main.js",
+      "preload.js",
+      "island.html",
+      "island-preload.js",
+      "logo.png",
+      "server.js",
+      "lib.js",
+      "frame-helper.js",
+      "index.html",
+      "legal.html",
+      "licenses/**",
+      "fonts/**",
+      "emoji/**",
+      "icon.png"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": "portable",
+      "icon": "icon.png"
+    },
+    "portable": {
+      "artifactName": "NetherFlow.exe"
+    },
+    "copyright": "Copyright © 2026 Volodya.rua",
+    "extraResources": [
+      {
+        "from": "vendor/yt-dlp/yt-dlp.exe",
+        "to": "yt-dlp.exe"
+      }
+    ]
+  }
+}

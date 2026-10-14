@@ -1,0 +1,23 @@
+// Gives the page its window buttons (it draws its own; the native ones don't match the look).
+const { contextBridge, ipcRenderer } = require('electron');
+contextBridge.exposeInMainWorld('netherflowApp', {
+  win: action => ipcRenderer.send('win', action), // 'min' | 'max' | 'close'
+  onMaximized: cb => ipcRenderer.on('maximized', (_, on) => cb(on)),
+  awake: on => ipcRenderer.send('awake', !!on), // keep the screen on (while a song plays)
+  onShown: cb => ipcRenderer.on('shown', (_, on) => cb(on)), // where the window is: 2 in front, 1 behind another app, 0 minimized / hidden
+  // saving a song for offline: its audio downloaded from YouTube (see main.js) → { data, ext, dur }
+  ytdl: (id, key) => ipcRenderer.invoke('ytdl', { id, key }),
+  ytdlCancel: key => ipcRenderer.send('ytdl-cancel', key),
+  onYtdlProgress: cb => ipcRenderer.on('ytdl-progress', (_, m) => cb(m)), // { key, frac }
+  // the island (see main.js): what's playing, ~30 times a second (null: nothing), and what's pressed on it
+  island: state => ipcRenderer.send('island-state', state),
+  onIsland: cb => ipcRenderer.on('island-cmd', (_, cmd, v) => cb(cmd, v)),
+  // Discord "Now playing" (see main.js): the song as it plays ({ title, artist, album, art, start, end, url }), or null
+  presence: w => ipcRenderer.send('presence', w),
+  // phone ↔ PC sync (see main.js): open the local server → { port, addrs, name }; what a phone sends (encrypted) comes in
+  // by onSyncIn(id, data) and the page answers with syncOut(id, { data } | { error }); id '' = it closed by itself
+  syncOpen: () => ipcRenderer.invoke('sync-open'),
+  syncClose: () => ipcRenderer.send('sync-close'),
+  onSyncIn: cb => ipcRenderer.on('sync-in', (_, id, data) => cb(id, data)),
+  syncOut: (id, reply) => ipcRenderer.send('sync-out', id, reply),
+});

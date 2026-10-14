@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>NetherFlow island</title>
+<style>
+/* The island (desktop app, see main.js): what's playing, at the top middle of the screen over every other app, in the
+   manner of Apple's Dynamic Island. Compact: a small black pill, just as wide as the song needs — the cover, the song's
+   name and artist, and seven lines beating with the music. Clicked: it springs open into the player — the cover, the
+   song, the beat, the timeline, like, previous, play, next, repeat and the volume — and closes again when the pointer
+   leaves it. An optional glow (Settings › Island glow) in the mood's colour, swelling with the bass.
+   The window is bigger than the island but shaped to it (shape() below): clicks anywhere else go straight through to
+   whatever's under it. The shape leaves room round the island for its glow and shadow, which stay inside it. */
+:root { --a: #ff4a1c; --b: #ffb21e; --kick: 0; --ui: 'Segoe UI Variable Display', 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif; --dim: #8e8e93; }
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: transparent; overflow: hidden; user-select: none; -webkit-user-select: none; }
+body { font: 400 13px/1.25 var(--ui); color: #fff; -webkit-font-smoothing: antialiased; }
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: default; }
+.isl { position: absolute; top: 8px; left: 50%; translate: -50% 0; width: 180px; height: 36px; border-radius: 18px; background: #000; overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0,0,0,.45);
+  transition: width .5s cubic-bezier(.32,1.22,.42,1), height .5s cubic-bezier(.32,1.22,.42,1), border-radius .5s cubic-bezier(.32,1.22,.42,1), box-shadow .4s,
+    opacity .3s, scale .45s cubic-bezier(.32,1.3,.42,1); }
+.isl.instant { transition: none; }
+/* away (NetherFlow in front, or nothing playing): faded and shrunk; coming back, it springs in */
+body.away .isl { opacity: 0; scale: .8; pointer-events: none; }
+/* the glow (an option): soft, in the mood's colour, swelling with the bass — within 30 px of the island (the window's
+   shape leaves 40: nothing of it is ever cut off) */
+.glow .isl { box-shadow: 0 0 calc(10px + var(--kick) * 16px) calc(var(--kick) * 2px) color-mix(in srgb, var(--a) calc(28% + var(--kick) * 47%), transparent), 0 4px 12px rgba(0,0,0,.45); }
+/* ---- compact ---- */
+.pill { position: absolute; inset: 0; display: flex; align-items: center; gap: 10px; padding: 0 15px 0 8px; transition: opacity .2s, filter .25s; }
+.open .pill { opacity: 0; filter: blur(6px); pointer-events: none; }
+.art1 { flex: none; width: 22px; height: 22px; border-radius: 6px; background: #1c1c1e center / cover; box-shadow: inset 0 0 0 1px rgba(255,255,255,.16); }
+/* (a hairline round the covers: a dark one keeps its shape against the black) */
+.ticker { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; }
+.ticker.long { mask: linear-gradient(90deg, transparent, #000 8px, #000 calc(100% - 14px), transparent); -webkit-mask: linear-gradient(90deg, transparent, #000 8px, #000 calc(100% - 14px), transparent); }
+#tk { display: inline-block; }
+#tk > span { display: inline-block; padding-right: 36px; }
+#tk b { font-weight: 600; }
+#tk small { font-size: 12.5px; color: var(--dim); margin-left: 6px; }
+.ticker.long #tk { animation: tick var(--tk, 12s) linear infinite; }
+@keyframes tick { to { translate: -50% 0; } }
+.bars { flex: none; display: flex; align-items: center; gap: 2px; height: 16px; }
+.bars i { width: 2.5px; height: 100%; border-radius: 2px; background: var(--a); transform: scaleY(.15); will-change: transform; }
+/* ---- open ---- */
+.panel { position: absolute; inset: 0; display: grid; grid-template-rows: auto auto auto auto; gap: 11px; padding: 18px 22px 16px;
+  opacity: 0; filter: blur(8px); pointer-events: none; transition: opacity .25s, filter .3s; }
+.open .panel { opacity: 1; filter: none; pointer-events: auto; transition-delay: .14s; }
+.top { display: grid; grid-template-columns: 54px minmax(0, 1fr) auto; align-items: center; gap: 12px; }
+.art2 { cursor: pointer; width: 54px; height: 54px; border-radius: 12px; background: #1c1c1e center / cover; box-shadow: inset 0 0 0 1px rgba(255,255,255,.14); }
+.names { min-width: 0; }
+.names b, .names small { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.names b { font-size: 15px; font-weight: 600; }
+.names small { margin-top: 2px; font-size: 13px; color: var(--dim); }
+.bars.big { height: 22px; gap: 2.5px; }
+.bars.big i { width: 3px; }
+.time { display: grid; grid-template-columns: 36px 1fr 40px; align-items: center; gap: 8px; font-size: 11px; color: var(--dim); font-variant-numeric: tabular-nums; }
+.time span:last-child { text-align: right; }
+input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 14px; margin: 0; background: transparent; }
+input[type=range]::-webkit-slider-runnable-track { height: 5px; border-radius: 3px; background: linear-gradient(#fff, #fff) 0 0 / var(--p, 0%) 100% no-repeat, rgba(255,255,255,.22); }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 0; height: 5px; }
+input[type=range]:hover::-webkit-slider-runnable-track, input[type=range]:active::-webkit-slider-runnable-track { height: 7px; }
+.ctl { display: flex; align-items: center; justify-content: space-between; padding: 0 6px; }
+.c { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; transition: background .2s, scale .25s cubic-bezier(.3,1.6,.5,1), opacity .2s; }
+.c:hover { background: rgba(255,255,255,.1); }
+.c:active { scale: .88; }
+.c svg { width: 22px; height: 22px; fill: #fff; }
+.c.main svg { width: 30px; height: 30px; }
+.c.main .i-pause, .playing .c.main .i-play { display: none; }
+.playing .c.main .i-pause { display: block; }
+.c.sm svg { width: 18px; height: 18px; fill: none; stroke: #fff; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.c.sm { opacity: .55; }
+.c.sm.on { opacity: 1; }
+.c.sm.on svg { stroke: var(--a); }
+.c.like.on svg { fill: var(--a); }
+.c:disabled { opacity: .3; }
+.rep { position: relative; }
+.rep b { position: absolute; top: 6px; right: 6px; font-size: 8px; font-weight: 700; color: var(--a); display: none; }
+.rep[data-mode=one] b { display: block; }
+.vol { display: grid; grid-template-columns: 16px 1fr 16px auto; align-items: center; gap: 9px; }
+.vol svg { width: 16px; height: 16px; fill: var(--dim); }
+.name { margin-left: 6px; font-size: 11px; font-weight: 600; letter-spacing: .02em; color: var(--dim); transition: color .2s; }
+.name:hover { color: #fff; }
+</style>
+</head>
+<body class="away">
+<div id="isl" class="isl" role="region" aria-label="Now playing">
+  <button id="pill" class="pill" aria-label="Open the player">
+    <i id="art1" class="art1"></i>
+    <span id="ticker" class="ticker"><span id="tk"></span></span>
+    <span class="bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+  </button>
+  <div class="panel">
+    <div class="top"><i id="art2" class="art2"></i><div class="names"><b id="ttl"></b><small id="artist"></small></div>
+      <span class="bars big" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span></div>
+    <div class="time"><span id="cur">0:00</span><input id="seek" type="range" min="0" max="1000" value="0" aria-label="Position in the song"><span id="left">-0:00</span></div>
+    <div class="ctl">
+      <button id="like" class="c sm like" aria-label="Like"><svg viewBox="0 0 24 24"><path d="M12 20.5s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.6a4.3 4.3 0 0 1 7.5 2.7c0 5.6-7.5 10.2-7.5 10.2z"/></svg></button>
+      <button id="prev" class="c" aria-label="Previous"><svg viewBox="0 0 24 24"><path d="M11.5 6.6v10.8c0 .8-.9 1.3-1.6.8L2.8 13a1.2 1.2 0 0 1 0-2l7.1-5.2c.7-.5 1.6 0 1.6.8zm10 0v10.8c0 .8-.9 1.3-1.6.8L12.8 13a1.2 1.2 0 0 1 0-2l7.1-5.2c.7-.5 1.6 0 1.6.8z"/></svg></button>
+      <button id="play" class="c main" aria-label="Play or pause"><svg class="i-play" viewBox="0 0 24 24"><path d="M7 4.8v14.4c0 .9 1 1.4 1.7.9l11-7.2a1.1 1.1 0 0 0 0-1.8l-11-7.2C8 3.4 7 3.9 7 4.8z"/></svg><svg class="i-pause" viewBox="0 0 24 24"><rect x="6" y="4.5" width="4" height="15" rx="1.3"/><rect x="14" y="4.5" width="4" height="15" rx="1.3"/></svg></button>
+      <button id="next" class="c" aria-label="Next"><svg viewBox="0 0 24 24"><path d="M12.5 6.6v10.8c0 .8.9 1.3 1.6.8l7.1-5.2a1.2 1.2 0 0 0 0-2l-7.1-5.2c-.7-.5-1.6 0-1.6.8zm-10 0v10.8c0 .8.9 1.3 1.6.8l7.1-5.2a1.2 1.2 0 0 0 0-2L4.1 5.8c-.7-.5-1.6 0-1.6.8z"/></svg></button>
+      <button id="rep" class="c sm rep" aria-label="Repeat"><svg viewBox="0 0 24 24"><path d="M17 2.5l3 3-3 3M4 11V9a3.5 3.5 0 0 1 3.5-3.5H20M7 21.5l-3-3 3-3M20 13v2a3.5 3.5 0 0 1-3.5 3.5H4"/></svg><b>1</b></button>
+    </div>
+    <div class="vol">
+      <svg viewBox="0 0 24 24"><path d="M4 9.5h3l4.5-4v13l-4.5-4H4z"/></svg>
+      <input id="vol" type="range" min="0" max="200" value="100" aria-label="Volume">
+      <svg viewBox="0 0 24 24"><path d="M3 9.5h3l4.5-4v13l-4.5-4H3zM14 8.3a5 5 0 0 1 0 7.4l-1-1.1a3.5 3.5 0 0 0 0-5.2zM16.6 5.6a8.8 8.8 0 0 1 0 12.8l-1.1-1.1a7.3 7.3 0 0 0 0-10.6z"/></svg>
+      <button id="openApp" class="name" title="Open NetherFlow">NetherFlow</button>
+    </div>
+  </div>
+</div>
+<script>
+const $ = id => document.getElementById(id), isl = $('isl'), root = document.documentElement;
+const send = (c, v) => window.islandApp?.cmd(c, v);
+const fmt = s => isFinite(s) && s >= 0 ? Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0') : '0:00';
+let S = null, at = 0, dragging = null, was = {}, isOpen = false;
+const set = (k, v, fn) => { if (was[k] !== v) { was[k] = v; fn(v); } }; // (only what changed)
+
+// ---- size and shape: the island's size, eased (CSS), and the window's shape round it: grown at once (so the island
+// grows into it), shrunk once the island has. Compact: as wide as the song needs (150–340 px).
+const OPEN_W = 380, OPEN_H = 212, TOP = 8;
+let compactW = 180, shapeW = 0, shapeH = 0, shrinkTimer = 0;
+const pad = () => document.body.classList.contains('glow') ? 40 : 18;
+function sendShape(w, h) { window.islandApp?.shape({ x: Math.round((innerWidth - w) / 2 - pad()), y: 0, width: Math.round(w + pad() * 2), height: Math.round(TOP + h + pad()) }); }
+function resize() {
+  const w = isOpen ? OPEN_W : compactW, h = isOpen ? OPEN_H : 36;
+  isl.style.width = w + 'px'; isl.style.height = h + 'px'; isl.style.borderRadius = (isOpen ? 42 : 18) + 'px';
+  clearTimeout(shrinkTimer);
+  sendShape(Math.max(w, shapeW), Math.max(h, shapeH));
+  if (w < shapeW || h < shapeH) shrinkTimer = setTimeout(() => { sendShape(w, h); shapeW = w; shapeH = h; }, 560);
+  else { shapeW = w; shapeH = h; }
+}
+function open(on) { isOpen = on; clearTimeout(closeTimer); resize(); isl.classList.toggle('open', on); }
+// there or away (main.js): coming back, closed, nothing held, its shape sent afresh; going away, closed too
+window.islandApp?.onVisible?.(on => {
+  clearTimeout(closeTimer); dragging = null;
+  if (isOpen) { isl.classList.add('instant'); isOpen = false; isl.classList.remove('open'); requestAnimationFrame(() => requestAnimationFrame(() => isl.classList.remove('instant'))); }
+  document.body.classList.toggle('away', !on);
+  if (on) { shapeW = shapeH = 0; resize(); }
+});
+
+// ---- what's playing, from the page (~30 times a second while the island's out)
+// What the island itself changes (play or pause, position, volume, like) shows at once, and is held on screen until
+// the page's reports agree — or for a moment, if they never do — so nothing flicks back while the player catches up
+// (YouTube says "paused" for a moment as it starts again, say, or the old position just after a seek).
+const hold = {};
+const want = (k, v, ms = 1500) => { hold[k] = { v, at: performance.now(), until: performance.now() + ms }; };
+const held = (k, actual, same = (x, y) => x === y) => {
+  const h = hold[k];
+  if (!h) return actual;
+  if (same(actual, h.v) || performance.now() > h.until) { delete hold[k]; return actual; }
+  return h.v;
+};
+let playing = false;
+window.islandApp?.onState(s => {
+  if (!s) return;
+  const now = performance.now();
+  // (just after a seek: the time it was sent to, running on, till the reports catch up)
+  if (hold.t) { const t = hold.t.v + (now - hold.t.at) / 1000; if (now < hold.t.until && Math.abs(s.t - t) > 1.5) s.t = t; else delete hold.t; }
+  S = s; at = now; show();
+});
+function setPlaying(on) { if (on !== playing) { playing = on; isl.classList.toggle('playing', on); } }
+function show() {
+  const p = S.pal || {};
+  for (const k of ['a', 'b']) if (p[k]) set('pal-' + k, p[k], v => root.style.setProperty('--' + k, v));
+  set('glow', !!S.glow, v => { document.body.classList.toggle('glow', v); shapeW = shapeH = 0; resize(); });
+  set('song', S.title + '\n' + S.artist, () => {
+    const one = () => { const e = document.createElement('span'); e.append(Object.assign(document.createElement('b'), { textContent: S.title }), Object.assign(document.createElement('small'), { textContent: S.artist })); return e; };
+    $('tk').replaceChildren(one()); $('ticker').classList.remove('long');
+    $('ttl').textContent = S.title; $('artist').textContent = S.artist;
+    // as wide as it needs: the cover, the song's name, the beat (and their gaps and padding); too long, it scrolls
+    const text = $('tk').firstChild.offsetWidth - 36;
+    const need = 8 + 22 + 10 + text + 10 + 29 + 15;
+    compactW = Math.round(Math.max(150, Math.min(340, need)));
+    if (need > 340) { $('tk').append(one()); $('ticker').classList.add('long'); $('ticker').style.setProperty('--tk', ($('tk').offsetWidth / 2 / 36).toFixed(1) + 's'); }
+    resize();
+  });
+  set('art', S.art || '', v => { const u = v ? 'url(' + JSON.stringify(v) + ')' : ''; $('art1').style.backgroundImage = $('art2').style.backgroundImage = u; });
+  setPlaying(held('playing', !!S.playing));
+  set('rep', S.repeat, v => { $('rep').dataset.mode = v; $('rep').classList.toggle('on', v !== 'off'); $('rep').setAttribute('aria-label', 'Repeat: ' + (v === 'one' ? 'this song' : v)); });
+  set('like', held('like', !!S.liked), v => $('like').classList.toggle('on', v));
+  set('next', !S.next, v => { $('next').disabled = v; });
+  if (dragging !== 'vol') set('vol', held('vol', Math.round(S.vol * 100), (x, y) => Math.abs(x - y) <= 1), v => { $('vol').value = v; $('vol').style.setProperty('--p', v / 2 + '%'); });
+}
+// every frame (while it's out): the beat, eased (up fast, down slow); and open, the time running on between reports.
+// Only what's changed is touched; the bars move by transform alone (no layout).
+const lv = new Float32Array(7), shownScale = new Array(7).fill(''), barGroups = [...document.querySelectorAll('.bars')].map(g => [...g.children]);
+let lastKick = '', lastSec = -1, lastP = '', away = true, glowing = false, shownT = 0;
+new MutationObserver(() => { away = document.body.classList.contains('away'); glowing = document.body.classList.contains('glow'); lastSec = -1; lastP = ''; })
+  .observe(document.body, { attributes: true, attributeFilter: ['class'] });
+(function frame() {
+  requestAnimationFrame(frame);
+  if (!S || away) return;
+  const bars = S.bars || [];
+  for (let k = 0; k < 7; k++) {
+    const v = playing ? bars[k] || 0 : 0;
+    lv[k] += (v - lv[k]) * (v > lv[k] ? .55 : .12);
+    const sc = (.15 + .85 * lv[k]).toFixed(2);
+    if (sc !== shownScale[k]) { shownScale[k] = sc; for (const g of barGroups) g[k].style.transform = 'scaleY(' + sc + ')'; }
+  }
+  if (glowing) { const kq = Math.min(1, lv[0] * .6 + lv[1] * .4).toFixed(2); if (kq !== lastKick) { lastKick = kq; root.style.setProperty('--kick', kq); } }
+  if (!isOpen || dragging === 'seek') return;
+  let t = Math.max(0, Math.min(S.dur || 0, S.t + (playing ? (performance.now() - at) / 1000 : 0)));
+  if (playing && t < shownT && shownT - t < 1.5) t = shownT; // (never a hair back: the reports come in steps; a real jump back still shows)
+  shownT = t;
+  const pc = S.dur ? (t / S.dur * 100).toFixed(2) : '0';
+  if (pc !== lastP) { lastP = pc; $('seek').value = pc * 10; $('seek').style.setProperty('--p', pc + '%'); }
+  const sec = Math.floor(t);
+  if (sec !== lastSec) { lastSec = sec; $('cur').textContent = fmt(t); $('left').textContent = '-' + fmt((S.dur || 0) - t); }
+})();
+
+// ---- open and close: a click on the pill opens it; a click on the cover, or the pointer leaving it a moment, closes it
+let closeTimer = 0;
+$('pill').onclick = () => { lastSec = -1; lastP = ''; open(true); };
+$('art2').onclick = () => open(false);
+isl.addEventListener('mouseenter', () => clearTimeout(closeTimer));
+isl.addEventListener('mouseleave', () => { if (!dragging && isOpen) closeTimer = setTimeout(() => open(false), 900); });
+resize();
+
+// ---- the controls: each shows its effect at once (held: see above), and tells the page
+$('play').onclick = () => { const on = !playing; want('playing', on); setPlaying(on); send('toggle'); };
+$('prev').onclick = () => send('prev');
+$('next').onclick = () => send('next');
+$('rep').onclick = () => send('repeat');
+$('like').onclick = () => { const on = !$('like').classList.contains('on'); want('like', on, 1000); was.like = on; $('like').classList.toggle('on', on); send('like'); };
+$('openApp').onclick = () => send('open');
+// the sliders: the pointer held to them while dragging (let go anywhere — even off the island — and it ends)
+for (const id of ['seek', 'vol']) {
+  const r = $(id);
+  r.addEventListener('pointerdown', e => { dragging = id; r.setPointerCapture(e.pointerId); });
+  r.addEventListener('input', () => {
+    r.style.setProperty('--p', (id === 'vol' ? r.value / 2 : r.value / 10) + '%');
+    if (id === 'seek' && S) { const t = r.value / 1000 * S.dur; $('cur').textContent = fmt(t); $('left').textContent = '-' + fmt(S.dur - t); }
+    if (id === 'vol') { want('vol', +r.value, 1200); was.vol = +r.value; send('vol', r.value / 100); }
+  });
+  r.addEventListener('change', () => {
+    if (id !== 'seek' || !S) return;
+    const t = r.value / 1000 * S.dur;
+    want('t', t, 2500); S.t = t; at = performance.now(); lastSec = -1; lastP = ''; shownT = t;
+    send('seek', t);
+  });
+  const end = () => { dragging = null; };
+  r.addEventListener('pointerup', end); r.addEventListener('pointercancel', end); r.addEventListener('lostpointercapture', end);
+}
+</script>
+</body>
+</html>
