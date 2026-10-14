@@ -90,13 +90,9 @@ lint/tmp/
 # Android Profiling
 *.hprof
 
-# Cordova plugins for Capacitor
-capacitor-cordova-android-plugins
+# (Capacitor's generated Cordova-plugin project, config.json, plugins.json and config.xml are kept in the repository: a build
+# then needs only "npm run android:web" and Gradle — no Capacitor CLI, which wants a newer Node.js than F-Droid's servers have)
 
 # Copied web assets
 app/src/main/assets/public
 
-# Generated Config files
-app/src/main/assets/capacitor.config.json
-app/src/main/assets/capacitor.plugins.json
-app/src/main/res/xml/config.xml

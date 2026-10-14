@@ -1,0 +1,1 @@
+Ready for F-Droid: built from source there. Windows: a proper installer.

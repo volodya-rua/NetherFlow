@@ -1,0 +1,15 @@
+{
+	"appId": "io.github.volodya_rua.netherflow",
+	"appName": "NetherFlow",
+	"webDir": "www",
+	"backgroundColor": "#0b0503",
+	"android": {
+		"backgroundColor": "#0b0503"
+	},
+	"plugins": {
+		"SystemBars": {
+			"insetsHandling": "disable",
+			"style": "DARK"
+		}
+	}
+}

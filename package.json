@@ -1,7 +1,7 @@
 {
   "name": "netherflow",
   "productName": "NetherFlow",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "NetherFlow by Volodya.rua: search any song, hear it in full, read the lyrics in sync.",
   "author": "Volodya.rua",
   "license": "MIT",
@@ -10,7 +10,8 @@
     "start": "electron .",
     "test": "electron selftest.js",
     "dist": "node tools/fetch-yt-dlp.js && electron-builder --win",
-    "android:sync": "node -e \"const fs=require('fs');fs.mkdirSync('www',{recursive:true});for(const f of ['index.html','lib.js','legal.html','frame-helper.js','logo.png'])fs.copyFileSync(f,'www/'+f);for(const d of ['licenses','fonts'])fs.cpSync(d,'www/'+d,{recursive:true})\" && cap sync android",
+    "android:web": "node -e \"const fs=require('fs');for(const to of ['www','android/app/src/main/assets/public']){fs.mkdirSync(to,{recursive:true});for(const f of ['index.html','lib.js','legal.html','frame-helper.js','logo.png'])fs.copyFileSync(f,to+'/'+f);for(const d of ['licenses','fonts'])fs.cpSync(d,to+'/'+d,{recursive:true})}\"",
+    "android:sync": "npm run android:web && cap sync android",
     "android": "android-build.cmd",
     "fetch-yt-dlp": "node tools/fetch-yt-dlp.js"
   },
