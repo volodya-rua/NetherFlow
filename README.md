@@ -161,6 +161,12 @@ wants a workout. On a slower phone it steps down by itself, so it never lags.
   same, signed and checked first (a store's build gets updated by the store). The portable app can't update itself
 - Minimized or in the background, it draws nothing at all, so it's light on your battery
 
+Here's how it looks on a PC 👇
+
+<p align="center">
+  <img src="docs/media/pc.webp" width="100%" alt="NetherFlow on Windows: the home screen on Black Hole, Settings over Aurora, the equalizer over Liquid, and the themes and moods">
+</p>
+
 And this is it on a phone 👇 straight from the Android app:
 
 <p align="center">
