@@ -7,41 +7,486 @@
 <meta name="description" content="NetherFlow is a free, open-source music player for Windows and Android: full songs, word-synced lyrics, glowing music-reactive backgrounds, themes and Listen together. No account, no ads, no tracking.">
 <link rel="canonical" href="https://volodya-rua.github.io/NetherFlow/">
 <link rel="icon" href="logo/netherflow-logo.png">
-<meta property="og:title" content="NetherFlow: free music player for Windows and Android">
-<meta property="og:description" content="Full songs, word-synced lyrics and backgrounds that move with the music. Free and open source.">
+<meta name="theme-color" content="#0b0503">
+<meta property="og:title" content="NetherFlow: turn silence into song">
+<meta property="og:description" content="A free music player for Windows and Android. Full songs, lyrics word by word, backgrounds that move with the music.">
 <meta property="og:image" content="https://volodya-rua.github.io/NetherFlow/social-preview.jpg">
 <meta property="og:url" content="https://volodya-rua.github.io/NetherFlow/">
 <meta name="twitter:card" content="summary_large_image">
+<link rel="preload" href="fonts/Anton-400-latin.woff2" as="font" type="font/woff2" crossorigin>
 <style>
-  :root { --bg: #160a06; --text: #f6ede4; --hot: #ff4a1c; --gold: #ffb21e; }
-  * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--text); font: 17px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; text-align: center; }
-  main { max-width: 1100px; margin: 0 auto; padding: 0 16px 48px; }
-  img { max-width: 100%; height: auto; border-radius: 14px; }
-  h1 { font-size: clamp(2.4rem, 7vw, 4rem); margin: 24px 0 0; background: linear-gradient(90deg, var(--hot), var(--gold)); -webkit-background-clip: text; background-clip: text; color: transparent; }
-  .lead { max-width: 640px; margin: 8px auto 28px; opacity: .9; }
-  .btns a { display: inline-block; margin: 6px; padding: 14px 28px; border-radius: 999px; font-weight: 700; text-decoration: none; }
-  .get { background: linear-gradient(90deg, var(--hot), var(--gold)); color: var(--bg); box-shadow: 0 0 32px #ff4a1c66; }
-  .src { color: var(--text); border: 2px solid #f6ede455; }
-  .shots { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-top: 48px; }
-  footer { opacity: .6; font-size: 14px; padding: 24px 16px; }
-  footer a { color: inherit; }
+@font-face { font-family: Anton; src: url(fonts/Anton-400-latin.woff2) format('woff2'); font-display: swap; }
+@font-face { font-family: Bodoni; src: url(fonts/LibreBodoni-400i-latin.woff2) format('woff2'); font-style: italic; font-display: swap; }
+@font-face { font-family: Martian; src: url(fonts/MartianMono-latin.woff2) format('woff2'); font-weight: 100 800; font-display: swap; }
+
+:root {
+  --bg: #0b0503; --ink: #f6ede4; --dim: #f6ede494; --line: #f6ede41f;
+  --hot: #ff4a1c; --gold: #ffb21e;
+  --poster: Anton, Impact, sans-serif; --serif: Bodoni, 'Bodoni 72', Didot, serif; --mono: Martian, ui-monospace, monospace;
+  --pad: clamp(16px, 4vw, 56px);
+}
+* { box-sizing: border-box; }
+html { background: var(--bg); color: var(--ink); scroll-behavior: smooth; }
+body { margin: 0; font: 300 14px/1.7 var(--mono); letter-spacing: -.01em; -webkit-font-smoothing: antialiased; overflow-x: clip; }
+a { color: inherit; }
+img { display: block; max-width: 100%; height: auto; }
+:focus-visible { outline: 2px solid var(--gold); outline-offset: 4px; border-radius: 2px; }
+::selection { background: var(--hot); color: var(--bg); }
+p, li, small, .label { text-shadow: 0 0 10px var(--bg), 0 0 3px var(--bg); }
+
+/* the app's own Fractal background, live */
+#bg { position: fixed; inset: 0; width: 100%; height: 100%; z-index: -1; }
+.grain { position: fixed; inset: 0; z-index: -1; pointer-events: none; opacity: .07; mix-blend-mode: overlay;
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='g'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23g)'/></svg>"); }
+
+.label { font: 500 11px/1.6 var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--dim); }
+.label b { color: var(--hot); font-weight: 500; }
+.track { display: flex; gap: 14px; align-items: baseline; padding: 0 var(--pad); }
+.track::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+
+/* top bar */
+.top { position: fixed; top: 0; left: 0; right: 0; z-index: 5; display: flex; justify-content: space-between; align-items: center;
+  padding: 18px var(--pad); text-shadow: 0 0 14px #000, 0 0 4px #000; }
+.mark { font: 22px/1 var(--poster); letter-spacing: .02em; text-decoration: none; text-transform: uppercase; }
+.top nav { display: flex; gap: 22px; }
+.top nav a { font: 500 11px/1 var(--mono); letter-spacing: .14em; text-transform: uppercase; text-decoration: none; opacity: .7; }
+.top nav a:hover, .top nav a[aria-current] { opacity: 1; }
+.top nav a span { color: var(--hot); }
+
+/* 01 intro */
+.intro { min-height: 100svh; display: grid; align-content: end; padding: 96px 0 calc(110px + 4vh); position: relative; }
+.intro h1 { margin: 0; padding: 0 var(--pad); font-weight: 400; line-height: .8; }
+.intro h1 .big { display: block; font: clamp(76px, min(20vw, 31svh), 360px)/.8 var(--poster); text-transform: uppercase; letter-spacing: -.01em; }
+.intro h1 .into { display: block; font: italic clamp(48px, min(10.5vw, 16svh), 190px)/.9 var(--serif); color: var(--gold); text-align: right;
+  margin: -.38em 0 0; text-shadow: 0 0 40px #ff4a1c80; position: relative; }
+.w { display: inline-block; background: linear-gradient(90deg, currentColor 50%, #f6ede42a 50%) right / 210% 100% no-repeat;
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+.into .w { background-image: linear-gradient(90deg, var(--gold) 50%, #ffb21e30 50%); }
+.lit { background-position: left; transition: background-position .55s cubic-bezier(.6, 0, .2, 1); }
+.intro .under { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 24px 48px; align-items: end; padding: 0 var(--pad); margin-top: 5vh; }
+.intro .under p { margin: 0; max-width: 46ch; font-size: 15px; }
+.cta { display: inline-flex; align-items: center; gap: 14px; padding: 20px 30px; border-radius: 999px; text-decoration: none;
+  font: 500 12px/1 var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--bg);
+  background: linear-gradient(100deg, var(--hot), var(--gold)); box-shadow: 0 0 0 0 #ff4a1c00, 0 10px 40px -10px #ff4a1caa;
+  transition: box-shadow .3s, transform .3s; }
+.cta:hover { transform: translateY(-2px); box-shadow: 0 0 0 6px #ff4a1c26, 0 18px 50px -10px #ff4a1ccc; }
+.cta svg { width: 14px; height: 14px; }
+.meta { display: flex; gap: 10px 22px; flex-wrap: wrap; margin-top: 18px; }
+.intro .label.top-l { padding: 0 var(--pad); margin-bottom: 3vh; }
+
+/* 02 lyrics: scroll is the playhead, words light as they're "sung" */
+.lyrics { height: 260vh; position: relative; }
+.lyrics .stick { position: sticky; top: 0; height: 100svh; display: grid; align-content: center; gap: 5vh; }
+.lyrics blockquote { margin: 0; padding: 0 var(--pad); font: italic clamp(46px, 8.4vw, 150px)/.98 var(--serif); letter-spacing: -.02em; }
+.lyrics blockquote .w { padding-right: .18em; transition: background-position .35s cubic-bezier(.6, 0, .2, 1), text-shadow .35s; }
+.lyrics blockquote .lit { text-shadow: 0 0 34px #ffb21e55; }
+.lyrics blockquote .l2 { padding-left: 12vw; display: block; }
+.lyrics blockquote .l3 { padding-left: 4vw; display: block; color: var(--gold); }
+.lyrics .cap { padding: 0 var(--pad); max-width: 62ch; margin-left: auto; text-align: right; color: var(--dim); }
+.lyrics .cap b { color: var(--ink); font-weight: 500; }
+
+/* 03 moods: a pinned stage, scroll flips through the backgrounds */
+.moods { height: 560vh; position: relative; }
+.moods .stick { position: sticky; top: 0; height: 100svh; display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  gap: 4vw; align-items: center; padding: 70px var(--pad) 110px; }
+.moods ol { list-style: none; margin: 0; padding: 0; counter-reset: m; }
+.moods li { font: clamp(40px, 6.4vw, 112px)/.92 var(--poster); text-transform: uppercase; color: transparent;
+  -webkit-text-stroke: 1px #f6ede44d; transition: color .4s, -webkit-text-stroke-color .4s, transform .5s cubic-bezier(.6, 0, .2, 1); }
+.moods li.on { color: var(--ink); -webkit-text-stroke-color: transparent; transform: translateX(.18em); }
+.moods li button { all: unset; cursor: pointer; }
+.moods li button:focus-visible { outline: 2px solid var(--gold); outline-offset: 4px; }
+.stage { position: relative; aspect-ratio: 16 / 10; border-radius: 6px; overflow: hidden; background: #000;
+  box-shadow: 0 0 0 1px var(--line), 0 40px 120px -30px #ff4a1c66; }
+.stage img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transform: scale(1.06);
+  transition: opacity .7s, transform 1.4s cubic-bezier(.2, .7, .2, 1); }
+.stage img.on { opacity: 1; transform: none; }
+.stage .label { position: absolute; left: 16px; bottom: 14px; color: var(--ink); mix-blend-mode: difference; }
+.moods .cap { grid-column: 1 / -1; display: flex; justify-content: space-between; gap: 20px; color: var(--dim); align-self: end; }
+.moods .cap p { margin: 0; max-width: 52ch; font: 300 13px/1.6 var(--mono); letter-spacing: 0; text-transform: none; }
+
+/* 04 themes: a broken grid, each one its own row */
+.themes { padding: 18vh 0 10vh; }
+.themes h2, .notes h2, .get h2 { margin: 3vh 0 8vh; padding: 0 var(--pad); font: clamp(64px, 13vw, 230px)/.82 var(--poster); text-transform: uppercase; font-weight: 400; }
+.themes h2 em, .notes h2 em, .get h2 em { font: italic .62em/1 var(--serif); text-transform: none; color: var(--gold); }
+.skin { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 0 2vw; align-items: center; padding: 0 var(--pad); margin-bottom: 14vh; }
+.skin figure { margin: 0; grid-column: 1 / span 7; grid-row: 1; border-radius: 6px; overflow: hidden; box-shadow: 0 0 0 1px var(--line), 0 30px 90px -40px #000; }
+.skin .txt { grid-column: 7 / span 6; grid-row: 1; position: relative; z-index: 1; }
+.skin:nth-child(even) figure { grid-column: 6 / span 7; }
+.skin:nth-child(even) .txt { grid-column: 1 / span 6; text-align: right; }
+.skin:nth-child(3n) figure { grid-column-end: span 6; }
+.skin h3 { margin: 0; font: clamp(56px, 9vw, 160px)/.85 var(--poster); text-transform: uppercase; font-weight: 400; text-shadow: 0 6px 40px #000c; }
+.skin p { margin: 14px 0 0; display: inline-block; max-width: 34ch; text-align: left; padding: 12px 14px; background: #0b0503d9; border-left: 2px solid var(--hot); }
+.skin .label { display: block; margin-bottom: 10px; }
+
+/* 05 liner notes */
+.notes { padding: 14vh 0; }
+.stats { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); margin: 0 var(--pad) 10vh; }
+.stats div { padding: 26px 0 22px; border-left: 1px solid var(--line); padding-left: 18px; }
+.stats div:first-child { border-left: 0; padding-left: 0; }
+.stats b { display: block; font: clamp(48px, 6vw, 104px)/.9 var(--poster); font-weight: 400; color: var(--ink); }
+.stats span { color: var(--dim); }
+.cols { columns: 4 240px; column-gap: 40px; padding: 0 var(--pad); }
+.cols section { break-inside: avoid; margin-bottom: 36px; }
+.cols h3 { margin: 0 0 10px; font: 500 11px/1 var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--hot); }
+.cols ul { margin: 0; padding: 0; list-style: none; }
+.cols li { padding: 7px 0; border-bottom: 1px solid var(--line); }
+.cols li b { font-weight: 500; }
+.phones { margin: 8vh var(--pad) 0; max-width: calc(100% - 2 * var(--pad)); border-radius: 6px; }
+
+/* 06 get it */
+.get { padding: 16vh 0 180px; }
+.builds { margin: 0 var(--pad); border-top: 1px solid var(--line); }
+.builds a { display: grid; grid-template-columns: 3.4em minmax(0, 1fr) auto; gap: 20px; align-items: center; padding: 26px 0; border-bottom: 1px solid var(--line); text-decoration: none; transition: padding .35s, color .35s; }
+.builds a:hover { padding-left: 18px; color: var(--gold); }
+.builds strong { font: clamp(30px, 4.2vw, 64px)/1 var(--poster); text-transform: uppercase; font-weight: 400; }
+.builds small { display: block; margin-top: 8px; color: var(--dim); font-size: 12px; }
+.builds .go { font: italic 32px/1 var(--serif); color: var(--hot); }
+.hucla { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 4vw; margin: 16vh var(--pad) 0; align-items: start; }
+.hucla h3 { margin: 0; font: italic clamp(48px, 7vw, 120px)/.9 var(--serif); color: var(--gold); font-weight: 400; }
+.hucla h3 span { color: var(--ink); }
+.hucla p { margin: 0 0 14px; max-width: 60ch; }
+.foot { display: flex; flex-wrap: wrap; gap: 14px 28px; justify-content: space-between; margin: 12vh var(--pad) 0; padding-top: 22px; border-top: 1px solid var(--line); color: var(--dim); font-size: 12px; }
+.foot nav { display: flex; flex-wrap: wrap; gap: 8px 22px; }
+
+/* the player: the page is the song */
+.player { position: fixed; left: 12px; right: 12px; bottom: 12px; z-index: 6; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 16px; align-items: center;
+  padding: 10px 10px 10px 12px; border-radius: 16px; background: #0b0503b8; -webkit-backdrop-filter: blur(18px) saturate(1.4); backdrop-filter: blur(18px) saturate(1.4);
+  box-shadow: 0 0 0 1px var(--line), 0 20px 60px -20px #000; }
+.player .art { width: 44px; height: 44px; border-radius: 8px; background: url(logo/netherflow-logo.png) center / cover, var(--hot); }
+.player .mid { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-rows: auto auto; gap: 2px 12px; align-items: center; }
+.player .now { grid-column: 1 / -1; display: flex; gap: 10px; align-items: baseline; white-space: nowrap; overflow: hidden; }
+.player .now b { font: 18px/1.1 var(--poster); text-transform: uppercase; font-weight: 400; letter-spacing: .02em; }
+.player .now span { color: var(--dim); font-size: 12px; overflow: hidden; text-overflow: ellipsis; }
+.player time { font: 500 11px/1 var(--mono); color: var(--dim); font-variant-numeric: tabular-nums; }
+.player input { -webkit-appearance: none; appearance: none; width: 100%; height: 22px; margin: 0; background: transparent; cursor: pointer; --p: 0%; }
+.player input::-webkit-slider-runnable-track { height: 3px; border-radius: 3px; background: linear-gradient(90deg, var(--hot), var(--gold) var(--p), #f6ede42a var(--p)); }
+.player input::-moz-range-track { height: 3px; border-radius: 3px; background: linear-gradient(90deg, var(--hot), var(--gold) var(--p), #f6ede42a var(--p)); }
+.player input::-webkit-slider-thumb { -webkit-appearance: none; width: 13px; height: 13px; margin-top: -5px; border-radius: 50%; background: var(--ink); box-shadow: 0 0 14px var(--gold); }
+.player input::-moz-range-thumb { width: 13px; height: 13px; border: 0; border-radius: 50%; background: var(--ink); box-shadow: 0 0 14px var(--gold); }
+.player .cta { padding: 15px 22px; }
+
+@media (max-width: 860px) {
+  .top nav { display: none; }
+  .intro .under { grid-template-columns: 1fr; }
+  .intro h1 .big { font-size: 27vw; }
+  .intro h1 .into { font-size: 15vw; }
+  .moods .stick { grid-template-columns: 1fr; align-content: center; gap: 22px; padding-top: 80px; }
+  .moods ol { order: 2; display: flex; flex-wrap: wrap; gap: 0 16px; }
+  .moods li { font-size: clamp(30px, 9vw, 54px); }
+  .moods li.on { transform: none; }
+  .moods .cap { order: 3; flex-direction: column; }
+  .skin, .skin:nth-child(even) { grid-template-columns: 1fr; margin-bottom: 9vh; }
+  .skin figure, .skin:nth-child(even) figure, .skin .txt, .skin:nth-child(even) .txt { grid-column: 1; text-align: left; }
+  .skin .txt, .skin:nth-child(even) .txt { grid-row: 2; margin-top: 16px; }
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stats div:nth-child(odd) { border-left: 0; padding-left: 0; }
+  .stats div:nth-child(n+3) { border-top: 1px solid var(--line); }
+  .stats div:last-child { grid-column: 1 / -1; }
+  .hucla { grid-template-columns: 1fr; }
+  .player { grid-template-columns: auto minmax(0, 1fr); }
+  .player .cta { display: none; }
+  .builds a { grid-template-columns: 2.4em minmax(0, 1fr) auto; gap: 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { transition: none !important; }
+}
 </style>
 </head>
 <body>
+<canvas id="bg" aria-hidden="true"></canvas>
+<div class="grain" aria-hidden="true"></div>
+
+<header class="top">
+  <a class="mark" href="#intro">NetherFlow</a>
+  <nav aria-label="Sections">
+    <a href="#lyrics"><span>02</span> Lyrics</a>
+    <a href="#moods"><span>03</span> Moods</a>
+    <a href="#themes"><span>04</span> Themes</a>
+    <a href="#notes"><span>05</span> Notes</a>
+    <a href="#get"><span>06</span> Get it</a>
+    <a href="https://github.com/volodya-rua/NetherFlow">GitHub ↗</a>
+  </nav>
+</header>
+
 <main>
-  <img src="media/hero.webp" alt="NetherFlow: turn silence into song. Windows, Android, free and open source">
-  <h1>NetherFlow</h1>
-  <p class="lead">A free music player for Windows and Android that turns any song into a whole vibe. Full songs, lyrics hitting word by word, and backgrounds that actually move with the music. No account, no ads, no tracking.</p>
-  <div class="btns">
-    <a class="get" href="https://github.com/volodya-rua/NetherFlow/releases/latest">Download, it's free</a>
-    <a class="src" href="https://github.com/volodya-rua/NetherFlow">Source on GitHub</a>
-  </div>
-  <div class="shots">
-    <img src="screenshots/desktop-cosmos.png" alt="NetherFlow on Windows with the Cosmos background" loading="lazy">
-    <img src="screenshots/desktop-fractal.png" alt="NetherFlow on Windows with the Fractal background" loading="lazy">
-  </div>
+  <section class="intro" id="intro" data-track="Silence" data-w="1" data-c="1,.29,.11|1,.7,.12">
+    <span class="label top-l"><b>01</b> &nbsp;Silence &nbsp;·&nbsp; v1.2 &nbsp;·&nbsp; free &amp; open source</span>
+    <h1 aria-label="Turn silence into song">
+      <span class="big" aria-hidden="true"><span class="w">Turn</span></span>
+      <span class="big" aria-hidden="true"><span class="w">Silence</span></span>
+      <span class="into" aria-hidden="true"><span class="w">into</span> <span class="w">song.</span></span>
+    </h1>
+    <div class="under">
+      <div>
+        <p>A free music player for Windows and Android that turns any song into a whole vibe. Full songs, lyrics hitting word by word, and backgrounds that actually move with the music.</p>
+        <div class="meta label"><span>No account</span><span>No ads</span><span>No tracking</span><span>MIT</span></div>
+      </div>
+      <a class="cta" href="https://github.com/volodya-rua/NetherFlow/releases/latest">Download, it's free
+        <svg viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1v10M2.5 6.5 7 11l4.5-4.5M1 13h12" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></a>
+    </div>
+  </section>
+
+  <section class="lyrics" id="lyrics" data-track="Every word" data-w=".75" data-c="1,.5,.15|.95,.25,.45">
+    <div class="stick">
+      <div class="track label"><span><b>02</b> &nbsp;Every word</span></div>
+      <blockquote aria-label="Every word lands on the beat. You don't read it. You feel it.">
+        <span aria-hidden="true">every word lands</span>
+        <span class="l2" aria-hidden="true">right on the beat,</span>
+        <span class="l3" aria-hidden="true">you don't read it, you feel it.</span>
+      </blockquote>
+      <p class="cap"><b>Synced lyrics, word by word,</b> lined up to the exact recording that's playing. 19 animations from Spiral to Shatter, 13 font pairs, a karaoke mode with the voice turned down, and on Windows, Extreme lyrics that cut like a music video.</p>
+    </div>
+  </section>
+
+  <section class="moods" id="moods" data-track="27 backgrounds" data-w=".5">
+    <div class="stick">
+      <ol aria-label="Backgrounds">
+        <li data-c=".55,.6,.7|.85,.85,.9"><button type="button">Smoke</button></li>
+        <li data-c=".2,1,.6|.4,.5,1"><button type="button">Aurora</button></li>
+        <li data-c="1,.25,.55|.35,.4,1"><button type="button">Liquid</button></li>
+        <li data-c=".5,.3,1|1,.4,.7"><button type="button">Cosmos</button></li>
+        <li data-c=".35,.55,1|1,.75,.5"><button type="button">Galaxy</button></li>
+        <li data-c="1,.6,.1|.2,.9,.9"><button type="button">Kaleido</button></li>
+      </ol>
+      <div class="stage">
+        <img src="media/backgrounds/smoke.webp" alt="The Smoke background" loading="lazy" width="640" height="400">
+        <img src="media/backgrounds/aurora.webp" alt="The Aurora background" loading="lazy" width="640" height="400">
+        <img src="media/backgrounds/liquid.webp" alt="The Liquid background" loading="lazy" width="640" height="400">
+        <img src="media/backgrounds/cosmos.webp" alt="The Cosmos background" loading="lazy" width="640" height="400">
+        <img src="media/backgrounds/galaxy.webp" alt="The Galaxy background" loading="lazy" width="640" height="400">
+        <img src="media/backgrounds/kaleido.webp" alt="The Kaleido background" loading="lazy" width="640" height="400">
+        <span class="label" id="moodNo">01 / 06</span>
+      </div>
+      <div class="cap label"><span><b>03</b> &nbsp;27 backgrounds</span><p>They take their colours straight from the album cover. Low to Ultra, and Extreme on Windows.</p></div>
+    </div>
+  </section>
+
+  <section class="themes" id="themes" data-track="Six themes" data-w=".55" data-c="1,.29,.11|.95,.85,.7">
+    <div class="track label"><span><b>04</b> &nbsp;Six themes</span></div>
+    <h2>One tap,<br><em>a whole new app.</em></h2>
+    <article class="skin">
+      <figure><img src="media/themes/stickman.webp" alt="The Stickman theme" loading="lazy" width="1100" height="619"></figure>
+      <div class="txt"><span class="label"><b>01</b> Windows · Android</span><h3>Stickman</h3><p>Notebook paper and ink, stick figures dancing to the beat.</p></div>
+    </article>
+    <article class="skin">
+      <figure><img src="media/themes/spider.webp" alt="The Spider theme" loading="lazy" width="1100" height="619"></figure>
+      <div class="txt"><span class="label"><b>02</b> Windows · Android</span><h3>Spider</h3><p>A comic book at night, a masked hero swinging through the city, POW and WHAM on the beat.</p></div>
+    </article>
+    <article class="skin">
+      <figure><img src="media/themes/blocks.webp" alt="The Blocks theme" loading="lazy" width="1100" height="619"></figure>
+      <div class="txt"><span class="label"><b>03</b> Windows · Android</span><h3>Blocks</h3><p>A blocky world at dusk to fly over, stone buttons, an XP bar.</p></div>
+    </article>
+    <article class="skin">
+      <figure><img src="media/themes/tactical.webp" alt="The Tactical theme" loading="lazy" width="1100" height="619"></figure>
+      <div class="txt"><span class="label"><b>04</b> Windows · Android</span><h3>Tactical</h3><p>An agent next to the lyrics, a round timer, ACE and CLUTCH banners.</p></div>
+    </article>
+    <article class="skin">
+      <figure><img src="media/themes/ops.webp" alt="The Ops theme" loading="lazy" width="1100" height="619"></figure>
+      <div class="txt"><span class="label"><b>05</b> Windows · Android</span><h3>Ops</h3><p>A desert bomb site, smoke and tracers on the kick, the lyrics as a kill feed.</p></div>
+    </article>
+    <article class="skin">
+      <figure><img src="media/themes/redline.webp" alt="The Redline theme: a 3D race on a real circuit" loading="lazy" width="1100" height="619"></figure>
+      <div class="txt"><span class="label"><b>06</b> Windows · Extreme+</span><h3>Redline</h3><p>Real cars racing on real circuits in 3D, a rev counter round the play button.</p></div>
+    </article>
+  </section>
+
+  <section class="notes" id="notes" data-track="Liner notes" data-w=".26" data-c=".95,.3,.45|1,.7,.12">
+    <div class="track label"><span><b>05</b> &nbsp;Liner notes</span></div>
+    <h2>Everything<br><em>it does.</em></h2>
+    <div class="stats">
+      <div><b>27</b><span>backgrounds</span></div>
+      <div><b>19</b><span>lyric animations</span></div>
+      <div><b>46</b><span>moods</span></div>
+      <div><b>58</b><span>Extreme looks</span></div>
+      <div><b>10</b><span>people listening together</span></div>
+    </div>
+    <div class="cols">
+      <section><h3>Listening</h3><ul>
+        <li><b>Search anything</b> and play it in full, typos fixed as you type</li>
+        <li><b>Autoplay</b> that learns from what you skip and like</li>
+        <li><b>Smooth mix</b>: songs blend like a DJ set, on the beat</li>
+        <li><b>Equalizer</b>, a booster, and every song at its original loudness</li>
+        <li><b>Save for offline</b>, one song or a whole playlist</li>
+        <li><b>Import playlists</b> of any length from Spotify, Apple Music or YouTube</li>
+      </ul></section>
+      <section><h3>Lyrics</h3><ul>
+        <li><b>Synced</b> word by word to the exact recording</li>
+        <li><b>Extreme lyrics</b>: 58 looks, emoji, the music video behind</li>
+        <li><b>Sing</b>: karaoke, the voice turned down</li>
+        <li><b>Story clips</b> sized for your Instagram story</li>
+      </ul></section>
+      <section><h3>With your people</h3><ul>
+        <li><b>Listen together</b>: up to 10 people, same song, same moment, end-to-end encrypted</li>
+        <li><b>Phone ↔ PC sync</b> over your own Wi-Fi with a 6-number code</li>
+        <li><b>Discord status</b> with cover and progress</li>
+        <li><b>Your stats</b>: minutes, streaks, top songs, a card to share</li>
+      </ul></section>
+      <section><h3>Windows · Android</h3><ul>
+        <li>A <b>now-playing island</b> over every app on Windows</li>
+        <li>A <b>home-screen widget</b> and lyrics on the lock screen on Android</li>
+        <li><b>Updates in the app</b>, signed and checked first</li>
+        <li>Minimized, it draws nothing at all: <b>easy on your battery</b></li>
+      </ul></section>
+    </div>
+    <img class="phones" src="media/phones.webp" alt="NetherFlow on Android: the home screen on Smoke, the Spider theme, Settings, and the Blocks theme" loading="lazy" width="1600" height="900">
+  </section>
+
+  <section class="get" id="get" data-track="Press play" data-w=".34" data-c="1,.29,.11|1,.7,.12">
+    <div class="track label"><span><b>06</b> &nbsp;Press play</span></div>
+    <h2>Press<br><em>play.</em></h2>
+    <div class="builds">
+      <a href="https://github.com/volodya-rua/NetherFlow/releases/latest"><span class="label">WIN</span><span><strong>Windows</strong><small>Installer: just for you, no admin, updates itself. Or the portable .exe, nothing to install</small></span><span class="go">→</span></a>
+      <a href="https://github.com/volodya-rua/NetherFlow/releases/latest"><span class="label">LITE</span><span><strong>Windows Lite</strong><small>The same app without Extreme+, about 18 MB smaller</small></span><span class="go">→</span></a>
+      <a href="https://github.com/volodya-rua/NetherFlow/releases/latest"><span class="label">APK</span><span><strong>Android 7.0+</strong><small>NetherFlow-&lt;version&gt;.apk, updates itself, signed and checked</small></span><span class="go">→</span></a>
+      <a href="https://github.com/volodya-rua/NetherFlow"><span class="label">SRC</span><span><strong>Source code</strong><small>Every line, MIT licensed, on GitHub</small></span><span class="go">→</span></a>
+    </div>
+    <div class="hucla">
+      <h3>Hu<span>man</span> × Cla<span>ude</span></h3>
+      <div>
+        <p>NetherFlow is a HuCla build. The idea, the vision, how it should look and feel, that's me, Volodya.rua: every theme, every background, every build tested on my PC and my phone until it was right.</p>
+        <p>The code is mostly Claude, Anthropic's AI: the player, the lyric engine, the shaders (this page's background is one of them, running live), the 3D races, the Android app. Every commit Claude worked on says so.</p>
+      </div>
+    </div>
+    <footer class="foot">
+      <span>© 2026 Volodya.rua · MIT · no accounts, no analytics, nothing sent to me</span>
+      <nav aria-label="Links">
+        <a href="https://github.com/volodya-rua/NetherFlow">GitHub</a>
+        <a href="https://www.instagram.com/volodya.rua/">Instagram</a>
+        <a href="mailto:volodya.rua@gmail.com">Email</a>
+        <a href="https://github.com/volodya-rua/NetherFlow/blob/main/legal.html">Privacy &amp; terms</a>
+      </nav>
+    </footer>
+  </section>
 </main>
-<footer>MIT licensed · made by <a href="https://www.instagram.com/volodya.rua/">@volodya.rua</a> with Claude</footer>
+
+<div class="player" role="region" aria-label="Page player">
+  <div class="art" aria-hidden="true"></div>
+  <div class="mid">
+    <div class="now"><b>NetherFlow</b><span id="now">01 · Silence</span></div>
+    <time id="cur">0:00</time>
+    <input id="scrub" type="range" min="0" max="1000" value="0" aria-label="Where you are on the page">
+    <time id="dur">3:33</time>
+  </div>
+  <a class="cta" href="https://github.com/volodya-rua/NetherFlow/releases/latest">Get it</a>
+</div>
+
+<script>
+const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const SONG = 213; // the page plays as a 3:33 track
+const clock = s => Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0');
+const rgb = s => s.split('|').map(c => c.split(',').map(Number));
+
+// split the karaoke lines into words
+for (const line of $$('.lyrics blockquote span'))
+  line.innerHTML = line.textContent.split(' ').map(w => `<span class="w">${w}</span>`).join(' ');
+const words = $$('.lyrics .w');
+
+// the intro sings itself in, one word at a time
+$$('.intro .w').forEach((w, i) => setTimeout(() => w.classList.add('lit'), still ? 0 : 250 + i * 330));
+
+// --- the background: NetherFlow's Fractal shader, ported from the app ---
+const cv = $('#bg'), gl = cv.getContext('webgl', { antialias: false, alpha: false, powerPreference: 'low-power' });
+let u = {};
+if (gl) {
+  const fs = `precision mediump float;
+uniform vec2 R; uniform float T, W; uniform vec3 C0, C1, C2;
+void main(){
+  vec2 uv = (gl_FragCoord.xy - .5 * R) / R.y;
+  float t = T;
+  vec2 p = uv * 1.05;
+  float r = length(p), a = atan(p.y, p.x) + t * .3, seg = 6.2832 / 6.;
+  a = abs(mod(a, seg) - seg * .5);
+  vec2 z = vec2(cos(a), sin(a)) * r * (1.6 + .3 * sin(t * .5));
+  float acc = 0., last = 0., trap = 9.;
+  for (int i = 0; i < 9; i++) {
+    z = abs(z) / max(dot(z, z), .03) - vec2(.92 + .06 * sin(t * .7), .48 + .05 * cos(t * .5));
+    float m = length(z);
+    acc += exp(-abs(m - last) * 3.);
+    trap = min(trap, abs(z.y));
+    last = m;
+  }
+  acc /= 9.;
+  vec3 col = C0 + mix(C2, C1, acc) * pow(acc, 2.5) * .7 * W + mix(C1, vec3(1.), .5) * exp(-trap * 18.) * .35 * W;
+  col *= smoothstep(1.3, .1, r) * .8 + .2;
+  col *= smoothstep(1.35, .1, length(uv * vec2(.8, 1.))) * .85 + .15;
+  gl_FragColor = vec4(col, 1.);
+}`;
+  const prog = gl.createProgram();
+  for (const [type, src] of [[gl.VERTEX_SHADER, 'attribute vec2 p;void main(){gl_Position=vec4(p,0,1);}'], [gl.FRAGMENT_SHADER, fs]]) {
+    const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); gl.attachShader(prog, s);
+  }
+  gl.linkProgram(prog); gl.useProgram(prog);
+  gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+  gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+  for (const k of ['R', 'T', 'W', 'C0', 'C1', 'C2']) u[k] = gl.getUniformLocation(prog, k);
+  gl.uniform3f(u.C0, .043, .02, .012);
+}
+// ponytail: renders at 60% of the screen's pixels, 45% on phones (the glow hides it); lower it if a phone struggles
+const coarse = matchMedia('(pointer: coarse)').matches;
+const size = () => { const s = Math.min(devicePixelRatio, 2) * (coarse ? .45 : .6); cv.width = innerWidth * s | 0; cv.height = innerHeight * s | 0; gl?.viewport(0, 0, cv.width, cv.height); };
+size(); addEventListener('resize', size);
+
+// --- the playhead: one clock for scroll, words, moods, colours and the shader ---
+const sections = $$('main > section'), moods = $$('.moods li'), stageImgs = $$('.stage img');
+const scrub = $('#scrub'), cur = $('#cur'), now = $('#now'), moodNo = $('#moodNo'), lyr = $('.lyrics'), md = $('.moods');
+const prog01 = el => { const r = el.getBoundingClientRect(); return Math.min(1, Math.max(0, -r.top / (r.height - innerHeight))); };
+let col = [[1, .29, .11], [1, .7, .12]], want = col, w = 1, wantW = 1, lastY = scrollY, vel = 0, t0 = performance.now(), last = 0, seeking = false, moodAt = -1, trackAt = -1;
+
+moods.forEach((li, i) => li.querySelector('button').addEventListener('click', () =>
+  scrollTo({ top: md.offsetTop + (i + .5) / moods.length * (md.offsetHeight - innerHeight), behavior: still ? 'auto' : 'smooth' })));
+scrub.addEventListener('input', () => { seeking = true; scrollTo(0, scrub.value / 1000 * (document.documentElement.scrollHeight - innerHeight)); });
+scrub.addEventListener('change', () => seeking = false);
+
+function frame(ts) {
+  // read the layout first, then write
+  const max = document.documentElement.scrollHeight - innerHeight, p = max > 0 ? scrollY / max : 0;
+  let at = 0; sections.forEach((s, i) => { if (s.getBoundingClientRect().top < innerHeight * .5) at = i; });
+  const lp = prog01(lyr) * 1.15, mp = prog01(md);
+  vel += (Math.abs(scrollY - lastY) - vel) * .08; lastY = scrollY;
+
+  // player bar
+  if (!seeking) scrub.value = p * 1000;
+  scrub.style.setProperty('--p', p * 100 + '%');
+  cur.textContent = clock(p * SONG);
+  if (at !== trackAt) {
+    trackAt = at;
+    now.textContent = String(at + 1).padStart(2, '0') + ' · ' + sections[at].dataset.track;
+    if (sections[at].dataset.c) want = rgb(sections[at].dataset.c);
+    wantW = +sections[at].dataset.w;
+    $$('.top nav a').forEach(a => a.toggleAttribute('aria-current', a.hash === '#' + sections[at].id));
+  }
+
+  // karaoke: words light as the lyrics section plays through
+  words.forEach((w, i) => w.classList.toggle('lit', lp > (i + .5) / words.length));
+
+  // moods: the pinned stage flips through the backgrounds
+  const mi = Math.min(moods.length - 1, Math.floor(mp * moods.length));
+  if (mi !== moodAt) {
+    moodAt = mi;
+    moods.forEach((li, i) => li.classList.toggle('on', i === mi));
+    stageImgs.forEach((im, i) => im.classList.toggle('on', i === mi));
+    moodNo.textContent = String(mi + 1).padStart(2, '0') + ' / 0' + moods.length;
+  }
+  if (at === sections.indexOf(md)) want = rgb(moods[mi].dataset.c);
+
+  // the shader: blooms out of silence on load, swells when you scroll fast, takes each section's colours
+  if (gl) {
+    const k = still ? 1 : 1 - Math.exp(-(ts - (last || ts)) / 400); last = ts; // (eases over ~0.4 s, at any frame rate)
+    col = col.map((c, i) => c.map((v, j) => v + (want[i][j] - v) * k));
+    w += (wantW - w) * k;
+    const sec = (ts - t0) / 1000, bloom = still ? 1 : Math.min(1, sec / 2.2);
+    gl.uniform2f(u.R, cv.width, cv.height);
+    gl.uniform1f(u.T, still ? 4 : sec * .12 + scrollY * .0004);
+    gl.uniform1f(u.W, bloom * bloom * w * (1 + Math.min(vel / 60, .8)));
+    gl.uniform3fv(u.C1, col[0]); gl.uniform3fv(u.C2, col[1]);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
 </body>
 </html>
