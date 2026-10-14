@@ -113,8 +113,8 @@ they come out unsigned (as F-Droid wants them). Add `-PnfEmulator` to include x8
 ## Privacy
 
 NetherFlow has no accounts and no analytics, and sends nothing to its developer. Your settings, library and saved songs
-stay on your device. When you use it, it talks directly to the services above (and GitHub, to update yt-dlp), which see
-your IP address. The full [Privacy Policy](legal.html#privacy) is in the app.
+stay on your device. When you use it, it talks directly to the services above (and GitHub, to update yt-dlp: on Android
+only if you turn on "Update the downloader"), which see your IP address. The full [Privacy Policy](legal.html#privacy) is in the app.
 
 ## Legal
 

@@ -1,0 +1,1 @@
+Android: yt-dlp, the downloader for saving songs, updates itself from GitHub only if you turn on "Update the downloader" in Settings.

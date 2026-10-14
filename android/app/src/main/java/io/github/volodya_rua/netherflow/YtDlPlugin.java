@@ -19,8 +19,9 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 // Saving for offline: yt-dlp (Python, run by Chaquopy; see src/main/python/nf_dl.py) downloads a song's audio from
 // its YouTube upload, as YouTube has it. The page reads the file (convertFileSrc), keeps it, and has it removed.
 //   download({ id, key }) → { path, ext, dur }   ·   events "progress" { key, frac }
-//   cancel({ key })   ·   remove({ path })
-// yt-dlp looks for a newer release of itself once a day, and when a download fails (YouTube changes things).
+//   cancel({ key })   ·   remove({ path })   ·   setUpdates({ on })
+// Only if the user turns on "Update the downloader" (setUpdates; off till the page says so): yt-dlp looks for a newer
+// release of itself once a day, and when a download fails (YouTube changes things). Off, it's the one in the app.
 @CapacitorPlugin(name = "YtDl")
 public class YtDlPlugin extends Plugin {
     private static final long DAY = 24 * 3600_000L, RETRY_AFTER = 6 * 3600_000L;
@@ -28,6 +29,7 @@ public class YtDlPlugin extends Plugin {
     // downloads share this; making ready or updating yt-dlp (which re-imports it) has it alone
     private final ReentrantReadWriteLock ytdl = new ReentrantReadWriteLock();
     private final Map<String, Boolean> cancelled = new ConcurrentHashMap<>();
+    private volatile boolean updates; // the user's "Update the downloader"
 
     private PyObject py() {
         if (!Python.isStarted()) Python.start(new AndroidPlatform(getContext()));
@@ -40,16 +42,31 @@ public class YtDlPlugin extends Plugin {
         return dir;
     }
 
+    private void alone(Runnable r) { // (in the background, with no download running)
+        worker.execute(() -> {
+            ytdl.writeLock().lock();
+            try { r.run(); }
+            catch (Exception ignored) {}
+            finally { ytdl.writeLock().unlock(); }
+        });
+    }
+
+    private double sinceChecked() {
+        return System.currentTimeMillis() - py().callAttr("checked_at").toDouble() * 1000;
+    }
+
     @Override
     public void load() {
-        worker.execute(() -> { // (in the background, before anything's asked for: a stale copy fails)
-            ytdl.writeLock().lock();
-            try {
-                py().callAttr("prepare");
-                if (System.currentTimeMillis() - py().callAttr("checked_at").toDouble() * 1000 > DAY) py().callAttr("update");
-            } catch (Exception ignored) {
-            } finally { ytdl.writeLock().unlock(); }
-        });
+        alone(() -> py().callAttr("prepare")); // (before anything's asked for)
+    }
+
+    @PluginMethod
+    public void setUpdates(PluginCall call) {
+        updates = call.getBoolean("on", false);
+        // (each asks again when it runs: switched on and off quickly, the last word counts)
+        if (updates) alone(() -> { if (updates && sinceChecked() > DAY) py().callAttr("update"); });
+        else alone(() -> { if (!updates) py().callAttr("forget"); });
+        call.resolve();
     }
 
     // what the page calls back with: how far it's got, and whether to stop
@@ -93,8 +110,7 @@ public class YtDlPlugin extends Plugin {
                 try { r = fetch(id, key); }
                 catch (Exception e) {
                     // maybe YouTube changed something: a newer yt-dlp (looked for at most every 6 hours), then once more
-                    if (cancelled.containsKey(key) || System.currentTimeMillis() - py().callAttr("checked_at").toDouble() * 1000 < RETRY_AFTER
-                        || !update()) throw e;
+                    if (!updates || cancelled.containsKey(key) || sinceChecked() < RETRY_AFTER || !update()) throw e;
                     r = fetch(id, key);
                 }
                 call.resolve(r);

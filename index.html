@@ -1502,6 +1502,7 @@ function renderTextPanel() {
       'Your liked songs, playlists, history and stats, swapped between your phone and computer over your Wi-Fi: no account.')] : []),
     ...(native ? [settingRow('Lyrics on the lock screen', ['Off', 'On'], lockLyrics ? 'On' : 'Off', setLockLyrics, 'The line being sung under the song\'s name on the lock screen, in the notification, on the widget and on a car\'s display.')] : []),
     settingRow('Liked songs offline', ['Off', 'On Wi-Fi'], likedOffline ? 'On Wi-Fi' : 'Off', setLikedOffline, 'Songs you like are saved on this device by themselves, a few at a time, only on Wi-Fi: they play with no connection.'),
+    ...(native ? [settingRow('Update the downloader', ['Off', 'On'], ytdlUpdates ? 'On' : 'Off', setYtdlUpdates, 'Saving songs uses yt-dlp, which comes with the app. YouTube changes often, and in time an old yt-dlp can stop saving songs (the next NetherFlow update brings a newer one). On: NetherFlow downloads yt-dlp\'s newest release from GitHub (it looks about once a day, and when saving fails) and runs it. That code didn\'t come with the app, so it skips the checks the app store you got NetherFlow from made on it. Off: the one that came with the app.')] : []),
     settingRow('Folders on the home screen', ['Off', 'On'], folders ? 'On' : 'Off', setFolders, 'Liked songs, downloads and your playlists, under the buttons at the top of the home screen. Hidden while a song plays.'),
     ...(window.netherflowApp?.presence ? [settingRow('Discord status', ['Off', 'On'], discordOn ? 'On' : 'Off', setDiscord, 'The song you\'re playing on your Discord profile ("Listening to…", with its cover and a link to it), while the Discord app is open. Your friends there see it.')] : []),
     ...(window.netherflowApp?.island ? [settingRow('Island', ['On', 'Off'], islandOn ? 'On' : 'Off', setIsland, 'The song playing, in a small black island at the top middle of the screen, over every other app (hidden while NetherFlow itself is in front). Click it for the cover, the timeline, the volume and the controls.'),
@@ -1841,6 +1842,7 @@ let place = 2, calmTimer = 0;
 let islandOn = store.get('netherflow.island') !== 'Off', islandGlow = store.get('netherflow.islandglow') !== 'Off';
 let discordOn = store.get('netherflow.discord') === 'On'; // (Discord status: see setDiscord)
 let lockLyrics = store.get('netherflow.locklyrics') === 'On', likedOffline = store.get('netherflow.likedoff') === 'On'; // (Android extras: see setLockLyrics)
+let ytdlUpdates = store.get('netherflow.ytdlup') === 'On'; // (see setYtdlUpdates)
 const vizWanted = () => place === 2 || (islandOn && !!window.netherflowApp?.island);
 function keepAwake() {
   const on = (body.classList.contains('playing') || $('drive').open) && place > 0; // (Drive mode: the screen stays on, paused too)
@@ -4335,6 +4337,9 @@ const YtDl = native ? Capacitor.Plugins.YtDl : null;
 const dlFrac = new Map(); // download key → its progress callback
 window.netherflowApp?.onYtdlProgress?.(m => dlFrac.get(m.key)?.(m.frac));
 YtDl?.addListener('progress', m => dlFrac.get(m.key)?.(m.frac));
+// Android: yt-dlp updates itself from GitHub only if the user turns it on (off, the plugin uses the one in the app)
+function setYtdlUpdates(v) { ytdlUpdates = v === 'On'; store.set('netherflow.ytdlup', ytdlUpdates ? 'On' : ''); YtDl?.setUpdates({ on: ytdlUpdates }).catch(() => {}); renderTextPanel(); }
+YtDl?.setUpdates({ on: ytdlUpdates }).catch(() => {});
 async function downloadSong(job, vids, onFrac) {
   const key = Math.random().toString(36).slice(2);
   let cancelled = false, last;
@@ -4356,6 +4361,7 @@ async function downloadSong(job, vids, onFrac) {
         last = new Error(String(e.message || e).replace(/^Error invoking remote method '\w+': (Error: )?/, ''));
       }
     }
+    if (YtDl && !ytdlUpdates) last.message += ' (turning on "Update the downloader" in Settings may help)';
     throw last;
   } finally { dlFrac.delete(key); job.cancel = null; }
 }

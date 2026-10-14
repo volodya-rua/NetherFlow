@@ -1,8 +1,9 @@
 # NetherFlow (Android): saving a song for offline — yt-dlp downloads its audio from its YouTube upload, as YouTube has
 # it (usually Opus in WebM). Called by YtDlPlugin.java.
 #
-# yt-dlp comes with the app (src/main/python/yt_dlp), but YouTube changes often and old copies stop working, so the
-# newest release is fetched now and then into HOME (update()) and used in its place.
+# yt-dlp comes with the app (src/main/python/yt_dlp), but YouTube changes often and old copies stop working, so if the
+# user turns on "Update the downloader", the newest release is fetched now and then into HOME (update()) and used in
+# its place. Turned off, forget() goes back to the one that came with the app.
 import json
 import os
 import sys
@@ -17,12 +18,32 @@ RELEASES = 'https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest'
 # (YtDlPlugin runs prepare() and update() with no download running, and downloads several at once otherwise)
 
 
+def _unload():
+    # (with what came in its zip, e.g. yt_dlp_ejs, and its plugin finders, which outlive it in sys.meta_path: they'd
+    # keep reading a zip that may be gone)
+    sys.meta_path[:] = [f for f in sys.meta_path if not type(f).__module__.startswith('yt_dlp')]
+    for name, m in list(sys.modules.items()):
+        if name.split('.')[0] in ('yt_dlp', 'yt_dlp_plugins') or str(getattr(m, '__file__', '')).startswith(LATEST):
+            del sys.modules[name]
+    sys.path_importer_cache.pop(LATEST, None)
+
+
 def prepare():
     """Use the newest copy of yt_dlp there is (imported afresh if update() just fetched a newer one)."""
     if os.path.exists(LATEST) and LATEST not in sys.path:
         sys.path.insert(0, LATEST)
-        for name in [m for m in sys.modules if m == 'yt_dlp' or m.startswith('yt_dlp.')]:
-            del sys.modules[name]
+        _unload()
+    import yt_dlp  # noqa: F401
+
+
+def forget():
+    """Back to the yt_dlp that came with the app: the fetched one is deleted."""
+    if LATEST in sys.path:
+        sys.path.remove(LATEST)
+        _unload()
+    for f in (LATEST, CHECKED):
+        if os.path.exists(f):
+            os.remove(f)
     import yt_dlp  # noqa: F401
 
 
