@@ -16,3 +16,4 @@ vendor/yt-dlp/yt-dlp.exe
 .vscode/
 .idea/
 *.log
+assets-src/

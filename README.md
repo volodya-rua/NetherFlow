@@ -16,13 +16,15 @@ From the [latest release](https://github.com/volodya-rua/NetherFlow/releases/lat
 - **Windows**: `NetherFlow-Setup-<version>.exe`, the installer. It installs for you alone (no admin needed), with Start-menu
   and desktop shortcuts and an uninstaller in Windows' Settings. Or `NetherFlow-<version>-Windows.exe`, portable: it runs as it is,
   with nothing to install.
+- **Windows, Lite**: `NetherFlow-Lite-Setup-<version>.exe` and `NetherFlow-Lite-<version>-Windows.exe`: the same app without
+  Extreme+ (no Redline theme, its 3D races or their cars), about 18 MB smaller. It updates to Lite.
 - **Android**: `NetherFlow-<version>.apk` (Android 7.0 or newer).
 
 ## Features
 
 - **Search** songs, artists and albums, and play them in full: typos fixed, suggestions as you type, and YouTube Music's
   catalog alongside Apple's
-- **5 themes** that change the whole look at once (the top of the mood menu, or Settings): every button and panel, the
+- **6 themes** (5 on Android) that change the whole look at once (the top of the mood menu, or Settings): every button and panel, the
   colours, the faces, the cursor, the timeline, a backdrop of their own (drawn in full on Ultra and Extreme) and their own
   Extreme lyrics look. **Stickman**: notebook paper and ink, stick figures dancing to the beat on the timeline and one
   running along it. **Spider**: a comic book at night, a masked hero swinging through the city on twos, halftone dots, POW and WHAM on the beat, comic captions.
@@ -30,15 +32,19 @@ From the [latest release](https://github.com/volodya-rua/NetherFlow/releases/lat
   **Tactical**: an agent from VALORANT beside the lyrics (Riot Games' art, fetched as you use it), a round timer with the
   two teams up top, ACE and CLUTCH banners in a chorus, cut corners, signal red on navy, words on banners. **Ops**: a
   desert bomb site in the afternoon, blue doors and all, smoke grenades and tracers on the kick, a round timer between
-  the two teams, "Bomb has been planted" near the end, a crosshair, the lyrics as a kill feed
+  the two teams, "Bomb has been planted" near the end, a crosshair, the lyrics as a kill feed. **Redline** (Windows only, **Extreme+**): real cars at full throttle — 3D night races on real
+  circuits (Spa, Monza, Suzuka, Interlagos, the Nürburgring, Zandvoort, Imola, the Red Bull Ring: their real layouts,
+  heights, buildings, grandstands, barriers and forests) with real cars racing each other, filmed like a broadcast and cut
+  on the beat; while one gets ready, a night motorway in long-exposure light trails and rain. A rev counter round the play button, shift lights on the bass, a speedometer up top, the
+  timeline a lap, the lyrics in slanted racing type
 - **Synced lyrics**, word by word where available, with 19 lyric animations: Classic, Wave, Spiral, Shatter, Fireworks,
   Swarm, Black Hole, Cylinder, Globe, Helix, DNA, Tornado, Knot, Möbius, Ribbon, Orbit, Atom, Tunnel and Cube; lined up
   to YouTube Music's own timing for the very recording that plays
 - **27 animated backgrounds** (fractals, galaxies, a plasma globe, hyperbolic tilings and more) that take their colors from the album
-  cover, up to an Ultra quality setting (and Extreme on Windows); or a still **Gradient** in the same colors, the
+  cover, up to an Ultra quality setting (and Extreme and Extreme+ on Windows); or a still **Gradient** in the same colors, the
   lightest for a slower phone
 - **Extreme lyrics** (Windows, at Extreme quality): the lyrics cut like a music video or an Instagram lyric edit, every
-  word coming in as it's sung in 57 looks (chat bubbles, shattering glass, holographic foil, a slot machine, liquid filling the letters, label tape, grunge block letters, typewriter, decoding, extruded 3D, Y2K chrome, neon
+  word coming in as it's sung in 58 looks (chat bubbles, shattering glass, holographic foil, a slot machine, liquid filling the letters, label tape, grunge block letters, typewriter, decoding, extruded 3D, Y2K chrome, neon
   signs, a turning cube, a split-flap board, graffiti, a ransom-note collage, karaoke, a strobe and more), with film scratches, glitches, glow and light leaks on the beat.
   Mixed (a new look every few words) or one look of your choice; and all 1,595 of Microsoft's 3D Fluent emoji popping up by
   the words they fit ("fire", "moon", "dil"…) and the emoji in the lyrics themselves, which you can turn off. And when the song has an official music video, it plays behind the words, cut to the
@@ -127,8 +133,7 @@ they come out unsigned (as F-Droid wants them). Add `-PnfEmulator` to include x8
 
 NetherFlow has no accounts and no analytics, and sends nothing to its developer. Your settings, library and saved songs
 stay on your device. When you use it, it talks directly to the services above (GitHub too: to look for a newer
-NetherFlow, and to update yt-dlp, on Android only if you turn on "Update the downloader"; and valorant-api.com, only with
-the Tactical theme), which see your IP address. The full [Privacy Policy](legal.html#privacy) is in the app.
+NetherFlow, and to update yt-dlp, on Android only if you turn on "Update the downloader"; and valorant-api.com, only with the Tactical theme), which see your IP address. The full [Privacy Policy](legal.html#privacy) is in the app.
 
 ## Legal
 
@@ -145,6 +150,10 @@ the Tactical theme), which see your IP address. The full [Privacy Policy](legal.
 - The Tactical theme shows VALORANT's agents: NetherFlow was created under Riot Games' "Legal Jibber Jabber" policy using
   assets owned by Riot Games. Riot Games does not endorse or sponsor this project. The art isn't in this repository or
   under its license: the app fetches it from valorant-api.com while that theme is on.
+- Redline's 3D races are built from [© OpenStreetMap contributors](https://www.openstreetmap.org/copyright)' map data:
+  the circuits and what's round them (ODbL 1.0, as are `race/tracks.json` and `race/maps/`, made from it by
+  `tools/race-tracks.js`), with heights from NASA's SRTM (public domain) through OpenTopoData. The cars are CC BY 4.0 models from Sketchfab, credited in `race/cars.json` and the app (they come inside it); the cars' makers
+  don't endorse or sponsor NetherFlow.
 - The software is provided **as is**, without warranty of any kind (see the license).
 
 ## License
@@ -154,7 +163,7 @@ please give it a different name and icon so nobody mistakes it for the original.
 
 Third-party code in this repository keeps its own license: yt-dlp (The Unlicense) and certifi (MPL 2.0) in
 `android/app/src/main/python/`, and the 27 typefaces in `fonts/` (SIL Open Font License 1.1; Permanent Marker, Special
-Elite and Yellowtail under the Apache License 2.0), and Microsoft's Fluent Emoji in `emoji/` (MIT). The builds also include Electron (with Chromium, Node.js and FFmpeg),
+Elite and Yellowtail under the Apache License 2.0), and Microsoft's Fluent Emoji in `emoji/` (MIT), and three.js in `race/three/` (MIT). The builds also include Electron (with Chromium, Node.js and FFmpeg),
 Capacitor, Chaquopy (with Python), electron-updater and, on Windows, `yt-dlp.exe`, each under its own license. All license texts are in
 [`licenses/`](licenses); the full list of components is in the app under About › Licenses.
 

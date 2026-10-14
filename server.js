@@ -21,6 +21,14 @@ const FILES = {
 for (const f of fs.readdirSync(path.join(__dirname, 'licenses'))) FILES['/licenses/' + f] = ['licenses/' + f, 'text/plain; charset=utf-8'];
 for (const f of fs.readdirSync(path.join(__dirname, 'fonts'))) FILES['/fonts/' + f] = ['fonts/' + f, f.endsWith('.css') ? 'text/css' : 'font/woff2'];
 for (const f of fs.readdirSync(path.join(__dirname, 'emoji'))) FILES['/emoji/' + f] = ['emoji/' + f, f.endsWith('.webp') ? 'image/webp' : 'text/plain; charset=utf-8']; // (Extreme lyrics' emoji)
+// Redline's 3D races (race/: the renderer, three.js, the circuits, the cars; not in NetherFlow Lite)
+if (fs.existsSync(path.join(__dirname, 'race'))) (function race(dir) {
+  for (const e of fs.readdirSync(path.join(__dirname, dir), { withFileTypes: true })) {
+    const f = dir + '/' + e.name;
+    if (e.isDirectory()) race(f);
+    else FILES['/' + f] = [f, { js: 'text/javascript', json: 'application/json', glb: 'model/gltf-binary' }[e.name.split('.').pop()] || 'text/plain; charset=utf-8'];
+  }
+})('race');
 const get = (url, headers) => fetch(url, { headers, signal: AbortSignal.timeout(8000) }).then(r => r.text());
 const post = (url, body, headers) => fetch(url, { method: 'POST', body, headers, signal: AbortSignal.timeout(8000) }).then(r => r.text());
 const send = (res, code, body, type = 'application/json') => { res.writeHead(code, { 'Content-Type': type }); res.end(body); };

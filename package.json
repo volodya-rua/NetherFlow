@@ -1,7 +1,7 @@
 {
   "name": "netherflow",
   "productName": "NetherFlow",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "NetherFlow by Volodya.rua: search any song, hear it in full, read the lyrics in sync.",
   "author": "Volodya.rua",
   "license": "MIT",
@@ -13,7 +13,8 @@
     "android:web": "node -e \"const fs=require('fs');for(const to of ['www','android/app/src/main/assets/public']){fs.mkdirSync(to,{recursive:true});for(const f of ['index.html','lib.js','legal.html','frame-helper.js','logo.png'])fs.copyFileSync(f,to+'/'+f);for(const d of ['licenses','fonts'])fs.cpSync(d,to+'/'+d,{recursive:true})}\"",
     "android:sync": "npm run android:web && cap sync android",
     "android": "android-build.cmd",
-    "fetch-yt-dlp": "node tools/fetch-yt-dlp.js"
+    "fetch-yt-dlp": "node tools/fetch-yt-dlp.js",
+    "race:three": "node -e \"const fs=require('fs'),s='node_modules/three/',d='race/three/';for(const f of ['build/three.module.js','build/three.core.js'])fs.cpSync(s+f,d+f.split('/').pop());fs.cpSync(s+'LICENSE','licenses/three.js-MIT.txt');for(const f of ['loaders/GLTFLoader.js','utils/BufferGeometryUtils.js','utils/SkeletonUtils.js','libs/meshopt_decoder.module.js','postprocessing/EffectComposer.js','postprocessing/RenderPass.js','postprocessing/ShaderPass.js','postprocessing/MaskPass.js','postprocessing/Pass.js','postprocessing/UnrealBloomPass.js','postprocessing/OutputPass.js','shaders/CopyShader.js','shaders/LuminosityHighPassShader.js','shaders/OutputShader.js'])fs.cpSync(s+'examples/jsm/'+f,d+'addons/'+f)\""
   },
   "private": true,
   "devDependencies": {
@@ -22,7 +23,8 @@
     "@capacitor/cli": "8.5.3",
     "@capacitor/core": "8.5.3",
     "electron": "44.7.0",
-    "electron-builder": "26.15.3"
+    "electron-builder": "26.15.3",
+    "three": "0.186.1"
   },
   "build": {
     "appId": "io.github.volodya_rua.netherflow",
@@ -40,6 +42,7 @@
       "licenses/**",
       "fonts/**",
       "emoji/**",
+      "race/**",
       "icon.png"
     ],
     "directories": {

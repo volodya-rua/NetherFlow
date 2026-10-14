@@ -8,8 +8,8 @@ android {
         applicationId "io.github.volodya_rua.netherflow"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 5
-        versionName "1.1.0"
+        versionCode 6
+        versionName "1.2.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         // Python (Chaquopy) is native: built for 64-bit ARM phones (Python 3.12+ is 64-bit only); for an x86_64
         // emulator too with -PnfEmulator (on Arm translation, Python crashes)

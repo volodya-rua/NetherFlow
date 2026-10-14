@@ -1,6 +1,7 @@
 // Gives the page its window buttons (it draws its own; the native ones don't match the look).
 const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('netherflowApp', {
+  lite: process.argv.includes('--nf-lite'), // NetherFlow Lite: no Extreme+ (see main.js)
   win: action => ipcRenderer.send('win', action), // 'min' | 'max' | 'close'
   onMaximized: cb => ipcRenderer.on('maximized', (_, on) => cb(on)),
   awake: on => ipcRenderer.send('awake', !!on), // keep the screen on (while a song plays)

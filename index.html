@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>NetherFlow</title>
+<script type="importmap">{ "imports": { "three": "./race/three/three.module.js", "three/addons/": "./race/three/addons/" } }</script><!-- (Redline's 3D races: see race/race.js) -->
 <link rel="icon" href="logo.png">
 <link rel="stylesheet" href="fonts/pairs.css"> <!-- (the lyric font pairs: each loaded only once it's used) -->
 <link rel="stylesheet" href="fonts/fonts.css"> <!-- the typefaces, bundled: no request to Google, and they work offline -->
@@ -988,8 +989,7 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
 .fs-btn .i-exit, .fs .fs-btn .i-enter { display: none; }
 .fs .fs-btn .i-exit { display: inline; }
 
-/* NetherFlow not in front (setPlace): every animation paused — behind another app only the lyrics keep up (calm), away
-   nothing moves at all */
+/* NetherFlow away (setPlace: minimized, hidden): every animation paused */
 .still *, .still *::before, .still *::after { animation-play-state: paused !important; }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1189,6 +1189,67 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
 .skin-ops .top-hit { border-radius: 4px; background: rgba(13,17,21,.7); box-shadow: inset 0 2px 0 var(--a); }
 .skin-ops .top-hit .go { border-radius: 6px; }
 
+/* — Redline: carbon fibre and racing red, slanted wide type; a rev counter round the play button and shift lights that rev
+     with the bass; a speedometer and the gear up top; the timeline a lap; on Extreme+, real car footage cut to the beat — */
+.sk-redline { background: radial-gradient(circle at 70% 120%, #ff1e2d66, transparent 60%), repeating-linear-gradient(45deg, #17181c 0 2px, #0b0c0e 2px 4px); color: #fff; border-radius: 4px; }
+.skin-card small { margin-top: -3px; font: 700 8px/1 'Chakra Petch', sans-serif; letter-spacing: .14em; color: #ff1e2d; }
+.sk-redline b { font: 900 12px/1 'Unbounded', sans-serif; font-style: oblique 10deg; letter-spacing: .02em; text-transform: uppercase; }
+.skin-redline { --poster: 'Unbounded', sans-serif; --serif: 'Chakra Petch', sans-serif; --mono: 'Chakra Petch', sans-serif;
+  --carbon: repeating-linear-gradient(45deg, rgba(255,255,255,.035) 0 2px, transparent 2px 4px), repeating-linear-gradient(-45deg, rgba(0,0,0,.35) 0 2px, transparent 2px 4px), #101114;
+  --slant: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%); }
+.skin-redline, .skin-redline .lbl { font-weight: 500; letter-spacing: .1em; }
+/* (slanted like racing type: the wide face has no italic of its own, and none's made up for it — so it's leaned) */
+.skin-redline :is(.cur, .prev, .msg, .it-title, .cs-title, .cs-line, .ap-name, .top-hit b, .q) { transform: skewX(-10deg); }
+.skin-redline :is(.title, .cta, .brand) { font-style: italic; }
+.skin-redline :is(.row b, .acard b, .album b, .chip, .sm-head b, .eq-top h3, .consent h2, .home-now b, .mrow.now .mname, .dv-line) { font-style: normal; font-weight: 500; letter-spacing: .01em; }
+.skin-redline .msg { font-size: clamp(34px, 9vw, 150px); line-height: .98; }
+.skin-redline .msg em { font: 500 .5em/1.2 'Chakra Petch', sans-serif; text-transform: uppercase; letter-spacing: .14em; }
+.skin-redline :is(.moods, .eq, .smenu, .consent) { background: var(--carbon); border: 0; border-radius: 4px; box-shadow: inset 0 3px 0 var(--a), 0 0 0 1px rgba(255,255,255,.08), 0 30px 80px rgba(0,0,0,.7); }
+.skin-redline :is(.seg button, .presets button, .chip, .stepper .step, .nudge button, .mchip) { border: 0; border-radius: 0; background: rgba(255,255,255,.07); clip-path: var(--slant); padding-left: 16px; padding-right: 16px; text-transform: uppercase; }
+.skin-redline :is(.seg button, .presets button, .chip, .stepper .step, .mchip):hover { background: rgba(255,30,45,.28); }
+.skin-redline :is(.seg button, .presets button, .mchip)[aria-pressed=true] { background: var(--a); color: #fff; }
+.skin-redline .pill { border-radius: 0; clip-path: var(--slant); background: var(--a); color: #fff; padding-left: 26px; padding-right: 26px; }
+.skin-redline .pill.ghost { background: rgba(255,255,255,.08); color: #fff; box-shadow: none; }
+.skin-redline .row:hover, .skin-redline .row:focus-visible { background: linear-gradient(100deg, var(--a) 0 55%, transparent); color: #fff; }
+.skin-redline .row:hover .idx, .skin-redline .ritem:has(.row:hover, .row:focus-visible) .rmore { color: #fff; }
+.skin-redline .toast { background: #000; color: #ffd400; border-radius: 0; clip-path: var(--slant); padding-left: 26px; padding-right: 26px; font: 700 12px 'Chakra Petch', sans-serif; letter-spacing: .14em; text-transform: uppercase; }
+.skin-redline .core { box-shadow: 0 0 0 3px #0b0c0e, 0 0 0 5px rgba(255,255,255,.16), 0 0 26px rgba(255,30,45,.55); }
+.skin-redline .badge { display: none; }
+.skin-redline :is(.search, .about) { background: var(--carbon); }
+.skin-redline .top-hit { border: 0; border-radius: 0; clip-path: polygon(14px 0, 100% 0, calc(100% - 14px) 100%, 0 100%); background: linear-gradient(100deg, rgba(255,30,45,.22), rgba(255,255,255,.04)); }
+.skin-redline .cur .w.now > span { filter: drop-shadow(0 0 .14em rgba(255,30,45,.7)); }
+.skin-redline .cur .w.em > span { font-family: 'Chakra Petch', sans-serif; text-transform: uppercase; }
+.skin-redline ::-webkit-scrollbar-thumb { border-radius: 0; }
+/* the rev counter round the play button: its scale, the red zone, the needle on the bass (--rev, set every frame) */
+.tacho, .needle { display: none; }
+.skin-redline .tacho { display: block; position: absolute; inset: 0; border-radius: 50%; pointer-events: none;
+  background: conic-gradient(from -130deg, transparent 0 200deg, #ff1e2d 200deg 260deg, transparent 260deg), repeating-conic-gradient(from -130deg, rgba(255,255,255,.8) 0 1.4deg, transparent 1.4deg 26deg);
+  -webkit-mask: radial-gradient(closest-side, transparent 80%, #000 82% 97%, transparent 98%), conic-gradient(from -130deg, #000 0 261.4deg, transparent 261.4deg);
+  -webkit-mask-composite: source-in; mask-composite: intersect; }
+.skin-redline .needle { display: block; position: absolute; z-index: 1; left: 50%; top: 50%; width: 3px; height: 47px; margin-left: -1.5px; border-radius: 2px; pointer-events: none;
+  background: linear-gradient(transparent 0 54%, #ff1e2d 54%); transform-origin: 50% 0; rotate: calc(50deg + var(--rev, .06) * 260deg); filter: drop-shadow(0 0 4px rgba(255,30,45,.9)); }
+/* the shift lights over the header, lighting up with the bass */
+.shift { display: none; }
+.skin-redline .shift { display: flex; gap: 5px; position: fixed; z-index: 3; top: 7px; left: 50%; translate: -50% 0; pointer-events: none; }
+.shift i { width: 9px; height: 9px; border-radius: 50%; background: var(--c); opacity: clamp(.1, calc((var(--rev, 0) * 15.5 - var(--i)) * 1.4), 1); box-shadow: 0 0 8px var(--c); }
+/* the speed and the gear, in the header's middle */
+.dash { display: none; }
+.has-dash .mood > :not(.dash) { display: none; }
+.has-dash .dash { display: flex; align-items: baseline; gap: 9px; }
+.dash .d-gear { font: 900 24px/1 'Unbounded', sans-serif; color: var(--a); min-width: 1.1ch; text-align: center; }
+.dash .d-spd { font: 900 26px/1 'Orbitron', sans-serif; min-width: 3.2ch; text-align: right; color: #fff; font-variant-numeric: tabular-nums; }
+.dash small { font: 700 9px 'Chakra Petch', sans-serif; letter-spacing: .14em; opacity: .7; }
+/* Redline on Extreme+: its 3D race under everything (see "Redline's races"), darker behind the lyrics */
+.race { position: fixed; inset: 0; z-index: 1; pointer-events: none; opacity: 0; transition: opacity .6s; }
+.race canvas { display: block; width: 100%; height: 100%; }
+.vid-race .race { opacity: 1; } /* (out of focus, held on its last frame like the other backdrops: not gone) */
+.race::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse 70% 60% at 35% 50%, rgba(0,0,0,.3), transparent 75%), linear-gradient(transparent 60%, rgba(0,0,0,.5)); }
+.race-tag { position: absolute; left: 5vw; bottom: 17vh; display: grid; gap: 6px; padding: 10px 22px 12px 16px; border-left: 5px solid var(--a); background: linear-gradient(90deg, rgba(6,7,8,.82), rgba(6,7,8,0)); color: #fff; opacity: 0; transform: translateX(-30px) skewX(-10deg); transition: opacity .4s, transform .5s cubic-bezier(.2,.9,.2,1); }
+.race-tag.on { opacity: 1; transform: none skewX(-10deg); }
+.race-tag b { font: 900 clamp(22px, 3.4vw, 46px)/1 'Unbounded', sans-serif; text-transform: uppercase; letter-spacing: .02em; }
+.race-tag span { font: 700 12px 'Chakra Petch', sans-serif; letter-spacing: .22em; text-transform: uppercase; color: var(--b); }
+.race-tag small { font: 500 10px 'Chakra Petch', sans-serif; letter-spacing: .06em; opacity: .55; } /* (OpenStreetMap's credit: the circuit and what's round it are its map data) */
+
 /* — the themes' extras (see "the themes' extras" in the script) — */
 /* Tactical's agent (Riot Games' art) by the lyrics: its backdrop art behind it, a glow in its colours, sliding in */
 .agent { display: none; position: fixed; z-index: 1; right: 3vw; bottom: 0; height: 94vh; aspect-ratio: .9; pointer-events: none; }
@@ -1250,6 +1311,7 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
 <div class="grain" aria-hidden="true"></div>
 <div id="agent" class="agent" aria-hidden="true"><img class="ag-bg" alt=""><img class="ag-pt" alt=""></div><!-- the Tactical theme's agent: Riot Games' art (see "the themes' extras") -->
 <div class="vedit" id="vedit" inert aria-hidden="true"><div id="ytv"></div></div><!-- Extreme lyrics: the song's music video, cut like an edit -->
+<div class="race" inert aria-hidden="true"><canvas id="race"></canvas><div class="race-tag" id="raceTag"><b></b><span></span><small>Map data © OpenStreetMap contributors</small></div></div><!-- Redline on Extreme+: a 3D race (race/race.js) -->
 <canvas id="kin" aria-hidden="true"></canvas><!-- Extreme lyrics: the music video (over the backdrop, under everything else) -->
 <canvas id="viz" aria-hidden="true"></canvas><!-- the beat ring: the whole window, so it's never cut off at the edge of the lyrics area -->
 <div class="screen" id="screen" inert><div id="yt"></div><div id="ytb"></div></div>
@@ -1277,7 +1339,7 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
 <div class="frame">
   <header class="top">
     <button id="brand" class="brand" data-legal="" aria-label="About NetherFlow"><img class="brand-mark" src="logo.png" alt="">NetherFlow<sup>FM</sup></button>
-    <button id="mood" class="mood lbl" popovertarget="moods" title="Pick a mood (M cycles)"><i></i><span>Mood</span> <b id="moodName">Ember</b><span class="hud" aria-hidden="true"><i class="hud-l"></i><b class="hud-sl">0</b><b class="hud-t">0:00</b><b class="hud-sr">0</b><i class="hud-r"></i></span></button>
+    <button id="mood" class="mood lbl" popovertarget="moods" title="Pick a mood (M cycles)"><i></i><span>Mood</span> <b id="moodName">Ember</b><span class="hud" aria-hidden="true"><i class="hud-l"></i><b class="hud-sl">0</b><b class="hud-t">0:00</b><b class="hud-sr">0</b><i class="hud-r"></i></span><span class="dash" aria-hidden="true"><b class="d-gear">N</b><b class="d-spd">0</b><small>KM/H</small></span></button>
     <nav class="files lbl">
       <!-- Search: a lens with a sound wave in it. Library: a record sliding out of its sleeve. -->
       <button id="openSearch" class="link hot nav-ico" aria-label="Search (/)" title="Search (/)"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="7"/><path d="M15.6 15.6L21 21M7.5 9.5v2M10.5 7.5v6M13.5 9v3"/></svg></button>
@@ -1329,6 +1391,7 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
           <path id="loop" d="M50,50 m-40,0 a40,40 0 1,1 80,0 a40,40 0 1,1 -80,0" fill="none"/>
           <text><textPath href="#loop" textLength="250" lengthAdjust="spacing">PLAY IT LOUD ✦ NETHERFLOW ✦ PLAY IT LOUD ✦ NETHERFLOW ✦</textPath></text>
         </svg></span>
+        <span class="tacho" aria-hidden="true"></span><span class="needle" aria-hidden="true"></span>
         <span class="core">
           <i id="art"></i>
           <svg class="i-play" viewBox="0 0 24 24"><path d="M6 3.5v17a1 1 0 0 0 1.5.86l14-8.5a1 1 0 0 0 0-1.72l-14-8.5A1 1 0 0 0 6 3.5z"/></svg>
@@ -1363,7 +1426,7 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
     </div>
   </footer>
 </div>
-<div id="rbanner" class="rbanner" aria-hidden="true"></div><div id="sfx" class="sfxs" aria-hidden="true"></div><!-- the themes' round banners, and Spider's sound effects -->
+<div id="rbanner" class="rbanner" aria-hidden="true"></div><div id="shift" class="shift" aria-hidden="true"></div><div id="sfx" class="sfxs" aria-hidden="true"></div><!-- the themes' round banners, and Spider's sound effects -->
 
 <dialog id="story" class="consent story" aria-label="Your story">
   <div class="kicker lbl">Your story</div>
@@ -1551,6 +1614,7 @@ for (const ev of ['dragstart', 'dragover', 'drop']) addEventListener(ev, e => e.
 // graphics card's setting). Extreme (computers only): the same with no cap short of a 4K screen's, and the lyrics' own
 // Extreme option (the music video: see "Extreme lyrics").
 const BGQ = {
+  'Extreme+': { res: 2, maxPx: 3.4e7, oct: 7, fx: 3, every: 1, grain: .04 }, // (Extreme, and each theme's most demanding extras: Redline's car footage)
   Extreme: { res: 2, maxPx: 3.4e7, oct: 7, fx: 3, every: 1, grain: .04 },
   Ultra: { res: 2, maxPx: 8.3e6, oct: 7, fx: 3, every: 1, grain: .04 },
   High: { res: 1, maxPx: 4.2e6, oct: 6, fx: 2, every: 1, grain: .05, dpr: 2 },
@@ -1563,9 +1627,15 @@ const BGQ = {
 const modest = (navigator.hardwareConcurrency || 8) <= 4 || (navigator.deviceMemory || 8) <= 4;
 // (Extreme: a computer's alone — a phone's graphics chip is no match for it)
 const pcOnly = !native && !coarse;
-const BGQ_SHOWN = Object.keys(BGQ).filter(q => q !== 'Extreme' || pcOnly);
-let bgq = [store.get('netherflow.bg'), store.get('netherflow.bgauto')].find(q => BGQ_SHOWN.includes(q)) || (modest ? 'Low' : 'Balanced');
-function setBgq(name) { bgq = name; store.set('netherflow.bg', name); resize(); applyKin(); renderMoodMenu(); }
+const fullPc = pcOnly && !window.netherflowApp?.lite; // (NetherFlow Lite, on Windows: everything but Extreme+ — Redline's race and its cars)
+const BGQ_SHOWN = Object.keys(BGQ).filter(q => q === 'Extreme+' ? fullPc : !q.startsWith('Extreme') || pcOnly);
+const extremeQ = () => bgq === 'Extreme' || bgq === 'Extreme+';
+let bgq = [store.get('netherflow.bg'), store.get('netherflow.bgauto')].map(q => q === 'Extreme+' && !fullPc ? 'Extreme' : q).find(q => BGQ_SHOWN.includes(q)) || (modest ? 'Low' : 'Balanced'); // (Extreme+ in Lite: Extreme)
+function setBgq(name) {
+  bgq = name; store.set('netherflow.bg', name);
+  if (SKINS[skin]?.needs && SKINS[skin].needs !== name) { toast(`${skin} is for ${SKINS[skin].needs} only: back to NetherFlow's own look`); setSkin(''); }
+  resize(); applyKin(); renderMoodMenu();
+}
 // Extreme lyrics (Extreme quality only): the lyrics cut like a music video (see "music video")
 let kinetic = store.get('netherflow.kinetic') === 'On';
 const kin = { on: false, gl: null, shot: null, t0: performance.now() }; // (its state: see "music video")
@@ -1576,25 +1646,25 @@ const KIN_NAMES = { slam: 'Slam', echo: 'Echo', sketch: 'Sketch', marker: 'Marke
   arcade: 'Arcade', graffiti: 'Graffiti', collage: 'Collage', ring: 'Ring', slice: 'Slice', focus: 'Focus', karaoke: 'Karaoke', spotlight: 'Spotlight',
   mirror: 'Mirror', jelly: 'Jelly', captions: 'Captions', glass: 'Music app', coverfill: 'Cover cut-out', outline: 'Outline', dreamy: 'Dreamy', velocity: 'Velocity',
   shatter: 'Shatter', dust: 'Particles', fontmix: 'Font mix', cinema: 'Cinematic', slot: 'Slot machine', texts: 'Texts', label: 'Label maker', holo: 'Holographic',
-  liquid: 'Liquid', swirl: 'Swirl', story: 'Story text', acid: 'Acid green', doodle: 'Doodle', comic: 'Comic', blocks: 'Blocks', tactical: 'Tactical', killfeed: 'Kill feed' };
+  liquid: 'Liquid', swirl: 'Swirl', story: 'Story text', acid: 'Acid green', doodle: 'Doodle', comic: 'Comic', blocks: 'Blocks', tactical: 'Tactical', killfeed: 'Kill feed', speed: 'Speed' };
 let kinLook = KIN_NAMES[store.get('netherflow.kinlook')] ? store.get('netherflow.kinlook') : 'Mixed';
 function setKinLook(v) { kinLook = KIN_NAMES[v] ? v : 'Mixed'; store.set('netherflow.kinlook', kinLook === 'Mixed' ? '' : kinLook); kin.shot = null; renderMoodMenu(); }
 // and its emoji, on or off
 let kinEmojiOn = store.get('netherflow.kinemoji') !== 'Off';
 // and the song's music video under them, cut like an edit (see "the music video, cut like an edit")
 let vEditOn = store.get('netherflow.vedit') !== 'Off';
-function setVEdit(v) { vEditOn = v === 'Edit'; store.set('netherflow.vedit', vEditOn ? '' : 'Off'); if (!vEditOn) vedStop(); renderMoodMenu(); }
+function setVEdit(v) { vEditOn = v === 'On'; store.set('netherflow.vedit', vEditOn ? '' : 'Off'); if (!vEditOn) vedStop(); renderMoodMenu(); }
 function setKinEmoji(v) { kinEmojiOn = v === 'On'; store.set('netherflow.kinemoji', kinEmojiOn ? '' : 'Off'); renderMoodMenu(); }
 function setKinetic(v) { kinetic = v === 'Music video'; store.set('netherflow.kinetic', kinetic ? 'On' : ''); applyKin(); renderMoodMenu(); }
 
 // ---------- background theme (mood menu): what the backdrop draws. The mood picks its colors. ----------
 // The shader draws all but Gradient and Cover (both CSS: see PLAIN). The index is the shader's style number (themeNo).
 const THEMES = ['Smoke', 'Aurora', 'Liquid', 'Lava', 'Rings', 'Nebula', 'Prism', 'Silk', 'Mesh', 'Fireflies', 'Black Hole', 'Tunnel', 'Storm', 'Kaleido', 'Gyroid', 'Mandala', 'Fractal', 'Julia', 'Crystal', 'Cosmos', 'Galaxy', 'Plasma', 'Ribbons', 'Synapse', 'Halo', 'Bloom', 'Hyperbolic', 'Gradient', 'Cover',
-  'Stickman', 'Spider', 'Blocks', 'Tactical', 'Ops'];
+  'Stickman', 'Spider', 'Blocks', 'Tactical', 'Ops', 'Redline'];
 // (the backgrounds the shader doesn't draw: Gradient, plain CSS; Cover, the album cover blurred, CSS too)
 const PLAIN = new Set(['Gradient', 'Cover']);
 // (the themes' own backdrops: in the list only while their theme is on — see SKINS)
-const SCENES = new Set(['Stickman', 'Spider', 'Blocks', 'Tactical', 'Ops']);
+const SCENES = new Set(['Stickman', 'Spider', 'Blocks', 'Tactical', 'Ops', 'Redline']);
 const ownTheme = () => { const t = store.get('netherflow.theme'); return THEMES.includes(t) && !SCENES.has(t) ? t : 'Smoke'; };
 let theme = ownTheme();
 function showTheme(name) {
@@ -1640,12 +1710,21 @@ const SKINS = {
     font: { poster: "'Black Ops One'", serif: "'Chakra Petch'", lh: 1.06 }, bar: 'Ops',
     looks: ['killfeed', 'decode', 'typewriter', 'track', 'stack', 'slam'], badge: 'GO GO GO ✦ NETHERFLOW ✦ GO GO GO ✦ NETHERFLOW ✦',
     msg: ['Go go go', 'into song'] },
+  Redline: { pc: true, needs: 'Extreme+', note: 'Extreme+ only (picking it sets Extreme+). Real cars at full throttle: 3D night races on real circuits (their real hills, buildings, grandstands and barriers), filmed like a broadcast and cut to the beat; a night motorway in light trails while one gets ready. A rev counter round the play button, shift lights on the bass, a speedometer up top, the timeline a lap',
+    pal: { name: 'Redline', bg: '#060708', a: '#ff1e2d', b: '#18c8ff', ink: '#f5f6f7', fx: [1, 1, 1, 1] },
+    font: { poster: "'Unbounded'", serif: "'Chakra Petch'", lh: 1.08 }, bar: 'Lap',
+    looks: ['speed', 'velocity', 'slam', 'split', 'track', 'extrude', 'slice'], badge: 'FULL THROTTLE ✦ REDLINE ✦',
+    msg: ['Floor it', 'into the song'] },
 };
-let skin = SKINS[store.get('netherflow.skin')] ? store.get('netherflow.skin') : '';
+// (pc: a computer's alone — Redline, whose full self is on Extreme+, which a phone hasn't)
+const SKIN_LIST = Object.keys(SKINS).filter(k => fullPc || !SKINS[k].pc);
+let skin = SKIN_LIST.includes(store.get('netherflow.skin')) ? store.get('netherflow.skin') : '';
+if (SKINS[skin]?.needs && SKINS[skin].needs !== bgq) skin = '';
 // (the extras' state: see "the themes' extras")
 const RIOT_NOTICE = 'NetherFlow was created under Riot Games\' "Legal Jibber Jabber" policy using assets owned by Riot Games. Riot Games does not endorse or sponsor this project.';
 const agents = { list: null, asking: null, cur: null }, banner = { sec: null, n: 0, bomb: '', timer: 0 };
 let agentPick = store.get('netherflow.agent') || '', hudLast = '', sfxLast = 0;
+const race = { m: null, loading: false, show: false, key: '', tagged: '', status: '' }; // (Redline's race: see "Redline's races"; here, before Settings first asks after it)
 const BADGE = 'PLAY IT LOUD ✦ NETHERFLOW ✦ PLAY IT LOUD ✦ NETHERFLOW ✦';
 // (Blocks: a 16×16 texture, each texel one of these shades at random — the same every time — for the stone buttons and
 // the dirt behind full pages)
@@ -1668,7 +1747,9 @@ function applySkin() {
   msg.replaceChildren(m1, el('br'), el('em', '', m2));
 }
 function setSkin(name) {
-  skin = SKINS[name] ? name : ''; store.set('netherflow.skin', skin); store.set('netherflow.skinbg', '');
+  const need = SKINS[name]?.needs;
+  if (need && bgq !== need && SKIN_LIST.includes(name)) { bgq = need; store.set('netherflow.bg', need); resize(); applyKin(); } // (a theme for one quality: that quality on)
+  skin = SKIN_LIST.includes(name) ? name : ''; store.set('netherflow.skin', skin); store.set('netherflow.skinbg', '');
   applySkin(); applyMood(); applyFontPair();
   kin.shot = null; kin.recent = []; fxDirty = true; fxGround = null; skinExtras();
   renderMoodMenu(); if ($('textPanel').matches(':popover-open')) renderTextPanel();
@@ -1886,9 +1967,10 @@ function updShow() { $('textPanel').querySelector('.upd')?.replaceWith(updRow())
 function renderTextPanel() {
   if (!upd.state || (upd.state === 'none' && Date.now() - (+store.get('netherflow.updchecked') || 0) > 3600e3)) setTimeout(() => updCheck(), 300); // (looked for again when Settings opens)
   $('textPanel').replaceChildren(
-    settingRow('Theme', ['NetherFlow', ...Object.keys(SKINS)], skin || 'NetherFlow', v => setSkin(v === 'NetherFlow' ? '' : v),
+    settingRow('Theme', ['NetherFlow', ...SKIN_LIST], skin || 'NetherFlow', v => setSkin(v === 'NetherFlow' ? '' : v),
       'The whole look at once: every button and panel, the colours, the background, the timeline, the lyrics\' faces and the cursor. ' +
-      Object.entries(SKINS).map(([k, s]) => `${k}: ${s.note.charAt(0).toLowerCase() + s.note.slice(1)}.`).join(' ')),
+      SKIN_LIST.map(k => `${k}: ${SKINS[k].note.charAt(0).toLowerCase() + SKINS[k].note.slice(1)}.`).join(' ')),
+    ...(skin === 'Redline' ? [raceRow()] : []),
     ...(skin === 'Tactical' && agents.list ? [settingRow('Agent', ['Each song', ...agents.list.map(a => a.name)], agentPick || 'Each song', setAgent,
       'The agent by the lyrics: a new one for each song, or always the one you pick. ' + RIOT_NOTICE)] : []),
     updRow(),
@@ -2088,13 +2170,14 @@ const SKIN_ICONS = {
   Blocks: '<svg viewBox="0 0 24 24" stroke="none" shape-rendering="crispEdges"><path d="m12 3 8.5 4.6L12 12.2 3.5 7.6z" fill="#74b83c"/><path d="m3.5 7.6 8.5 4.6v9.3l-8.5-4.6z" fill="#8a5a2c"/><path d="m20.5 7.6-8.5 4.6v9.3l8.5-4.6z" fill="#664020"/><path d="m3.5 7.6 8.5 4.6 8.5-4.6v2.2L12 14.4 3.5 9.8z" fill="#5c9a2c"/></svg>',
   Tactical: '<svg viewBox="0 0 24 24"><path d="M3.5 9V3.5H9M15 3.5h5.5V9M20.5 15v5.5H15M9 20.5H3.5V15"/><path d="m12 7.5 4.5 4.5-4.5 4.5L7.5 12z" fill="currentColor" stroke="none"/></svg>',
   Ops: '<svg viewBox="0 0 24 24"><path d="M12 2.5V9M12 15v6.5M2.5 12H9M15 12h6.5"/><circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none"/></svg>',
+  Redline: '<svg viewBox="0 0 24 24"><path d="M3.5 17a8.5 8.5 0 1 1 17 0"/><path d="M17.2 9.6l1.2-1.2M12 5.5V4M6.8 9.6 5.6 8.4" stroke-width="1.4"/><path d="m12 17 5.2-5" stroke="#ff1e2d" stroke-width="2"/><circle cx="12" cy="17" r="1.5" fill="currentColor" stroke="none"/></svg>',
 };
 function skinCards() {
   const g = el('div', 'skins');
-  for (const k of ['', ...Object.keys(SKINS)]) {
+  for (const k of ['', ...SKIN_LIST]) {
     const b = el('button', 'skin-card sk-' + (k || 'none').toLowerCase()), i = el('i');
     i.innerHTML = SKIN_ICONS[k];
-    b.append(i, el('b', '', k || 'NetherFlow'));
+    b.append(i, el('b', '', k || 'NetherFlow'), ...(SKINS[k]?.needs ? [el('small', '', SKINS[k].needs)] : []));
     b.setAttribute('aria-pressed', k === skin);
     b.title = k ? SKINS[k].note : 'NetherFlow\'s own look: the moods, and every background';
     b.onclick = () => setSkin(k);
@@ -2117,12 +2200,12 @@ function renderMoodMenu() {
   const bgs = THEMES.filter(n => !SCENES.has(n));
   $('moods').append(
     settingRow('Background', skin ? [skin, ...bgs] : bgs, theme, setTheme, (skin ? `${skin}: the theme's own (drawn in full on Ultra and Extreme). ` : '') + 'Gradient: plain and still, in the mood\'s colors — the lightest of all, for a phone that lags. Cover: the song\'s album cover, blurred into a glow.'),
-    settingRow('Background quality', BGQ_SHOWN, bgq, setBgq, (pcOnly ? 'Extreme is for a powerful graphics card, and unlocks Extreme lyrics. ' : '') + 'Ultra is the sharpest (needs a strong graphics card); lower settings save battery. Off keeps the colors but stops the motion. Till you pick one, NetherFlow picks for this device, and steps down by itself if it runs slow.'),
-    ...(bgq === 'Extreme' ? [settingRow('Extreme lyrics', ['Off', 'Music video'], kinetic ? 'Music video' : 'Off', setKinetic, 'The lyrics cut like a music video or an Instagram lyric edit: every word comes in as it\'s sung, in 57 looks (each theme brings its own: a doodle, comic captions, dropping blocks, tactical banners, a kill feed) —chat bubbles, shattering glass, holographic foil, a slot machine, liquid filling the letters, label tape, a film title, a mix of typefaces, story text, lime green, glowing dust, a swirl, TikTok captions, a music app\'s lyrics screen, letters cut out of the cover, outline rings, a dreamy haze, velocity whips, grunge block letters, echoes, hand-drawn outlines, marker, a floor into the distance, tape glitches, a typewriter, falling letters, decoding, words flying out of the dark, extruded 3D, split halves, Y2K chrome, neon signs, an editorial stack, a highlighter, a ripple, a strobe, a turning cube, a split-flap board, letters flipping in, a tunnel, handwriting, stickers, 8-bit arcade, graffiti, a ransom-note collage, a ring, glitch slices, a rack focus, karaoke, a spotlight, a reflection, jelly — with 3D emoji popping up for words like fire, love or moon — louder for a chorus, quieter for a verse, with film scratches, glow and light leaks on the beat. Nothing is ever cut off at the edges.'),
+    settingRow('Background quality', BGQ_SHOWN, bgq, setBgq, (pcOnly ? 'Extreme is for a powerful graphics card, and unlocks Extreme lyrics. ' : '') + (fullPc ? 'Extreme+ is Extreme with each theme\'s most demanding extras: Redline races real cars round real circuits in 3D. ' : '') + 'Ultra is the sharpest (needs a strong graphics card); lower settings save battery. Off keeps the colors but stops the motion. Till you pick one, NetherFlow picks for this device, and steps down by itself if it runs slow.'),
+    ...(extremeQ() ? [settingRow('Extreme lyrics', ['Off', 'Music video'], kinetic ? 'Music video' : 'Off', setKinetic, 'The lyrics cut like a music video or an Instagram lyric edit: every word comes in as it\'s sung, in 58 looks (each theme brings its own: a doodle, comic captions, dropping blocks, tactical banners, a kill feed, speed) —chat bubbles, shattering glass, holographic foil, a slot machine, liquid filling the letters, label tape, a film title, a mix of typefaces, story text, lime green, glowing dust, a swirl, TikTok captions, a music app\'s lyrics screen, letters cut out of the cover, outline rings, a dreamy haze, velocity whips, grunge block letters, echoes, hand-drawn outlines, marker, a floor into the distance, tape glitches, a typewriter, falling letters, decoding, words flying out of the dark, extruded 3D, split halves, Y2K chrome, neon signs, an editorial stack, a highlighter, a ripple, a strobe, a turning cube, a split-flap board, letters flipping in, a tunnel, handwriting, stickers, 8-bit arcade, graffiti, a ransom-note collage, a ring, glitch slices, a rack focus, karaoke, a spotlight, a reflection, jelly — with 3D emoji popping up for words like fire, love or moon — louder for a chorus, quieter for a verse, with film scratches, glow and light leaks on the beat. Nothing is ever cut off at the edges.'),
       ...(kinetic ? [settingRow('Extreme look', ['Mixed', ...Object.values(KIN_NAMES)], kinLook === 'Mixed' ? 'Mixed' : KIN_NAMES[kinLook], v => setKinLook(Object.keys(KIN_NAMES).find(k => KIN_NAMES[k] === v) || 'Mixed'),
         'Mixed: a different look every few words, picked for the part of the song (the loud ones in a chorus). Or pick one look to keep for every line.'),
         settingRow('Emoji', ['On', 'Off'], kinEmojiOn ? 'On' : 'Off', setKinEmoji, '3D emoji popping up as they\'re sung: for words like fire, love, moon or dil, and the emoji in the lyrics themselves.'),
-        settingRow('Music video', ['Edit', 'Off'], vEditOn ? 'Edit' : 'Off', setVEdit, 'When the song has an official music video, it plays behind the lyrics, cut to the music the way editors cut one for TikTok and Reels: a new shot on the beat in a chorus, zoom punches, flashes, shakes and colour splits as shots land; a slow push in and dissolves in a verse; a colour grade for each part of the song. (It streams the video too.)')] : [])] : []),
+        settingRow('Music video', ['On', 'Off'], vEditOn ? 'On' : 'Off', setVEdit, 'When the song has an official music video, it plays behind the lyrics, smoothly, straight through: in time with the song when they\'re the same length, slowly drifting, in a colour grade of its own. (It streams the video too.)')] : [])] : []),
     settingRow('Background beat', ['Off', 'On'], bgBeat ? 'On' : 'Off', setBgBeat, 'The background swells and brightens with the bass of the music.'));
 }
 
@@ -2263,18 +2346,18 @@ const P = {
   },
 };
 // Where the app is (desktop: main.js; Android: the app in front or not): 2 in front · 1 on screen, another app in front
-// · 0 away (minimized, hidden; Android: in the background, or the screen off). Only in front does anything move: behind
-// another app the loop stops, every animation's paused (.still), and four times a second the lyrics, the time and the
-// timeline keep up (calm); away, nothing at all — and YouTube's frame stops sending its spectrum. The screen stays on
-// while a song plays with the app on screen (desktop: main.js; Android: ImmersivePlugin).
-let place = 2, calmTimer = 0;
+// · 0 away (minimized, hidden; Android: in the background, or the screen off). On screen, everything moves, in front or
+// not (watched beside another app); away, nothing at all — the loop stops, every animation's paused (.still), and
+// YouTube's frame stops sending its spectrum. (A window covered whole — a game full screen — isn't drawn by Chromium
+// anyway.) The screen stays on while a song plays with the app on screen (desktop: main.js; Android: ImmersivePlugin).
+let place = 2;
 // the island (desktop, Settings › Island): the song playing, over every other app — YouTube's frame keeps sending the
 // spectrum for it while this window's not in front
 let islandOn = store.get('netherflow.island') !== 'Off', islandGlow = store.get('netherflow.islandglow') !== 'Off';
 let discordOn = store.get('netherflow.discord') === 'On'; // (Discord status: see setDiscord)
 let lockLyrics = store.get('netherflow.locklyrics') === 'On', likedOffline = store.get('netherflow.likedoff') === 'On'; // (Android extras: see setLockLyrics)
 let ytdlUpdates = store.get('netherflow.ytdlup') === 'On'; // (see setYtdlUpdates)
-const vizWanted = () => place === 2 || (islandOn && !!window.netherflowApp?.island);
+const vizWanted = () => place > 0 || (islandOn && !!window.netherflowApp?.island);
 function keepAwake() {
   const on = (body.classList.contains('playing') || $('drive').open) && place > 0; // (Drive mode: the screen stays on, paused too)
   if (window.netherflowApp?.awake) netherflowApp.awake(on);
@@ -2283,10 +2366,9 @@ function keepAwake() {
 function setPlace(v) {
   if (v === place) return;
   place = v; keepAwake(); ytPost({ nfViz: vizWanted() });
-  body.classList.toggle('still', v < 2);
-  clearInterval(calmTimer); calmTimer = v === 1 ? setInterval(calm, 250) : 0;
+  body.classList.toggle('still', v < 1);
   speed.n = speed.s = speed.slow = 0;
-  if (v === 2 && !looping) { looping = true; requestAnimationFrame(frame); }
+  if (v > 0 && !looping) { looping = true; requestAnimationFrame(frame); }
 }
 window.netherflowApp?.onShown?.(v => setPlace(+v));
 if (native) Capacitor.Plugins.App.addListener('appStateChange', ({ isActive }) => setPlace(isActive ? 2 : 0));
@@ -5833,7 +5915,7 @@ $('closeAbout').onclick = () => $('about').close();
 // Links inside legal.html open in the real browser (legal.html calls this through window.parent).
 window.openExternal = url => native ? (location.href = url) : window.open(url, '_blank', 'noopener');
 
-const TERMS = 'netherflow.terms', TERMS_VERSION = '2026-10-14.6'; // bump when the terms change: everyone is asked again
+const TERMS = 'netherflow.terms', TERMS_VERSION = '2026-10-14.7'; // bump when the terms change: everyone is asked again
 if (store.get(TERMS) !== TERMS_VERSION) { $('consent').showModal(); placeWinctl(); }
 else if (fullSongs) setTimeout(() => loadYT().catch(() => {}), 2500); // (the first song then starts sooner)
 $('consent').addEventListener('cancel', e => e.preventDefault()); // Esc doesn't count as agreeing
@@ -6213,6 +6295,8 @@ function setCursors(accent) { // (called as the first mood is set: everything it
     Blocks: [`<path d="${PIX}" fill="#fff" stroke="#000" stroke-width="1" shape-rendering="crispEdges"/>`, `<path d="${PIX}" fill="#ffff55" stroke="#000" stroke-width="1" shape-rendering="crispEdges"/>`, [1, 1]],
     Tactical: ['<path d="M4 2v17.2l4.6-4.4 3 6.6 2.6-1.1-3-6.6H17z" fill="#ff4655" stroke="#ece8e1" stroke-width="1.2" stroke-linejoin="miter"/>',
       '<path d="M4 2v17.2l4.6-4.4 3 6.6 2.6-1.1-3-6.6H17z" fill="#ece8e1" stroke="#ff4655" stroke-width="1.4" stroke-linejoin="miter"/>', [4, 2]],
+    Redline: ['<path d="M3 3l17.5 7.2-7.6 2.4-2.5 7.7z" fill="#ff1e2d" stroke="#fff" stroke-width="1.3" stroke-linejoin="round"/>',
+      '<path d="M3 3l17.5 7.2-7.6 2.4-2.5 7.7z" fill="#fff" stroke="#ff1e2d" stroke-width="1.5" stroke-linejoin="round"/>', [3, 3]],
     Ops: [cross('#4cff4c'), cross('#4cff4c') + '<circle cx="12" cy="12" r="1.6" fill="#4cff4c" stroke="#000" stroke-width=".8"/>', [12, 12]],
   }[skin];
   root.style.setProperty('--cur', own ? pic(own[0], ...own[2], 'default') : pic(arrow('#0d0a0c', accent), 4, 2, 'default'));
@@ -6489,6 +6573,29 @@ float walls(vec2 p, float z){
   float wall = -.27 - p.y, ax = (fract(p.x * 1.6 + .3) - .5) / 1.6;
   float hole = max(abs(ax) - .085, max(p.y - (-.36 + sqrt(max(0., .0072 - ax * ax))), -.6 - p.y)); // (< 0 in an arch's opening)
   return min(wall, hole);
+}
+#endif
+#if STYLE == ${themeNo('Redline')}
+// A row of lights X metres to the side and hl high, seen from a car 1.2 m up looking down the road: on the screen, a ray
+// out of the vanishing point (0, hz). → x: the pixel's distance across it; y: how far off (metres) that point of it is.
+vec2 ray(vec2 p, float X, float hl, float hz){
+  vec2 w = vec2(X, hl - 1.2), d = normalize(w), q = p - vec2(0., hz);
+  float along = dot(q, d);
+  return vec2(abs(q.x * d.y - q.y * d.x), along > 0. ? .9 * length(w) / along : 1e4);
+}
+// its light in a long exposure: a hot core and a glow (nearer, wider; wd: how much wider — a reflection's blur), the
+// streams of cars in it thinning and bunching as they drift along (v: which way, how fast)
+float trail(vec2 p, float X, float hl, float hz, float px, float s, float v, float wd){
+  vec2 r = ray(p, X, hl, hz);
+  float th = .055 / r.y * wd, lit = .3 + .7 * smoothstep(.2, .75, n(vec2(r.y * .04 - s * v, X * 1.7)));
+  return (smoothstep(th + px, th * .2, r.x) * 1.5 + exp(-r.x / (th * 5. + .0015)) * .4) * lit * smoothstep(700., 25., r.y);
+}
+// a lamp-post row's lamps (every 36 m, coming at us as we drive), each a bright head with a glow round it
+float lamps(vec2 p, float X, float hz, float px, float s, float wd){
+  vec2 r = ray(p, X, 9., hz);
+  float th = .09 / r.y * wd, dz = mod(r.y + s * 10., 36.), along = min(dz, 36. - dz);
+  return exp(-along * along * .05) * (smoothstep(th + px, th * .3, r.x) * 2. + exp(-r.x / (th * 6. + .002)) * .7) * smoothstep(500., 15., r.y)
+       + exp(-r.x / (th * 1.5 + .0008)) * .12 * smoothstep(400., 10., r.y); // (and the streak they leave in the exposure)
 }
 #endif
 void main(){
@@ -7157,6 +7264,51 @@ void main(){
   vec2 g = p * 22. + vec2(t * 4., t * 2.), id = floor(g); // dust in the light
   col += vec3(1., .9, .7) * step(.94, h(id)) * (1. - smoothstep(.04, .1, length(fract(g) - .5))) * .2 * exp(-length(p - sunP) * 1.4);
   col *= .84 * (1. - smoothstep(.55, 1.4, length(p * vec2(.8, 1.))) * .5) * (1. + B * .35); // (a little dimmed: the lyrics read over it)
+#elif STYLE == ${themeNo('Redline')}
+  // Redline: a motorway at night in a long exposure — red tail-lights streaming away on the right, white headlights
+  // rushing in on the left, sodium lamps streaking overhead, lane lines flying under, a city glowing on the horizon, the
+  // wet road mirroring it all; a punch in on every kick; rain on Ultra and Extreme. (On Extreme+, real car footage
+  // plays over it instead: see "the music video".)
+  vec2 p = uv / F.x * (1. - K * .035); float asp = R.x / R.y, px = 1.4 / R.y * F.x;
+  float hz = .05, s = T * 1.8;
+  col = mix(vec3(.09, .045, .1), vec3(.01, .014, .036), smoothstep(hz, .55, p.y));
+  col += vec3(1., .45, .2) * exp(-abs(p.y - hz) * 14.) * .2 + vec3(.45, .25, .85) * exp(-abs(p.y - hz) * 4.) * .09;
+  if (p.y > hz) { // the city: towers against the glow, their windows lit, a red light blinking on the tallest
+    float cx = p.x * 22. + 50., id = floor(cx), tall = step(.85, h(vec2(id, 2.))), bh = h(vec2(id, 1.)) * .05 + tall * .06 + .008;
+    vec2 wc = vec2(fract(cx) * 4., (p.y - hz) * 260.);
+    float win = step(.64, h(floor(wc) + id)) * step(.3, fract(wc.x)) * step(fract(wc.x), .7) * step(.3, fract(wc.y)) * step(fract(wc.y), .7);
+    col = mix(col, vec3(.014, .014, .024) + mix(vec3(1., .72, .38), vec3(.55, .78, 1.), step(.5, h(floor(wc) + 3.))) * win * .45, step(p.y - hz, bh) * .95);
+    col += vec3(1., .12, .1) * exp(-length(p - vec2((id + .5 - 50.) / 22., hz + bh + .004)) * 700.) * tall * (.55 + .45 * sin(T * 3. + id));
+  } else { // the road: wet asphalt, the lane lines rushing under
+    float z = 1.08 / (hz - p.y), xw = p.x * z / .9, wz = z + s * 10.;
+    col = vec3(.02, .022, .028) * (.75 + .5 * n(vec2(xw * 4., wz * 2.)));
+    for (int i = 0; i < 4; i++) {
+      float X = i == 0 ? -2.3 : i == 1 ? 1.4 : i == 2 ? 5.1 : 8.8, solid = i == 0 || i == 3 ? 1. : step(fract(wz / 12.), .45);
+      col += vec3(.8, .8, .74) * smoothstep(.1 + px * z, .06, abs(xw - X)) * solid * smoothstep(220., 8., z) * .32;
+    }
+  }
+  vec3 L = vec3(0.);
+  float road = step(p.y, hz) * step(1.5, QF); // (the reflections: from High up)
+  for (int i = 0; i < 2; i++) {
+    float fi = float(i), X = 3.25 + fi * 3.7, Y = -4.6 - fi * 3.7;
+    // our way: tail-lights streaming away, two a car; the other way: headlights rushing at us
+    L += vec3(1., .06, .09) * (trail(p, X - .75, .8, hz, px, s, .5 + fi * .2, 1.) + trail(p, X + .75, .8, hz, px, s, .5 + fi * .2, 1.));
+    L += vec3(1., .9, .72) * (trail(p, Y - .75, .7, hz, px, s, -2.5 - fi, 1.) + trail(p, Y + .75, .7, hz, px, s, -2.5 - fi, 1.)) * .85;
+    if (road > .5) { // their reflections in the wet road: lower, wider, softer
+      L += vec3(1., .08, .1) * (trail(p, X, -.8, hz, px * 3., s, .5 + fi * .2, 4.)) * .22;
+      L += vec3(1., .9, .72) * (trail(p, Y, -.7, hz, px * 3., s, -2.5 - fi, 4.)) * .2;
+    }
+  }
+  vec3 sodium = vec3(1., .58, .18);
+  L += sodium * (lamps(p, 10.5, hz, px, s, 1.) + lamps(p, -11.5, hz, px, s, 1.));
+  if (road > .5) L += sodium * (lamps(vec2(p.x, 2. * hz - p.y), 10.5, hz, px * 3., s, 3.) + lamps(vec2(p.x, 2. * hz - p.y), -11.5, hz, px * 3., s, 3.)) * .18; // (mirrored in the road)
+  col += L * F.w;
+  if (QF > 2.5) { // rain, lit by it all
+    vec2 rq = vec2(p.x * 36. + p.y * 7., p.y * 5. + T * 10.), rid = floor(rq);
+    col += (vec3(.55, .62, .75) + L * .4) * step(.9, h(rid)) * smoothstep(.06, 0., abs(fract(rq.x) - .5 - (h(rid + 1.) - .5) * .5)) * smoothstep(0., .4, fract(rq.y)) * smoothstep(1., .55, fract(rq.y)) * .16;
+  }
+  col = 1. - exp(-col * 1.35);                                                   // (the brightest lights roll off, never clip)
+  col *= (1. - smoothstep(.5, 1.35, length(p * vec2(.75, 1.))) * .6) * (1. + B * .3);
 #endif
 #if STYLE < ${themeNo('Stickman')}
   col *= smoothstep(1.35, .1, length(uv / F.x * vec2(.8, 1.))) * .85 + .15;
@@ -7192,8 +7344,8 @@ if (gl) {
 if (!gl) $('screen').style.opacity = 0; // nothing opaque in front of it without WebGL
 // The backdrop is soft smoke, so it renders below screen resolution (Balanced = half), per the quality setting.
 // (the heaviest backdrops drawn a little smaller on Balanced and Low: Blocks — a world traced block by block, pixel art
-// anyway — and Ops, its smoke soft anyway)
-const sceneScale = () => bgq !== 'Balanced' && bgq !== 'Low' ? 1 : theme === 'Blocks' ? .7 : theme === 'Ops' ? .8 : 1;
+// anyway — and Ops and Redline, their smoke and light trails soft anyway)
+const sceneScale = () => bgq !== 'Balanced' && bgq !== 'Low' ? 1 : theme === 'Blocks' ? .7 : theme === 'Ops' || theme === 'Redline' ? .8 : 1;
 let fxScale = 1;
 function resize() {
   const Q = BGQ[bgq], dpr = Math.min(devicePixelRatio || 1, Q.dpr || Infinity);
@@ -7502,6 +7654,16 @@ function skinBar(kind, o) {
     }
     sg.fillStyle = I; dot(px, sy + 1.5, 3.6); dot(px, sy - 2.5, 2.2);
     sg.fillStyle = A; dot(px, sy + 1.8, 1.4);
+  } else if (kind === 'Lap') { // a lap: the track, its sectors (the song's parts) split, the stretch driven in red, a car at now
+    const y = mid + 3, sh = offset + songShift, dur = P.dur || 1;
+    sg.fillStyle = rgba(I, .14); sg.fillRect(0, y - 2, W, 4);
+    const g = sg.createLinearGradient(0, 0, Math.max(1, px), 0); g.addColorStop(0, rgba(A, .12)); g.addColorStop(1, A);
+    sg.fillStyle = g; glow(A, 10); sg.fillRect(0, y - 2, px, 4); flat();
+    for (const r of mapRows) { const x = Math.round((r.t - sh) / dur * W); if (x > 3 && x < W - 16) { sg.fillStyle = x < px ? '#b84dff' : rgba(I, .45); sg.fillRect(x - 1, y - 7, 2, 14); } } // (sectors done: purple)
+    for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) { sg.fillStyle = (i + j) % 2 ? '#fff' : '#111'; sg.fillRect(W - 12 + i * 3, y - 6 + j * 3, 3, 3); } // the chequered flag
+    for (let k = 1; k <= 6; k++) { sg.fillStyle = rgba(A, .36 - k * .05); sg.fillRect(px - 4 - k * (7 + (live ? kick * 4 : 0)), y - 1, 6, 2); } // its trail
+    sg.fillStyle = '#fff'; glow(A, 12 + kick * 10);
+    sg.beginPath(); sg.moveTo(px + 7, y); sg.lineTo(px - 5, y - 6); sg.lineTo(px - 2, y); sg.lineTo(px - 5, y + 6); sg.closePath(); sg.fill(); flat();
   } else if (kind === 'Pencil') {
     const g = '#2b2925', y = mid + 7;
     sg.strokeStyle = rgba(I, .35); sg.lineWidth = 1.2; sg.setLineDash([1, 5]); line(px, W, y); sg.setLineDash([]);
@@ -7838,7 +8000,7 @@ const KIN_MIX = [{ font: KF.serif, how: 'rise', k: 1 }, { font: KF.cut[0], caps:
   { font: KF.mono, caps: true, how: 'type', k: .7 }, { font: KF.cut[1], how: 'swing', k: .95 }, { font: KF.wide, caps: true, how: 'stretch', k: .8 }];
 const fnt = (f, px) => `${f.style || 'normal'} ${f.weight || 400} ${px}px ${f.family}`;
 function applyKin() {
-  kin.on = kinetic && bgq === 'Extreme' && pcOnly;
+  kin.on = kinetic && extremeQ() && pcOnly;
   if (kin.on && kin.gl === null) kinInit();
   if (kin.gl === false) kin.on = false; // (no WebGL2 here: the lyrics as they are)
   body.classList.toggle('la-kinetic', kin.on);
@@ -9190,6 +9352,19 @@ const KIN_LOOKS = {
         K.card(w.e, x + w.fs * .35, w.y, { a, g: k });
       });
     } },
+  // Redline: each word whooshing in from the side, its smear trailing behind it, the newest underscored in racing red
+  speed: { pool: 'any', skin: 'Redline', rows: 'stack', caps: true, cap: .3, wide: .76, font: KF.wide, lh: 1.1, wear: 0, fx: { scr: 0, ca: 1.3, glow: .8, halo: .2, leak: .3, trk: .08 },
+    ground: () => 'night', colors: () => ({ fill: [1, 1, 1], line: [0, 0, 0], echo: [1, .12, .18] }),
+    prep: S => S.lay.words.forEach(w => { w.e = kWord(S, w.t, w.font, w.fs); w.bar = kSlant(S, w.w + w.fs * .4, w.fs * .12, w.fs * .2); }),
+    draw(S, K) {
+      const [jx, jy] = jig(K.now, S.lay.words[0].fs * .025 * K.kick);
+      kinEach(S, K, (s, w, k) => {
+        const inn = eOut(s.age / .24), dx = (1 - inn) * w.fs * 5 + jx, now = k === K.nk;
+        for (let i = 3; i >= 1; i--) K.card(w.e, w.x + dx + i * w.fs * (.3 + (1 - inn) * 1.3), w.y + jy, { sx: 1 + (1 - inn) * .7, a: (.1 + (1 - inn) * .2) * (4 - i) / 3, fill: S.col.echo, blur: .3, g: 's' + k });
+        K.card(w.e, w.x + dx, w.y + jy, { sx: 1 + (1 - inn) * .4, a: c01(s.age / .04), fill: now ? [1, 1, 1] : [.78, .8, .83], g: k });
+        if (now) K.card(w.bar, w.x + dx, w.y + jy + w.fs * .56, { fill: S.col.echo, crop: [0, 0, eOut(s.age / .2), 1], wear: 0, g: k });
+      });
+    } },
 };
 // (the themes' looks' pieces) a stick figure in a pose — 0 waving, 1 cheering, 2 pointing back, 3 kicking, 4 jumping,
 // 5 dancing — its feet at the bottom of its box
@@ -9365,17 +9540,14 @@ function kinShot(now) {
   kin.shot = { key, look, words: kin.words.slice(a, b), em: kin.em.slice(a, b), times: kin.idx.slice(a, b).map(i => ({ t: wordTimes[i]?.t ?? 0, e: wordTimes[i]?.e ?? 0 })), h, seed: r(),
     roll: (r() - .5) * .3, t0: now, cut: now, ground: L.ground(r), col: L.colors(r, A), lay: null };
 }
-// ---- the music video, cut like an edit (Extreme lyrics; Settings: Music video)
-// When the song has an official video, it plays under the words — muted, in a player of its own — cut to the music the
-// way editors cut one for TikTok or Reels now: a new shot on the beat (every couple of beats in a chorus, every few bars
-// in a verse, longer in a break), a zoom punch and a flash as a shot lands, a shake and colour fringes on the kicks, now
-// and then a glitch or a mirrored shot; in a verse a slow push in, dissolves; a grade for each part of the song. It plays
-// at its own speed, smoothly, throughout.
-// frame-helper.js draws it, in YouTube's frame (the page can't read the video's frames); here, what to cut to and when.
+// ---- the music video (Extreme lyrics; Settings: Music video)
+// When the song has an official video, it plays under the words — muted, in a player of its own — smoothly, straight
+// through: in time with the song when the two are the same length (back in step, if they drift apart, with a dissolve,
+// never a jump), otherwise from a little way in (past the logos); slowly drifting, in one colour grade for the song.
+// frame-helper.js draws it, in YouTube's frame (the page can't read the video's frames); here, where it plays from.
 // (Its setting: with Extreme lyrics' others, early on.)
-const ved = { p: null, loading: null, for: null, mv: null, info: null, shown: false, cut: 0, t: 0, at: 0, beats: 4, kind: 'flow', sec: null, grade: 0,
-  prev: [], onsets: [], beat: .5, kPrev: 0, inv: 0, pan: [0, 0], fails: new Set() };
-const VED_GRADES = { drop: [1, 5, 0, 1, 2], build: [1, 0, 4], flow: [3, 0, 4, 1], break: [2, 4, 3] }; // (see frame-helper.js: 1 teal and orange, 2 black and white, 3 warm film, 4 cool, 5 duotone)
+const ved = { p: null, loading: null, for: null, mv: null, info: null, shown: false, cut: 0, t: 0, at: 0, fade: 0, grade: 0, fails: new Set() };
+const VED_GRADES = [3, 0, 4, 1]; // (see frame-helper.js: 0 none, 1 teal and orange, 3 warm film, 4 cool)
 // the looks on paper (their ground hides the video): left out of Mixed while it shows
 const KIN_PAPER = new Set(['sketch', 'marker', 'typewriter', 'stack', 'highlighter', 'graffiti', 'acid', 'label', 'collage', 'strobe', 'doodle']);
 // The song's official video on YouTube: by its artist, named for it, said to be its video — not a lyric video, its audio,
@@ -9398,74 +9570,86 @@ function vedPlayer() {
       onError: () => { if (ved.mv) { ved.fails.add(ved.mv.id); mvCache.delete(ved.for); } vedStop(); } } }))); // (not playable here: the next one found, if any)
 }
 const vedShow = on => { if (ved.shown !== on) { ved.shown = on; body.classList.toggle('vid-edit', on); } };
+// Redline on Extreme+ (computers): its own 3D race in place of the music video (see "Redline's races")
+const carOn = () => skin === 'Redline' && bgq === 'Extreme+' && pcOnly;
 function vedStop() {
   try { if (ved.mv) ved.p?.stopVideo(); } catch {}
-  Object.assign(ved, { for: null, mv: null, info: null, cut: 0, sec: null, prev: [], playing: false });
+  Object.assign(ved, { for: null, mv: null, info: null, cut: 0, at: 0, playing: false });
   vedShow(false);
 }
-// a cut: the next shot — somewhere in the video that's loaded already (so it's there at once: the picture never stops to
-// wait), not one just used nor where it is now; how many beats it holds, and what it does as it lands. Nothing else
-// loaded yet: this shot plays on.
-function vedCut(now) {
-  const kind = ved.kind, r = Math.random, I = ved.info, loud = kind === 'drop' && motion, b = kind === 'build' && motion;
-  ved.at = now;
-  ved.beats = !motion ? 16 : loud ? pickR(r, [2, 2, 4]) : b ? 4 : kind === 'break' ? 16 : pickR(r, [8, 8, 16]);
-  if (!I?.dur) return;
-  const lo = I.dur * .06, hi = I.dur * .92, buf = I.buf.map(([s, e]) => [Math.max(s, lo), Math.min(e, hi) - 4]).filter(([s, e]) => e > s);
-  const ok = x => Math.abs(x - I.t) > 4 && !ved.prev.some(p => Math.abs(p - x) < 5);
-  let to = -1;
-  for (let i = 0; i < 10 && buf.length && to < 0; i++) { const [s, e] = pickR(r, buf), x = s + r() * (e - s); if (ok(x)) to = x; }
-  if (to < 0) return;
-  ved.prev = [to, ...ved.prev].slice(0, 10);
-  Object.assign(ved, { cut: ved.cut + 1, t: to, fade: !loud && !b && r() < .5 ? .4 : 0, mir: loud && r() < .2, fl: loud ? (r() < .35 ? 1 : 0) : b && r() < .2 ? .6 : 0,
-    gli: (loud || b) && r() < .2 ? 1 : 0, punch: loud ? 1 : b ? .5 : 0, pan: [r() - .5, r() - .5] });
-}
-// every frame: (seen: Extreme lyrics showing) the video found, loaded, cut and moved — sent to its player's frame. It
-// plays at its own speed throughout, smoothly: the edit's in the cuts and what lands with them, never in stopping it.
+// every frame: (seen: Extreme lyrics showing) the video found, loaded, and where it should be — sent to its player's frame
 function vedFrame(now, seen, kick) {
-  const t = current, go = !!(vEditOn && seen && t && !P.paused && ved.mv && ved.for === t.trackId);
+  const t = current, on = vEditOn && seen && !carOn(), go = !!(on && t && !P.paused && ved.mv && ved.for === t.trackId);
   if (ved.p && go !== ved.playing) { try { go ? ved.p.playVideo() : ved.p.pauseVideo(); } catch {} ved.playing = go; } // (playing only while it's seen and the song plays)
-  if (!vEditOn || !seen || !t) return vedShow(false);
+  if (!on || !t) return vedShow(false);
   if (ved.for !== t.trackId) { // a new song: its video looked for, then loaded (a little way in: past the logos)
     vedStop(); ved.for = t.trackId;
-    mvFor(t).then(mv => { if (ved.for !== t.trackId || !mv) return; ved.mv = mv; return vedPlayer().then(p => { if (ved.mv === mv) { p.loadVideoById({ videoId: mv.id, startSeconds: Math.round(mv.dur * .2) }); ved.playing = true; } }); }).catch(() => {});
+    ved.grade = pickR(Math.random, VED_GRADES);
+    mvFor(t).then(mv => { if (ved.for !== t.trackId || !mv) return; ved.mv = mv; return vedPlayer().then(p => { if (ved.mv === mv) { const o = vedSync(t); p.loadVideoById({ videoId: mv.id, startSeconds: Math.round(o == null ? mv.dur * .2 : P.t + o) }); ved.playing = true; } }); }).catch(() => {});
     return;
   }
   const w = ved.mv && ved.p?.getIframe?.()?.contentWindow;
   if (!w) return vedShow(false);
   vedShow(ved.shown || !!ved.info?.ok);
-  // the beat: the kicks' onsets, and the time between them (folded into one beat: 0.33–0.9 s)
-  let onset = false;
-  if (kick > .5 && ved.kPrev <= .5 && now - (ved.onsets[ved.onsets.length - 1] || 0) > 200) { ved.onsets.push(now); if (ved.onsets.length > 16) ved.onsets.shift(); onset = true; }
-  ved.kPrev = kick;
-  const gaps = ved.onsets.slice(1).map((x, i) => { let g = (x - ved.onsets[i]) / 1000; while (g > .9) g /= 2; while (g < .33) g *= 2; return g; }).sort((a, b) => a - b);
-  if (gaps.length >= 4) ved.beat += (gaps[gaps.length >> 1] - ved.beat) * .1;
-  // the part of the song: a chorus (cut on the beat), its build, a verse, a break — each with a grade of its own; into a
-  // chorus, a cut at once and a flash of negative
-  const line = synced ? lines[activeIdx] : null, sec = line?.sec || null, name = sec?.name || '';
-  const kind = line && !/[\p{L}\p{N}]/u.test(line.text) ? 'break' : /pre|build|bridge/i.test(name) ? 'build' : /chorus|hook|drop/i.test(name) ? 'drop' : 'flow';
-  if (sec !== ved.sec || kind !== ved.kind) {
-    const into = kind === 'drop' && ved.kind !== 'drop' && ved.cut;
-    Object.assign(ved, { sec, kind, grade: pickR(Math.random, VED_GRADES[kind]) });
-    if (into) { if (motion) ved.inv = now; vedCut(now); }
-  }
-  const B = ved.beat, I = ved.info;
-  let e = (now - ved.at) / 1000;
-  const dark = I && I.cut === ved.cut && !I.waiting && I.luma < .045 && e > .5; // (a black shot — a fade, the credits: away from it)
-  if (onset && e > ved.beats * B * .8 || e > ved.beats * B * 1.6 || dark) { vedCut(now); e = (now - ved.at) / 1000; }
-  const k = Math.min(1, kick), u = c01(e / Math.max(.2, ved.beats * B)), live = motion ? 1 : 0, punch = 1 - eOut(e / .3);
-  let z, ca, zb, mb, amp, sat = 1.1;
-  if (kind === 'drop' && motion) { z = 1.07 + .14 * ved.punch * punch + k * .04; ca = .001 + k * .003 + (1 - c01(e / .15)) * .008; zb = (1 - c01(e / .18)) * .05; mb = 0; amp = .01; sat = 1.2; } // (a punch in and a colour split as it lands)
-  else if (kind === 'build' && motion) { z = 1.06 + u * .08 + k * .03 + .08 * ved.punch * punch; ca = .001 + k * .003; zb = (1 - c01(e / .15)) * .04; mb = 0; amp = .005; } // (nearer through each shot)
-  else if (kind === 'break') { z = 1.06 + u * .06; ca = .001; zb = 0; mb = .15; amp = .001; sat = .95; }
-  else { z = 1.05 + u * .07 + k * .015; ca = .001 + k * .0015; zb = 0; mb = .05; amp = .002; } // a verse: a slow push in
-  const shake = amp * live * (k + punch), [sx, sy] = jig(now, shake), rot = n1(now / 53) * shake * 1.5;
-  const ox = sx + ved.pan[0] * u * .04, oy = sy + ved.pan[1] * u * .03;
-  z = Math.max(z, 1.02 + 2 * (Math.abs(ox) + Math.abs(oy)) + Math.abs(rot) * 1.5); // (the video's edge never in sight)
-  w.postMessage({ nfEdit: { play: !P.paused, r: 1, z, rot, ox, oy, ca, zb, mb, sat, vg: .45, k: (kind === 'drop' ? k : k * .4) * live,
-    fl: ved.fl * (1 - c01(e / .12)) * .7 * live, inv: now - ved.inv < 70 ? 1 : 0, mir: ved.mir ? 1 : 0, gli: ved.gli * (1 - c01(e / .2)) * live, gr: ved.grade, fz: 0,
-    cut: { id: ved.cut, t: ved.t, fade: ved.fade }, cA: rgb(pal.a), cB: rgb(pal.b) } }, 'https://www.youtube.com');
+  // in step with the song (if it can be): back into step with a dissolve if it's drifted (a seek, a stall)
+  const I = ved.info, o = vedSync(t);
+  if (o != null && I?.dur && !I.waiting && !P.paused && now - ved.at > 3000 && Math.abs(I.t - (P.t + o)) > 1.5) Object.assign(ved, { at: now, cut: ved.cut + 1, t: P.t + o, fade: .6 });
+  // a slow drift in and across (still, without motion)
+  const sec = now / 1000, live = motion ? 1 : 0, ox = .012 * Math.sin(sec * .031) * live, oy = .01 * Math.cos(sec * .027) * live;
+  w.postMessage({ nfEdit: { play: !P.paused, r: 1, z: 1.06 + .02 * Math.sin(sec * .05) * live, rot: 0, ox, oy, ca: .0008, zb: 0, mb: 0, sat: 1.08, vg: .45, k: 0,
+    fl: 0, inv: 0, mir: 0, gli: 0, gr: ved.grade, fz: 0, cut: { id: ved.cut, t: ved.t, fade: ved.fade }, cA: rgb(pal.a), cB: rgb(pal.b) } }, 'https://www.youtube.com');
 }
+// how far into its video the song's start is, when they're the same length (to 6 s: an intro's), so the two keep in
+// step; null when they aren't (a video with a story before or after: no telling where the song is in it)
+function vedSync(t) {
+  const sd = (t.trackTimeMillis || 0) / 1000 || P.dur || 0, vd = ved.mv?.dur || 0;
+  return sd && vd && Math.abs(vd - sd) <= 6 ? Math.max(0, vd - sd) : null;
+}
+// the part of the song the lyrics are in: a chorus (drop), its build, a verse (flow), a break (no words)
+function songPart() {
+  const line = synced ? lines[activeIdx] : null, sec = line?.sec || null, name = sec?.name || '';
+  return { sec, kind: line && !/[\p{L}\p{N}]/u.test(line.text) ? 'break' : /pre|build|bridge/i.test(name) ? 'build' : /chorus|hook|drop/i.test(name) ? 'drop' : 'flow' };
+}
+// Redline's races (race/race.js): on Extreme+, a 3D race — real circuits, real cars — behind the lyrics; the night
+// motorway while it's getting ready (the cars are downloaded once, the first time: see server.js). Each song has its circuit.
+// the race loaded: as a song plays with Redline on, or at once from Settings › 3D race (Load now). No cars this time —
+// a download that failed, say — and it's tried again in a while; what went wrong shows in Settings.
+function raceLoad() {
+  if (race.m || race.loading) return;
+  race.loading = true; race.status = 'Loading the race…'; raceStatus();
+  if (race.tried) $('race').replaceWith(Object.assign(document.createElement('canvas'), { id: 'race' })); // (a fresh canvas: the last try's drawing state gone)
+  race.tried = true;
+  import('./race/race.js').then(m => m.create($('race'), { palA: rgb(pal.a), palB: rgb(pal.b), onCar: (n, all) => { race.status = `Loading the cars: ${n} of ${all}…`; raceStatus(); } }))
+    .then(r => {
+      if (!r.ready) throw new Error('the cars: ' + ([...new Set(r.errors.map(e => e.replace(/^[^:]*: /, '')))].join(' · ') || 'none listed')); // (the same reason for each said once)
+      race.m = r; r.resize(innerWidth, innerHeight);
+      race.status = `Ready: ${new Set(r.cars).size} cars on 8 circuits${r.errors.length ? ` (didn't load: ${r.errors.join(' · ')})` : ''}. It shows as a song plays.`;
+    })
+    .catch(e => { console.warn('race:', e); race.loading = false; race.retry = performance.now() + 20000; race.status = `Couldn't load: ${e.message || e}`; })
+    .finally(raceStatus);
+}
+function raceRow() {
+  const q = el('div', 'bgq lbl upd race-row');
+  q.append(el('span', '', '3D race'), el('small', '', race.status || (bgq === 'Extreme+' ? 'Loads as a song plays, or now.' : 'With Redline on Extreme+.')));
+  if (!race.m) { const b = el('button', 'pill', race.loading ? 'Loading…' : 'Load now'); b.disabled = race.loading; b.onclick = () => { race.retry = 0; raceLoad(); }; q.append(b); }
+  return q;
+}
+function raceStatus() { $('textPanel').querySelector('.race-row')?.replaceWith(raceRow()); }
+function raceFrame(now, seen, kick) {
+  if (!carOn() || !seen || !current) { if (race.show) raceShow(false); return; }
+  if (!race.m) { if (now > (race.retry || 0)) raceLoad(); return; }
+  if (race.key !== current.trackId) { race.key = current.trackId; race.info = race.m.song(race.key); race.tagged = ''; }
+  const r = race.m.frame(now, { kick, energy: Math.min(1, bassS * 1.4), playing: !P.paused, kind: songPart().kind });
+  race.kmh = r.kmh; // (the dash shows the car on screen's speed)
+  if (r.kmh != null && !race.show) raceShow(true); // (once a race is drawn: till then, the motorway)
+  if (race.show && race.tagged !== race.key) { // (the circuit's name, as on television)
+    race.tagged = race.key; const tag = $('raceTag'), I = race.info;
+    tag.children[0].textContent = I.name; tag.children[1].textContent = `${I.country} · ${(I.len / 1000).toFixed(3)} km`;
+    tag.classList.add('on'); clearTimeout(race.tagT); race.tagT = setTimeout(() => tag.classList.remove('on'), 4200);
+  }
+}
+function raceShow(on) { race.show = on; body.classList.toggle('vid-race', on); }
+addEventListener('resize', () => race.m?.resize(innerWidth, innerHeight));
 // ---- every frame
 function drawKin(now, kick) {
   const gl = kin.gl;
@@ -9640,6 +9824,9 @@ function showAgent() {
 function opsHud() { const h = $('mood').querySelector('.hud'); for (const k of [0, 4]) h.children[k].replaceChildren(...Array.from({ length: 5 }, () => el('i'))); }
 function skinExtras() { // (a theme put on, or a new song)
   body.classList.toggle('has-hud', skin === 'Tactical' || skin === 'Ops');
+  body.classList.toggle('has-dash', skin === 'Redline');
+  if (skin === 'Redline' && !$('shift').children.length) // (fifteen lights: five green, five red, five blue)
+    $('shift').append(...Array.from({ length: 15 }, (_, i) => { const e = el('i'); e.style.setProperty('--i', i); e.style.setProperty('--c', i < 5 ? '#2bff5a' : i < 10 ? '#ff2030' : '#3d6bff'); return e; }));
   banner.sec = null; banner.n = 0; hudLast = '';
   if (skin === 'Ops') opsHud();
   if (skin === 'Tactical') { if (agents.list) showAgent(); else agentsGet().then(() => { showAgent(); if ($('textPanel').matches(':popover-open')) renderTextPanel(); }); }
@@ -9660,7 +9847,20 @@ function showBanner(text, kind = '') {
   clearTimeout(banner.timer); banner.timer = setTimeout(() => { b.className = 'rbanner'; }, 2700);
 }
 const SFX = ['POW!', 'BAM!', 'WHAM!', 'ZAP!', 'KRAK!', 'BOOM!', 'THWIP!', 'SNAP!', 'WHOOSH!'];
+// Redline: the needle and the shift lights on the bass, every frame; the speed and the gear (up one every eighth of the
+// song) fifteen times a second
+let dashAt = 0;
+function redlineTick(now, kick) {
+  const rev = P.paused ? .06 : Math.min(1, .12 + bassS * .95 + kick * .25), r = rev.toFixed(3);
+  $('play').style.setProperty('--rev', r); $('shift').style.setProperty('--rev', r);
+  if (now - dashAt < 66) return;
+  dashAt = now;
+  const d = $('mood').querySelector('.dash'), dur = P.dur || 0, gear = P.paused || !dur ? 0 : 1 + Math.min(7, Math.floor((P.t || 0) / dur * 8));
+  const kmh = race.show && race.kmh != null ? race.kmh : Math.round(gear * 34 * (.55 + rev * .55));
+  d.children[0].textContent = race.show && race.kmh != null ? Math.max(1, Math.min(7, Math.ceil(race.kmh / 45))) : gear ? gear : 'N'; d.children[1].textContent = kmh;
+}
 function skinTick(now, kick, t, dur) { // (every frame, a theme on)
+  if (skin === 'Redline') redlineTick(now, kick);
   if (skin === 'Tactical' || skin === 'Ops') {
     const sec = synced && activeIdx >= 0 ? lines[activeIdx]?.sec : null;
     if (sec && sec !== banner.sec) {
@@ -9697,7 +9897,7 @@ let vsGap = [], vsTick = 0, vsN = 1; // (a computer: the gaps between the screen
 // Each frame reads what it needs of the page first (sizes, places) and changes it after: read after a change, the
 // browser would have to work out the whole layout again there and then, every frame.
 function frame(now) {
-  if (place < 2) { looping = false; return; } // (not in front: the loop stops; setPlace starts it again)
+  if (place < 1) { looping = false; return; } // (away: the loop stops; setPlace starts it again)
   requestAnimationFrame(frame);
   // A screen faster than 60 Hz (90, 120, 144…): the work keeps to about 60 times a second. On a phone, by the clock (at
   // 120 Hz, every other frame); on a computer, on every Nth of the screen's own frames, evenly — at 144 Hz every other
@@ -9737,7 +9937,7 @@ function frame(now) {
   const style = THEMES.indexOf(theme), drawn = !PLAIN.has(theme); // Cover isn't drawn here: it's the blurred cover in front, on plain background; Gradient, CSS
   if (gl && !covered && theme === 'Cover' && fxDirty) { fxDirty = false; gl.clearColor(...rgb(pal.bg), 1); gl.clear(gl.COLOR_BUFFER_BIT); }
   const moving = gl && !covered && drawn && !Q.still;
-  if (gl && !covered && drawn && ++fxFrame % Q.every === 0 && (!Q.still || settling || fxDirty)) { // lower qualities redraw less often
+  if (gl && !covered && drawn && !race.show && ++fxFrame % Q.every === 0 && (!Q.still || settling || fxDirty)) { // lower qualities redraw less often (none under Redline's race)
     fxDirty = false;
     if (style !== fxStyle) useStyle(style);
     const ease = Math.min(1, 0.04 * Q.every);
@@ -9765,6 +9965,7 @@ function frame(now) {
   const kinSeen = kin.on && !covered && view !== 'Cover' && body.classList.contains('has-song') && !body.classList.contains('home');
   if (kinSeen) drawKin(now, kick);
   vedFrame(now, kinSeen, kick);
+  raceFrame(now, !covered, kick);
 }
 // the seek bar and the time (only what changed)
 function showTime(t, dur) {
@@ -9774,16 +9975,6 @@ function showTime(t, dur) {
   if (sv !== lastSeek) { lastSeek = sv; $('seek').value = sv; }
   if (ct !== lastCur) { lastCur = ct; $('cur').textContent = ct; }
   if (dd !== lastDur) { lastDur = dd; $('dur').textContent = dd; }
-}
-// Behind another app (setPlace), four times a second: the lyrics, the time and the timeline keep up. Every animation's
-// paused meanwhile (.still), so an entrance that's begun (a new line's, say) is finished at once: shown as it ends.
-function calm() {
-  const dur = P.dur, t = P.t;
-  lyricKick = 0;
-  drawSpec(performance.now(), dur ? t / dur : 0);
-  showTime(t, dur);
-  syncLyrics();
-  for (const a of document.getAnimations()) if (a.playState !== 'finished' && a.effect?.getTiming().iterations !== Infinity) a.finish();
 }
 // The backdrop too much for this device: under ~40 frames a second (a phone: 50), twice running, over 2.5 seconds of
 // drawing it, a quality step down (and from Low to a still picture under ~24; a phone: 30), remembered. Only while the

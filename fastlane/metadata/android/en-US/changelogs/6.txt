@@ -1,0 +1,1 @@
+This version's new features are for the Windows app: a 3D racing theme on real circuits (Extreme+) and smooth music videos behind Extreme lyrics. On Android: the privacy policy's wording is updated, and small fixes.

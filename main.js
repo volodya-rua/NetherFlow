@@ -7,6 +7,7 @@ const { spawn } = require('child_process');
 const { start } = require('./server');
 
 const PORT = 41739; // fixed, so settings saved by the page (lyric sync per song) survive restarts
+const LITE = !!require('./package.json').lite; // (NetherFlow Lite: built by tools/lite-build.js, without Extreme+)
 
 // Ad servers the YouTube player calls. Blocking them stops many ads from loading at all.
 const AD_URLS = [
@@ -283,6 +284,7 @@ function getUpdater() {
   try {
     updater = require('electron-updater').autoUpdater;
     updater.autoDownload = false; updater.autoInstallOnAppQuit = true;
+    if (LITE) { updater.channel = 'lite'; updater.allowDowngrade = false; } // (Lite updates to Lite: lite.yml, not latest.yml)
     updater.on('download-progress', p => { if (win && !win.isDestroyed()) win.webContents.send('update-progress', p.percent / 100); });
   } catch { updater = null; }
   return updater;
@@ -294,7 +296,7 @@ ipcMain.handle('update-check', async e => {
   try { const r = await u.checkForUpdates(); return { version, can: true, next: r?.isUpdateAvailable ? r.updateInfo.version : null }; }
   catch (er) {
     const m = String(er.message || er).split('\n')[0];
-    return /latest\.yml|\b404\b/.test(m) ? { version, can: true, next: null } : { version, can: true, error: m }; // (a release without the update's files: nothing to get)
+    return /(latest|lite)\.yml|\b404\b/.test(m) ? { version, can: true, next: null } : { version, can: true, error: m }; // (a release without the update's files: nothing to get)
   }
 });
 ipcMain.handle('update-get', async e => {
@@ -323,13 +325,14 @@ app.whenReady().then(async () => {
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       backgroundThrottling: false, // keep timers at full speed when minimized, so ads are still skipped instantly
+      additionalArguments: LITE ? ['--nf-lite'] : [], // (see preload.js: lite)
     },
   });
   win.removeMenu();
   win.once('ready-to-show', () => win.show());
   for (const ev of ['maximize', 'unmaximize']) win.on(ev, () => { if (!win.webContents.isDestroyed()) win.webContents.send('maximized', win.isMaximized()); });
   // Where the window is, for the page — 2 in front, 1 on screen behind another app, 0 minimized or hidden: it only
-  // moves while it's in front (timers keep running, see above, so the page can't tell on its own).
+  // moves while it's on screen (timers keep running, see above, so the page can't tell on its own).
   const where = () => !win.isVisible() || win.isMinimized() ? 0 : win.isFocused() ? 2 : 1;
   for (const ev of ['minimize', 'restore', 'hide', 'show', 'focus', 'blur']) win.on(ev, () => { if (!win.webContents.isDestroyed()) win.webContents.send('shown', where()); });
   win.webContents.on('did-finish-load', () => win.webContents.send('shown', where()));
