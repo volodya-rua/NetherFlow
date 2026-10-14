@@ -9,6 +9,15 @@ full, and follow its lyrics word by word over moving, music-reactive backgrounds
 
 ![On a phone: home, backgrounds](docs/screenshots/phone-home-backgrounds.png)
 
+## Download
+
+From the [latest release](https://github.com/volodya-rua/NetherFlow/releases/latest):
+
+- **Windows**: `NetherFlow-Setup-<version>.exe`, the installer. It installs for you alone (no admin needed), with Start-menu
+  and desktop shortcuts and an uninstaller in Windows' Settings. Or `NetherFlow-<version>-Windows.exe`, portable: it runs as it is,
+  with nothing to install.
+- **Android**: `NetherFlow-<version>.apk` (Android 7.0 or newer).
+
 ## Features
 
 - **Search** songs, artists and albums, and play them in full: typos fixed, suggestions as you type, and YouTube Music's
@@ -78,7 +87,7 @@ You need [Node.js](https://nodejs.org) 20 or newer.
 ```bash
 npm ci
 npm start      # run it
-npm run dist   # build dist/NetherFlow.exe (fetches yt-dlp.exe first and checks its SHA-256)
+npm run dist   # build the installer and the portable app into dist/ (fetches yt-dlp.exe first and checks its SHA-256)
 npm test       # a quick self-test: plays a song and checks the lyrics sync
 ```
 

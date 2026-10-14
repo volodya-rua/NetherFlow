@@ -9,7 +9,7 @@
   "scripts": {
     "start": "electron .",
     "test": "electron selftest.js",
-    "dist": "node tools/fetch-yt-dlp.js && electron-builder --win portable",
+    "dist": "node tools/fetch-yt-dlp.js && electron-builder --win",
     "android:sync": "node -e \"const fs=require('fs');fs.mkdirSync('www',{recursive:true});for(const f of ['index.html','lib.js','legal.html','frame-helper.js','logo.png'])fs.copyFileSync(f,'www/'+f);for(const d of ['licenses','fonts'])fs.cpSync(d,'www/'+d,{recursive:true})\" && cap sync android",
     "android": "android-build.cmd",
     "fetch-yt-dlp": "node tools/fetch-yt-dlp.js"
@@ -45,8 +45,22 @@
       "output": "dist"
     },
     "win": {
-      "target": "portable",
+      "target": [
+        "nsis",
+        "portable"
+      ],
       "icon": "icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "NetherFlow",
+      "uninstallDisplayName": "NetherFlow",
+      "deleteAppDataOnUninstall": false,
+      "artifactName": "NetherFlow-Setup-${version}.exe"
     },
     "portable": {
       "artifactName": "NetherFlow.exe"
