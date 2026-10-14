@@ -40,11 +40,12 @@ Grab it from the **[latest release](https://github.com/volodya-rua/NetherFlow/re
 
 | | Installer | Portable |
 |:--|:--|:--|
-| 🪟 **Windows** | `NetherFlow-Setup-<version>.exe`<br><sub>installs just for you (no admin), shortcuts, uninstaller, and it updates itself</sub> | `NetherFlow-<version>-Windows.exe`<br><sub>just run it, nothing to install</sub> |
-| 🪶 **Windows Lite** | `NetherFlow-Lite-Setup-<version>.exe` | `NetherFlow-Lite-<version>-Windows.exe` |
+| ⭐ **Windows Lite**<br><sub>recommended</sub> | `NetherFlow-Lite-Setup-<version>.exe`<br><sub>installs just for you (no admin), shortcuts, uninstaller, and it updates itself</sub> | `NetherFlow-Lite-<version>-Windows.exe`<br><sub>just run it, nothing to install</sub> |
+| 🏎️ **Windows** | `NetherFlow-Setup-<version>.exe` | `NetherFlow-<version>-Windows.exe` |
 | 🤖 **Android** 7.0+ | `NetherFlow-<version>.apk` | |
 
-**Lite** is the exact same app minus Extreme+ (so no Redline races or cars), about 18 MB smaller, and it updates to Lite.
+**Not sure? Get Lite.** It's the exact same app minus Extreme+ (so no Redline races or cars, which need a beefy graphics
+card anyway), about 18 MB smaller, and it updates to Lite.
 
 <a id="whats-new"></a>
 
