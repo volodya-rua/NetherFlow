@@ -185,7 +185,7 @@ ipcMain.on('island-cmd', (e, cmd, v) => {
 // its cover, a bar of how far in — through the Discord app's own local connection (its named pipe: nothing goes over the
 // internet from here). DISCORD_ID: NetherFlow's application at Discord, which names it there (an id, public, not a
 // secret; from discord.com/developers/applications).
-const DISCORD_ID = process.env.NETHERFLOW_DISCORD_ID || '';
+const DISCORD_ID = process.env.NETHERFLOW_DISCORD_ID || '1559725339968540834';
 const net = require('net');
 const rpc = { sock: null, ready: false, want: null, sent: '', retryAt: 0, buf: Buffer.alloc(0), timer: null, last: 0 };
 const rpcFrame = (op, obj) => { const j = Buffer.from(JSON.stringify(obj)), h = Buffer.alloc(8); h.writeInt32LE(op, 0); h.writeInt32LE(j.length, 4); return Buffer.concat([h, j]); };
@@ -216,7 +216,7 @@ function rpcConnect(i = 0) {
 function rpcSend() {
   if (!rpc.ready) return rpcConnect();
   const w = rpc.want, a = w && { type: 2, status_display_type: 2, details: w.title.slice(0, 128), state: ('by ' + w.artist).slice(0, 128),
-    timestamps: { start: w.start, end: w.end }, assets: { large_image: w.art || undefined, large_text: (w.album || w.title).slice(0, 128) },
+    timestamps: { start: w.start, end: w.end }, assets: { large_image: w.art || 'netherflow-discord', large_text: (w.album || w.title).slice(0, 128), small_image: 'netherflow-discord', small_text: 'NetherFlow' }, // (netherflow-discord: the logo, an art asset of the app at Discord)
     ...(w.url ? { buttons: [{ label: 'Listen on YouTube', url: w.url }] } : {}) };
   const msg = JSON.stringify(a || null);
   if (msg === rpc.sent) return;

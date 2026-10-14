@@ -82,9 +82,8 @@ npm run dist   # build dist/NetherFlow.exe (fetches yt-dlp.exe first and checks 
 npm test       # a quick self-test: plays a song and checks the lyrics sync
 ```
 
-Discord status needs NetherFlow's application id at Discord (public, not a secret): create an application named
-NetherFlow at [discord.com/developers/applications](https://discord.com/developers/applications) and put its id in
-`DISCORD_ID` in `main.js` (or set the `NETHERFLOW_DISCORD_ID` environment variable).
+Discord status uses NetherFlow's own application at Discord (its id, public, is `DISCORD_ID` in `main.js`; a fork can
+use its own there or with the `NETHERFLOW_DISCORD_ID` environment variable). Its logo, for Discord, is in `docs/logo/`.
 
 ### Android
 
