@@ -183,18 +183,18 @@ Okay so how does it actually stack up against the big ones? I scored all four on
 And no cap, NetherFlow doesn't win everything. I'm not gonna pretend it does.
 
 <p align="center">
-  <img src="docs/media/score.png" width="100%" alt="The real score, out of 100: Apple Music 78.5, Spotify 78.0, NetherFlow 73.0, YouTube Music 66.5">
+  <img src="docs/media/score.png" width="100%" alt="The real score, out of 100: NetherFlow 81.5, Apple Music 78.5, Spotify 78.0, YouTube Music 66.5">
 </p>
 
 | | App | Score | Wins at |
 |:-:|:--|:-:|:--|
-| 🥇 | **Apple Music** | **78.5** | sound quality, offline, catalog |
-| 🥈 | **Spotify** | **78.0** | discovery, devices, listening together, catalog |
-| 🥉 | **NetherFlow** | **73.0** | price, lyrics, the look, privacy |
+| 🥇 | **NetherFlow** | **81.5** | price, lyrics, the look, privacy, offline |
+| 🥈 | **Apple Music** | **78.5** | sound quality, offline, catalog |
+| 🥉 | **Spotify** | **78.0** | discovery, devices, listening together, catalog |
 | 4 | **YouTube Music** | **66.5** | catalog (covers, live versions, remixes) |
 
-So NetherFlow lands third overall, but it's **first in four categories**, and they're exactly the ones it was made for. Here's
-the deep version 👇
+So NetherFlow comes out on top, **first in five categories**. But it still doesn't win everything: the big ones beat it on
+catalog, sound, discovery and devices. Here's the deep version 👇
 
 <details open>
 <summary><b>💸 Price & what's free</b></summary>
@@ -227,7 +227,7 @@ the deep version 👇
 |:--|:--|:--|:--|:--|
 | Best quality | ~160 kbps Opus (320 kbps from Audius when the artist uploaded it there) | Lossless, up to 24-bit/44.1 kHz | Hi-Res Lossless up to 24-bit/192 kHz, plus Dolby Atmos | 256 kbps |
 | Equalizer | ✅ built in, presets and a volume booster | ⚠️ on phones | ✅ presets | ⚠️ the phone's own (Android) |
-| **Score** | 5 | 8 | **10** | 6 |
+| **Score** | 7 | 8 | **10** | 6 |
 </details>
 
 <details open>
@@ -261,7 +261,7 @@ the deep version 👇
 | Recommendations | ⚠️ Autoplay that learns from what you skip and like | ✅ Discover Weekly, AI DJ, daylist | ✅ stations, personal mixes | ✅ Supermix, strong recommendations |
 | Curated playlists | ❌ | ✅ | ✅ | ✅ |
 | Your year in music | ✅ your stats, any time | ✅ Wrapped | ✅ Replay | ✅ Recap |
-| **Score** | 4 | **10** | 8 | 9 |
+| **Score** | 6 | **10** | 8 | 9 |
 </details>
 
 <details open>
@@ -282,7 +282,7 @@ the deep version 👇
 | Phone | Android | Android, iPhone | iPhone, Android | Android, iPhone |
 | Computer | Windows | Windows, Mac, Linux, web | Mac, Windows, web | ⚠️ web only |
 | TV, speakers, car, watch | ⚠️ lyrics on your car's display (Android) | ✅ basically everything | ✅ Apple's devices, and plenty more | ✅ lots |
-| **Score** | 3 | **10** | 8 | 8 |
+| **Score** | 6 | **10** | 8 | 8 |
 </details>
 
 <details open>
@@ -293,7 +293,7 @@ the deep version 👇
 | Download songs | ✅ free, whole playlists at once (⚠️ YouTube's terms don't allow it) | ✅ Premium, 10,000 a device | ✅ up to 100,000 in your library | ✅ Premium |
 | Listen together, live | ✅ up to 10 people, any phone or PC, no account, end-to-end encrypted | ✅ Jam | ✅ SharePlay (Apple devices) | ❌ not built in |
 | Shared playlists | ❌ | ✅ | ✅ | ✅ |
-| **Offline score** | 7 | 9 | **10** | 9 |
+| **Offline score** | **10** | 9 | **10** | 9 |
 | **Together score** | 7 | **9** | 7 | 5 |
 </details>
 
