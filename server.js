@@ -4,7 +4,8 @@
 //  3. /api/words?artist=&title=&dur= fetches word-by-word lyric timing; /api/ytmlyrics?id=… YouTube Music's own lyrics
 //     for a video (time-synced when it has them); /api/suggest?q=… what YouTube Music suggests while a search is typed;
 //     /api/audius?q=… Audius's tracks (an artist's own uploads there play at 320 kbps); /api/radio?id=… YouTube Music's radio
-//     for a song (what Autoplay picks from); /api/playlist?url=… a Spotify, Apple Music or YouTube playlist's songs.
+//     for a song (what Autoplay picks from); /api/playlist?url=… a Spotify, Apple Music or YouTube playlist's songs;
+//     /api/agents the Tactical theme's agents (Riot Games' art, by valorant-api.com).
 // (2 and 3 live in lib.js, which the Android app runs inside the page instead.)
 const http = require('http'), fs = require('fs'), path = require('path');
 const lib = require('./lib');
@@ -60,6 +61,10 @@ async function handle(req, res) {
     if (!/^(music\.youtube\.com|(www\.|m\.)?youtube\.com|youtu\.be|open\.spotify\.com|music\.apple\.com)$/.test(host)) return send(res, 400, JSON.stringify({ error: 'not a playlist link' }));
     try { return send(res, 200, JSON.stringify(await lib.playlist(get, post, link))); }
     catch (e) { return send(res, 502, JSON.stringify({ error: e.message })); }
+  }
+  if (url.pathname === '/api/agents') { // (the Tactical theme's agents: see lib.agents)
+    try { return send(res, 200, JSON.stringify(await lib.agents(get))); }
+    catch { return send(res, 200, '[]'); }
   }
   if (url.pathname === '/api/radio') {
     const id = url.searchParams.get('id') || '';

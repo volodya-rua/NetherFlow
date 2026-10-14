@@ -119,7 +119,7 @@ kbd { font: inherit; border: 1px solid currentColor; border-radius: 3px; padding
 .brand:hover .brand-mark { transform: scale(1.08); }
 .brand sup { font: 500 9px var(--mono); letter-spacing: .15em; color: var(--a); margin-left: 4px; }
 .mood { display: flex; align-items: center; gap: 10px; }
-.mood i { width: 14px; height: 14px; border-radius: 50%; background: conic-gradient(var(--a), var(--b), var(--ink), var(--a));
+.mood > i { width: 14px; height: 14px; border-radius: 50%; background: conic-gradient(var(--a), var(--b), var(--ink), var(--a));
   animation: spin 4s linear infinite; }
 .mood b { font-weight: 500; color: var(--a); }
 /* a little see-through, so the background shows behind it */
@@ -995,12 +995,260 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* ---------- themes (the mood menu's top, and Settings): body.skin-<name> changes every part of the page ---------- */
+/* the cards to pick one: each in its own colours and face, whatever's on */
+.skins { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; padding: 2px 0 10px; margin-bottom: 4px; border-bottom: 1px solid var(--hair); }
+.skin-card { display: grid; justify-items: center; gap: 7px; padding: 12px 4px 9px; border-radius: 12px; color: #f2efe8; font: 400 11px/1.1 var(--mono); letter-spacing: .06em;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.1); transition: transform .2s cubic-bezier(.3,1.6,.5,1), box-shadow .2s; overflow: hidden; }
+.skin-card:hover { transform: translateY(-2px); }
+.skin-card[aria-pressed=true] { box-shadow: inset 0 0 0 2px var(--a), 0 0 18px color-mix(in srgb, var(--a) 35%, transparent); }
+.skin-card i { width: 34px; height: 34px; display: grid; place-items: center; }
+.skin-card svg { width: 30px; height: 30px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.skin-card img { width: 30px; height: 30px; border-radius: 7px; }
+.skin-card b { font-weight: 400; white-space: nowrap; }
+.sk-none { background: radial-gradient(circle at 30% 20%, #ff4a1c55, transparent 60%), #120806; font-style: italic; }
+.sk-none b { font: italic 400 16px/1 'Instrument Serif', Georgia, serif; letter-spacing: 0; }
+.sk-stickman { background: repeating-linear-gradient(#f3efe4 0 9px, #b8c8e6 9px 10px); color: #1d1b18; }
+.sk-stickman b { font: 400 14px/1 'Permanent Marker', cursive; letter-spacing: 0; }
+.sk-spider { background: radial-gradient(circle, #ff4d8d 22%, transparent 24%) 0 0 / 6px 6px, linear-gradient(#170a2c, #6b1460); color: #fff; }
+.sk-spider i { color: #fff; filter: drop-shadow(2px 2px 0 #ff2d55); }
+.sk-spider b { font: 400 18px/1 'Sedgwick Ave Display', cursive; letter-spacing: 0; text-shadow: 2px 2px 0 #000; }
+.sk-blocks { background: linear-gradient(#d9774f, #6e4a6c 70%, #3d3a2a); border-radius: 0; }
+.sk-blocks b { font: 400 8px/1.4 'Press Start 2P', monospace; text-shadow: 1px 1px 0 #3f3f3f; }
+.sk-tactical { background: linear-gradient(135deg, #0f1923 60%, #2a1a24); color: #ff4655; border-radius: 0; clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px)); }
+.sk-tactical b { font: 400 17px/1 'Anton', Impact, sans-serif; letter-spacing: .06em; color: #ece8e1; text-transform: uppercase; }
+.sk-ops { background: linear-gradient(#1b2733, #4c3a2a); color: #4cff4c; border-radius: 4px; }
+.sk-ops b { font: 400 14px/1 'Black Ops One', Impact, sans-serif; color: #f0a830; letter-spacing: .04em; text-transform: uppercase; }
+.upd .pill { justify-self: start; margin-top: 4px; }
+.upd .pill:disabled { opacity: .6; cursor: var(--cur, default); }
+.skin-note { grid-column: 1 / -1; margin: 0; padding: 4px 8px 8px; opacity: .75; text-transform: none; letter-spacing: .02em; line-height: 1.6; }
+
+/* — Stickman: ink on notebook paper; everything outlined by hand (uneven corners), marker headings, typed labels,
+     a highlighter for what's picked, sticky notes — */
+.skin-stickman { color-scheme: light; --poster: 'Permanent Marker', cursive; --serif: 'Permanent Marker', cursive; --mono: 'Special Elite', 'Courier New', monospace;
+  --hand: 255px 14px 225px 14px / 14px 225px 14px 255px; --hand2: 14px 225px 14px 255px / 255px 14px 225px 14px; --hl: #fff27a; }
+.skin-stickman, .skin-stickman .lbl { font-size: 12px; letter-spacing: .02em; }
+.skin-stickman :is(.brand, .title, .row b, .acard b, .album b, .cs-title, .it-title, .prev, .chip, .cta, .msg em, .sm-head b, .eq-top h3, .consent h2, .home-now b, .top-hit b, .mrow.now .mname, .dv-line) { font-style: normal; letter-spacing: 0; }
+.skin-stickman .msg { font-size: clamp(36px, 10vw, 170px); line-height: 1; }
+.skin-stickman .msg em { font-size: .9em; }
+.skin-stickman :is(.moods, .eq, .smenu, .consent) { background: #fbf8ef; color: var(--ink); border: 2px solid var(--ink); border-radius: var(--hand);
+  box-shadow: 4px 5px 0 rgba(29,27,24,.18); -webkit-backdrop-filter: none; backdrop-filter: none; }
+.skin-stickman :is(.seg button, .presets button, .chip, .stepper .step, .pill, .nudge button) { border: 2px solid var(--ink); border-radius: var(--hand2); }
+.skin-stickman :is(.seg button, .presets button, .chip)[aria-pressed=true], .skin-stickman .chip:hover { background: var(--hl); color: var(--ink); border-color: var(--ink); }
+.skin-stickman .pill { background: var(--a); color: #fff; }
+.skin-stickman .pill.ghost { background: none; color: var(--a); box-shadow: none; border-color: var(--a); }
+.skin-stickman :is(.mchip, .mi, .acard, .album, .top-hit, .st-nums > div, .st-bar) { border-radius: var(--hand); }
+.skin-stickman .row:hover, .skin-stickman .row:focus-visible { background: var(--hl); color: var(--ink); }
+.skin-stickman .row:hover .idx, .skin-stickman .row:focus-visible .idx, .skin-stickman .ritem:has(.row:hover, .row:focus-visible) .rmore { color: var(--a); }
+.skin-stickman .toast { background: var(--hl); color: var(--ink); border-radius: 2px; rotate: -1.5deg; box-shadow: 2px 6px 14px rgba(0,0,0,.18); }
+.skin-stickman .core { border-radius: 52% 48% 55% 45% / 47% 55% 45% 53%; box-shadow: 0 0 0 2px var(--ink), 3px 4px 0 rgba(29,27,24,.25); }
+.skin-stickman .badge text { font: 400 8px 'Special Elite', monospace; }
+.skin-stickman .switch { border: 2px solid var(--ink); border-radius: var(--hand2); }
+.skin-stickman :is(.winctl button:hover) { background: rgba(0,0,0,.07); color: var(--ink); }
+.skin-stickman :is(.search, .about, .drive) { background: repeating-linear-gradient(transparent 0 27px, #bcd0ec 27px 28px) 0 14px, #f4f0e6; }
+.skin-stickman .results { border-top: 2px solid var(--ink); }
+.skin-stickman .row { border-bottom: 1px dashed color-mix(in srgb, var(--ink) 30%, transparent); }
+.skin-stickman .cur .w > span { --dim: color-mix(in srgb, var(--ink) 18%, transparent); }
+.skin-stickman .cur .w.now > span { filter: none; transform: translateY(-.04em) rotate(-1.5deg) scale(1.05); }
+.skin-stickman .cur .w.em > span { --lit: var(--a); --dim: color-mix(in srgb, var(--a) 25%, transparent); }
+.skin-stickman .grain { display: none; }
+.skin-stickman ::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--ink) 55%, transparent) padding-box; }
+
+/* — Spider: a comic at night; panels in black ink on paper with a hard shadow, buttons as yellow caption boxes,
+     speech-bubble toasts, a burst for the play button, graffiti lyrics outlined in ink — */
+.skin-spider { --poster: 'Sedgwick Ave Display', cursive; --serif: 'Permanent Marker', cursive; --mono: 'Permanent Marker', cursive; --cap: #ffe14d; }
+.skin-spider, .skin-spider .lbl { font-size: 12px; letter-spacing: .04em; }
+.skin-spider :is(.brand, .title, .row b, .acard b, .album b, .cs-title, .it-title, .prev, .chip, .cta, .msg em, .sm-head b, .eq-top h3, .consent h2, .home-now b, .mrow.now .mname, .dv-line) { font-style: normal; letter-spacing: 0; }
+.skin-spider .msg { font-size: clamp(40px, 12vw, 200px); line-height: .95; text-shadow: 4px 4px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000; }
+.skin-spider .msg em { color: var(--cap); }
+.skin-spider :is(.moods, .eq, .smenu, .consent) { background: radial-gradient(circle, rgba(255,45,85,.12) 25%, transparent 27%) 0 0 / 7px 7px, #fff8e8; color: #120a14;
+  border: 3px solid #000; border-radius: 4px; box-shadow: 7px 7px 0 #000; -webkit-backdrop-filter: none; backdrop-filter: none; --hair: rgba(0,0,0,.18); }
+.skin-spider :is(.moods, .smenu, .consent) :is(.lbl, span, small, b, p, h2, h3):not(.skin-card *) { color: #120a14; }
+.skin-spider :is(.moods, .smenu, .eq, .consent) .inline-link, .skin-spider .moods .stepper b { color: #d0103a; }
+.skin-spider :is(.seg button, .presets button, .chip, .stepper .step, .pill, .nudge button, .mchip) { background: var(--cap); color: #000; border: 2px solid #000; border-radius: 2px;
+  box-shadow: 3px 3px 0 #000; transition: transform .12s, box-shadow .12s; }
+.skin-spider :is(.seg button, .presets button, .chip, .stepper .step, .pill, .mchip):hover { transform: translate(-1px, -1px); box-shadow: 4px 4px 0 #000; }
+.skin-spider :is(.seg button, .presets button, .mchip)[aria-pressed=true] { background: var(--a); color: #fff; }
+.skin-spider .pill.ghost { background: #fff; color: #000; }
+.skin-spider .row:hover, .skin-spider .row:focus-visible { background: var(--a); color: #fff; box-shadow: inset 0 0 0 3px #000; }
+.skin-spider .toast { background: #fff; color: #000; border: 3px solid #000; border-radius: 22px; box-shadow: 5px 5px 0 #000; overflow: visible; }
+.skin-spider .toast::after { content: ''; position: absolute; left: 30px; bottom: -14px; width: 18px; height: 14px; background: #fff; clip-path: polygon(0 0, 100% 0, 10% 100%);
+  filter: drop-shadow(0 3px 0 #000); }
+.skin-spider .core { border-radius: 0; clip-path: polygon(50% 0, 61% 26%, 90% 12%, 77% 40%, 100% 52%, 74% 62%, 86% 92%, 58% 76%, 46% 100%, 39% 74%, 10% 88%, 25% 60%, 0 46%, 25% 36%, 13% 8%, 41% 24%);
+  width: 70px; height: 70px; }
+.skin-spider .badge text { font: 400 9px 'Permanent Marker', cursive; fill: #fff; }
+.skin-spider .cur { -webkit-text-stroke: .025em #000; paint-order: stroke fill; }
+.skin-spider .cur .w.em > span { --lit: var(--cap); --dim: color-mix(in srgb, var(--cap) 25%, transparent); }
+.skin-spider .cur .w.now > span { filter: drop-shadow(.06em .06em 0 #000); }
+.skin-spider .title { text-shadow: 3px 3px 0 #000; }
+.skin-spider :is(.search, .about) { background: radial-gradient(circle, rgba(255,45,85,.16) 24%, transparent 26%) 0 0 / 9px 9px, linear-gradient(#12071f, #2a0b2c); }
+.skin-spider .q { text-shadow: 5px 5px 0 #000; color: var(--cap); }
+.skin-spider .switch { border: 2px solid #000; }
+.skin-spider ::-webkit-scrollbar-thumb { background: #000 padding-box; border-color: transparent; box-shadow: inset 0 0 0 2px var(--a); }
+
+/* — Blocks: a pixel game's screens; stone buttons with bevelled edges, light grey panels, white text with its shadow,
+     a dirt backdrop behind full pages, pixel faces — */
+.skin-blocks { --poster: 'Press Start 2P', monospace; --serif: 'VT323', monospace; --mono: 'VT323', monospace; --gui: #c6c6c6; --gtext: #3f3f3f; }
+.skin-blocks, .skin-blocks .lbl { font-size: 17px; letter-spacing: .03em; line-height: 1.25; }
+.skin-blocks .frame, .skin-blocks .search, .skin-blocks .about { text-shadow: 2px 2px 0 rgba(30,30,30,.75); }
+.skin-blocks :is(.brand, .title, .row b, .acard b, .album b, .cs-title, .it-title, .prev, .chip, .cta, .msg em, .sm-head b, .eq-top h3, .consent h2, .home-now b, .mrow.now .mname, .dv-line) { font-style: normal; letter-spacing: 0; }
+.skin-blocks .title { font-size: clamp(26px, 3vw, 40px); }
+.skin-blocks .msg { font-size: clamp(22px, 5.6vw, 92px); line-height: 1.25; }
+.skin-blocks .msg em { font-size: 1.5em; }
+.skin-blocks :is(.moods, .eq, .smenu, .consent) { background: var(--gui); color: var(--gtext); border: 3px solid #000; border-radius: 0; text-shadow: none;
+  box-shadow: inset 3px 3px 0 #fff, inset -3px -3px 0 #555, 0 12px 40px rgba(0,0,0,.5); -webkit-backdrop-filter: none; backdrop-filter: none; --hair: rgba(0,0,0,.2); }
+.skin-blocks :is(.moods, .smenu, .consent) :is(.lbl, span, small, b, p, h2, h3):not(.skin-card *) { color: var(--gtext); }
+.skin-blocks :is(.seg button, .presets button, .chip, .stepper .step, .pill, .nudge button, .mchip, .dv-small, .dv-exit) {
+  background: var(--stone, #777) 0 0 / 48px 48px; image-rendering: pixelated; color: #fff; text-shadow: 2px 2px 0 #3f3f3f; border: 2px solid #000; border-radius: 0;
+  box-shadow: inset 2px 2px 0 rgba(255,255,255,.45), inset -2px -3px 0 rgba(0,0,0,.4); }
+.skin-blocks :is(.seg button, .presets button, .chip, .stepper .step, .pill, .mchip):hover { border-color: #fff; color: #ffffa0; }
+.skin-blocks :is(.seg button, .presets button, .mchip)[aria-pressed=true] { color: #ffffa0; border-color: #fff; background-color: #5b8b2c; background-blend-mode: multiply; }
+.skin-blocks .mchip i { border-radius: 0; }
+.skin-blocks .row:hover, .skin-blocks .row:focus-visible { background: rgba(255,255,255,.18); color: #fff; box-shadow: inset 0 0 0 2px #fff; }
+.skin-blocks .row:hover .idx, .skin-blocks .ritem:has(.row:hover, .row:focus-visible) .rmore { color: #ffffa0; }
+.skin-blocks :is(.search, .about, .drive) { background: linear-gradient(rgba(0,0,0,.6), rgba(0,0,0,.6)), var(--dirt, #3f2c1f) 0 0 / 64px 64px; image-rendering: pixelated; }
+.skin-blocks .q { font-size: clamp(24px, 6vw, 84px); line-height: 1.3; }
+.skin-blocks .toast { background: #212121; color: #ffff55; border: 2px solid #555; border-radius: 0; text-shadow: 2px 2px 0 #3f3f3f; box-shadow: inset 0 0 0 2px #000, 0 8px 0 rgba(0,0,0,.3); }
+.skin-blocks .core { border-radius: 0; background: var(--a); box-shadow: inset 3px 3px 0 rgba(255,255,255,.4), inset -3px -4px 0 rgba(0,0,0,.35), 0 0 0 3px #000; }
+.skin-blocks .core i, .skin-blocks .core i::after, .skin-blocks .now-cover, .skin-blocks .row img, .skin-blocks .acard i, .skin-blocks .album img, .skin-blocks .ap-art { border-radius: 0; }
+.skin-blocks .badge { display: none; }
+.skin-blocks :is(.skip, .icon-btn, .files > .link, .nudge button, .switch, .switch::after) { border-radius: 0; }
+.skin-blocks .switch { box-shadow: inset 0 0 0 2px #000; }
+.skin-blocks .cur { text-shadow: .1em .1em 0 rgba(20,20,20,.6); }
+.skin-blocks .cur .w.now > span { filter: none; transform: translateY(-.08em); }
+.skin-blocks .cur .w.em > span { --lit: #ffff55; --dim: rgba(255,255,85,.25); }
+.skin-blocks .vol::-webkit-slider-thumb, .skin-blocks .sl::-webkit-slider-thumb { border-radius: 0; box-shadow: 0 0 0 2px #000; }
+.skin-blocks ::-webkit-scrollbar-thumb { border-radius: 0; background: #c6c6c6 padding-box; box-shadow: inset 2px 2px 0 #fff, inset -2px -2px 0 #555; border-width: 2px; }
+
+/* — Tactical: deep navy and signal red, cut corners, hairline frames with corner ticks, tall condensed capitals — */
+.skin-tactical { --poster: 'Anton', Impact, sans-serif; --serif: 'Chakra Petch', sans-serif; --mono: 'Chakra Petch', sans-serif;
+  --cut: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px)); }
+.skin-tactical, .skin-tactical .lbl { font-weight: 500; letter-spacing: .1em; }
+.skin-tactical :is(.brand, .title, .cta, .msg em, .consent h2, .eq-top h3, .home-now b, .mrow.now .mname, .cs-title, .it-title) { font-family: 'Anton', Impact, sans-serif; font-style: normal; text-transform: uppercase; letter-spacing: .03em; }
+.skin-tactical :is(.row b, .acard b, .album b, .chip, .sm-head b, .prev, .dv-line) { font-style: normal; font-weight: 500; letter-spacing: .01em; }
+.skin-tactical .msg em { font-size: .92em; }
+.skin-tactical :is(.moods, .eq, .smenu, .consent) { background: linear-gradient(rgba(15,25,35,.96), rgba(15,25,35,.96)), var(--a); border: 0; border-radius: 0; clip-path: var(--cut);
+  box-shadow: inset 0 0 0 1px rgba(236,232,225,.16), inset 0 3px 0 var(--a); -webkit-backdrop-filter: none; backdrop-filter: none; }
+.skin-tactical :is(.seg button, .presets button, .chip, .stepper .step, .nudge button, .mchip) { border: 1px solid rgba(236,232,225,.28); border-radius: 0; text-transform: uppercase;
+  transition: background-color .15s, color .15s, border-color .15s; }
+.skin-tactical :is(.seg button, .presets button, .chip, .stepper .step, .mchip):hover { border-color: var(--a); color: var(--a); }
+.skin-tactical :is(.seg button, .presets button, .mchip)[aria-pressed=true] { background: var(--ink); border-color: var(--ink); color: var(--bg); }
+.skin-tactical .pill { border-radius: 0; background: var(--a); color: var(--ink); letter-spacing: .16em; clip-path: polygon(0 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%); }
+.skin-tactical .pill.ghost { background: none; box-shadow: inset 0 0 0 1px var(--ink); color: var(--ink); }
+.skin-tactical .row:hover, .skin-tactical .row:focus-visible { background: linear-gradient(90deg, rgba(255,70,85,.22), transparent 70%); color: var(--ink); box-shadow: inset 4px 0 0 var(--a); }
+.skin-tactical .row:hover .idx, .skin-tactical .ritem:has(.row:hover, .row:focus-visible) .rmore { color: var(--a); }
+.skin-tactical .toast { background: var(--bg); color: var(--ink); border-radius: 0; clip-path: var(--cut); box-shadow: inset 0 0 0 1px rgba(236,232,225,.2), inset 4px 0 0 var(--a); text-transform: uppercase; letter-spacing: .14em; }
+.skin-tactical .core { border-radius: 0; rotate: 45deg; width: 50px; height: 50px; box-shadow: 0 0 0 1px var(--bg), 0 0 0 3px var(--a), 0 0 24px rgba(255,70,85,.5); }
+.skin-tactical .core svg, .skin-tactical .core i { rotate: -45deg; }
+.skin-tactical .core i, .skin-tactical .core i::after { border-radius: 0; inset: -20%; }
+.skin-tactical .badge text { font: 500 8px 'Chakra Petch', sans-serif; letter-spacing: .2em; }
+.skin-tactical :is(.skip, .icon-btn, .files > .link, .nudge button, .now-cover, .row img, .acard i, .album img) { border-radius: 0; }
+.skin-tactical .switch, .skin-tactical .switch::after { border-radius: 0; }
+.skin-tactical :is(.search, .about) { background: linear-gradient(115deg, transparent 62%, rgba(255,70,85,.08) 62% 70%, transparent 70%), var(--bg); }
+.skin-tactical .q { font-family: 'Anton', Impact, sans-serif; letter-spacing: .02em; }
+.skin-tactical .cur .w.now > span { filter: drop-shadow(0 0 .14em rgba(255,70,85,.55)); }
+.skin-tactical .cur .w.em > span { font-family: 'Anton', Impact, sans-serif; font-style: normal; text-transform: uppercase; }
+.skin-tactical ::-webkit-scrollbar-thumb { border-radius: 0; }
+
+/* — Ops: a match's HUD at dusk; dark glass panels with an amber edge, square-ish buttons, a stencil face for the big
+     words, a kill-feed toast, a crosshair cursor — */
+.skin-ops { --poster: 'Black Ops One', Impact, sans-serif; --serif: 'Chakra Petch', sans-serif; --mono: 'Space Mono', ui-monospace, monospace; }
+.skin-ops, .skin-ops .lbl { letter-spacing: .08em; }
+.skin-ops :is(.brand, .title, .cta, .consent h2, .eq-top h3, .home-now b, .mrow.now .mname, .cs-title, .it-title, .row b, .acard b, .album b, .chip, .sm-head b, .prev, .dv-line) { font-style: normal; font-weight: 500; letter-spacing: .01em; }
+.skin-ops .msg { font-size: clamp(40px, 11vw, 190px); }
+.skin-ops .msg em { font-family: 'Chakra Petch', sans-serif; font-style: normal; font-weight: 500; text-transform: uppercase; font-size: .62em; letter-spacing: .06em; }
+.skin-ops .title { text-transform: uppercase; }
+.skin-ops .stage-wrap { background: radial-gradient(ellipse 70% 60% at 35% 50%, rgba(8,12,16,.5), transparent 75%); }
+.skin-ops .cur { -webkit-text-stroke: .025em rgba(8,12,16,.9); paint-order: stroke fill; } /* (outlined, as a HUD's words: they read over the brightest smoke) */
+.skin-ops :is(.prev, .it-title, .it-meta, .cs-title, .msg, .cta, .hint) { text-shadow: 0 2px 16px rgba(0,0,0,.6), 0 1px 2px rgba(0,0,0,.55); }
+.skin-ops :is(.moods, .eq, .smenu, .consent) { background: rgba(13,17,21,.9); border: 1px solid rgba(255,255,255,.09); border-radius: 4px; box-shadow: inset 0 2px 0 var(--a), 0 24px 60px rgba(0,0,0,.6); }
+.skin-ops :is(.seg button, .presets button, .chip, .stepper .step, .nudge button, .mchip) { background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.12); border-radius: 3px; text-transform: uppercase; }
+.skin-ops :is(.seg button, .presets button, .chip, .stepper .step, .mchip):hover { background: rgba(255,255,255,.1); border-color: rgba(255,255,255,.3); }
+.skin-ops :is(.seg button, .presets button, .mchip)[aria-pressed=true] { background: var(--a); border-color: var(--a); color: #111; }
+.skin-ops .pill { border-radius: 3px; background: var(--a); color: #111; font-weight: 700; }
+.skin-ops .pill.ghost { background: none; color: var(--a); box-shadow: inset 0 0 0 1px var(--a); }
+.skin-ops .row:hover, .skin-ops .row:focus-visible { background: rgba(240,168,48,.13); color: var(--ink); box-shadow: inset 3px 0 0 var(--a); }
+.skin-ops .row:hover .idx, .skin-ops .ritem:has(.row:hover, .row:focus-visible) .rmore { color: var(--a); }
+.skin-ops .toast { background: rgba(0,0,0,.62); color: #fff; border: 1px solid #d83a3a; border-radius: 3px; box-shadow: 0 0 0 1px rgba(0,0,0,.6); text-transform: uppercase; }
+.skin-ops .core { border-radius: 8px; box-shadow: 0 0 0 1px rgba(0,0,0,.5), 0 0 0 3px rgba(240,168,48,.35); }
+.skin-ops .core i, .skin-ops .core i::after { border-radius: 8px; }
+.skin-ops .badge text { font: 700 8px 'Space Mono', monospace; letter-spacing: .14em; }
+.skin-ops :is(.skip, .icon-btn, .files > .link, .nudge button) { border-radius: 4px; }
+.skin-ops :is(.search, .about) { background: linear-gradient(rgba(13,17,21,.94), rgba(13,17,21,.98)), linear-gradient(0deg, #4c3a2a, #1b2733); }
+.skin-ops .cur .w.now > span { filter: drop-shadow(0 0 .12em rgba(240,168,48,.6)); }
+.skin-ops .cur .w.em > span { font-family: 'Chakra Petch', sans-serif; font-style: normal; text-transform: uppercase; }
+.skin-ops ::-webkit-scrollbar-thumb { border-radius: 2px; }
+/* (the search's top result, in each) */
+.skin-stickman .top-hit { border: 2px solid var(--ink); background: color-mix(in srgb, var(--hl) 45%, transparent); box-shadow: 3px 4px 0 rgba(29,27,24,.15); }
+.skin-spider .top-hit { border: 3px solid #000; border-radius: 4px; background: radial-gradient(circle, rgba(255,45,85,.22) 24%, transparent 26%) 0 0 / 8px 8px, #2a0d33; box-shadow: 7px 7px 0 #000; }
+.skin-blocks .top-hit { border: 2px solid #000; border-radius: 0; background: rgba(0,0,0,.35); box-shadow: inset 2px 2px 0 rgba(255,255,255,.22), inset -2px -2px 0 rgba(0,0,0,.4); }
+.skin-blocks :is(.top-hit img, .top-hit .go, .acard i) { border-radius: 0; }
+.skin-tactical .top-hit { border: 0; border-radius: 0; clip-path: var(--cut); background: linear-gradient(90deg, rgba(255,70,85,.16), rgba(236,232,225,.04)); box-shadow: inset 0 0 0 1px rgba(236,232,225,.14), inset 4px 0 0 var(--a); }
+.skin-tactical .top-hit .go { border-radius: 0; rotate: 45deg; } .skin-tactical .top-hit .go svg { rotate: -45deg; }
+.skin-ops .top-hit { border-radius: 4px; background: rgba(13,17,21,.7); box-shadow: inset 0 2px 0 var(--a); }
+.skin-ops .top-hit .go { border-radius: 6px; }
+
+/* — the themes' extras (see "the themes' extras" in the script) — */
+/* Tactical's agent (Riot Games' art) by the lyrics: its backdrop art behind it, a glow in its colours, sliding in */
+.agent { display: none; position: fixed; z-index: 1; right: 3vw; bottom: 0; height: 94vh; aspect-ratio: .9; pointer-events: none; }
+.skin-tactical .agent { display: block; }
+.agent::before { content: ''; position: absolute; inset: 22% 0 0; background: radial-gradient(closest-side, color-mix(in srgb, var(--ag1, #ff4655) 60%, transparent), transparent); opacity: .5; }
+.agent img { position: absolute; left: 50%; bottom: 0; height: 100%; translate: -50% 0; object-fit: contain; }
+.agent .ag-bg { height: 84%; bottom: 8%; opacity: .16; mix-blend-mode: screen; }
+.agent .ag-pt { opacity: 0; translate: -35% 0; transition: opacity .5s, translate .8s cubic-bezier(.16,1,.3,1);
+  -webkit-mask: linear-gradient(to top, transparent, #000 24%); mask: linear-gradient(to top, transparent, #000 24%); filter: drop-shadow(0 18px 40px rgba(0,0,0,.55)); }
+.agent.in .ag-pt { opacity: .95; translate: -50% 0; }
+.agent img:not([src]), .agent img[src=""] { display: none; }
+.skin-tactical :is(.prev, .it-title, .cs-title) { text-shadow: 0 3px 24px rgba(15,25,35,.85); } /* (not the line being sung: its letters are cut out of their fill, and a shadow would show through) */
+@media (max-width: 720px) { .agent { right: -24vw; height: 72vh; opacity: .5; } }
+/* the round timer in the header (Tactical, Ops): the scores either side, five a team */
+.hud { display: none; }
+.has-hud .mood > :not(.hud) { display: none; }
+.has-hud .mood { gap: 0; }
+.has-hud .hud { display: flex; align-items: center; gap: 6px; }
+.hud i { display: flex; gap: 3px; }
+.hud-t { min-width: 76px; padding: 5px 12px 6px; text-align: center; font-variant-numeric: tabular-nums; }
+.hud-sl, .hud-sr { min-width: 34px; text-align: center; font-weight: 400; }
+.skin-tactical .hud-t { font: 400 24px/1 'Anton', Impact, sans-serif; letter-spacing: .04em; color: #ece8e1; background: rgba(15,25,35,.72); clip-path: polygon(0 0, 100% 0, 88% 100%, 12% 100%); }
+.skin-tactical .hud.low .hud-t { color: #ff4655; }
+.skin-tactical :is(.hud-sl, .hud-sr) { font: 400 26px/1 'Anton', Impact, sans-serif; }
+.skin-tactical .hud-sl { color: #5ff5c4; } .skin-tactical .hud-sr { color: #ff4655; }
+.skin-tactical .hud img { width: 26px; height: 26px; object-fit: cover; background: rgba(95,245,196,.18); box-shadow: inset 0 -2px 0 #5ff5c4; }
+.skin-tactical .hud-r img { background: rgba(255,70,85,.2); box-shadow: inset 0 -2px 0 #ff4655; transform: scaleX(-1); }
+.skin-ops .hud-t { font: 700 20px/1 'Chakra Petch', sans-serif; color: #fff; background: rgba(0,0,0,.55); border-radius: 3px; }
+.skin-ops .hud.low .hud-t { color: #ff5a4a; }
+.skin-ops :is(.hud-sl, .hud-sr) { padding: 4px 6px; font: 700 19px/1 'Chakra Petch', sans-serif; color: #fff; border-radius: 3px; }
+.skin-ops .hud-sl { background: #5d79ae; } .skin-ops .hud-sr { background: #de9b35; }
+.skin-ops .hud i i { display: block; width: 14px; height: 18px; border-radius: 2px; background: rgba(93,121,174,.75); box-shadow: inset 0 -3px 0 rgba(0,0,0,.3); }
+.skin-ops .hud-r i { background: rgba(222,155,53,.8); }
+@media (max-width: 720px) { .hud i { display: none; } }
+/* a round banner, in a chorus */
+.rbanner { display: none; position: fixed; z-index: 30; left: 50%; top: 9vh; translate: -50% 0; pointer-events: none; text-align: center; white-space: nowrap; }
+.rbanner.show { display: block; animation: rbanner 2.7s cubic-bezier(.16,1,.3,1) both; }
+@keyframes rbanner { 0% { opacity: 0; transform: scale(1.5); } 7% { opacity: 1; transform: scale(1); } 82% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateY(-14px); } }
+.skin-tactical .rbanner b { display: block; padding: 0 .35em; font: 400 clamp(56px, 9vw, 128px)/1.05 'Anton', Impact, sans-serif; letter-spacing: .05em; color: #fff;
+  background: linear-gradient(transparent 64%, #ff4655 64% 80%, transparent 80%); text-shadow: 0 6px 36px rgba(0,0,0,.6); }
+.skin-tactical .rbanner.gold b { background: linear-gradient(transparent 64%, #f2c260 64% 80%, transparent 80%); }
+.skin-ops .rbanner { left: 0; right: 0; translate: none; }
+.skin-ops .rbanner b { display: block; padding: 20px 0; font: 700 clamp(24px, 3.6vw, 46px)/1 'Chakra Petch', sans-serif; letter-spacing: .1em; color: #fff;
+  background: linear-gradient(90deg, transparent, rgba(93,121,174,.88) 18% 82%, transparent); text-shadow: 0 2px 10px rgba(0,0,0,.5); }
+.skin-ops .rbanner.t b { background: linear-gradient(90deg, transparent, rgba(222,155,53,.9) 18% 82%, transparent); }
+.skin-ops .rbanner.bomb b { background: linear-gradient(90deg, transparent, rgba(190,35,35,.92) 18% 82%, transparent); }
+/* Spider's sound effects: a word in a burst, popping up and gone */
+.sfxs { position: fixed; inset: 0; z-index: 3; pointer-events: none; }
+.sfx { position: absolute; padding: .2em .3em; font: 400 clamp(30px, 4.2vw, 58px)/1 'Bagel Fat One', 'Anton', sans-serif; color: #fff; -webkit-text-stroke: .06em #000; paint-order: stroke fill;
+  rotate: var(--r); animation: sfx 1.2s cubic-bezier(.2,1.7,.4,1) both; filter: drop-shadow(4px 4px 0 #000); }
+.sfx::before { content: ''; position: absolute; inset: -55% -35%; z-index: -1; background: var(--c, #ffe14d);
+  clip-path: polygon(50% 0, 60% 22%, 86% 6%, 76% 32%, 100% 40%, 79% 55%, 96% 80%, 68% 72%, 60% 100%, 46% 78%, 22% 96%, 26% 70%, 0 66%, 20% 50%, 4% 24%, 32% 28%); }
+@keyframes sfx { 0% { transform: scale(0); opacity: 0; } 18% { transform: scale(1.12); opacity: 1; } 30% { transform: scale(1); } 80% { opacity: 1; } 100% { transform: scale(1.06); opacity: 0; } }
 </style>
 </head>
 <body>
 <canvas id="fx" aria-hidden="true"></canvas>
 <div class="cover-bg" aria-hidden="true"></div>
 <div class="grain" aria-hidden="true"></div>
+<div id="agent" class="agent" aria-hidden="true"><img class="ag-bg" alt=""><img class="ag-pt" alt=""></div><!-- the Tactical theme's agent: Riot Games' art (see "the themes' extras") -->
 <div class="vedit" id="vedit" inert aria-hidden="true"><div id="ytv"></div></div><!-- Extreme lyrics: the song's music video, cut like an edit -->
 <canvas id="kin" aria-hidden="true"></canvas><!-- Extreme lyrics: the music video (over the backdrop, under everything else) -->
 <canvas id="viz" aria-hidden="true"></canvas><!-- the beat ring: the whole window, so it's never cut off at the edge of the lyrics area -->
@@ -1029,7 +1277,7 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
 <div class="frame">
   <header class="top">
     <button id="brand" class="brand" data-legal="" aria-label="About NetherFlow"><img class="brand-mark" src="logo.png" alt="">NetherFlow<sup>FM</sup></button>
-    <button id="mood" class="mood lbl" popovertarget="moods" title="Pick a mood (M cycles)"><i></i><span>Mood</span> <b id="moodName">Ember</b></button>
+    <button id="mood" class="mood lbl" popovertarget="moods" title="Pick a mood (M cycles)"><i></i><span>Mood</span> <b id="moodName">Ember</b><span class="hud" aria-hidden="true"><i class="hud-l"></i><b class="hud-sl">0</b><b class="hud-t">0:00</b><b class="hud-sr">0</b><i class="hud-r"></i></span></button>
     <nav class="files lbl">
       <!-- Search: a lens with a sound wave in it. Library: a record sliding out of its sleeve. -->
       <button id="openSearch" class="link hot nav-ico" aria-label="Search (/)" title="Search (/)"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="7"/><path d="M15.6 15.6L21 21M7.5 9.5v2M10.5 7.5v6M13.5 9v3"/></svg></button>
@@ -1115,6 +1363,7 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
     </div>
   </footer>
 </div>
+<div id="rbanner" class="rbanner" aria-hidden="true"></div><div id="sfx" class="sfxs" aria-hidden="true"></div><!-- the themes' round banners, and Spider's sound effects -->
 
 <dialog id="story" class="consent story" aria-label="Your story">
   <div class="kicker lbl">Your story</div>
@@ -1243,6 +1492,7 @@ const api = {
     const r = await fetch('/api/playlist?' + new URLSearchParams({ url: link })), j = await r.json(); if (!r.ok) throw new Error(j.error || 'couldn\'t read it'); return j; },
   // YouTube Music's radio for a song (what Autoplay picks from): [{ id, title, artist, album, year, dur, art }]
   radio: async id => native ? netherflowLib.ytmRadio(nativePost, id) : (await fetch('/api/radio?' + new URLSearchParams({ id }))).json(),
+  agents: async () => native ? netherflowLib.agents(nativeGet) : (await fetch('/api/agents')).json(), // (the Tactical theme's: see lib.agents)
   audius: async q => native ? netherflowLib.audius(nativeGet, q).catch(() => [])
     : (await fetch('/api/audius?' + new URLSearchParams({ q }))).json(),
   words: async (artist, title, dur) => native ? netherflowLib.words(nativeGet, artist, title, dur)
@@ -1326,7 +1576,7 @@ const KIN_NAMES = { slam: 'Slam', echo: 'Echo', sketch: 'Sketch', marker: 'Marke
   arcade: 'Arcade', graffiti: 'Graffiti', collage: 'Collage', ring: 'Ring', slice: 'Slice', focus: 'Focus', karaoke: 'Karaoke', spotlight: 'Spotlight',
   mirror: 'Mirror', jelly: 'Jelly', captions: 'Captions', glass: 'Music app', coverfill: 'Cover cut-out', outline: 'Outline', dreamy: 'Dreamy', velocity: 'Velocity',
   shatter: 'Shatter', dust: 'Particles', fontmix: 'Font mix', cinema: 'Cinematic', slot: 'Slot machine', texts: 'Texts', label: 'Label maker', holo: 'Holographic',
-  liquid: 'Liquid', swirl: 'Swirl', story: 'Story text', acid: 'Acid green' };
+  liquid: 'Liquid', swirl: 'Swirl', story: 'Story text', acid: 'Acid green', doodle: 'Doodle', comic: 'Comic', blocks: 'Blocks', tactical: 'Tactical', killfeed: 'Kill feed' };
 let kinLook = KIN_NAMES[store.get('netherflow.kinlook')] ? store.get('netherflow.kinlook') : 'Mixed';
 function setKinLook(v) { kinLook = KIN_NAMES[v] ? v : 'Mixed'; store.set('netherflow.kinlook', kinLook === 'Mixed' ? '' : kinLook); kin.shot = null; renderMoodMenu(); }
 // and its emoji, on or off
@@ -1339,18 +1589,92 @@ function setKinetic(v) { kinetic = v === 'Music video'; store.set('netherflow.ki
 
 // ---------- background theme (mood menu): what the backdrop draws. The mood picks its colors. ----------
 // The shader draws all but Gradient and Cover (both CSS: see PLAIN). The index is the shader's style number (themeNo).
-const THEMES = ['Smoke', 'Aurora', 'Liquid', 'Lava', 'Rings', 'Nebula', 'Prism', 'Silk', 'Mesh', 'Fireflies', 'Black Hole', 'Tunnel', 'Storm', 'Kaleido', 'Gyroid', 'Mandala', 'Fractal', 'Julia', 'Crystal', 'Cosmos', 'Galaxy', 'Plasma', 'Ribbons', 'Synapse', 'Halo', 'Bloom', 'Hyperbolic', 'Gradient', 'Cover'];
+const THEMES = ['Smoke', 'Aurora', 'Liquid', 'Lava', 'Rings', 'Nebula', 'Prism', 'Silk', 'Mesh', 'Fireflies', 'Black Hole', 'Tunnel', 'Storm', 'Kaleido', 'Gyroid', 'Mandala', 'Fractal', 'Julia', 'Crystal', 'Cosmos', 'Galaxy', 'Plasma', 'Ribbons', 'Synapse', 'Halo', 'Bloom', 'Hyperbolic', 'Gradient', 'Cover',
+  'Stickman', 'Spider', 'Blocks', 'Tactical', 'Ops'];
 // (the backgrounds the shader doesn't draw: Gradient, plain CSS; Cover, the album cover blurred, CSS too)
 const PLAIN = new Set(['Gradient', 'Cover']);
-let theme = THEMES.includes(store.get('netherflow.theme')) ? store.get('netherflow.theme') : 'Smoke';
-function setTheme(name) {
-  theme = name; store.set('netherflow.theme', name === 'Smoke' ? '' : name);
+// (the themes' own backdrops: in the list only while their theme is on — see SKINS)
+const SCENES = new Set(['Stickman', 'Spider', 'Blocks', 'Tactical', 'Ops']);
+const ownTheme = () => { const t = store.get('netherflow.theme'); return THEMES.includes(t) && !SCENES.has(t) ? t : 'Smoke'; };
+let theme = ownTheme();
+function showTheme(name) {
+  theme = name;
   body.classList.toggle('theme-cover', name === 'Cover');
   body.classList.toggle('theme-gradient', name === 'Gradient');
-  fxDirty = true; renderMoodMenu();
 }
-body.classList.toggle('theme-cover', theme === 'Cover');
-body.classList.toggle('theme-gradient', theme === 'Gradient');
+function setTheme(name) {
+  if (skin) store.set('netherflow.skinbg', name === skin ? '' : name); // (a theme on: its own backdrop, or the one picked over it)
+  else store.set('netherflow.theme', name === 'Smoke' ? '' : name);
+  showTheme(name); fxDirty = true; renderMoodMenu();
+}
+showTheme(theme);
+
+// ---------- themes (the top of the mood menu, and of Settings): the whole look at once — the shapes, faces and colours
+// of every button and panel, its own backdrop (drawn for Ultra and Extreme, simpler below), timeline, lyric faces, cursor,
+// the Extreme lyrics' looks. None: NetherFlow's own, with the moods. Each is its own take on a style, nobody's artwork.
+// pal: its colours (the moods step aside); font: the lyrics' pair; bar: its timeline (drawSpec); looks: Extreme lyrics'
+// (kinShot); badge: round the play button; msg: the home screen's words.
+const SKINS = {
+  Stickman: { note: 'Ink on notebook paper: stick figures dancing to the beat, everything drawn by hand',
+    pal: { name: 'Stickman', bg: '#f2eee4', a: '#e0362a', b: '#2a5bd7', ink: '#1d1b18', fx: [1, 1, 1, 1] },
+    font: { poster: "'Permanent Marker'", serif: "'Permanent Marker'", lh: 1.12 }, bar: 'Pencil',
+    looks: ['doodle', 'sketch', 'marker', 'script', 'highlighter', 'typewriter', 'outline'], badge: 'DRAW IT LOUD ✦ STICKMAN ✦ DRAW IT LOUD ✦ STICKMAN ✦',
+    msg: ['Draw silence', 'into song'] },
+  Spider: { note: 'A comic book at night: a masked hero swinging through the city, halftone dots, ink lines, sound effects on the beat, frames on twos',
+    pal: { name: 'Spider', bg: '#0e0716', a: '#ff2d55', b: '#2de2ff', ink: '#fff5ef', fx: [1, 1, 1, 1] },
+    font: { poster: "'Sedgwick Ave Display'", serif: "'Permanent Marker'", lh: 1.1 }, bar: 'Web',
+    looks: ['comic', 'graffiti', 'collage', 'sticker', 'slam', 'split', 'slice', 'echo'], badge: 'SWING ✦ NETHERFLOW ✦ SWING ✦ NETHERFLOW ✦ SWING ✦',
+    msg: ['Swing', 'into song'] },
+  Blocks: { note: 'A blocky world at dusk: pixel textures, stone buttons, an experience bar',
+    pal: { name: 'Blocks', bg: '#17120e', a: '#7ed321', b: '#ffd23f', ink: '#ffffff', fx: [1, 1, 1, 1] },
+    font: { poster: "'Press Start 2P'", serif: "'VT323'", lh: 1.35 }, bar: 'XP',
+    looks: ['blocks', 'arcade', 'extrude', 'flap', 'cube', 'drop'], badge: 'PRESS PLAY ✦ BLOCKS ✦ PRESS PLAY ✦ BLOCKS ✦ PRESS PLAY ✦',
+    msg: ['Build silence', 'into song'] },
+  Tactical: { note: 'Sharp and tactical: an agent by the lyrics, a round timer up top, round banners in a chorus, cut corners, signal red on deep navy',
+    pal: { name: 'Tactical', bg: '#0f1923', a: '#ff4655', b: '#ece8e1', ink: '#ece8e1', fx: [1, 1, 1, 1] },
+    font: { poster: "'Anton'", serif: "'Chakra Petch'", lh: 1.02 }, bar: 'Tactical',
+    looks: ['tactical', 'stack', 'split', 'slice', 'decode', 'slam', 'focus'], badge: 'LOCK IN ✦ NETHERFLOW ✦ LOCK IN ✦ NETHERFLOW ✦ LOCK IN ✦',
+    msg: ['Lock in', 'to the song'] },
+  Ops: { note: 'A desert bomb site in the afternoon: smoke grenades, tracers on the kick, a round timer and the two teams up top, round banners',
+    pal: { name: 'Ops', bg: '#0d1115', a: '#f0a830', b: '#6d8fd1', ink: '#e8ecef', fx: [1, 1, 1, 1] },
+    font: { poster: "'Black Ops One'", serif: "'Chakra Petch'", lh: 1.06 }, bar: 'Ops',
+    looks: ['killfeed', 'decode', 'typewriter', 'track', 'stack', 'slam'], badge: 'GO GO GO ✦ NETHERFLOW ✦ GO GO GO ✦ NETHERFLOW ✦',
+    msg: ['Go go go', 'into song'] },
+};
+let skin = SKINS[store.get('netherflow.skin')] ? store.get('netherflow.skin') : '';
+// (the extras' state: see "the themes' extras")
+const RIOT_NOTICE = 'NetherFlow was created under Riot Games\' "Legal Jibber Jabber" policy using assets owned by Riot Games. Riot Games does not endorse or sponsor this project.';
+const agents = { list: null, asking: null, cur: null }, banner = { sec: null, n: 0, bomb: '', timer: 0 };
+let agentPick = store.get('netherflow.agent') || '', hudLast = '', sfxLast = 0;
+const BADGE = 'PLAY IT LOUD ✦ NETHERFLOW ✦ PLAY IT LOUD ✦ NETHERFLOW ✦';
+// (Blocks: a 16×16 texture, each texel one of these shades at random — the same every time — for the stone buttons and
+// the dirt behind full pages)
+const pixTex = (cols, s) => {
+  let out = '';
+  for (let i = 0; i < 256; i++) { s = s * 16807 % 2147483647; out += `<rect x="${i % 16}" y="${i >> 4}" width="1" height="1" fill="${cols[s % cols.length]}"/>`; }
+  return `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" shape-rendering="crispEdges">${out}</svg>`)}")`;
+};
+function applySkin() {
+  const S = SKINS[skin], bg = store.get('netherflow.skinbg');
+  if (skin === 'Blocks' && !root.style.getPropertyValue('--dirt')) {
+    root.style.setProperty('--dirt', pixTex(['#4a3424', '#3f2c1f', '#5a3f2b', '#36261a', '#523a28', '#2e2016', '#614430'], 7));
+    root.style.setProperty('--stone', pixTex(['#7b7b7b', '#6f6f6f', '#868686', '#747474', '#6a6a6a', '#818181', '#5f5f5f'], 11));
+  }
+  for (const k in SKINS) body.classList.toggle('skin-' + k.toLowerCase(), k === skin);
+  body.classList.toggle('skinned', !!S);
+  showTheme(S ? (THEMES.includes(bg) && !SCENES.has(bg) ? bg : skin) : ownTheme());
+  document.querySelector('.badge textPath').textContent = S?.badge || BADGE;
+  const [m1, m2] = S?.msg || ['Turn silence', 'into song'], msg = document.querySelector('.home-stage .msg');
+  msg.replaceChildren(m1, el('br'), el('em', '', m2));
+}
+function setSkin(name) {
+  skin = SKINS[name] ? name : ''; store.set('netherflow.skin', skin); store.set('netherflow.skinbg', '');
+  applySkin(); applyMood(); applyFontPair();
+  kin.shot = null; kin.recent = []; fxDirty = true; fxGround = null; skinExtras();
+  renderMoodMenu(); if ($('textPanel').matches(':popover-open')) renderTextPanel();
+  if (activeIdx >= 0 && synced) { stage.replaceChildren(); buildStage(activeIdx); }
+}
+applySkin();
 
 // ---------- lyrics text (in the Settings panel): size and alignment ----------
 const LSIZE = { 'Extra small': .62, Small: .8, Normal: 1, Large: 1.25 };
@@ -1442,8 +1766,9 @@ const FONT_PAIRS = [
   { name: 'Gothic', poster: "'Pirata One'", serif: "'IM Fell English'", lh: 1.04 },
 ];
 let fontPair = FONT_PAIRS.some(f => f.name === store.get('netherflow.font')) ? store.get('netherflow.font') : 'Poster';
+const curPair = () => SKINS[skin]?.font || FONT_PAIRS.find(x => x.name === fontPair); // (a theme's own, while it's on)
 function applyFontPair() {
-  const f = FONT_PAIRS.find(x => x.name === fontPair);
+  const f = curPair();
   for (const e of [stage, $('coverStage'), $('drive')]) {
     e.style.setProperty('--poster', f.poster + ', Impact, sans-serif');
     e.style.setProperty('--serif', f.serif + ', Georgia, serif');
@@ -1485,14 +1810,94 @@ function setView(v) {
   $('nowCover').setAttribute('aria-label', v === 'Cover' ? 'Show the lyrics (V)' : 'Show the cover (V)');
   renderTextPanel();
 }
+// ---------- updates (Settings › Update) ----------
+// Windows (the installed app): from the GitHub releases, by electron-updater (main.js) — only the parts of the installer
+// that changed come down, and a restart puts them in place. The portable app can't update itself: it's sent to the
+// release page. Android (NetherFlow's own APK from GitHub — an app store's, F-Droid's, is updated there): the latest
+// release's update.json, signed by NetherFlow's developer (checked in UpdatePlugin.java). A newer page — most releases —
+// comes down as only its changed files and the app reloads with them at once; a release that changed the app around
+// the page too brings its APK, which Android installs over this one. Checked by itself at most once a day, and asked
+// before anything's downloaded.
+const Upd = native ? Capacitor.Plugins.Updater : null, RELEASES = 'https://github.com/volodya-rua/NetherFlow/releases/latest';
+// state: '' not asked yet · checking · none (the latest) · ready (one to get) · getting · got (Windows: restart to finish) ·
+// store (an app store's build) · portable · error
+const upd = { state: '', version: '', next: '', kind: '', size: 0, frac: 0, err: '', u: null };
+const newer = (a, b) => { const x = String(a).split('.').map(Number), y = String(b).split('.').map(Number); for (let i = 0; i < 4; i++) if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0); return false; };
+async function updCheck(quiet) {
+  if (upd.state === 'checking' || upd.state === 'getting' || upd.state === 'got') return;
+  upd.state = 'checking'; updShow();
+  try {
+    if (window.netherflowApp?.updateCheck) {
+      const r = await netherflowApp.updateCheck();
+      upd.version = r?.version || '';
+      Object.assign(upd, !r?.can ? { state: r?.portable ? 'portable' : 'none' } : r.error ? { state: 'error', err: r.error } : r.next ? { state: 'ready', next: r.next, kind: 'app' } : { state: 'none' });
+    } else if (Upd) {
+      const i = await Upd.info();
+      upd.version = i.web;
+      if (!i.ours) upd.state = 'store';
+      else {
+        let u = null;
+        try { u = JSON.parse(await nativeGet(RELEASES + '/download/update.json')); } catch {} // (none in the latest release: nothing for Android in it)
+        const web = u?.min <= i.code;
+        Object.assign(upd, { u }, u?.version && newer(u.version, i.web) ? { state: 'ready', next: u.version, kind: web ? 'web' : 'apk', size: web ? 0 : u.apk.size } : { state: 'none' });
+      }
+    } else upd.state = 'none'; // (in a browser: always the latest)
+  } catch (e) { Object.assign(upd, { state: 'error', err: e.message || 'GitHub couldn\'t be reached' }); }
+  store.set('netherflow.updchecked', String(Date.now()));
+  updShow();
+  if (quiet && upd.state === 'ready' && store.get('netherflow.updtold') !== upd.next) { store.set('netherflow.updtold', upd.next); toast(`NetherFlow ${upd.next} is out · Settings › Update`); }
+}
+async function updGet() {
+  if (upd.state === 'portable') return openExternal(RELEASES);
+  if (upd.state === 'got') return netherflowApp.updateInstall();
+  if (upd.state !== 'ready') return updCheck();
+  Object.assign(upd, { state: 'getting', frac: 0 }); updShow();
+  try {
+    if (window.netherflowApp?.updateGet) { await netherflowApp.updateGet(); upd.state = 'got'; }
+    else if (upd.kind === 'web') { await Upd.web({ manifest: upd.u.manifest, sig: upd.u.sig }); upd.state = 'none'; } // (and the app reloads with it, by itself)
+    else { await Upd.apk({ url: upd.u.apk.url, sha256: upd.u.apk.sha256 }); upd.state = 'ready'; } // (Android's installer takes it from there)
+  } catch (e) { Object.assign(upd, { state: 'error', err: String(e.message || e) }); }
+  updShow();
+}
+window.netherflowApp?.onUpdateProgress?.(f => { upd.frac = f; updShow(); });
+Upd?.addListener('progress', m => { upd.frac = m.frac; updShow(); });
+setTimeout(() => { if (Date.now() - (+store.get('netherflow.updchecked') || 0) > 20 * 3600e3) updCheck(true); }, 12000); // (once a day at most, quietly)
+// its row in Settings (and kept up to date in place while it's open)
+function updRow() {
+  const q = el('div', 'bgq lbl upd'), mb = n => (n / 1e6).toFixed(n > 1e7 ? 0 : 1) + ' MB', v = upd.version ? ` ${upd.version}` : '';
+  const note = {
+    '': 'NetherFlow updates itself, downloading only what changed.', checking: 'Looking for a newer NetherFlow…', none: `NetherFlow${v} is the latest.`,
+    ready: `NetherFlow ${upd.next} is out (this is${v}). ` + (upd.kind === 'web' ? 'Only the files that changed come down, and the app restarts with them.'
+      : upd.kind === 'apk' ? `This one changes the app itself: the new app comes down (${mb(upd.size)}) and Android installs it over this one, keeping everything.`
+      : 'Only the parts that changed come down; then NetherFlow restarts into it, keeping everything.'),
+    getting: `Downloading NetherFlow ${upd.next}…`, got: 'Downloaded. Restart NetherFlow to finish: it opens again by itself.',
+    store: 'Updates come from the app store NetherFlow was installed from.',
+    portable: 'This portable NetherFlow can\'t update itself. The installed one can, in place, downloading only what changed: get the installer.',
+    error: `Couldn't update: ${upd.err}.`,
+  }[upd.state];
+  const label = { '': 'Check for updates', checking: 'Checking…', none: 'Check again', ready: `Update to ${upd.next}`, getting: `Downloading… ${Math.round(upd.frac * 100)}%`,
+    got: 'Restart now', portable: 'Get the installer', error: 'Try again' }[upd.state];
+  q.append(el('span', '', 'Update'), el('small', '', note));
+  if (label) { const b = el('button', 'pill', label); b.disabled = upd.state === 'checking' || upd.state === 'getting'; b.onclick = updGet; q.append(b); }
+  return q;
+}
+function updShow() { $('textPanel').querySelector('.upd')?.replaceWith(updRow()); }
+
 function renderTextPanel() {
+  if (!upd.state || (upd.state === 'none' && Date.now() - (+store.get('netherflow.updchecked') || 0) > 3600e3)) setTimeout(() => updCheck(), 300); // (looked for again when Settings opens)
   $('textPanel').replaceChildren(
+    settingRow('Theme', ['NetherFlow', ...Object.keys(SKINS)], skin || 'NetherFlow', v => setSkin(v === 'NetherFlow' ? '' : v),
+      'The whole look at once: every button and panel, the colours, the background, the timeline, the lyrics\' faces and the cursor. ' +
+      Object.entries(SKINS).map(([k, s]) => `${k}: ${s.note.charAt(0).toLowerCase() + s.note.slice(1)}.`).join(' ')),
+    ...(skin === 'Tactical' && agents.list ? [settingRow('Agent', ['Each song', ...agents.list.map(a => a.name)], agentPick || 'Each song', setAgent,
+      'The agent by the lyrics: a new one for each song, or always the one you pick. ' + RIOT_NOTICE)] : []),
+    updRow(),
     settingRow('Show', ['Lyrics', 'Cover'], view, setView, 'Cover: the record spinning, with a ring that moves to the beat. Tap the cover in the player to switch.'),
     settingRow('Lyrics animation', LANIMS, lanimPick, setLanim, 'How the lyrics move. 2D: Wave, Spiral, Shatter, Fireworks. 3D: Swarm, Black Hole, Cylinder, Globe, Helix, DNA, Tornado, Knot, Möbius, Ribbon, Orbit, Atom, Tunnel, Cube.' + (kin.on ? ' (Extreme lyrics are on, in the mood menu: this is for when they\x27re off.)' : '')),
-    fontRow(),
+    ...(skin ? [] : [fontRow()]), // (a theme brings its own font and timeline)
     settingRow('Beat style', BEATS, beatStyle, setBeat, 'The ring round the record, in the Cover view.'),
     settingRow('Beat on the screen edges', ['Off', 'On'], edges ? 'On' : 'Off', setEdges, 'The wave also runs along all four sides of the screen, with the lyrics too.'),
-    settingRow('Timeline', BARS, barStyle, setBar, 'The bar under the lyrics that shows where the song is (drag it to move through the song).'),
+    ...(skin ? [] : [settingRow('Timeline', BARS, barStyle, setBar, 'The bar under the lyrics that shows where the song is (drag it to move through the song).')]),
     settingRow('Lyrics size', Object.keys(LSIZE), lsize, setLsize, 'Long lines shrink just enough to stay on screen.'),
     settingRow('Lyrics alignment', ALIGNS, lalign, setAlign),
     stepperRow('Skip back / forward', 1, 60, jump, setJump, ' s', 'The ⟲ ⟳ buttons by the player, and the ← → keys. Hold − or + to count faster.'),
@@ -1663,6 +2068,7 @@ const MOOD_KEY = 'netherflow.mood';
 let moodPref = MOODS.some(m => m.name === store.get(MOOD_KEY)) ? store.get(MOOD_KEY) : 'Auto';
 let curArt = '', curTitle = '';
 function applyMood() {
+  if (skin) return applyPalette(SKINS[skin].pal); // (a theme's own colours)
   if (moodPref !== 'Auto') return setMood(MOODS.findIndex(m => m.name === moodPref));
   const tok = loadId;
   setMood(curTitle ? hash(curTitle) : 0);
@@ -1674,8 +2080,32 @@ function chooseMood(name) {
   applyMood();
   renderMoodMenu();
 }
+// the themes, as cards on top of the mood menu: each its own little picture
+const SKIN_ICONS = {
+  '': '<img src="logo.png" alt="">',
+  Stickman: '<svg viewBox="0 0 24 24"><circle cx="12" cy="4.8" r="2.7" fill="currentColor" stroke="none"/><path d="M12 7.5v7.2M12 14.7l-3.8 6.3M12 14.7l3.8 6.3M12 9.8L7.2 12.6M12 9.8l4.4-3.6"/></svg>',
+  Spider: '<svg viewBox="0 0 24 24"><path d="M12 2v20M2 12h20M4.9 4.9l14.2 14.2M19.1 4.9 4.9 19.1"/><path d="m12 6.2 4.1 1.7 1.7 4.1-1.7 4.1-4.1 1.7-4.1-1.7L6.2 12l1.7-4.1z"/><path d="m12 9.4 1.8.8.8 1.8-.8 1.8-1.8.8-1.8-.8-.8-1.8.8-1.8z"/></svg>',
+  Blocks: '<svg viewBox="0 0 24 24" stroke="none" shape-rendering="crispEdges"><path d="m12 3 8.5 4.6L12 12.2 3.5 7.6z" fill="#74b83c"/><path d="m3.5 7.6 8.5 4.6v9.3l-8.5-4.6z" fill="#8a5a2c"/><path d="m20.5 7.6-8.5 4.6v9.3l8.5-4.6z" fill="#664020"/><path d="m3.5 7.6 8.5 4.6 8.5-4.6v2.2L12 14.4 3.5 9.8z" fill="#5c9a2c"/></svg>',
+  Tactical: '<svg viewBox="0 0 24 24"><path d="M3.5 9V3.5H9M15 3.5h5.5V9M20.5 15v5.5H15M9 20.5H3.5V15"/><path d="m12 7.5 4.5 4.5-4.5 4.5L7.5 12z" fill="currentColor" stroke="none"/></svg>',
+  Ops: '<svg viewBox="0 0 24 24"><path d="M12 2.5V9M12 15v6.5M2.5 12H9M15 12h6.5"/><circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none"/></svg>',
+};
+function skinCards() {
+  const g = el('div', 'skins');
+  for (const k of ['', ...Object.keys(SKINS)]) {
+    const b = el('button', 'skin-card sk-' + (k || 'none').toLowerCase()), i = el('i');
+    i.innerHTML = SKIN_ICONS[k];
+    b.append(i, el('b', '', k || 'NetherFlow'));
+    b.setAttribute('aria-pressed', k === skin);
+    b.title = k ? SKINS[k].note : 'NetherFlow\'s own look: the moods, and every background';
+    b.onclick = () => setSkin(k);
+    g.append(b);
+  }
+  return g;
+}
 function renderMoodMenu() {
-  $('moods').replaceChildren(...[{ name: 'Auto' }, ...MOODS].map(m => {
+  $('mood').querySelector('span').textContent = skin ? 'Theme' : 'Mood';
+  $('moods').replaceChildren(skinCards(), ...(skin ? [el('p', 'skin-note lbl', `${SKINS[skin].note}. The theme sets the colours: NetherFlow, above, brings the moods back.` + (skin === 'Tactical' ? ' ' + RIOT_NOTICE : ''))]
+    : [{ name: 'Auto' }, ...MOODS].map(m => {
     const b = el('button', 'mchip'), sw = el('i');
     sw.style.background = m.a ? `radial-gradient(circle at 30% 30%, ${m.a}, ${m.b} 62%, ${m.bg})`
                               : 'conic-gradient(#ff4a1c, #d4ff1a, #5ce9ff, #a066ff, #ff4a1c)';
@@ -1683,11 +2113,12 @@ function renderMoodMenu() {
     b.append(sw, el('span', '', m.a ? m.name : 'Auto · from cover'));
     b.onclick = () => chooseMood(m.name);
     return b;
-  }));
+  })));
+  const bgs = THEMES.filter(n => !SCENES.has(n));
   $('moods').append(
-    settingRow('Background', THEMES, theme, setTheme, 'Gradient: plain and still, in the mood\'s colors — the lightest of all, for a phone that lags. Cover: the song\'s album cover, blurred into a glow.'),
+    settingRow('Background', skin ? [skin, ...bgs] : bgs, theme, setTheme, (skin ? `${skin}: the theme's own (drawn in full on Ultra and Extreme). ` : '') + 'Gradient: plain and still, in the mood\'s colors — the lightest of all, for a phone that lags. Cover: the song\'s album cover, blurred into a glow.'),
     settingRow('Background quality', BGQ_SHOWN, bgq, setBgq, (pcOnly ? 'Extreme is for a powerful graphics card, and unlocks Extreme lyrics. ' : '') + 'Ultra is the sharpest (needs a strong graphics card); lower settings save battery. Off keeps the colors but stops the motion. Till you pick one, NetherFlow picks for this device, and steps down by itself if it runs slow.'),
-    ...(bgq === 'Extreme' ? [settingRow('Extreme lyrics', ['Off', 'Music video'], kinetic ? 'Music video' : 'Off', setKinetic, 'The lyrics cut like a music video or an Instagram lyric edit: every word comes in as it\'s sung, in 52 looks — chat bubbles, shattering glass, holographic foil, a slot machine, liquid filling the letters, label tape, a film title, a mix of typefaces, story text, lime green, glowing dust, a swirl, TikTok captions, a music app\'s lyrics screen, letters cut out of the cover, outline rings, a dreamy haze, velocity whips, grunge block letters, echoes, hand-drawn outlines, marker, a floor into the distance, tape glitches, a typewriter, falling letters, decoding, words flying out of the dark, extruded 3D, split halves, Y2K chrome, neon signs, an editorial stack, a highlighter, a ripple, a strobe, a turning cube, a split-flap board, letters flipping in, a tunnel, handwriting, stickers, 8-bit arcade, graffiti, a ransom-note collage, a ring, glitch slices, a rack focus, karaoke, a spotlight, a reflection, jelly — with 3D emoji popping up for words like fire, love or moon — louder for a chorus, quieter for a verse, with film scratches, glow and light leaks on the beat. Nothing is ever cut off at the edges.'),
+    ...(bgq === 'Extreme' ? [settingRow('Extreme lyrics', ['Off', 'Music video'], kinetic ? 'Music video' : 'Off', setKinetic, 'The lyrics cut like a music video or an Instagram lyric edit: every word comes in as it\'s sung, in 57 looks (each theme brings its own: a doodle, comic captions, dropping blocks, tactical banners, a kill feed) —chat bubbles, shattering glass, holographic foil, a slot machine, liquid filling the letters, label tape, a film title, a mix of typefaces, story text, lime green, glowing dust, a swirl, TikTok captions, a music app\'s lyrics screen, letters cut out of the cover, outline rings, a dreamy haze, velocity whips, grunge block letters, echoes, hand-drawn outlines, marker, a floor into the distance, tape glitches, a typewriter, falling letters, decoding, words flying out of the dark, extruded 3D, split halves, Y2K chrome, neon signs, an editorial stack, a highlighter, a ripple, a strobe, a turning cube, a split-flap board, letters flipping in, a tunnel, handwriting, stickers, 8-bit arcade, graffiti, a ransom-note collage, a ring, glitch slices, a rack focus, karaoke, a spotlight, a reflection, jelly — with 3D emoji popping up for words like fire, love or moon — louder for a chorus, quieter for a verse, with film scratches, glow and light leaks on the beat. Nothing is ever cut off at the edges.'),
       ...(kinetic ? [settingRow('Extreme look', ['Mixed', ...Object.values(KIN_NAMES)], kinLook === 'Mixed' ? 'Mixed' : KIN_NAMES[kinLook], v => setKinLook(Object.keys(KIN_NAMES).find(k => KIN_NAMES[k] === v) || 'Mixed'),
         'Mixed: a different look every few words, picked for the part of the song (the loud ones in a chorus). Or pick one look to keep for every line.'),
         settingRow('Emoji', ['On', 'Off'], kinEmojiOn ? 'On' : 'Off', setKinEmoji, '3D emoji popping up as they\'re sung: for words like fire, love, moon or dil, and the emoji in the lyrics themselves.'),
@@ -1733,7 +2164,7 @@ function setNow(title, artist, art = '', album = '') {
   curArt = art; curTitle = title;
   $('dvTitle').textContent = title; $('dvArtist').textContent = artist || '';
   $('dvArt').style.backgroundImage = art ? `url(${JSON.stringify(art)})` : '';
-  applyMood();
+  applyMood(); skinExtras();
   if ('mediaSession' in navigator)
     navigator.mediaSession.metadata = new MediaMetadata({ title, artist, album, artwork: art ? [{ src: art, sizes: '600x600', type: 'image/jpeg' }] : [] });
   songMeta = { title, artist: artist || '', album, art };
@@ -5402,7 +5833,7 @@ $('closeAbout').onclick = () => $('about').close();
 // Links inside legal.html open in the real browser (legal.html calls this through window.parent).
 window.openExternal = url => native ? (location.href = url) : window.open(url, '_blank', 'noopener');
 
-const TERMS = 'netherflow.terms', TERMS_VERSION = '2026-10-14.5'; // bump when the terms change: everyone is asked again
+const TERMS = 'netherflow.terms', TERMS_VERSION = '2026-10-14.6'; // bump when the terms change: everyone is asked again
 if (store.get(TERMS) !== TERMS_VERSION) { $('consent').showModal(); placeWinctl(); }
 else if (fullSongs) setTimeout(() => loadYT().catch(() => {}), 2500); // (the first song then starts sooner)
 $('consent').addEventListener('cancel', e => e.preventDefault()); // Esc doesn't count as agreeing
@@ -5771,8 +6202,21 @@ function setCursors(accent) { // (called as the first mood is set: everything it
   const arrow = (fill, line) => `<path d="${ARROW}" fill="${fill}" stroke="#f6ede4" stroke-width="1.3" stroke-linejoin="round"/>` +
     (line ? `<path d="M6.2 6.4v9.2" stroke="${line}" stroke-width="1.2" stroke-linecap="round"/>` : '');
   const beam = 'M9 4.6h6M9 19.4h6M12 4.6v14.8';
-  root.style.setProperty('--cur', pic(arrow('#0d0a0c', accent), 4, 2, 'default'));
-  root.style.setProperty('--cur-hand', pic(arrow(accent), 4, 2, 'pointer'));
+  // the themes' own: [the cursor, over something clickable, the hot spot]
+  const cross = c => `<path d="M12 2.5v6.5M12 15v6.5M2.5 12H9M15 12h6.5" stroke="#000" stroke-width="3.6"/><path d="M12 3v6M12 15v6M3 12h6M15 12h6" stroke="${c}" stroke-width="1.7"/>`;
+  const pencil = tip => `<g transform="rotate(45 12 12)"><path d="M9.6 1.5h4.8v14.6H9.6z" fill="#f4c13d" stroke="#1d1b18" stroke-width="1.1"/><path d="M9.6 1.5h4.8v2.8H9.6z" fill="#ef8f8f" stroke="#1d1b18" stroke-width="1.1"/><path d="M9.6 16.1 12 22l2.4-5.9z" fill="#f2d7a8" stroke="#1d1b18" stroke-width="1.1" stroke-linejoin="round"/><path d="M11.2 20 12 22l.8-2z" fill="${tip}"/></g>`;
+  const PIX = 'M1 1h1v1h1v1h1v1h1v1h1v1h1v1h1v1h1v1h1v1h1v1h1v1H8v2h1v2H7v-2H6v-1H5v1H4v1H3v1H2v1H1z'; // (a pixel arrow, a step a texel)
+  const own = {
+    Stickman: [pencil('#1d1b18'), pencil('#e0362a'), [5, 19]],
+    Spider: [`<path d="${ARROW}" fill="#fff" stroke="#000" stroke-width="2.6" stroke-linejoin="round" transform="translate(1.2 1.2)" opacity=".9"/><path d="${ARROW}" fill="#fff" stroke="#000" stroke-width="1.8" stroke-linejoin="round"/>`,
+      `<path d="${ARROW}" fill="#000" transform="translate(1.6 1.6)"/><path d="${ARROW}" fill="#ff2d55" stroke="#000" stroke-width="1.8" stroke-linejoin="round"/>`, [4, 2]],
+    Blocks: [`<path d="${PIX}" fill="#fff" stroke="#000" stroke-width="1" shape-rendering="crispEdges"/>`, `<path d="${PIX}" fill="#ffff55" stroke="#000" stroke-width="1" shape-rendering="crispEdges"/>`, [1, 1]],
+    Tactical: ['<path d="M4 2v17.2l4.6-4.4 3 6.6 2.6-1.1-3-6.6H17z" fill="#ff4655" stroke="#ece8e1" stroke-width="1.2" stroke-linejoin="miter"/>',
+      '<path d="M4 2v17.2l4.6-4.4 3 6.6 2.6-1.1-3-6.6H17z" fill="#ece8e1" stroke="#ff4655" stroke-width="1.4" stroke-linejoin="miter"/>', [4, 2]],
+    Ops: [cross('#4cff4c'), cross('#4cff4c') + '<circle cx="12" cy="12" r="1.6" fill="#4cff4c" stroke="#000" stroke-width=".8"/>', [12, 12]],
+  }[skin];
+  root.style.setProperty('--cur', own ? pic(own[0], ...own[2], 'default') : pic(arrow('#0d0a0c', accent), 4, 2, 'default'));
+  root.style.setProperty('--cur-hand', own ? pic(own[1], ...own[2], 'pointer') : pic(arrow(accent), 4, 2, 'pointer'));
   root.style.setProperty('--cur-text', pic(`<path d="${beam}" fill="none" stroke="#0d0a0c" stroke-width="3.2" stroke-linecap="round"/><path d="${beam}" fill="none" stroke="#f6ede4" stroke-width="1.4" stroke-linecap="round"/>`, 12, 12, 'text'));
 }
 
@@ -5793,7 +6237,7 @@ precision highp float;
 precision mediump float;
 #endif
 #define STYLE ${style}
-uniform vec2 R; uniform float T, B, M, H, G, OCT, QF; uniform vec3 C0, C1, C2; uniform vec4 F;
+uniform vec2 R; uniform float T, B, M, H, G, OCT, QF, K, GY; uniform vec3 C0, C1, C2; uniform vec4 F; // (K: the kick, live — the themes' scenes move to it; GY: the timeline's height, −.5….5)
 float h(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float n(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3. - 2. * f);
   return mix(mix(h(i), h(i + vec2(1, 0)), f.x), mix(h(i + vec2(0, 1)), h(i + vec2(1, 1)), f.x), f.y); }
@@ -5838,6 +6282,213 @@ vec3 web(vec2 p, float t, float T, float fire){
     }
   }
   return o;
+}
+#endif
+#if STYLE == ${themeNo('Stickman')}
+float sg(vec2 p, vec2 a, vec2 b){ vec2 pa = p - a, ba = b - a; return length(pa - ba * clamp(dot(pa, ba) / dot(ba, ba), 0., 1.)); }
+vec2 lb(vec2 a, float ang, float len){ return a + len * vec2(sin(ang), -cos(ang)); } // a limb from a: ang 0 straight down, + to the right
+// A stick figure s tall, its feet at o: x its lines' distance, y its head's. ph: where it is in its move; k: the kick.
+// kind 0 dances (hips swaying, knees giving on the beat, arms up in turn), 1 runs (side on), 2 cheers (arms up, jumping)
+vec2 stick(vec2 p, vec2 o, float s, float ph, float k, float kind){
+  float sw = sin(ph * 6.2832), bob = abs(sw);
+  vec2 hip, nk, e1, h1, e2, h2, k1, f1, k2, f2;
+  if (kind < .5) {
+    hip = o + s * vec2(sw * .05, .5 - bob * .04 - k * .07);
+    nk = hip + s * vec2(sw * .03, .32);
+    float a1 = 2.5 * (.5 + .5 * sin(ph * 6.2832)) + .35, a2 = 2.5 * (.5 + .5 * sin(ph * 6.2832 + 3.1416)) + .35;
+    e1 = lb(nk, -a1, s * .17); h1 = lb(e1, -a1 - .6, s * .16);
+    e2 = lb(nk, a2, s * .17);  h2 = lb(e2, a2 + .6, s * .16);
+    float bend = .3 + k * .55 + bob * .2;
+    k1 = lb(hip, -.22 - bend * .45 + sw * .12, s * .26); f1 = lb(k1, -.1 + bend * .35, s * .25);
+    k2 = lb(hip, .22 + bend * .45 + sw * .12, s * .26);  f2 = lb(k2, .1 - bend * .35, s * .25);
+  } else if (kind < 1.5) {
+    hip = o + s * vec2(0., .47 + bob * .05);
+    nk = hip + s * vec2(.1, .3);
+    float l = sw * .85;
+    k1 = lb(hip, l, s * .26);  f1 = lb(k1, l - .25 - max(0., -sw) * 1.2, s * .25);
+    k2 = lb(hip, -l, s * .26); f2 = lb(k2, -l - .25 - max(0., sw) * 1.2, s * .25);
+    e1 = lb(nk, -l * .9, s * .16); h1 = lb(e1, -l * .9 + 1.5, s * .15);
+    e2 = lb(nk, l * .9, s * .16);  h2 = lb(e2, l * .9 + 1.5, s * .15);
+  } else {
+    hip = o + s * vec2(0., .5 + k * .14 + bob * .04);
+    nk = hip + s * vec2(0., .32);
+    e1 = lb(nk, -2.45 - sw * .25, s * .17); h1 = lb(e1, -2.85 - sw * .35, s * .16);
+    e2 = lb(nk, 2.45 + sw * .25, s * .17);  h2 = lb(e2, 2.85 + sw * .35, s * .16);
+    k1 = lb(hip, -.3 - k * .3, s * .26); f1 = lb(k1, -.05 + k * .7, s * .25);
+    k2 = lb(hip, .3 + k * .3, s * .26);  f2 = lb(k2, .05 - k * .7, s * .25);
+  }
+  vec2 hd = nk + normalize(nk - hip) * s * .11;
+  float d = min(min(min(sg(p, hip, nk), sg(p, nk, e1)), min(sg(p, e1, h1), sg(p, nk, e2))),
+                min(min(sg(p, e2, h2), sg(p, hip, k1)), min(min(sg(p, k1, f1), sg(p, hip, k2)), sg(p, k2, f2))));
+  return vec2(d, length(p - hd) - s * .085);
+}
+// a quaver (♪), u its size: a tilted oval head, a stem, a flag
+float quaver(vec2 p, float u){
+  p /= u;
+  vec2 hp = mat2(.85, .5, -.5, .85) * p;
+  float head = (length(hp * vec2(1., 1.55)) - .3) * .7;
+  return min(head, min(sg(p, vec2(.3, .05), vec2(.3, 1.2)), sg(p, vec2(.3, 1.2), vec2(.75, .8))) - .06) * u;
+}
+#endif
+#if STYLE == ${themeNo('Spider')}
+float sg2(vec2 p, vec2 a, vec2 b){ vec2 pa = p - a, ba = b - a; return length(pa - ba * clamp(dot(pa, ba) / dot(ba, ba), 0., 1.)); }
+// the masked hero, in its own frame — hanging by one hand off its line (the hand at 0, the line straight up), facing +x,
+// knees tucked into the swing: a silhouette of no one in particular. < 0 inside
+float hero(vec2 q){
+  vec2 sh = vec2(0., -.075), hip = vec2(-.012, -.18);
+  float d = min(sg2(q, vec2(0.), vec2(0., -.04)) - .013, sg2(q, vec2(0., -.04), sh) - .017);                         // the arm up the line
+  d = min(d, length((q - vec2(.03, -.074)) * vec2(1., .9)) - .029);                                                // the head
+  d = min(d, sg2(q, sh + vec2(.004, 0.), hip + vec2(0., .025)) - .033 + (q.y + .075) * -.06);                     // the chest, narrowing to the waist
+  d = min(d, min(sg2(q, sh + vec2(.008, -.012), vec2(.062, -.125)) - .016, sg2(q, vec2(.062, -.125), vec2(.092, -.09)) - .013)); // the other arm, reaching on
+  d = min(d, min(sg2(q, hip, vec2(.068, -.21)) - .022, sg2(q, vec2(.068, -.21), vec2(.04, -.278)) - .016));        // a knee tucked up
+  return min(d, min(sg2(q, hip, vec2(-.028, -.258)) - .021, sg2(q, vec2(-.028, -.258), vec2(-.082, -.305)) - .015)); // the other leg trailing
+}
+// a halftone screen: dots as big as the tone (0…1) asks, cells c across, turned by a (antialiased over aa cells)
+float dots(vec2 p, float tone, float c, float a, float aa){
+  p = mat2(cos(a), -sin(a), sin(a), cos(a)) * p / c;
+  return smoothstep(aa, -aa, length(fract(p) - .5) - sqrt(clamp(tone, 0., 1.)) * .64);
+}
+// One layer of the city (L: 0 far … 2 near): x inside a building, y its window's light (0 dark), z the ink of its edges,
+// w how far down the building (0 its roof … for the halftone shade)
+vec4 city(vec2 p, float L, float px){
+  float w = .09 + L * .045, x = p.x / w + L * 17.3, id = floor(x), fx = fract(x);
+  float r1 = h(vec2(id, L)), r2 = h(vec2(id, L + 7.)), top = -.1 + r1 * r1 * (.34 + L * .04) + step(.85, r2) * .12 - L * .11;
+  float gap = .04 + step(.7, h(vec2(id, L + 3.))) * .08;
+  float sideIn = min(fx - gap, 1. - gap - fx) * w;                    // to the building's sides (in p units)
+  float set = step(.55, r2) * .035, setIn = min(fx - gap - .2, .8 - gap - fx) * w; // a narrower block on top
+  float inMain = min(sideIn, top - p.y), inSet = min(setIn, top + set - p.y);
+  float ant = step(.75, h(vec2(id, L + 11.))) * (.05 + r1 * .06);   // an antenna
+  float inAnt = min(.0018 - abs(fx - .5) * w, top + set + ant - p.y);
+  float d = max(max(inMain, inSet), inAnt);                          // > 0 inside
+  float inside = smoothstep(-px, px, d);
+  float edge = (1. - smoothstep(px * (1.2 + L * .5), px * (2.4 + L * .8), abs(d))); // ink round it
+  vec2 wc = vec2((fx - gap) / (1. - gap * 2.) * 3., (top - p.y) / (.028 + L * .01));
+  float win = step(.74, h(floor(wc) + id * 3.1 + L)) * step(.2, fract(wc.x)) * step(fract(wc.x), .75) * step(.25, fract(wc.y)) * step(fract(wc.y), .75)
+            * step(.5, wc.y) * step(.006, sideIn);
+  return vec4(inside, win * (.6 + .4 * h(floor(wc) + 5.)), edge, clamp((top - p.y) * 2.2, 0., 1.));
+}
+// the comic page at p (on twos: ts), its moving parts all stepped
+vec3 comic(vec2 p, float ts, float px, float asp){
+  // the sky: deep night down to a hot pink glow, printed in pink dots over purple
+  float sy = clamp(.55 - p.y * .9, 0., 1.);
+  vec3 col = mix(vec3(.07, .03, .16), vec3(.42, .07, .38), smoothstep(.15, .75, sy));
+  col = mix(col, vec3(1., .3, .52), smoothstep(.7, 1.05, sy) * .85);
+  col = mix(col, vec3(1., .42, .62), dots(p, smoothstep(.35, 1., sy) * .55, .012, .26, .08) * .55);
+  // the moon, in yellow dots, shaded to the lower right
+  vec2 mp = p - vec2(asp * .2, .2);
+  float md = length(mp) - .13, mtone = .95 - smoothstep(-.1, .14, mp.x + mp.y * -.8) * .6;
+  vec3 moon = mix(vec3(1., .62, .3), vec3(1., .92, .55), dots(p, mtone, .009, .78, .08));
+  col = mix(col, moon, smoothstep(px, -px, md));
+  col = mix(col, vec3(.05, .02, .08), 1. - smoothstep(px, px * 2.5, abs(md)));
+  // three layers of the city, nearer ones darker, lit cyan from one side and pink from the other
+  for (int i = 0; i < 3; i++) {
+    float L = float(i);
+    vec2 q = p * (1. + L * .25) + vec2(ts * (.012 + L * .018), .02 + L * .05);
+    vec4 b = city(q, L, px * (1. + L * .25));
+    vec3 face = mix(vec3(.2, .1, .36), vec3(.05, .02, .09), L * .45);
+    face = mix(face, vec3(.1, .9, 1.) * .5, dots(p, (1. - b.w) * .5 * (1. - L * .25), .008, .26 + L, .08) * (.5 - L * .12));
+    face = mix(face, vec3(1., .85, .35), b.y);
+    col = mix(col, face, b.x);
+    col = mix(col, vec3(.02, .01, .04), b.z * (.75 + L * .1));
+  }
+  return col;
+}
+#endif
+#if STYLE == ${themeNo('Blocks')}
+// (a cheap hash, no sine: there are many of these per pixel)
+float hb(vec2 p){ vec3 q = fract(vec3(p.xyx) * .1031); q += dot(q, q.yzx + 33.33); return fract((q.x + q.y) * q.z); }
+float vn(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3. - 2. * f);
+  return mix(mix(hb(i), hb(i + vec2(1, 0)), f.x), mix(hb(i + vec2(0, 1)), hb(i + vec2(1, 1)), f.x), f.y); }
+// the ground's height at a column (in blocks): rolling hills, a few mountains, the sea at 9
+// the ground's height (in blocks), from the map worked out once (blocksMap: a 256×256 patch, repeating): its whole
+// blocks in red, its fraction in green
+uniform sampler2D HM;
+float hv(vec2 c){ vec4 t = texture2D(HM, (mod(c, 256.) + .5) / 256.); return floor(t.r * 255. + .5) + t.g; }
+float ground(vec2 c){ return floor(texture2D(HM, (mod(c, 256.) + .5) / 256.).r * 255. + .5); }
+float hills(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3. - 2. * f); // (smooth between columns: the camera's height)
+  return mix(mix(hv(i), hv(i + vec2(1, 0)), f.x), mix(hv(i + vec2(0, 1)), hv(i + vec2(1, 1)), f.x), f.y); }
+// a tree for each 9×9 patch (not all of them): its trunk's column, and the ground there (z < 0: none)
+vec3 tree(vec2 r){ vec2 t = r * 9. + 2. + floor(vec2(hb(r), hb(r + 7.1)) * 5.); float g = ground(t); return vec3(t, hb(r + 3.3) < .5 && g > 10. ? g : -1.); }
+// the sky, looking along rd: dusk — a warm low sun (square), its glow, the blue above, a few stars
+const vec3 SUN = vec3(-.58, .3, .76);
+vec3 sky(vec3 rd, float T){
+  float y = rd.y;
+  vec3 c = mix(vec3(.93, .52, .36), vec3(.2, .27, .55), smoothstep(-.02, .32, y));
+  c = mix(c, vec3(.06, .08, .2), smoothstep(.3, .75, y));
+  c = mix(c, vec3(.36, .22, .3), smoothstep(.0, -.2, y));
+  vec3 s = normalize(SUN), sr = normalize(cross(vec3(0, 1, 0), s)), su = cross(s, sr);
+  vec2 sq = vec2(dot(rd, sr), dot(rd, su)) / max(dot(rd, s), .01);
+  c += vec3(1., .55, .25) * exp(-length(sq) * 4.) * .5 * step(0., dot(rd, s));
+  c = mix(c, vec3(1., .93, .7), step(max(abs(sq.x), abs(sq.y)), .055) * step(0., dot(rd, s)));
+  vec2 st = floor(rd.xz / max(rd.y, .05) * 90.);
+  c += vec3(.9) * step(.996, hb(st)) * smoothstep(.25, .5, y) * (.5 + .5 * sin(T * 2. + hb(st + 1.) * 40.));
+  return c;
+}
+// Through the world from ro along rd, block by block (the cell the ray's in, stepped to whichever face it crosses first).
+// x: what it met (0 nothing: the sky), y: the distance; n: the face's normal
+vec2 march(vec3 ro, vec3 rd, out vec3 n, out vec3 cell, int N){
+  cell = floor(ro); vec3 st = sign(rd), tD = abs(1. / rd), side = (st * (cell - ro) + st * .5 + .5) * tD, m = vec3(0.);
+  vec2 col = vec2(1e9), reg = vec2(1e9); float g = 0.; vec3 tr = vec3(0., 0., -1.);
+  for (int i = 0; i < 120; i++) {
+    if (i >= N) break;
+    if (cell.x != col.x || cell.z != col.y) { col = cell.xz; g = ground(col); vec2 r = floor(col / 9.); if (r != reg) { reg = r; tr = tree(r); } }
+    float k = 0.;
+    if (cell.y < g) { float d = g - 1. - cell.y, beach = step(g, 10.5); k = d < .5 ? mix(1., 4., beach) : d < 3.5 ? mix(2., 4., beach) : 3.; }
+    else if (cell.y < 9.) k = 5.;
+    else if (tr.z > 0.) {
+      vec2 d = abs(cell.xz - tr.xy); float y = cell.y - tr.z;
+      if (d.x + d.y < .5 && y < 4.5) k = 6.;
+      else if (y > 2.5 && y < 4.5 && max(d.x, d.y) < 2.5 && d.x + d.y < 3.5) k = 7.;
+      else if (y > 4.5 && y < 6.5 && max(d.x, d.y) < 1.5 && (y < 5.5 || d.x + d.y < 1.5)) k = 7.;
+    }
+    if (k > 0.) { n = -m * st; return vec2(k, dot(side - tD, m)); }
+    if (cell.y > 34. && rd.y > 0.) break;
+    m = step(side, side.yzx) * step(side, side.zxy);
+    side += m * tD; cell += m * st;
+  }
+  return vec2(0., 1e9);
+}
+// a face's colour: its block's texture (16×16 texels, each its own shade) — t the texel, v how far up the face (0…1)
+vec3 tex(float k, vec3 n, vec2 t, float v, float T){
+  float r = hb(t + k * 17.), r2 = hb(t * 1.7 + k * 31.);
+  vec3 grass = vec3(.36, .6, .22) * (.82 + r * .3), dirt = vec3(.52, .36, .24) * (.78 + r * .36);
+  if (k < 1.5) return n.y > .5 ? grass : n.y < -.5 ? dirt : (v > 1. - (2. + floor(r2 * 3.)) / 16. ? grass : dirt);
+  if (k < 2.5) return dirt;
+  if (k < 3.5) return vec3(.47, .47, .49) * (.78 + r * .3) * (r2 > .9 ? .7 : 1.);
+  if (k < 4.5) return vec3(.86, .8, .56) * (.9 + r * .14);
+  if (k < 5.5) return vec3(.16, .3, .66) * (.85 + .2 * hb(t + floor(T * 3.)));
+  if (k < 6.5) return abs(n.y) > .5 ? mix(vec3(.62, .5, .32), vec3(.45, .34, .2), step(.5, fract(length(t - 7.5) / 3.))) : vec3(.4, .3, .18) * (.8 + .3 * hb(vec2(t.x, 0.)));
+  return vec3(.2, .45, .13) * (.55 + r * .55) * (r2 > .85 ? .55 : 1.);
+}
+#endif
+#if STYLE == ${themeNo('Ops')}
+float sg2(vec2 p, vec2 a, vec2 b){ vec2 pa = p - a, ba = b - a; return length(pa - ba * clamp(dot(pa, ba) / dot(ba, ba), 0., 1.)); }
+float box2(vec2 p, vec2 b){ vec2 d = abs(p) - b; return length(max(d, 0.)) + min(max(d.x, d.y), 0.); }
+// the grenades' smoke at p: three, each blooming fast, lingering, then thinning — in turn, round the middle
+float smoke(vec2 p, float t){
+  float d = 0.;
+  for (int i = 0; i < 3; i++) {
+    float fi = float(i), cyc = t * .045 + fi / 3., age = fract(cyc), n0 = floor(cyc);
+    vec2 c = vec2((fi - 1.) * .5 + (h(vec2(n0, fi)) - .5) * .3, -.17 + h(vec2(n0, fi + 4.)) * .06);
+    float grow = 1. - exp(-age * 14.), fade = smoothstep(1., .62, age) * smoothstep(0., .02, age);
+    vec2 q = (p - c) / (.36 * grow + .02) * vec2(.85, 1.2);
+    q.y -= age * .25;
+    float w = fbm(q * 1.7 + vec2(t * .35, -t * .5) + fi * 5.3);
+    d += exp(-dot(q, q) * (1.7 - w * 1.2)) * (.55 + w * .8) * fade; // (its edge pushed out and in by the noise: billows)
+  }
+  return d;
+}
+// the town's walls, at depth z (0 far … 1 near): > 0 inside them
+float walls(vec2 p, float z){
+  if (z < .5) { // far: flat roofs, a dome, a tower
+    float d = -.08 + h(vec2(floor(p.x * 6.), 2.)) * .07 - p.y;
+    d = max(d, .14 - length((p - vec2(.35, -.06)) * vec2(1., 1.25)));
+    return max(d, min(.012 - abs(p.x + .55), .15 - p.y));
+  }
+  // near: a long low wall with tall arches through it
+  float wall = -.27 - p.y, ax = (fract(p.x * 1.6 + .3) - .5) / 1.6;
+  float hole = max(abs(ax) - .085, max(p.y - (-.36 + sqrt(max(0., .0072 - ax * ax))), -.6 - p.y)); // (< 0 in an arch's opening)
+  return min(wall, hole);
 }
 #endif
 void main(){
@@ -6287,9 +6938,230 @@ void main(){
   col += mix(k, vec3(1.), .3) * (smoothstep(.0022, 0., dE) * .6 + exp(-dE * 140.) * .18) * drawn * F.w;
   col += k * smoothstep(.0012, 0., dS) * .2 * drawn * F.w;
   col += mix(C1, C2, .5) * exp(-abs(zr - 1.) * 28.) * .3 * F.w;                // the rim, where it all goes
+#elif STYLE == ${themeNo('Stickman')}
+  // Stickman: notebook paper, inked by hand — stick figures dancing to the beat on the timeline (its pencil line: see
+  // drawSpec, where one runs along it too), notes floating up off them, a doodled sun and clouds. The lines boil
+  // (redrawn eight times a second); the motion steps on twos.
+  vec2 p = uv / F.x; float asp = R.x / R.y, px = 1.4 / R.y * F.x;
+  float fr = floor(T * 8.), ts = floor(T * 12.) / 12.;
+  col = vec3(.953, .937, .9) * (.975 + .04 * n(p * 340.) + .035 * (n(p * 6. + 3.) * .6 + n(p * 13.) * .4));
+  float rule = abs(fract((p.y + .5) / .055 + .5) - .5) * .055;
+  col = mix(col, vec3(.6, .72, .9), (1. - smoothstep(0., px * 1.3, rule)) * .5);
+  col = mix(col, vec3(.92, .4, .4), (1. - smoothstep(0., px * 1.5, abs(p.x + asp * .5 - .085))) * .55);
+  vec2 q = p + (vec2(n(p * 70. + fr * 7.1), n(p * 70. + fr * 7.1 + 9.2)) - .5) * .004; // an unsteady hand
+  float gy = GY + .002;
+  vec3 ink = vec3(.12, .11, .1);
+  float s = min(.13, .2 * asp), lw = s * .02;
+  for (int i = 0; i < 2; i++) { // two clouds drifting over, drawn in a few strokes
+    float fi = float(i), cx = mod(ts * (.012 + fi * .004) + fi * .9, asp + .5) - asp * .5 - .25;
+    vec2 cp = (q - vec2(cx, .36 - fi * .06 + sin(fi * 2.) * .04)) * (1.3 + fi * .25);
+    float cl = min(min(length(cp - vec2(-.04, 0.)) - .03, length(cp - vec2(0., .016)) - .038), length(cp - vec2(.045, 0.)) - .028);
+    cl = max(cl, -cp.y - .012);
+    col = mix(col, vec3(.45, .55, .7), (1. - smoothstep(px * .5, px * 1.8, abs(cl))) * .55);
+  }
+  for (int i = 0; i < 4; i++) {
+    float fi = float(i), x = (fi - 1.5) * .28 * asp + (fi < 1.5 ? -.04 : .04);
+    vec3 c = i == 0 ? C1 : i == 1 ? C2 : i == 2 ? vec3(.13, .6, .27) : vec3(.93, .66, .08);
+    if (abs(q.x - x) > s * .9 || q.y < gy - .03 || q.y > gy + s * 2.8) continue; // (nowhere near this one: nothing to work out)
+    vec2 d = stick(q, vec2(x, gy), s, ts * (1.75 + fi * .08) + fi * .31, K, step(.66, h(vec2(floor(ts / 6.), fi))) * 2.); // (now and then a cheer)
+    col = mix(col, c * .92, max(1. - smoothstep(lw, lw + px * 1.4, d.x), 1. - smoothstep(-px * .2, px * 1.2, d.y)));
+    for (int j = 0; j < 2; j++) { // notes floating up off it
+      float fj = float(j), ph = fract(ts * .22 + fi * .37 + fj * .5);
+      vec2 np = q - vec2(x + (fj - .5) * s * .5 + sin(ph * 6. + fi) * s * .12, gy + s * 1.15 + ph * s * 1.4);
+      col = mix(col, c, (1. - smoothstep(0., px * 1.3, quaver(np, s * .11))) * smoothstep(0., .15, ph) * smoothstep(1., .6, ph));
+    }
+  }
+  vec2 sp = q - vec2(asp * .5 - .13, .33); // a doodled sun in the corner, its rays turning
+  float sr = length(sp), sa = atan(sp.y, sp.x) + ts * .15;
+  float rays = max(abs(fract(sa / 6.2832 * 10. + .5) - .5) * 6.2832 / 10. * sr, max(.056 - sr, sr - .088));
+  col = mix(col, vec3(.95, .6, .1), (1. - smoothstep(px * .5, px * 1.8, min(abs(sr - .04), rays))) * .85);
+  col *= 1. - smoothstep(.6, 1.5, length(p * vec2(.75, 1.))) * .12;
+#elif STYLE == ${themeNo('Spider')}
+  // Spider: a comic book's night — a city swinging by under a halftone moon, ink lines, dots for the light, a web in the
+  // corner. On twos (a new frame twelve times a second), printed a little off register; on the kick, a glitch.
+  vec2 p = uv / F.x; float asp = R.x / R.y, px = 1.4 / R.y * F.x;
+  float ts = floor(T * 12.) / 12., sw = sin(ts * .55) * .05;
+  p = mat2(cos(sw), -sin(sw), sin(sw), cos(sw)) * p + vec2(0., cos(ts * 1.1) * .02);
+  p.x += step(.78, n(vec2(p.y * 24., floor(T * 12.)))) * K * (n(vec2(p.y * 90., ts)) - .5) * .07; // the glitch: rows shoved sideways
+  col = comic(p, ts, px, asp);
+  if (QF > 2.5) col.r = comic(p + vec2(.0016, -.0011) * (1. + K * 3.), ts, px, asp).r; // the red plate a hair off register
+  // a masked hero swinging through on a line of web, every 16 s or so: in from one side, out the other, on twos
+  float cyc = ts / 16., ph = fract(cyc), dir = mod(floor(cyc), 2.) < .5 ? 1. : -1.;
+  if (ph < .3) {
+    float sp = ph / .3, th = dir * mix(-1.15, 1.15, sp), c = cos(th), sn = sin(th);
+    vec2 an = vec2(dir * mix(-asp * .4, asp * .5, sp), .8), hd = an + .82 * vec2(sin(th), -cos(th));
+    col = mix(col, vec3(.95, .97, 1.), (1. - smoothstep(px * .6, px * 1.8, sg2(p, an, hd))) * .9);
+    vec2 q = mat2(c, -sn, sn, c) * (p - hd); q.x *= dir; q /= 1.05; // (into its frame: its line straight up, facing its way)
+    float fill = smoothstep(px, -px, hero(q));
+    if (q.x < -.06 && q.x > -.34 && q.y < 0. && q.y > -.3) // speed lines behind it
+      col = mix(col, vec3(1.), (1. - smoothstep(.0008, .0008 + px, abs(fract(q.y / .028 + floor(ts * 2.) * .37) - .5) * .028)) * smoothstep(-.34, -.08, q.x) * .5);
+    col = mix(col, vec3(.04, .02, .07), fill);
+    float rimC = fill * smoothstep(-px, px, hero(q + vec2(.008, .007))), rimP = fill * smoothstep(-px, px, hero(q - vec2(.008, .002)));
+    col = mix(col, vec3(.25, .95, 1.), rimC * .9);
+    col = mix(col, vec3(1., .22, .45), rimP * .75 * (1. - rimC));
+  }
+  vec2 wp = p - vec2(-asp * .5 - .02, .52); // the web, from the top-left corner
+  float wr = length(wp), wa = atan(-wp.y, wp.x), wf = fract(wa / 1.5708 * 7.);
+  float spk = abs(fract(wa / 1.5708 * 7. + .5) - .5) * 1.5708 / 7. * wr;
+  float u = wr / (1. - .07 * sin(3.1416 * wf)), ring = abs(fract(u / .075 + .5) - .5) * .075;
+  float wm = step(wr, .62) * step(.03, wr) * step(0., wa) * step(wa, 1.5708);
+  col = mix(col, vec3(.96, .94, 1.), (1. - smoothstep(0., px * 1.2, min(spk, ring))) * wm * .75);
+  col += vec3(1.) * (1. - smoothstep(0., px * 3., max(spk, ring))) * wm * (.5 + .5 * sin(ts * 3. + wr * 40.));
+  col *= 1. - smoothstep(.55, 1.4, length(p * vec2(.75, 1.))) * .45;
+  col *= 1. + B * .3;
+#elif STYLE == ${themeNo('Blocks')}
+  // Blocks: flying over a blocky world at dusk — hills of grass and stone, sand by the water, trees, a square sun low in
+  // the sky; every face textured in 16×16 texels and shaded flat, tops brightest. Shadows on Ultra and Extreme.
+  float tt = T * .5;
+  vec3 ro = vec3(sin(tt * .045) * 40., 0., tt * 4.2);
+  ro.y = max(23., hills(ro.xz) + 8.) + K * .35; // (over the hills, never through them)
+  float yaw = sin(tt * .033) * .5 - .25, pitch = -.24;
+  vec3 fw = vec3(sin(yaw) * cos(pitch), sin(pitch), cos(yaw) * cos(pitch)), rt = normalize(cross(vec3(0, 1, 0), fw)), up = cross(fw, rt);
+  vec3 rd = normalize(fw * 1.35 + rt * uv.x + up * uv.y);
+  vec3 nrm, cell, sk = sky(rd, T);
+  vec2 hit = march(ro, rd, nrm, cell, QF > 1.5 ? 120 : 75);
+  col = sk;
+  if (hit.x > 0.) {
+    vec3 hp = ro + rd * hit.y, an = abs(nrm);
+    vec2 fuv = an.y > .5 ? hp.xz : an.x > .5 ? hp.zy : hp.xy;
+    vec3 c = tex(hit.x, nrm, floor(fract(fuv) * 16.), fract(hp.y), T);
+    float face = nrm.y > .5 ? 1. : nrm.y < -.5 ? .5 : an.x > .5 ? .8 : .64;
+    float sunlit = max(dot(nrm, normalize(SUN)), 0.), lit = 1.;
+    if (QF > 2.5 && sunlit > 0.) { vec3 n2, c2; if (march(hp + nrm * .02, normalize(SUN), n2, c2, 40).x > 0.) lit = .15; }
+    vec3 light = vec3(.58, .6, .76) + vec3(1., .78, .55) * (sunlit * .9 + .3) * lit;
+    if (hit.x > 4.5 && hit.x < 5.5) c = mix(vec3(.16, .42, .86), sky(reflect(rd, vec3(0, 1, 0)), T), .3); // water: the sky in it
+    col = mix(c * face * light, sk, 1. - exp(-hit.y * .011));                            // and the haze, far off
+  }
+  if (rd.y > 0.) { // clouds: flat blocky slabs drifting high up
+    float tc = (52. - ro.y) / rd.y; vec2 cp = ro.xz + rd.xz * tc + vec2(T * 1.2, 0.);
+    col = mix(col, mix(vec3(1., .82, .78), sk, .35), step(.62, vn(floor(cp / 10.) * .35)) * .8 * exp(-tc * .004));
+  }
+  col *= .84 * (1. - smoothstep(.55, 1.4, length(uv / F.x * vec2(.8, 1.))) * .5) * (1. + B * .3); // (a little dimmed: the lyrics read over it)
+#elif STYLE == ${themeNo('Tactical')}
+  // Tactical: deep navy, long angled panels drifting at three depths with hairline edges, a few lit signal red; two
+  // triangles turning far behind, a light shaft, diamonds rising, and scans going out from a point, brighter on the kick
+  vec2 p = uv / F.x; float asp = R.x / R.y, px = 1.4 / R.y * F.x;
+  col = mix(vec3(.03, .06, .085), vec3(.07, .11, .15), smoothstep(-.7, .7, p.y + p.x * .25));
+  for (int i = 0; i < 2; i++) {
+    float fi = float(i), a = t * (fi < .5 ? .25 : -.18) + fi, rr = .34 + fi * .2, k3 = 1.7320508;
+    vec2 q = mat2(cos(a), -sin(a), sin(a), cos(a)) * (p - vec2(asp * .12, .02));
+    q.x = abs(q.x) - rr; q.y += rr / k3;
+    if (q.x + k3 * q.y > 0.) q = vec2(q.x - k3 * q.y, -k3 * q.x - q.y) / 2.;
+    q.x -= clamp(q.x, -2. * rr, 0.);
+    float d = length(q);
+    col += C2 * (1. - smoothstep(0., px * 1.5, d)) * .08 + C1 * exp(-d * 60.) * .035;
+  }
+  for (int i = 0; i < 3; i++) {
+    float fi = float(i), sc = 2. + fi * 1.4;
+    vec2 q = mat2(cos(-.4), -sin(-.4), sin(-.4), cos(-.4)) * p * sc;
+    q.x += t * (2. + fi * 1.5);
+    float row = floor(q.y), fy = fract(q.y);
+    float x = q.x + q.y * .5 + h(vec2(row, fi)) * 9., cell = floor(x / 3.), fx = fract(x / 3.) * 3.;
+    float len = .8 + h(vec2(cell, row + fi * 7.)) * 1.8, on = step(.5, h(vec2(cell, row + 2. + fi))), thick = .22 + h(vec2(cell, row + 4.)) * .25;
+    float d = max(abs(fx - len * .5) - len * .5, abs(fy - .5) - thick * .5) / sc; // (signed, in screen units)
+    float inside = (1. - smoothstep(-px, px, d)) * on, red = step(.78, h(vec2(cell, row + 9. + fi)));
+    vec3 fill = mix(vec3(.075, .12, .155), vec3(.1, .155, .19), h(vec2(cell, row))) * (1.1 - fi * .12);
+    col = mix(col, fill * (.95 + .05 * step(.5, fract((q.x - q.y) * 7.))), inside * (.6 + fi * .15));
+    col += mix(C2 * .35, C1 * 1.3, red) * (1. - smoothstep(0., px * 1.3, abs(d))) * on * (.5 + fi * .2);
+    col += C1 * red * on * exp(-abs(d) * 90.) * .25 * (1. + K);
+  }
+  float bd = p.x * .75 + p.y * .66 - .1 - sin(t * .7) * .25;
+  col += C2 * exp(-bd * bd / .02) * .05;
+  vec2 g = p * 9. + vec2(t * 1.5, -t * 7.), id = floor(g), f = fract(g) - .5 - (vec2(h(id + 1.), h(id + 2.)) - .5) * .6;
+  col += mix(C2, C1, step(.5, h(id + 4.))) * step(.86, h(id)) * (1. - smoothstep(.04, .07, abs(f.x) + abs(f.y))) * (.5 + .5 * sin(T * 3. + h(id) * 60.)) * .6;
+  vec2 sp = p - vec2(-asp * .28, -.16);
+  float sr = length(sp), sa = atan(sp.y, sp.x);
+  for (int i = 0; i < 3; i++) {
+    float ph = fract(t * 1.4 + float(i) / 3.), rr = ph * 1.4;
+    float ring = 1. - smoothstep(0., px * 1.5, abs(sr - rr)), tick = step(.5, fract(sa / 6.2832 * 48.)) * (1. - smoothstep(0., .012, abs(sr - rr - .015)));
+    col += mix(C2, C1, .55) * (ring * .6 + tick * .4) * (1. - ph) * (1. - ph) * (.5 + K * 1.2);
+  }
+  col *= (1. - smoothstep(.6, 1.45, length(p * vec2(.8, 1.))) * .55) * (1. + B * .35);
+#elif STYLE == ${themeNo('Ops')}
+  // Ops: a desert bomb site in the afternoon — a sandstone wall with arches through it, blue double doors in one, the
+  // site's "A" painted beside them with its arrow, crates in front, palms and a dome in the haze beyond; smoke grenades
+  // blooming over it in turn (lit by the sun, a glowing rim where they thin), tracers cutting through on the kick and
+  // leaving tunnels that close up again, dust in the light
+  vec2 p = uv / F.x; float asp = R.x / R.y, px = 1.4 / R.y * F.x;
+  vec2 sunP = vec2(-asp * .32, .36);
+  col = mix(vec3(.88, .78, .6), vec3(.42, .6, .78), smoothstep(-.18, .48, p.y));
+  col = mix(col, vec3(.26, .42, .62), smoothstep(.45, .9, p.y));
+  col += vec3(1., .88, .62) * exp(-length(p - sunP) * 3.5) * .55;
+  for (int i = 0; i < 2; i++) { // palms beyond the wall: a leaning trunk, fronds drooping off its top
+    float fi = float(i), x0 = (fi < .5 ? -.36 : .31) * asp, lean = fi < .5 ? .05 : -.07;
+    vec2 top = vec2(x0 + lean, .12 + fi * .05);
+    if (abs(p.x - top.x) > .2 || p.y < -.3 || p.y > top.y + .1) continue; // (nowhere near this palm)
+    float tr = sg2(p, vec2(x0, -.3), top) - .011 + (p.y + .3) * .008;
+    for (int k = 0; k < 9; k++) { // (each frond: up and out from the top, then drooping, thick at its base, thin at its tip)
+      float a = (float(k) / 8. - .5) * 3.6 + fi * .4, ln = .13 + .03 * sin(float(k) * 2.3);
+      vec2 dv = vec2(sin(a), cos(a)), mid = top + vec2(dv.x * .55, abs(dv.y) * .22 + .03) * ln, tip = top + vec2(dv.x * 1.05, -.2 - .25 * (1. - abs(dv.x))) * ln;
+      float u1 = clamp(dot(p - top, mid - top) / dot(mid - top, mid - top), 0., 1.), u2 = clamp(dot(p - mid, tip - mid) / dot(tip - mid, tip - mid), 0., 1.);
+      tr = min(tr, min(sg2(p, top, mid) - .014 * (1. - u1 * .3), sg2(p, mid, tip) - .01 * (1. - u2 * .85)));
+    }
+    col = mix(col, mix(vec3(.3, .36, .3), col, .38), smoothstep(px, -px, tr));
+  }
+  col = mix(col, mix(vec3(.66, .56, .44), col, .3), smoothstep(-px, px, walls(p, 0.))); // the far roofs and dome, in the haze
+  float d = smoke(p, T * .5), dl = smoke(p + vec2(.035, .02), T * .5), tracer = 0.; // (dl: toward the sun)
+  float slot = floor(T * .7), age = fract(T * .7);
+  for (int i = 0; i < 2; i++) {
+    float fi = float(i), yb = -.3 + h(vec2(slot, fi)) * .3, tilt = (h(vec2(slot, fi + 3.)) - .5) * .25;
+    float dy = abs(p.y - yb - p.x * tilt), xh = -asp * .6 + age * 9. * asp, behind = step(p.x, xh);
+    float tun = 1. - (1. - smoothstep(0., .014 * pow(1. - clamp(age * 1.6, 0., 1.), 2.) + .0005, dy)) * behind * .8; // (a tunnel, closing up)
+    d *= tun; dl *= tun;
+    tracer += (1. - smoothstep(0., px * 1.5 + .0015, dy)) * smoothstep(xh - .45, xh, p.x) * behind * step(age, .3) * (.6 + K);
+  }
+  float dens = clamp(d, 0., 1.8), dx = QF > 1.5 ? smoke(p + vec2(.012, 0.), T * .5) - d : (dl - d) * .6; // (lower qualities: one sample fewer)
+  vec3 nm = normalize(vec3(-dx * 14., -(dl - d) * 6., 1.));
+  float sun = clamp(dot(nm, normalize(vec3(-.6, .45, .5))), 0., 1.), rim = clamp((d - dl) * 3. + .4, 0., 1.) * (1. - smoothstep(.4, 1.2, dens));
+  vec3 sm = mix(vec3(.42, .46, .52), vec3(.74, .74, .74), smoothstep(.15, 1.4, dens)) * (.72 + .45 * sun) + vec3(1., .9, .72) * rim * .3;
+  col = mix(col, sm, smoothstep(.04, .75, dens) * .94);
+  // the near wall: sandstone in courses, lit from the left; arches through it — the one in the middle shut with blue doors
+  float ax = (fract(p.x * 1.6 + .3) - .5) / 1.6, cell = floor(p.x * 1.6 + .3);
+  float hole = max(abs(ax) - .085, max(p.y - (-.36 + sqrt(max(0., .0072 - ax * ax))), -.6 - p.y));
+  float wl = min(-.27 - p.y, hole);
+  vec2 bk = vec2(p.x * 14. + step(.5, fract(p.y * 25.)) * .5, p.y * 25.), bf = fract(bk);
+  float joint = min(min(bf.x, 1. - bf.x) / 14., min(bf.y, 1. - bf.y) / 25.);
+  vec3 stone = vec3(.78, .63, .44) * (.78 + .3 * h(floor(bk))) * (.86 + .22 * (n(p * vec2(40., 70.)) * .65 + n(p * vec2(90., 150.)) * .35));
+  stone *= (.72 + .28 * smoothstep(0., .0025, joint)) * (.85 + .25 * smoothstep(.3, -.3, ax + p.x * .1));
+  col = mix(col, stone, smoothstep(-px, px, wl));
+  col = mix(col, col * .55, smoothstep(.02, 0., -hole) * step(hole, 0.) * smoothstep(-.6, -.3, p.y) * .5); // (the arches' shade)
+  if (cell == 0. && hole < 0.) { // the blue doors: two leaves of planks, a dark seam, iron studs, the paint worn
+    float pl = abs(fract((ax + .085) / .017) - .5), seam = abs(ax);
+    vec3 door = vec3(.2, .4, .62) * (.8 + .25 * h(vec2(floor((ax + .085) / .017), 3.))) * (.85 + .2 * fbm(p * vec2(30., 90.)));
+    door = mix(door, vec3(.62, .52, .38), smoothstep(.62, .82, fbm(p * 22. + 4.)) * .7);
+    door *= .75 + .25 * smoothstep(0., .08, pl);
+    door *= mix(.35, 1., smoothstep(.001, .004, seam));
+    door = mix(door, vec3(.12, .12, .14), (1. - smoothstep(.0025, .004, length(vec2(fract((ax + .085) / .034) - .5, fract(p.y / .04) - .5) * vec2(.034, .04)))) * .8);
+    col = mix(col, door, smoothstep(px, -px, hole + .006));
+  }
+  // the site's letter, painted on the wall by the doors, and its arrow
+  vec2 ap = p - vec2(-.2 / 1.6 + .03, -.4);
+  float A = min(min(sg2(ap, vec2(-.03, -.045), vec2(0., .045)), sg2(ap, vec2(0., .045), vec2(.03, -.045))), sg2(ap, vec2(-.016, -.008), vec2(.016, -.008)));
+  float arrow = min(sg2(ap, vec2(.05, 0.), vec2(.11, 0.)), min(sg2(ap, vec2(.11, 0.), vec2(.09, .018)), sg2(ap, vec2(.11, 0.), vec2(.09, -.018))));
+  float paint = min(A, arrow) < .009 ? (1. - smoothstep(.007, .007 + px, min(A, arrow))) * step(0., wl) * smoothstep(.25, .6, fbm(p * 30.) + .2) : 0.;
+  col = mix(col, vec3(.86, .4, .16), paint * .9);
+  col += vec3(1., .8, .5) * (1. - smoothstep(0., px * 2.5, abs(p.y + .27))) * step(-.006, wl) * .35; // (the wall's top, in the sun)
+  for (int i = 0; i < 3; i++) { // crates in front: planks round a frame, a cross brace
+    float fi = float(i);
+    vec2 c = i == 0 ? vec2(asp * .5 - .13, -.47) : i == 1 ? vec2(asp * .5 - .2, -.47) : vec2(asp * .5 - .165, -.35);
+    vec2 q = p - c; float sz = .062;
+    float bx = box2(q, vec2(sz));
+    if (bx > px) continue; // (not on this crate)
+    float fr = min(sz - abs(q.x), sz - abs(q.y)), br = min(abs(q.x - q.y), abs(q.x + q.y)) * .7071;
+    vec3 wood = vec3(.62, .45, .27) * (.8 + .25 * h(vec2(floor(q.y / .02 + fi * 7.), fi))) * (.85 + .2 * n(q * vec2(60., 8.)));
+    wood *= mix(.6, 1., smoothstep(0., .004, fr - .012)) * mix(.62, 1., smoothstep(0., .004, br - .006) + step(fr, .012));
+    wood *= .85 + .2 * smoothstep(sz, -sz, q.x);
+    col = mix(col, wood, smoothstep(px, -px, bx));
+  }
+  col += vec3(1., .85, .55) * tracer;
+  vec2 g = p * 22. + vec2(t * 4., t * 2.), id = floor(g); // dust in the light
+  col += vec3(1., .9, .7) * step(.94, h(id)) * (1. - smoothstep(.04, .1, length(fract(g) - .5))) * .2 * exp(-length(p - sunP) * 1.4);
+  col *= .84 * (1. - smoothstep(.55, 1.4, length(p * vec2(.8, 1.))) * .5) * (1. + B * .35); // (a little dimmed: the lyrics read over it)
 #endif
+#if STYLE < ${themeNo('Stickman')}
   col *= smoothstep(1.35, .1, length(uv / F.x * vec2(.8, 1.))) * .85 + .15;
   col *= 1. + B * .45; // (and a flash of light on each beat)
+#endif
   col += (h(gl_FragCoord.xy + fract(T * 7.) * 91.) - .5) * G;
   gl_FragColor = vec4(col, 1.);
 }`;
@@ -6305,7 +7177,7 @@ function useStyle(style) {
     gl.bindAttribLocation(prog, 0, 'p');
     gl.linkProgram(prog);
     const u = {};
-    for (const k of ['R', 'T', 'B', 'M', 'H', 'G', 'OCT', 'QF', 'C0', 'C1', 'C2', 'F']) u[k] = gl.getUniformLocation(prog, k);
+    for (const k of ['R', 'T', 'B', 'M', 'H', 'G', 'OCT', 'QF', 'K', 'GY', 'HM', 'C0', 'C1', 'C2', 'F']) u[k] = gl.getUniformLocation(prog, k);
     fxProgs[style] = { prog, u };
   }
   gl.useProgram(fxProgs[style].prog);
@@ -6319,17 +7191,23 @@ if (gl) {
 }
 if (!gl) $('screen').style.opacity = 0; // nothing opaque in front of it without WebGL
 // The backdrop is soft smoke, so it renders below screen resolution (Balanced = half), per the quality setting.
+// (the heaviest backdrops drawn a little smaller on Balanced and Low: Blocks — a world traced block by block, pixel art
+// anyway — and Ops, its smoke soft anyway)
+const sceneScale = () => bgq !== 'Balanced' && bgq !== 'Low' ? 1 : theme === 'Blocks' ? .7 : theme === 'Ops' ? .8 : 1;
+let fxScale = 1;
 function resize() {
   const Q = BGQ[bgq], dpr = Math.min(devicePixelRatio || 1, Q.dpr || Infinity);
-  let w = innerWidth * dpr * Q.res, h = innerHeight * dpr * Q.res;
+  fxScale = sceneScale();
+  let w = innerWidth * dpr * Q.res * fxScale, h = innerHeight * dpr * Q.res * fxScale;
   const cap = Math.min(1, Math.sqrt(Q.maxPx / (w * h))); // very large screens: keep the GPU load sane
   fx.width = Math.round(w * cap); fx.height = Math.round(h * cap);
   gl?.viewport(0, 0, fx.width, fx.height);
   root.style.setProperty('--grain', Q.grain);
   document.body.classList.toggle('grain-still', !!Q.still || bgq === 'Low' || !motion); // (Low: for modest devices, the grain stays put too)
   fxDirty = true; // resizing clears the canvas
+  fxGround = null;
 }
-let fxFrame = 0, fxDirty = true;
+let fxFrame = 0, fxDirty = true, fxGround = null;
 addEventListener('resize', resize); resize();
 
 // ---------- spectrum scrubber ----------
@@ -6354,7 +7232,9 @@ function drawSpec(now, p, kick = 0) {
   const dot = (x, y, r) => { sg.beginPath(); sg.arc(x, y, r, 0, TAU); sg.fill(); };
   sg.lineCap = sg.lineJoin = 'round';
 
-  if (barStyle === 'Liquid') { // a glass tube filling with glowing liquid; its front edge ripples with the music
+  const own = SKINS[skin]?.bar; // (a theme's own timeline)
+  if (own) skinBar(own, { W, H, mid, px, p, A, B, I, live, kick, now, level, glow, flat, line, dot });
+  else if (barStyle === 'Liquid') { // a glass tube filling with glowing liquid; its front edge ripples with the music
     const h = 12, y0 = mid - h / 2, tube = new Path2D();
     tube.roundRect(.5, y0, W - 1, h, h / 2);
     sg.fillStyle = rgba(I, .05); sg.fill(tube);
@@ -6565,6 +7445,82 @@ function drawSpec(now, p, kick = 0) {
     sg.fillStyle = I; glow(A, 14); sg.fillRect(px - 1, 0, 2, H); flat();
   }
   sg.globalAlpha = 1; flat();
+}
+// The themes' timelines. XP: an experience bar, in segments, the level (the minutes so far) over it · Tactical: a hairline
+// with ticks, the part played signal red, a diamond for now · Ops: a round timer, in tenths, a marker for now · Web: a web
+// strand sagging from the start to now, a spider hanging off it, bobbing on the beat; the rest a dotted line yet to be
+// spun · Pencil: a line drawn by hand up to now, dotted after it, and a stick figure running along it (standing, paused).
+function skinBar(kind, o) {
+  const { W, H, mid, px, A, B, I, live, kick, now, glow, flat, line, dot } = o, TAU = Math.PI * 2, t = P.t || 0, run = live && motion;
+  if (kind === 'XP') {
+    const h = 8, y0 = Math.round(mid + 4), n = 18;
+    sg.fillStyle = '#000'; sg.fillRect(0, y0 - 1, W, h + 2);
+    sg.fillStyle = '#2b2b2b'; sg.fillRect(1, y0, W - 2, h);
+    if (px > 1) {
+      sg.fillStyle = kick > .5 ? '#a6ff52' : '#7ed321'; sg.fillRect(1, y0, px - 1, h);
+      sg.fillStyle = 'rgba(255,255,255,.35)'; sg.fillRect(1, y0, px - 1, 2);
+      sg.fillStyle = 'rgba(0,0,0,.25)'; sg.fillRect(1, y0 + h - 2, px - 1, 2);
+    }
+    sg.fillStyle = '#000';
+    for (let i = 1; i < n; i++) sg.fillRect(Math.round(W * i / n), y0, 2, h);
+    const lvl = String(Math.floor(t / 60));
+    sg.font = "10px 'Press Start 2P', monospace"; sg.textAlign = 'center'; sg.textBaseline = 'alphabetic';
+    for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) { sg.fillStyle = '#000'; sg.fillText(lvl, W / 2 + dx, y0 - 4 + dy); }
+    sg.fillStyle = '#80ff20'; sg.fillText(lvl, W / 2, y0 - 4);
+  } else if (kind === 'Tactical') {
+    sg.strokeStyle = rgba(I, .22); sg.lineWidth = 1; line(px, W);
+    for (let i = 1; i < 20; i++) { const x = W * i / 20; sg.fillStyle = rgba(I, x < px ? .55 : .25); sg.fillRect(Math.round(x), mid - (i % 5 ? 3 : 6), 1, i % 5 ? 3 : 6); }
+    sg.strokeStyle = A; sg.lineWidth = 2; glow(A, 8); line(0, px); flat();
+    const s = 6 + kick * 2.5;
+    sg.fillStyle = A; sg.strokeStyle = I; sg.lineWidth = 1.2; glow(A, 12 + kick * 10);
+    sg.beginPath(); sg.moveTo(px, mid - s); sg.lineTo(px + s, mid); sg.lineTo(px, mid + s); sg.lineTo(px - s, mid); sg.closePath(); sg.fill(); flat(); sg.stroke();
+    sg.fillStyle = rgba(I, .5); sg.fillRect(px - .5, 0, 1, mid - s - 3); sg.fillRect(px - .5, mid + s + 3, 1, H);
+  } else if (kind === 'Ops') {
+    const h = 4, y0 = mid - h / 2;
+    sg.fillStyle = 'rgba(0,0,0,.45)'; sg.fillRect(0, y0 - 2, W, h + 4);
+    sg.strokeStyle = 'rgba(255,255,255,.14)'; sg.lineWidth = 1; sg.strokeRect(.5, y0 - 1.5, W - 1, h + 3);
+    sg.fillStyle = A; glow(A, 6 + kick * 8); sg.fillRect(1, y0, Math.max(0, px - 1), h); flat();
+    sg.fillStyle = 'rgba(0,0,0,.6)';
+    for (let i = 1; i < 10; i++) sg.fillRect(Math.round(W * i / 10), y0 - 1, 1, h + 2);
+    for (let x = 0; x < W; x += 5) { const lv = o.level(x); if (lv < .1) continue; sg.fillStyle = rgba(x < px ? A : I, x < px ? .55 : .18); sg.fillRect(x, y0 - 3 - lv * 9, 2, lv * 9); }
+    sg.fillStyle = '#fff'; sg.fillRect(px - 1, y0 - 6, 2, h + 12);
+    sg.fillStyle = A; sg.beginPath(); sg.moveTo(px - 4, H - 2); sg.lineTo(px + 4, H - 2); sg.lineTo(px, H - 7); sg.fill();
+  } else if (kind === 'Web') {
+    const y = mid - 6, sag = Math.min(10, px * .03);
+    sg.strokeStyle = rgba(I, .28); sg.lineWidth = 1; sg.setLineDash([2, 5]); line(px, W, y); sg.setLineDash([]);
+    sg.strokeStyle = rgba(I, .9); sg.lineWidth = 1.3; sg.beginPath(); sg.moveTo(0, y);
+    for (let x = 0; x <= px; x += 6) sg.lineTo(x, y + Math.sin(Math.PI * x / Math.max(px, 1)) * sag);
+    sg.lineTo(px, y); sg.stroke();
+    sg.lineWidth = .8; sg.strokeStyle = rgba(I, .35); // (a few threads hanging off it)
+    for (let x = 40; x < px - 10; x += 90) { const yy = y + Math.sin(Math.PI * x / px) * sag; sg.beginPath(); sg.moveTo(x, yy); sg.lineTo(x + 6, yy + 7); sg.lineTo(x + 12, yy); sg.stroke(); }
+    const bob = (run ? Math.sin(now / 300) * 1.5 : 0) + kick * 4, sy = y + 12 + bob; // the spider, on its thread
+    sg.strokeStyle = rgba(I, .8); sg.lineWidth = 1; sg.beginPath(); sg.moveTo(px, y); sg.lineTo(px, sy - 3); sg.stroke();
+    sg.lineWidth = 1.2; sg.strokeStyle = I;
+    for (const sd of [-1, 1]) for (let k = 0; k < 4; k++) {
+      const a = (k - 1.5) * .45, wig = run ? Math.sin(now / 90 + k * 2 + sd) * .15 : 0, kx = px + sd * 5.5, ky = sy - 1 + (k - 1.5) * 2;
+      sg.beginPath(); sg.moveTo(px + sd * 1.5, sy + (k - 1.5)); sg.quadraticCurveTo(kx, ky - 3 + wig * 8, px + sd * (8 + Math.cos(a) * 2), sy + 3 + (k - 1.5) * 2.2); sg.stroke();
+    }
+    sg.fillStyle = I; dot(px, sy + 1.5, 3.6); dot(px, sy - 2.5, 2.2);
+    sg.fillStyle = A; dot(px, sy + 1.8, 1.4);
+  } else if (kind === 'Pencil') {
+    const g = '#2b2925', y = mid + 7;
+    sg.strokeStyle = rgba(I, .35); sg.lineWidth = 1.2; sg.setLineDash([1, 5]); line(px, W, y); sg.setLineDash([]);
+    sg.strokeStyle = g; sg.lineWidth = 1.7; sg.beginPath(); sg.moveTo(0, y);
+    const seed = Math.floor(now / 125); // (the line boils, like the figures above it)
+    for (let x = 4; x <= px; x += 4) sg.lineTo(x, y + Math.sin(x * .37 + seed) * .45 + Math.sin(x * .11) * .6);
+    sg.stroke();
+    // the runner (12 px tall) — the same moves as the figures in the backdrop
+    const s = 22, ph = run ? now / 330 : 0, sw = Math.sin(ph * TAU), lb = (a, ang, len) => [a[0] + len * Math.sin(ang), a[1] + len * Math.cos(ang)];
+    const hip = [px, y - s * (.47 + (run ? Math.abs(sw) * .05 : 0))], nk = [hip[0] + (run ? s * .1 : 0), hip[1] - s * .3], l = run ? sw * .85 : .2;
+    const k1 = lb(hip, l, s * .26), f1 = lb(k1, run ? l - .25 - Math.max(0, -sw) * 1.2 : .2, s * .25), k2 = lb(hip, -l, s * .26), f2 = lb(k2, run ? -l - .25 - Math.max(0, sw) * 1.2 : -.2, s * .25);
+    const e1 = lb(nk, run ? -l * .9 : .3, s * .16), h1 = lb(e1, run ? -l * .9 + 1.5 : .2, s * .15), e2 = lb(nk, run ? l * .9 : -.3, s * .16), h2 = lb(e2, run ? l * .9 + 1.5 : -.2, s * .15);
+    sg.strokeStyle = A; sg.lineWidth = 2; sg.beginPath();
+    for (const [a, b] of [[hip, nk], [nk, e1], [e1, h1], [nk, e2], [e2, h2], [hip, k1], [k1, f1], [hip, k2], [k2, f2]]) { sg.moveTo(...a); sg.lineTo(...b); }
+    sg.stroke();
+    const hd = [nk[0] + (nk[0] - hip[0]) * .35, nk[1] - s * .11];
+    sg.fillStyle = A; dot(hd[0], hd[1], s * .085);
+    if (run) { sg.strokeStyle = rgba(I, .3); sg.lineWidth = 1; for (const dy of [-.7, -.45, -.2]) line(px - s * .9, px - s * .55, y + dy * s); } // speed lines
+  }
 }
 
 // ---------- the beat ring (cover view): bars round the record, NCS style, from the music actually being heard ----------
@@ -6805,18 +7761,42 @@ function drawEdges(g, W, H) {
 }
 
 // One drawing of the backdrop at the canvas's size.
-function paintFx(Q, beat = 0) {
+function paintFx(Q, beat = 0, kick = 0) {
   gl.uniform2f(U.R, fx.width, fx.height);
   gl.uniform1f(U.T, fxT + 40);
   // The backdrop reacts to the music only with the Background beat option (beat: the bass, smoothed), and then only to
-  // the bass; mids and highs stay at rest.
-  gl.uniform1f(U.B, beat); gl.uniform1f(U.M, 0); gl.uniform1f(U.H, 0);
+  // the bass; mids and highs stay at rest. (The themes' scenes: their figures and tracers on the kick, kick.)
+  gl.uniform1f(U.B, beat); gl.uniform1f(U.M, 0); gl.uniform1f(U.H, 0); gl.uniform1f(U.K, motion ? kick : 0);
+  if (fxGround === null) { const r = spec.getBoundingClientRect(); fxGround = r.height ? .5 - (r.top + r.height / 2 + 7) / innerHeight : -.36; } // (Stickman's figures dance on its pencil line: see skinBar)
+  gl.uniform1f(U.GY, fxGround);
+  if (U.HM) { gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, blocksMap()); gl.uniform1i(U.HM, 0); }
   // a hair of dither against color banding; the visible grain is its own layer — but on a touch screen, it's this: one
   // full-screen layer fewer for a phone to blend every frame
   gl.uniform1f(U.G, coarse ? Q.grain * .7 : 0.006);
   gl.uniform1f(U.OCT, Q.oct); gl.uniform1f(U.QF, Q.fx);
   gl.uniform3fv(U.C0, palette[0]); gl.uniform3fv(U.C1, palette[1]); gl.uniform3fv(U.C2, palette[2]); gl.uniform4fv(U.F, palette[3]);
   gl.drawArrays(gl.TRIANGLES, 0, 3);
+}
+// Blocks' world: the ground's height at every column of a 256×256 patch that repeats without a seam (its noise wraps
+// round: 8, 24 and 3 cells across it), worked out once here rather than many times over for every pixel.
+let blocksHM = null;
+function blocksMap() {
+  if (blocksHM) return blocksHM;
+  const N = 256, data = new Uint8Array(N * N * 4);
+  const hash = (x, y, s) => { let h = Math.imul(x * 374761393 + y * 668265263 + s * 1442695041, 1274126177); h = Math.imul(h ^ (h >>> 13), 1103515245); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
+  const vn = (x, y, per, s) => {
+    const ix = Math.floor(x), iy = Math.floor(y), u = x - ix, v = y - iy, su = u * u * (3 - 2 * u), sv = v * v * (3 - 2 * v);
+    const g = (i, j) => hash((ix + i) % per, (iy + j) % per, s);
+    return (g(0, 0) * (1 - su) + g(1, 0) * su) * (1 - sv) + (g(0, 1) * (1 - su) + g(1, 1) * su) * sv;
+  };
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const h = 2 + vn(x * 8 / N, y * 8 / N, 8, 1) * 16 + vn(x * 24 / N, y * 24 / N, 24, 2) * 5 + vn(x * 3 / N, y * 3 / N, 3, 3) ** 3 * 9, i = (y * N + x) * 4;
+    data[i] = Math.floor(h); data[i + 1] = Math.round((h - Math.floor(h)) * 255); data[i + 3] = 255;
+  }
+  blocksHM = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, blocksHM);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, N, N, 0, gl.RGBA, gl.UNSIGNED_BYTE, data);
+  for (const [k, v] of [[gl.TEXTURE_MIN_FILTER, gl.NEAREST], [gl.TEXTURE_MAG_FILTER, gl.NEAREST], [gl.TEXTURE_WRAP_S, gl.REPEAT], [gl.TEXTURE_WRAP_T, gl.REPEAT]]) gl.texParameteri(gl.TEXTURE_2D, k, v);
+  return blocksHM;
 }
 // The backdrop as it is right now, drawn once at w×h in full quality (for the story), then the screen's put back.
 function backdropAt(w, h) {
@@ -6842,7 +7822,7 @@ function backdropAt(w, h) {
 // through a camera — and each word is kept inside the lyrics' area: if any of it would pass an edge, it's drawn smaller
 // and nearer the middle, so nothing is ever cut off. A second pass (KIN_POST) lays the words on the shot's ground with
 // film grain, dust and scratches, colour fringes, glow, light leaks, tape tracking, a zoom burst on the cut.
-const KIN_GROUND = { night: 0, blood: 1, paper: 2, white: 3, y2k: 4, ink: 5, mesh: 6, lime: 7 };
+const KIN_GROUND = { night: 0, blood: 1, paper: 2, white: 3, y2k: 4, ink: 5, mesh: 6, lime: 7, clear: 8 }; // (clear: the backdrop as it is — Stickman’s paper)
 const KF = { // the looks' own typefaces (all bundled)
   marker: { family: "'Permanent Marker', Impact, sans-serif" }, type: { family: "'Special Elite', 'Courier New', monospace" },
   crt: { family: "'VT323', monospace" }, orbit: { family: "'Orbitron', sans-serif", weight: 900 }, wide: { family: "'Unbounded', sans-serif", weight: 900 },
@@ -6901,6 +7881,10 @@ void main() {
     vec2 q = gl_FragCoord.xy / R.y; float t = q.x * 1.1 + q.y * .6 + vL.x * .3 - time * .3;
     fc = mix(.6 + .4 * cos(6.2832 * (t + vec3(0., .33, .67))), vec3(1.), .28) + smoothstep(.05, 0., abs(fract(q.x * .35 - q.y * .25 - time * .2) - .5)) * .6;
   }
+  if (vM.z == 8.) { // printed in dots, as a comic's colour is: darker dots, larger toward the bottom
+    float d = length(fract(mat2(.97, -.26, .26, .97) * gl_FragCoord.xy / 7.) - .5), r = .22 + vL.y * .2;
+    fc = mix(vFill, vFill * .55, smoothstep(r + .07, r - .07, d));
+  }
   if (vM.z == 5.) // the cover through the letters (laid square over the middle of the screen)
     fc = texture(CV, vec2((gl_FragCoord.x - R.x * .5) / R.y + .5, 1. - gl_FragCoord.y / R.y)).rgb * 1.12;
   vec3 c = vM.z == 2. ? mix(vLine, vFill, f) : mix(fc, vLine, l); // (neon: the colour round a white-hot core)
@@ -6912,7 +7896,7 @@ const KIN_POST_FS = `#version 300 es
 precision highp float;
 uniform sampler2D T;      // the words (premultiplied, with blurred levels)
 uniform vec2 R, C;        // canvas size (px); the lyrics' middle (0…1 from the top left)
-uniform float time, kick, burst, ground, seed, ca, trk, scan, glow, halo, leak, invert, flash, vid;
+uniform float time, kick, burst, ground, seed, ca, trk, scan, glow, halo, leak, invert, flash, vid, scr;
 uniform vec3 cA, cB;
 out vec4 o;
 ${KIN_GLSL_NOISE}
@@ -6921,7 +7905,7 @@ vec4 tx(vec2 u, float lod) { return inside(u) ? textureLod(T, vec2(u.x, 1. - u.y
 void main() {
   vec2 uv = vec2(gl_FragCoord.x / R.x, 1. - gl_FragCoord.y / R.y), px = gl_FragCoord.xy;
   float fr = floor(time * 24.), asp = R.x / R.y;
-  bool light = ground == 2. || ground == 3. || ground == 7.;
+  bool light = ground == 2. || ground == 3. || ground == 7. || ground == 8.;
   // gate weave: the picture jitters a hair, frame by frame (more on the beat)
   uv += (vec2(h1(vec2(fr, 1.)), h1(vec2(fr, 2.))) - .5) * vec2(.002, .003) * (1. + kick * 2. + burst * 3.);
   // tape tracking: bands of rows shoved sideways (a little at most: the words stay in)
@@ -6951,6 +7935,7 @@ void main() {
     col = mix(col, cA * .3 + cB * .25, smoothstep(.2, .9, n2(uv * 2.4 - vec2(t2 * .8, t2)))) * (.75 + mott * .2); a = .95; }
   else if (ground == 5.) { col = vec3(.03, .028, .034) * (.8 + mott * .4); a = .96; }
   else if (ground == 7.) { col = vec3(.54, .81, 0.) * (.96 + mott * .06); a = 1.; } // lime, flat
+  else if (ground == 8.) { col = vec3(0.); a = 0.; } // clear
   else { col = vec3(.03, .012, .02); a = .3; } // night: the backdrop through, darker and warmer
   if (vid > .5) { if (light) a *= .8; else { col = vec3(0.); a = .4 + tx(uv, 4.5).a * .35; } } // (the music video under it: dimmed, more round the words, so they read on a bright shot)
   vec4 P = vec4(col * a, a) * (1. - W.a) + W;
@@ -6969,7 +7954,7 @@ void main() {
     float k = float(i), f = i == 2 ? floor(time * 1.5) : fr;
     if (h1(vec2(f, k + 9.)) < (i == 2 ? .4 : .62)) continue;
     float x = h1(vec2(f, k)) + (n2(vec2(uv.y * 5., f + k)) - .5) * .012, y0 = h1(vec2(f, k + 3.)), len = .3 + h1(vec2(f, k + 4.)) * .7;
-    float on = step(abs(uv.y - y0), len) * (1. - smoothstep(0., 1.3 / R.x, abs(uv.x - x)));
+    float on = step(abs(uv.y - y0), len) * (1. - smoothstep(0., 1.3 / R.x, abs(uv.x - x))) * scr;
     if (light) P.rgb *= 1. - on * .45; else { emit += vec3(.75, .7, .6) * on * .55; P.a = max(P.a, on * .5); }
   }
   // dust: specks, mostly dark (dirt)
@@ -6982,7 +7967,7 @@ void main() {
   P += vec4(vec3(.95, .9, .85), 1.) * flash * .3;
   if (invert > .5) P.rgb = P.a - P.rgb;
   float vig = smoothstep(.45, 1.15, length((uv - .5) * vec2(asp * .7, 1.)));
-  P = mix(P, vec4(0, 0, 0, 1), vig * (ground == 7. ? .12 : .5));
+  P = mix(P, vec4(0, 0, 0, 1), vig * (ground >= 7. ? .12 : .5));
   float gr = (h1(px + fr * 13.1) - .5) * .1;
   P.rgb += gr * P.a; P.a = clamp(P.a, 0., 1.);
   o = vec4(clamp(P.rgb, 0., P.a), P.a);
@@ -7004,7 +7989,7 @@ function kinInit() {
     return { pr, U };
   };
   kin.sp = prog(KIN_SPRITE_VS, KIN_SPRITE_FS, ['aP', 'aUV', 'aL', 'aFill', 'aLine', 'aM', 'aB'], ['A', 'E', 'CV', 'R', 'time']);
-  kin.pp = prog(KIN_POST_VS, KIN_POST_FS, ['p'], ['T', 'R', 'C', 'time', 'kick', 'burst', 'ground', 'seed', 'ca', 'trk', 'scan', 'glow', 'halo', 'leak', 'invert', 'flash', 'cA', 'cB', 'vid']);
+  kin.pp = prog(KIN_POST_VS, KIN_POST_FS, ['p'], ['T', 'R', 'C', 'time', 'kick', 'burst', 'ground', 'seed', 'ca', 'trk', 'scan', 'glow', 'halo', 'leak', 'invert', 'flash', 'cA', 'cB', 'vid', 'scr']);
   if (!kin.sp || !kin.pp) return kin.gl = false;
   // the atlas: the shot's words and letters (with smaller levels, for a card seen far off)
   kin.AW = Math.min(4096, gl.getParameter(gl.MAX_TEXTURE_SIZE));
@@ -7177,7 +8162,7 @@ function kinLayout(S, look, CW, CH) {
   const bx = r0.width ? [r0.left * d, r0.top * d, r0.right * d, r0.bottom * d] : [0, 0, CW, CH];
   const m = Math.min(bx[2] - bx[0], bx[3] - bx[1]) * .05;
   const box = { x0: bx[0] + m, y0: bx[1] + m, x1: bx[2] - m, y1: bx[3] - m }, W = box.x1 - box.x0, H = box.y1 - box.y0;
-  const fp = FONT_PAIRS.find(f => f.name === fontPair);
+  const fp = curPair();
   const font = look.font || { family: fp.poster + ', Impact, sans-serif' }, kfont = look.kicker || font, lh = (look.lh || .95) * (look.font ? 1 : fp.lh || 1);
   const ws = S.words.map(t => ({ t, small: kinSmall(t) && S.words.length > 1 }));
   let rows = [];
@@ -8096,7 +9081,148 @@ const KIN_LOOKS = {
       }
     },
     draw(S, K) { kinEach(S, K, (s, w, k) => K.card(w.e, w.x, w.y, { sx: .8 * (1 + K.kick * .05), blur: .14, g: k })); } },
+  // ---- the themes' own (skin: in Mixed only while that theme's on) ----
+  // Stickman: marker words drawn on, the longest underlined in red, and a stick figure by the newest word striking a new
+  // pose on every beat (a jump on a big one)
+  doodle: { pool: 'any', skin: 'Stickman', rows: 'pairs', cap: .3, wide: .74, font: KF.marker, lh: 1.12, tilt: .05, wear: .2, fx: { scr: 0, ca: 0, glow: 0, halo: 0, leak: .3 },
+    ground: r => r() < .7 ? 'paper' : 'white', colors: () => ({ fill: KC.INK, line: KC.INK, echo: KC.RED }),
+    prep: S => {
+      const ws = S.lay.words, big = ws.reduce((bi, w, i) => w.w > ws[bi].w ? i : bi, 0), b = ws[big];
+      ws.forEach(w => { w.e = kWord(S, w.t, w.font, w.fs); });
+      S.under = { k: big, e: kRect(S, b.w * 1.05, b.fs * .09, .5, S.h) };
+      S.poses = [0, 1, 2, 3, 4, 5].map(p => kStick(S, Math.max(...ws.map(w => w.fs)) * 1.15, p));
+    },
+    draw(S, K) {
+      kinEach(S, K, (s, w, k) => {
+        K.card(w.e, w.x, w.y, { rz: w.rot, crop: [0, 0, eOut(s.age / .25), 1], g: k });
+        if (k === S.under.k) K.card(S.under.e, w.x, w.y + w.desc + w.fs * .1, { rz: w.rot, crop: [0, 0, eOut((s.age - .2) / .35), 1], fill: S.col.echo, g: 'u' });
+      });
+      if (K.nk < 0) return;
+      const w = S.lay.words[K.nk], e = S.poses[0], right = w.x + w.w / 2 + e.w < S.lay.box.x1;
+      const pose = K.kick > .6 ? 4 : Math.floor(K.now / 420 + K.nk) % 6;
+      K.card(S.poses[pose], right ? w.x + w.w / 2 + e.w * .5 : w.x - w.w / 2 - e.w * .5, w.y + w.desc - e.h * .4, { sx: right ? 1 : -1, fill: S.col.echo, a: c01(K.ws[K.nk].age / .08), wear: 0, g: 'fig' });
+    } },
+  // Spider: comic captions — each word in a yellow box, printed in dots, slammed in at a tilt with a hard shadow; in a
+  // chorus the last word bursts out of a red star
+  comic: { pool: 'any', skin: 'Spider', rows: 'stack', caps: true, cap: .34, wide: .74, font: KF.cut[0], lh: 1.24, tilt: .1, wear: .12, fx: { scr: 0, ca: 1.2, glow: .4, halo: .2, leak: .6 },
+    ground: () => 'night', colors: () => ({ fill: KC.INK, line: [0, 0, 0], echo: [1, .88, .3] }),
+    prep: S => {
+      const ws = S.lay.words;
+      ws.forEach(w => {
+        w.e = kWord(S, w.t, w.font, w.fs); w.big = kWord(S, w.t, w.font, w.fs, { lw: w.fs * .08 });
+        w.box = kRect(S, w.w + w.fs * .5, w.fs * 1.1); w.edge = kRect(S, w.w + w.fs * .64, w.fs * 1.24);
+      });
+      if (/chorus|hook/i.test(lines[activeIdx]?.sec?.name || '')) { S.bk = ws.length - 1; const b = ws[S.bk]; S.burst = kBurst(S, Math.max(b.w * 1.5, b.fs * 2.4), S.h); }
+    },
+    draw(S, K) {
+      const [dx, dy] = jig(K.now, S.lay.words[0].fs * .03 * K.kick);
+      kinEach(S, K, (s, w, k) => {
+        const land = eBack(s.age / .22), o = { s: .6 + .4 * land, rz: w.rot * (2 - land), a: c01(s.age / .03), g: k }, x = w.x + dx, y = w.y + dy;
+        if (k === S.bk) {
+          K.card(S.burst, x, y, { ...o, s: o.s * (1 + K.kick * .08), rz: o.rz + K.now / 5000, fill: [1, .18, .33], line: [0, 0, 0], mode: 8, wear: 0 });
+          K.card(w.big, x + w.fs * .07, y + w.fs * .08, { ...o, fill: [0, 0, 0], line: [0, 0, 0] });
+          K.card(w.big, x, y, { ...o, fill: S.col.echo, line: [0, 0, 0] });
+          return;
+        }
+        K.card(w.edge, x + w.fs * .11, y + w.fs * .13, { ...o, fill: [0, 0, 0], wear: 0 });
+        K.card(w.edge, x, y, { ...o, fill: [0, 0, 0], wear: 0 });
+        K.card(w.box, x, y, { ...o, fill: S.col.echo, mode: 8, wear: 0 });
+        K.card(w.e, x, y, o);
+      });
+    } },
+  // Blocks: pixel letters as blocks, each dropping in on its turn and bouncing to rest, turned a little to show their sides
+  blocks: { pool: 'any', skin: 'Blocks', rows: 'pairs', caps: true, cap: .2, wide: .8, font: KF.pixel, lh: 1.7, wear: 0, fx: { scr: 0, ca: .4, scan: .5, glow: .6, halo: .1, leak: .3 },
+    ground: () => 'night', colors: r => ({ fill: pickR(r, [[1, 1, 1], [1, 1, .33], [.5, 1, .13]]), line: [0, 0, 0] }),
+    prep: S => { const r = kinRand(S.h); S.lay.words.forEach(w => { w.L = kinLetters(w, r); for (const l of w.L) l.e = kWord(S, l.ch, w.font, w.fs); }); },
+    draw(S, K) {
+      const N = 6, side = S.col.fill.map(v => v * .42);
+      kinEach(S, K, (s, w, k) => w.L.forEach((l, j) => {
+        const la = s.age - j * .05;
+        if (la <= 0 || l.ch === ' ') return;
+        const x = w.x + l.dx, y = w.y - (1 - eBounce(la / .45)) * w.fs * 3, D = w.fs * .32;
+        const turn = { p: [x - K.cx, y - K.cy, K.F], rx: .32, ry: -.42 + Math.sin(K.now / 1800 + k) * .08, rz: 0 };
+        for (let i = N - 1; i >= 0; i--) K.card(l.e, x, y, { z: K.F + D * i / (N - 1), fill: i ? side : S.col.fill, line: i ? side : [0, 0, 0], a: c01(la / .05), turn, g: k });
+      }));
+    } },
+  // Tactical: each word on a slanted banner wiped in — signal red for the word being sung, dark for the rest — inside
+  // corner brackets that close in on the shot, a small label over it (the line's number and its part of the song)
+  tactical: { pool: 'any', skin: 'Tactical', rows: 'stack', caps: true, cap: .32, wide: .7, font: KF.cut[0], lh: 1.14, wear: 0, fx: { scr: 0, ca: .6, glow: .5, halo: 0, leak: .2, trk: .05 },
+    ground: () => 'night', colors: () => ({ fill: [.93, .91, .88], line: [.93, .91, .88], echo: [1, .27, .33] }),
+    prep: S => {
+      const ws = S.lay.words, f0 = ws[0].fs, line = lines[activeIdx];
+      ws.forEach(w => { w.e = kWord(S, w.t, w.font, w.fs); w.bar = kSlant(S, w.w + w.fs * .55, w.fs * .86, w.fs * .24); });
+      const x0 = Math.min(...ws.map(w => w.x - w.w / 2)) - f0 * .4, x1 = Math.max(...ws.map(w => w.x + w.w / 2)) + f0 * .4;
+      const y0 = Math.min(...ws.map(w => w.y - w.fs * .5)) - f0 * .2, y1 = Math.max(...ws.map(w => w.y + w.fs * .5)) + f0 * .2;
+      const lf = Math.max(11, Math.min(...ws.map(w => w.fs)) * .16), L = Math.max(10, lf * 1.6), th = Math.max(1.5, lf * .12);
+      S.corners = [[x0, y0, 1, 1], [x1, y0, -1, 1], [x0, y1, 1, -1], [x1, y1, -1, -1]].map(([x, y, sx, sy]) => ({ h: kRect(S, L, th), v: kRect(S, th, L), x, y, sx, sy, L, th }));
+      const e = kWord(S, `${pad(activeIdx + 1)} // ${(line?.sec?.name || 'Lyrics').toUpperCase()}`, KF.tech, lf);
+      S.label = { e, x: x0 + e.tw / 2, y: y0 - lf * 1.2 };
+    },
+    draw(S, K) {
+      const op = eOut((K.now - S.t0) / 300);
+      for (const c of S.corners) { // (the brackets closing in)
+        const o = (1 - op) * c.L, x = c.x - c.sx * o, y = c.y - c.sy * o;
+        K.card(c.h, x + c.sx * c.L / 2, y + c.sy * c.th / 2, { fill: S.col.echo, a: op, wear: 0, g: 'c' });
+        K.card(c.v, x + c.sx * c.th / 2, y + c.sy * c.L / 2, { fill: S.col.echo, a: op, wear: 0, g: 'c' });
+      }
+      K.card(S.label.e, S.label.x, S.label.y, { a: .8 * op, wear: 0, g: 'l' });
+      kinEach(S, K, (s, w, k) => {
+        const now = k === K.nk;
+        K.card(w.bar, w.x, w.y, { crop: [0, 0, eOut(s.age / .14), 1], fill: now ? S.col.echo : [.06, .1, .14], a: now ? 1 : .88, g: k });
+        K.card(w.e, w.x, w.y, { crop: [0, 0, eOut((s.age - .06) / .16), 1], g: k });
+      });
+    } },
+  // Ops: a kill feed — each word an entry sliding in, on a dark strip with a crosshair before it; the newest outlined red,
+  // as a player's own
+  killfeed: { pool: 'any', skin: 'Ops', rows: 'stack', caps: true, cap: .16, wide: .56, font: KF.tech, lh: 1.6, wear: 0, fx: { scr: 0, ca: .4, glow: .3, halo: 0, leak: .2, scan: .4 },
+    ground: () => 'night', colors: () => ({ fill: [.95, .96, .97], line: [0, 0, 0], echo: [.86, .24, .24] }),
+    prep: S => S.lay.words.forEach(w => {
+      w.e = kWord(S, w.t, w.font, w.fs);
+      w.bw = w.w + w.fs * 2.1; const bh = w.fs * 1.35;
+      w.bg = kRect(S, w.bw, bh); w.ring = kFrame(S, w.bw, bh, Math.max(2, w.fs * .07)); w.ico = kCross(S, w.fs * .8);
+    }),
+    draw(S, K) {
+      kinEach(S, K, (s, w, k) => {
+        const x = w.x + (1 - eOut(s.age / .18)) * w.bw * .6, now = k === K.nk, a = c01(s.age / .05) * (now ? 1 : .8);
+        K.card(w.bg, x, w.y, { fill: [0, 0, 0], a: a * .62, wear: 0, g: k });
+        if (now) K.card(w.ring, x, w.y, { fill: S.col.echo, a, wear: 0, g: k });
+        K.card(w.ico, x - w.bw / 2 + w.fs * .65, w.y, { fill: now ? S.col.echo : [.75, .78, .8], a, rz: now ? K.kick * .4 : 0, wear: 0, g: k });
+        K.card(w.e, x + w.fs * .35, w.y, { a, g: k });
+      });
+    } },
 };
+// (the themes' looks' pieces) a stick figure in a pose — 0 waving, 1 cheering, 2 pointing back, 3 kicking, 4 jumping,
+// 5 dancing — its feet at the bottom of its box
+function kStick(S, s, pose) {
+  return kinEntry(S, 'stick|' + pose + '|' + (s | 0), s * 1.1, s * 1.2, g => {
+    const lb = (a, ang, len) => [a[0] + len * Math.sin(ang), a[1] + len * Math.cos(ang)];
+    const P = [[0, -.3, -.2, 2.6, 2.9, -.25, -.15, .25, .15], [.02, -2.6, -2.9, 2.6, 2.9, -.35, -.2, .35, .2], [0, -1.57, -1.57, .4, .2, -.2, -.1, .2, .1],
+      [0, -1.2, -.6, 1.9, 1.5, -.15, -.1, 1.25, 1.65], [.12, -2.4, -2.9, 2.4, 2.9, -.9, .4, .9, -.4], [.03, -2.5, -3, .5, 1.2, -.45, .05, .2, .2]][pose];
+    const hip = [0, s * (.1 - P[0])], nk = [0, hip[1] - s * .32];
+    const e1 = lb(nk, P[1], s * .17), h1 = lb(e1, P[2], s * .16), e2 = lb(nk, P[3], s * .17), h2 = lb(e2, P[4], s * .16);
+    const k1 = lb(hip, P[5], s * .25), f1 = lb(k1, P[6], s * .25), k2 = lb(hip, P[7], s * .25), f2 = lb(k2, P[8], s * .25);
+    g.strokeStyle = '#f00'; g.lineWidth = s * .045; g.lineCap = g.lineJoin = 'round'; g.beginPath();
+    for (const [a, b] of [[hip, nk], [nk, e1], [e1, h1], [nk, e2], [e2, h2], [hip, k1], [k1, f1], [hip, k2], [k2, f2]]) { g.moveTo(...a); g.lineTo(...b); }
+    g.stroke(); g.fillStyle = '#f00'; g.beginPath(); g.arc(0, nk[1] - s * .11, s * .085, 0, Math.PI * 2); g.fill();
+  });
+}
+// a comic burst: a star of uneven points, r across, outlined
+const kBurst = (S, r, seed) => kinEntry(S, 'burst|' + (r | 0) + '|' + seed, r * 1.04, r * 1.04, g => {
+  const rnd = kinRand(seed), n = 14;
+  g.beginPath();
+  for (let i = 0; i < n * 2; i++) { const a = i / (n * 2) * Math.PI * 2, rr = (i % 2 ? .3 + rnd() * .06 : .45 + rnd() * .04) * r; g.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); }
+  g.closePath(); g.fillStyle = '#f00'; g.fill(); g.strokeStyle = '#0f0'; g.lineWidth = r * .022; g.lineJoin = 'miter'; g.stroke();
+});
+// a slanted banner (sk: how far its top leans over its bottom), a frame (outline only), a crosshair
+const kSlant = (S, w, h, sk) => kinEntry(S, ['sl', w | 0, h | 0, sk | 0].join('|'), w + sk, h, g => {
+  g.fillStyle = '#f00'; g.beginPath(); g.moveTo(-w / 2 + sk / 2, -h / 2); g.lineTo(w / 2 + sk / 2, -h / 2); g.lineTo(w / 2 - sk / 2, h / 2); g.lineTo(-w / 2 - sk / 2, h / 2); g.closePath(); g.fill();
+});
+const kFrame = (S, w, h, lw) => kinEntry(S, ['fr', w | 0, h | 0, lw | 0].join('|'), w + lw * 2, h + lw * 2, g => { g.strokeStyle = '#f00'; g.lineWidth = lw; g.strokeRect(-w / 2, -h / 2, w, h); });
+const kCross = (S, s) => kinEntry(S, 'cross|' + (s | 0), s, s, g => {
+  g.strokeStyle = '#f00'; g.lineWidth = s * .09; g.beginPath(); g.arc(0, 0, s * .3, 0, Math.PI * 2);
+  for (const [x, y] of [[0, -1], [0, 1], [-1, 0], [1, 0]]) { g.moveTo(x * s * .14, y * s * .14); g.lineTo(x * s * .48, y * s * .48); }
+  g.stroke(); g.fillStyle = '#f00'; g.beginPath(); g.arc(0, 0, s * .05, 0, Math.PI * 2); g.fill();
+});
 // ---- emoji: Microsoft's Fluent Emoji, all 1,595 of them (3D, 256 px, MIT; emoji/<code points>.webp) in full colour —
 // an emoji in the lyrics, and a word with an emoji of its own ("fire", "dil", "moon", "rocket"…), pops it up by the word
 // as it's sung, with a soft shadow under it, a squash and stretch, a tilt, a pulse on the beat (Settings: Emoji)
@@ -8178,7 +9304,7 @@ function kinCover() {
 // A sung word's emoji, popping up by it (at its top corner when it ends its row; above it when another word follows):
 // squashed flat, then stretched tall, then settling — with a soft shadow under it, a gentle 3D tilt, a pulse on the beat.
 // (Not in the looks that keep to type alone.)
-const KIN_NO_EMOJI = new Set(['stack', 'flap', 'decode', 'typewriter', 'highlighter', 'glass', 'cinema', 'acid']);
+const KIN_NO_EMOJI = new Set(['stack', 'flap', 'decode', 'typewriter', 'highlighter', 'glass', 'cinema', 'acid', 'tactical', 'killfeed']);
 function kinReact(S, K) {
   if (!kinEmojiOn || KIN_NO_EMOJI.has(S.look) || !S.em) return;
   const b = S.lay.box;
@@ -8198,7 +9324,7 @@ function kinReact(S, K) {
     K.card(e, x, y, { ...o, mode: 4 });
   });
 }
-const KIN_FX = { ca: 1, trk: .12, scan: .6, glow: 1, halo: .3, leak: 1 };
+const KIN_FX = { ca: 1, trk: .12, scan: .6, glow: 1, halo: .3, leak: 1, scr: 1 }; // (scr: the film’s scratches)
 const KIN_POOL = { loud: Object.keys(KIN_LOOKS).filter(k => KIN_LOOKS[k].pool !== 'calm'), calm: Object.keys(KIN_LOOKS).filter(k => KIN_LOOKS[k].pool !== 'loud') };
 
 // ---- shots: which words are up now, and in what look
@@ -8227,7 +9353,11 @@ function kinShot(now) {
   if (kin.shot?.key === key) return;
   // a cut: the next shot, in another look — a chorus's loud, a verse's quieter (and now and then the other kind)
   const h = hash(curTitle + key), r = kinRand(h), recent = kin.recent || [];
-  const loud = /chorus|hook/i.test(line.sec?.name || ''), pool = KIN_POOL[(r() < .2) !== loud ? 'loud' : 'calm'].filter(l => !ved.shown || !KIN_PAPER.has(l));
+  // (a theme on: its own looks alone; none: every look but the themes')
+  const loud = /chorus|hook/i.test(line.sec?.name || ''), own = SKINS[skin]?.looks, base = KIN_POOL[(r() < .2) !== loud ? 'loud' : 'calm'];
+  let pool = own ? base.filter(l => own.includes(l)) : base.filter(l => !KIN_LOOKS[l].skin);
+  if (!pool.length) pool = own || base;
+  if (ved.shown && pool.some(l => !KIN_PAPER.has(l))) pool = pool.filter(l => !KIN_PAPER.has(l)); // (paper would hide the video)
   const fresh = pool.filter(l => !recent.includes(l)), look = KIN_LOOKS[kinLook] ? kinLook : pickR(r, fresh.length ? fresh : pool), L = KIN_LOOKS[look];
   const A = rgb(pal.a).map(v => v / Math.max(.01, ...rgb(pal.a)));
   kin.recent = [look, ...recent].slice(0, 6);
@@ -8247,7 +9377,7 @@ const ved = { p: null, loading: null, for: null, mv: null, info: null, shown: fa
   prev: [], onsets: [], beat: .5, kPrev: 0, inv: 0, pan: [0, 0], fails: new Set() };
 const VED_GRADES = { drop: [1, 5, 0, 1, 2], build: [1, 0, 4], flow: [3, 0, 4, 1], break: [2, 4, 3] }; // (see frame-helper.js: 1 teal and orange, 2 black and white, 3 warm film, 4 cool, 5 duotone)
 // the looks on paper (their ground hides the video): left out of Mixed while it shows
-const KIN_PAPER = new Set(['sketch', 'marker', 'typewriter', 'stack', 'highlighter', 'graffiti', 'acid', 'label', 'collage', 'strobe']);
+const KIN_PAPER = new Set(['sketch', 'marker', 'typewriter', 'stack', 'highlighter', 'graffiti', 'acid', 'label', 'collage', 'strobe', 'doodle']);
 // The song's official video on YouTube: by its artist, named for it, said to be its video — not a lyric video, its audio,
 // a live take, a visualizer — near the song's length (a video can run longer: an intro, a story). null: none.
 const mvCache = new Map();
@@ -8383,16 +9513,17 @@ function drawKin(now, kick) {
   // then laid on the ground, with the film over it all
   gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   gl.viewport(0, 0, CW, CH);
-  const P = kin.pp.U, fx = { ...KIN_FX, ...(S?.look === 'break' ? { leak: 2.2, glow: 1 } : look?.fx) };
+  const P = kin.pp.U, fx = { ...KIN_FX, ...(S?.look === 'break' ? { leak: 2.2, glow: 1 } : look?.fx), ...(skin ? { scr: 0 } : {}) }; // (no film scratches over a theme)
   gl.useProgram(kin.pp.pr); gl.bindVertexArray(kin.pvao);
   gl.uniform1i(P.T, 0);
   gl.uniform2f(P.R, CW, CH); gl.uniform2f(P.C, K.cx / CW, K.cy / CH);
   gl.uniform1f(P.time, (now - kin.t0) / 1000 % 1000);
   gl.uniform1f(P.kick, K.kick);
   gl.uniform1f(P.burst, S && motion ? Math.exp(-(now - S.cut) / 140) : 0);
-  gl.uniform1f(P.ground, KIN_GROUND[K.ground || S?.ground || 'night']);
+  const gr = K.ground || S?.ground || 'night';
+  gl.uniform1f(P.ground, KIN_GROUND[skin === 'Stickman' && (gr === 'paper' || gr === 'white') ? 'clear' : gr]); // (Stickman: on its own paper)
   gl.uniform1f(P.seed, S?.seed || 0);
-  for (const k of ['ca', 'trk', 'scan', 'glow', 'halo', 'leak']) gl.uniform1f(P[k], fx[k]);
+  for (const k of ['ca', 'trk', 'scan', 'glow', 'halo', 'leak', 'scr']) gl.uniform1f(P[k], fx[k]);
   gl.uniform1f(P.vid, ved.shown ? 1 : 0);
   gl.uniform1f(P.invert, motion ? K.invert : 0); gl.uniform1f(P.flash, motion ? K.flash : 0);
   gl.uniform3fv(P.cA, rgb(pal.a)); gl.uniform3fv(P.cB, rgb(pal.b));
@@ -8472,6 +9603,88 @@ function kinFlush(K, CW, CH) {
 }
 applyKin();
 
+// ---------- the themes' extras: Tactical's agent and HUD, Ops' HUD, round banners, Spider's sound effects ----------
+// Tactical: an agent of VALORANT by the lyrics — Riot Games' own art, by valorant-api.com (see lib.agents), used under
+// Riot's fan policy (its notice: RIOT_NOTICE) — a new one each song or the one picked (Settings › Agent), on its own
+// backdrop art in its colours, sliding in; in the header, a round timer (the time left in the song) between the scores
+// (the song's place in the list, and the list's length) with five agents' icons a side. Ops: the same timer with the
+// two teams' colours and five players a side. A chorus brings a round banner (Tactical: ACE, CLUTCH…; Ops: a team's
+// win, and near the end the bomb planted). Spider: comic sound effects popping up round the edges on the big kicks.
+function agentsGet() { // (kept on the device for a week)
+  if (agents.list) return Promise.resolve();
+  let kept = null;
+  try { kept = JSON.parse(store.get('netherflow.agents') || 'null'); } catch {}
+  if (kept?.list?.length && Date.now() - kept.t < 7 * 864e5) { agents.list = kept.list; return Promise.resolve(); }
+  return agents.asking ||= api.agents().then(l => { if (l?.length) { agents.list = l; store.set('netherflow.agents', JSON.stringify({ t: Date.now(), list: l })); } })
+    .catch(() => {}).finally(() => { agents.asking = null; });
+}
+function setAgent(v) { agentPick = v === 'Each song' ? '' : v; store.set('netherflow.agent', agentPick); showAgent(); renderTextPanel(); }
+function showAgent() {
+  const L = agents.list, box = $('agent');
+  if (skin !== 'Tactical' || !L?.length) return;
+  const a = L.find(x => x.name === agentPick) || L[hash(curTitle || 'NetherFlow') % L.length];
+  if (agents.cur !== a) {
+    agents.cur = a;
+    const [bg, pt] = box.children;
+    box.classList.remove('in');
+    pt.onload = () => { if (agents.cur === a) box.classList.add('in'); };
+    pt.src = a.portrait; bg.src = a.bg || '';
+    box.style.setProperty('--ag1', a.colors[0] || '#ff4655'); box.style.setProperty('--ag2', a.colors[2] || '#0f1923');
+  }
+  const others = L.filter(x => x !== a), r = kinRand(hash(curTitle || 'x') | 1), team = [a, ...Array.from({ length: 9 }, () => others.splice(Math.floor(r() * others.length), 1)[0]).filter(Boolean)];
+  const icon = x => { const i = el('img'); i.src = x.icon; i.alt = ''; return i; };
+  const h = $('mood').querySelector('.hud');
+  h.children[0].replaceChildren(...team.slice(0, 5).map(icon)); h.children[4].replaceChildren(...team.slice(5, 10).map(icon));
+}
+// (Ops: five players a side, as plain boxes)
+function opsHud() { const h = $('mood').querySelector('.hud'); for (const k of [0, 4]) h.children[k].replaceChildren(...Array.from({ length: 5 }, () => el('i'))); }
+function skinExtras() { // (a theme put on, or a new song)
+  body.classList.toggle('has-hud', skin === 'Tactical' || skin === 'Ops');
+  banner.sec = null; banner.n = 0; hudLast = '';
+  if (skin === 'Ops') opsHud();
+  if (skin === 'Tactical') { if (agents.list) showAgent(); else agentsGet().then(() => { showAgent(); if ($('textPanel').matches(':popover-open')) renderTextPanel(); }); }
+}
+function hudTick(t, dur) {
+  const left = Math.max(0, (dur || 0) - (t || 0)), s = `${Math.floor(left / 60)}:${String(Math.floor(left % 60)).padStart(2, '0')}`;
+  if (s === hudLast) return;
+  hudLast = s;
+  const h = $('mood').querySelector('.hud');
+  h.children[1].textContent = qi >= 0 ? qi + 1 : 0; h.children[2].textContent = s; h.children[3].textContent = queue.length;
+  h.classList.toggle('low', !!dur && left < 30);
+}
+function showBanner(text, kind = '') {
+  const b = $('rbanner');
+  b.className = 'rbanner'; void b.offsetWidth; // (its entrance again)
+  b.replaceChildren(el('b', '', text));
+  b.className = 'rbanner show ' + kind;
+  clearTimeout(banner.timer); banner.timer = setTimeout(() => { b.className = 'rbanner'; }, 2700);
+}
+const SFX = ['POW!', 'BAM!', 'WHAM!', 'ZAP!', 'KRAK!', 'BOOM!', 'THWIP!', 'SNAP!', 'WHOOSH!'];
+function skinTick(now, kick, t, dur) { // (every frame, a theme on)
+  if (skin === 'Tactical' || skin === 'Ops') {
+    const sec = synced && activeIdx >= 0 ? lines[activeIdx]?.sec : null;
+    if (sec && sec !== banner.sec) {
+      banner.sec = sec;
+      if (/chorus|hook|drop/i.test(sec.name || '') && motion) {
+        const n = banner.n++;
+        if (skin === 'Tactical') showBanner(['ACE', 'CLUTCH', 'FLAWLESS', 'TEAM ACE', 'THRIFTY'][n % 5], n % 5 ? '' : 'gold');
+        else showBanner(n % 2 ? 'TERRORISTS WIN' : 'COUNTER-TERRORISTS WIN', n % 2 ? 't' : 'ct');
+      }
+    }
+    if (skin === 'Ops' && dur > 90 && dur - t < 40 && !P.paused && banner.bomb !== curTitle) { banner.bomb = curTitle; showBanner('BOMB HAS BEEN PLANTED', 'bomb'); }
+  }
+  if (skin === 'Spider' && kick > .82 && now - sfxLast > 1800 && !P.paused && motion && !body.classList.contains('home')) {
+    sfxLast = now;
+    const e = el('b', 'sfx', SFX[Math.floor(Math.random() * SFX.length)]), left = Math.random() < .5;
+    e.style.left = (left ? 3 + Math.random() * 16 : 66 + Math.random() * 16) + '%'; e.style.top = (16 + Math.random() * 44) + '%'; // (round the edges: never on the lyrics)
+    e.style.setProperty('--r', ((Math.random() - .5) * 30).toFixed(1) + 'deg'); e.style.setProperty('--c', pickR(Math.random, ['#ffe14d', '#ff2d55', '#2de2ff']));
+    $('sfx').replaceChildren(e);
+    setTimeout(() => e.remove(), 1200);
+  }
+}
+
+skinExtras();
+
 // ---------- main loop ----------
 const avg =(a, b) => { let s = 0; for (let i = a; i < b; i++) s += freq[i]; return s / (b - a) / 255; };
 let bassS = 0, bassAvg = 0, midS = 0, highS = 0, fxT = 0, last = 0;
@@ -8518,6 +9731,7 @@ function frame(now) {
   bgKick += ((bgBeat && live ? kick : 0) - bgKick) * (kick > bgKick ? .5 : .1); // (the Background beat option: quick in, slow out)
 
   const Q = BGQ[bgq];
+  if (sceneScale() !== fxScale) resize(); // (into or out of Blocks)
   // Off (still): only redraw while the colors are changing, or after a resize; otherwise the last image stays.
   const settling = palette.some((c, i) => c.some((v, k) => Math.abs(target[i][k] - v) > 0.002));
   const style = THEMES.indexOf(theme), drawn = !PLAIN.has(theme); // Cover isn't drawn here: it's the blurred cover in front, on plain background; Gradient, CSS
@@ -8529,7 +9743,7 @@ function frame(now) {
     const ease = Math.min(1, 0.04 * Q.every);
     for (let c = 0; c < 4; c++) for (let k = 0; k < palette[c].length; k++) palette[c][k] += (target[c][k] - palette[c][k]) * ease;
     fxT += Q.still ? 0 : dt * Q.every * palette[3][2] * (motion ? (!P.paused ? 1 : 0.35) : 0); // steady: livelier while playing
-    paintFx(Q, bgKick);
+    paintFx(Q, bgKick, live ? kick : 0);
   }
   checkSpeed(gap, moving);
 
@@ -8547,12 +9761,14 @@ function frame(now) {
   for (const b of bassEls) if (b.v !== kb && b.seen()) { b.v = kb; b.el.style.setProperty('--bass', kb); }
   lyricKick = kick;
   syncLyrics();
+  if (skin) skinTick(now, kick, t, dur);
   const kinSeen = kin.on && !covered && view !== 'Cover' && body.classList.contains('has-song') && !body.classList.contains('home');
   if (kinSeen) drawKin(now, kick);
   vedFrame(now, kinSeen, kick);
 }
 // the seek bar and the time (only what changed)
 function showTime(t, dur) {
+  if (body.classList.contains('has-hud')) hudTick(t, dur); // (the themes' round timer)
   if (!dur) return;
   const sv = Math.round(t / dur * 1000), ct = fmt(t), dd = fmt(dur);
   if (sv !== lastSeek) { lastSeek = sv; $('seek').value = sv; }
@@ -8598,6 +9814,8 @@ function stepDown(fps, janky = 0) {
 
 requestAnimationFrame(frame);
 
+// (the themes: each with its backdrop in the shader's list, and only looks that exist)
+console.assert(Object.entries(SKINS).every(([k, s]) => SCENES.has(k) && THEMES.includes(k) && s.looks.every(l => KIN_LOOKS[l]) && FONT_PAIRS && s.font.poster) && SCENES.size === Object.keys(SKINS).length, 'themes broken');
 // Self-checks for the parsing helpers.
 console.assert(JSON.stringify(parseLyrics('[00:01.50]hi\n[01:00]yo\nplain')) ===
   JSON.stringify([{t:null,text:'plain'},{t:1.5,text:'hi'},{t:60,text:'yo'}]), 'parseLyrics broken');

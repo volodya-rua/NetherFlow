@@ -1,0 +1,1 @@
+Themes that change the whole look: Stickman, Spider, Blocks, Tactical (with its agents) and Ops, each with its own backdrop, timeline, cursor and lyrics. Playlists of any length import from Spotify, Apple Music and YouTube. NetherFlow's own app from GitHub updates itself, downloading only what changed.

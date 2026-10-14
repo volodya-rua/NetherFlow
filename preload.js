@@ -20,4 +20,10 @@ contextBridge.exposeInMainWorld('netherflowApp', {
   syncClose: () => ipcRenderer.send('sync-close'),
   onSyncIn: cb => ipcRenderer.on('sync-in', (_, id, data) => cb(id, data)),
   syncOut: (id, reply) => ipcRenderer.send('sync-out', id, reply),
+  // updates (see main.js): updateCheck → { version, can (false: the portable app), next (a newer version) | error };
+  // updateGet downloads it (onUpdateProgress: 0…1), updateInstall restarts into it
+  updateCheck: () => ipcRenderer.invoke('update-check'),
+  updateGet: () => ipcRenderer.invoke('update-get'),
+  onUpdateProgress: cb => ipcRenderer.on('update-progress', (_, f) => cb(f)),
+  updateInstall: () => ipcRenderer.send('update-install'),
 });

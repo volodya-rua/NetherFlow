@@ -272,6 +272,38 @@ ipcMain.handle('sync-open', async e => {
 ipcMain.on('sync-out', (e, id, reply) => { if (win && e.sender === win.webContents && sync?.pending.has(id)) sync.pending.get(id)(reply && typeof reply === 'object' ? reply : null); });
 ipcMain.on('sync-close', e => { if (win && e.sender === win.webContents) syncClose(); });
 
+// ---------- updates (the page's Settings › Update): the installed app, from its GitHub releases — only the parts of the
+// installer that changed come down (electron-updater, by the installer's block map) — put in place by restarting. The
+// portable app is one file run from anywhere and can't update itself: the page sends it to the release page instead.
+let updater;
+function getUpdater() {
+  if (updater !== undefined) return updater;
+  updater = null;
+  if (!app.isPackaged || process.env.PORTABLE_EXECUTABLE_DIR) return updater;
+  try {
+    updater = require('electron-updater').autoUpdater;
+    updater.autoDownload = false; updater.autoInstallOnAppQuit = true;
+    updater.on('download-progress', p => { if (win && !win.isDestroyed()) win.webContents.send('update-progress', p.percent / 100); });
+  } catch { updater = null; }
+  return updater;
+}
+ipcMain.handle('update-check', async e => {
+  if (!win || e.sender !== win.webContents) return null;
+  const u = getUpdater(), version = app.getVersion();
+  if (!u) return { version, can: false, portable: !!process.env.PORTABLE_EXECUTABLE_DIR }; // (or run from the source: nothing to update)
+  try { const r = await u.checkForUpdates(); return { version, can: true, next: r?.isUpdateAvailable ? r.updateInfo.version : null }; }
+  catch (er) {
+    const m = String(er.message || er).split('\n')[0];
+    return /latest\.yml|\b404\b/.test(m) ? { version, can: true, next: null } : { version, can: true, error: m }; // (a release without the update's files: nothing to get)
+  }
+});
+ipcMain.handle('update-get', async e => {
+  if (!win || e.sender !== win.webContents || !getUpdater()) return false;
+  await getUpdater().downloadUpdate();
+  return true;
+});
+ipcMain.on('update-install', e => { if (win && e.sender === win.webContents && getUpdater()) getUpdater().quitAndInstall(true, true); }); // (quietly, then open again)
+
 ipcMain.on('island-shape', (e, r) => {
   if (!island || e.sender !== island.webContents || !r || ![r.x, r.y, r.width, r.height].every(Number.isFinite)) return;
   const c = (v, max) => Math.max(0, Math.min(max, Math.round(v)));

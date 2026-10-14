@@ -111,7 +111,8 @@
   // A playlist (or album) from its link — YouTube / YouTube Music, Spotify, Apple Music — as { name, from, tracks:
   // [{ title, artist, album, dur, yt (its YouTube video, when it's from there), apple (its iTunes id, from Apple) }] }.
   // ponytail: each service's public page or its web app's own API, read as they are now; if one reshapes, its branch is
-  // the one spot to fix. (Spotify's embed shows up to 100 of a list's songs; YouTube's, up to ~500.)
+  // the one spot to fix. Spotify's embed and Apple's page show a list's first 100 songs; the rest come from each one's
+  // own web API, with the pass its own player uses (Spotify keeps its editorial lists to itself: those stop at 100).
   lib.playlist = async (get, post, link) => {
     const u = new URL(link), find = (o, key) => { if (!o || typeof o !== 'object') return null; if (o[key]) return o[key]; for (const k in o) { const r = find(o[k], key); if (r) return r; } return null; };
     if (/(^|\.)youtube\.com$|^youtu\.be$/.test(u.hostname)) {
@@ -120,7 +121,7 @@
       let json = await ytmPost(post, 'browse', { context: WEB_MUSIC, browseId: 'VL' + id });
       const head = find(json, 'musicResponsiveHeaderRenderer') || find(json, 'musicDetailHeaderRenderer') || find(json, 'musicEditablePlaylistDetailHeaderRenderer');
       const name = (find(head, 'title')?.runs || []).map(x => x.text).join('') || 'YouTube playlist', tracks = [], seen = new Set();
-      for (let page = 0; page < 6 && json; page++) {
+      for (let page = 0; page < 200 && json; page++) { // (every page of it: 200 at most, ~20,000 songs)
         (function walk(o) {
           if (!o || typeof o !== 'object') return;
           const r = o.musicResponsiveListItemRenderer, vid = r?.playlistItemData?.videoId;
@@ -141,9 +142,17 @@
       const m = u.pathname.match(/\/(playlist|album)\/([A-Za-z0-9]+)/);
       if (!m) throw new Error('not a playlist link');
       const html = await get(`https://open.spotify.com/embed/${m[1]}/${m[2]}`, { 'User-Agent': UA });
-      const e = JSON.parse(html.match(/<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/)?.[1] || '{}').props?.pageProps?.state?.data?.entity;
+      const st = JSON.parse(html.match(/<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/)?.[1] || '{}').props?.pageProps?.state, e = st?.data?.entity;
       if (!e?.trackList) throw new Error('Spotify page changed');
-      return { name: e.name || 'Spotify playlist', from: 'Spotify', tracks: e.trackList.map(t => ({ title: t.title, artist: (t.subtitle || '').split(',')[0].trim(), album: m[1] === 'album' ? e.name : '', dur: Math.round((t.duration || 0) / 1000) })) };
+      const tracks = e.trackList.map(t => ({ title: t.title, artist: (t.subtitle || '').split(',')[0].trim(), album: m[1] === 'album' ? e.name : '', dur: Math.round((t.duration || 0) / 1000) }));
+      const pass = st.settings?.session?.accessToken;
+      if (m[1] === 'playlist' && tracks.length >= 100 && pass) for (let at = 100; at < 20000; at += 100) { // (past the embed's 100)
+        const r = JSON.parse(await get(`https://api.spotify.com/v1/playlists/${m[2]}/tracks?offset=${at}&limit=100&fields=next,items(track(name,duration_ms,artists(name),album(name)))`,
+          { Authorization: 'Bearer ' + pass, 'User-Agent': UA }).catch(() => '{}') || '{}');
+        for (const x of r.items || []) if (x?.track?.name) tracks.push({ title: x.track.name, artist: x.track.artists?.[0]?.name || '', album: x.track.album?.name || '', dur: Math.round((x.track.duration_ms || 0) / 1000) });
+        if (!r.next) break;
+      }
+      return { name: e.name || 'Spotify playlist', from: 'Spotify', tracks };
     }
     if (/(^|\.)apple\.com$/.test(u.hostname)) {
       const html = await get(link, { 'User-Agent': UA });
@@ -157,10 +166,27 @@
         for (const k in o) walk(o[k]);
       })(j);
       const name = (html.match(/<title>([^<]*)<\/title>/)?.[1] || '').replace(/^‎/, '').replace(/\s+-\s+(Playlist|Album|Single|EP).*$/, '').replace(/&amp;/g, '&').replace(/&#39;/g, "'") || 'Apple Music playlist';
+      const pl = u.pathname.match(/^\/([a-z]{2})\/playlist\/(?:[^/]+\/)?(pl\.[\w.-]+)/);
+      if (pl && tracks.length >= 100) { // (past the page's 100: Apple Music's web API, with its web player's own pass — in its script)
+        const js = html.match(/\/assets\/index[^"']*\.js/)?.[0], pass = js && (await get('https://music.apple.com' + js, { 'User-Agent': UA }).catch(() => '')).match(/eyJ[\w-]+\.[\w-]+\.[\w-]+/)?.[0];
+        for (let at = 100; pass && at < 20000; at += 100) {
+          const r = JSON.parse(await get(`https://amp-api.music.apple.com/v1/catalog/${pl[1]}/playlists/${pl[2]}/tracks?offset=${at}&limit=100`,
+            { Authorization: 'Bearer ' + pass, Origin: 'https://music.apple.com', 'User-Agent': UA }).catch(() => '{}') || '{}');
+          for (const t of r.data || []) if (t.attributes?.name && !seen.has(t.id)) { seen.add(t.id); tracks.push({ title: t.attributes.name, artist: t.attributes.artistName || '', dur: Math.round((t.attributes.durationInMillis || 0) / 1000), apple: t.id }); }
+          if (!r.next) break;
+        }
+      }
       return { name, from: 'Apple Music', tracks };
     }
     throw new Error('not a YouTube, Spotify or Apple Music link');
   };
+
+  // The Tactical theme's agents: Riot Games' own art for VALORANT's agents, as valorant-api.com (a community site) serves
+  // it — used under Riot's "Legal Jibber Jabber" policy for free fan projects (the notice is in the app and its README).
+  // Nothing of it is in this repository. → [{ id, name, role, portrait, bg (its backdrop art), icon, colors (4 hex) }]
+  lib.agents = async get => JSON.parse(await get('https://valorant-api.com/v1/agents?isPlayableCharacter=true', { 'User-Agent': UA })).data
+    .filter(a => a.fullPortrait).map(a => ({ id: a.uuid, name: a.displayName, role: a.role?.displayName || '', portrait: a.fullPortrait, bg: a.background || '',
+      icon: a.displayIcon, colors: (a.backgroundGradientColors || []).map(c => '#' + String(c).slice(0, 6)) }));
 
   // Audius (an open music platform with a public API for apps): its tracks for a search, each { id, title, artist,
   // verified (the artist's own, checked account), dur, url (its full stream: 320 kbps MP3) }.

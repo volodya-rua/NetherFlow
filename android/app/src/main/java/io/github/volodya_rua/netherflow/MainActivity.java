@@ -28,6 +28,7 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(SharingPlugin.class);
         registerPlugin(SystemVolumePlugin.class);
         registerPlugin(YtDlPlugin.class);
+        registerPlugin(UpdatePlugin.class);
         super.onCreate(savedInstanceState);
 
         WebView web = getBridge().getWebView();

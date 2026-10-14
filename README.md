@@ -22,6 +22,15 @@ From the [latest release](https://github.com/volodya-rua/NetherFlow/releases/lat
 
 - **Search** songs, artists and albums, and play them in full: typos fixed, suggestions as you type, and YouTube Music's
   catalog alongside Apple's
+- **5 themes** that change the whole look at once (the top of the mood menu, or Settings): every button and panel, the
+  colours, the faces, the cursor, the timeline, a backdrop of their own (drawn in full on Ultra and Extreme) and their own
+  Extreme lyrics look. **Stickman**: notebook paper and ink, stick figures dancing to the beat on the timeline and one
+  running along it. **Spider**: a comic book at night, a masked hero swinging through the city on twos, halftone dots, POW and WHAM on the beat, comic captions.
+  **Blocks**: a blocky world at dusk to fly over, stone buttons, an experience bar, letters dropping in as blocks.
+  **Tactical**: an agent from VALORANT beside the lyrics (Riot Games' art, fetched as you use it), a round timer with the
+  two teams up top, ACE and CLUTCH banners in a chorus, cut corners, signal red on navy, words on banners. **Ops**: a
+  desert bomb site in the afternoon, blue doors and all, smoke grenades and tracers on the kick, a round timer between
+  the two teams, "Bomb has been planted" near the end, a crosshair, the lyrics as a kill feed
 - **Synced lyrics**, word by word where available, with 19 lyric animations: Classic, Wave, Spiral, Shatter, Fireworks,
   Swarm, Black Hole, Cylinder, Globe, Helix, DNA, Tornado, Knot, Möbius, Ribbon, Orbit, Atom, Tunnel and Cube; lined up
   to YouTube Music's own timing for the very recording that plays
@@ -29,7 +38,7 @@ From the [latest release](https://github.com/volodya-rua/NetherFlow/releases/lat
   cover, up to an Ultra quality setting (and Extreme on Windows); or a still **Gradient** in the same colors, the
   lightest for a slower phone
 - **Extreme lyrics** (Windows, at Extreme quality): the lyrics cut like a music video or an Instagram lyric edit, every
-  word coming in as it's sung in 52 looks (chat bubbles, shattering glass, holographic foil, a slot machine, liquid filling the letters, label tape, grunge block letters, typewriter, decoding, extruded 3D, Y2K chrome, neon
+  word coming in as it's sung in 57 looks (chat bubbles, shattering glass, holographic foil, a slot machine, liquid filling the letters, label tape, grunge block letters, typewriter, decoding, extruded 3D, Y2K chrome, neon
   signs, a turning cube, a split-flap board, graffiti, a ransom-note collage, karaoke, a strobe and more), with film scratches, glitches, glow and light leaks on the beat.
   Mixed (a new look every few words) or one look of your choice; and all 1,595 of Microsoft's 3D Fluent emoji popping up by
   the words they fit ("fire", "moon", "dil"…) and the emoji in the lyrics themselves, which you can turn off. And when the song has an official music video, it plays behind the words, cut to the
@@ -38,7 +47,7 @@ From the [latest release](https://github.com/volodya-rua/NetherFlow/releases/lat
 - A **beat ring** and screen edges that move with the music, 12 timeline styles and 46 moods to choose from
 - **13 lyric font pairs** (Poster, Vogue, Neon, Arcade, Vinyl, Glitch, Graffiti, Cyber, Wide, Stencil, Bubble, Melt, Gothic)
 - On Windows, a **now-playing island** at the top middle of the screen, over every app: the song and its beat; click it for the cover, timeline, volume and controls
-- **Import playlists** from Spotify, Apple Music or YouTube: paste the link (Library › Import playlist, or in the search)
+- **Import playlists** of any length from Spotify, Apple Music or YouTube: paste the link (Library › Import playlist, or in the search)
 - **Your stats** (Library): minutes, plays, a streak, top songs, artists and genres, when you listen — this month, this year,
   all time — and a card to share
 - **Sing**: karaoke — the voice turned down (a slider for how much stays), the lyrics big
@@ -55,6 +64,10 @@ From the [latest release](https://github.com/volodya-rua/NetherFlow/releases/lat
 - **Equalizer** with presets, a volume booster, and each song at its **original loudness** (YouTube turns loud songs
   down; NetherFlow gives that back)
 - **Library**: liked songs, playlists, queue and history, kept on your device
+- **Updates in the app** (Settings › Update): the Windows installer updates itself, downloading only the parts that
+  changed; NetherFlow's own Android app (from GitHub) downloads only the changed files of a release, signed by its
+  developer and checked before use, or the new app when a release changes more than the page (an app store's build is
+  updated by the store). The portable Windows app can't update itself
 - **Save for offline**: one song, or a whole playlist with *Download all* (three at a time)
 - **Story clips**: a short video of a song with its lyrics, sized for Instagram stories
 - **Light when it's not in front**: behind another app only the lyrics keep moving; minimized or in the background,
@@ -113,8 +126,9 @@ they come out unsigned (as F-Droid wants them). Add `-PnfEmulator` to include x8
 ## Privacy
 
 NetherFlow has no accounts and no analytics, and sends nothing to its developer. Your settings, library and saved songs
-stay on your device. When you use it, it talks directly to the services above (and GitHub, to update yt-dlp: on Android
-only if you turn on "Update the downloader"), which see your IP address. The full [Privacy Policy](legal.html#privacy) is in the app.
+stay on your device. When you use it, it talks directly to the services above (GitHub too: to look for a newer
+NetherFlow, and to update yt-dlp, on Android only if you turn on "Update the downloader"; and valorant-api.com, only with
+the Tactical theme), which see your IP address. The full [Privacy Policy](legal.html#privacy) is in the app.
 
 ## Legal
 
@@ -128,6 +142,9 @@ only if you turn on "Update the downloader"), which see your IP address. The ful
 - NetherFlow also skips and blocks ads inside YouTube's player, which YouTube's terms may not allow.
 - The [Terms of Use](legal.html#terms) apply to using the app. If you hold rights in something and have a concern,
   contact the developer (below): every notice is reviewed in good faith.
+- The Tactical theme shows VALORANT's agents: NetherFlow was created under Riot Games' "Legal Jibber Jabber" policy using
+  assets owned by Riot Games. Riot Games does not endorse or sponsor this project. The art isn't in this repository or
+  under its license: the app fetches it from valorant-api.com while that theme is on.
 - The software is provided **as is**, without warranty of any kind (see the license).
 
 ## License
@@ -138,7 +155,7 @@ please give it a different name and icon so nobody mistakes it for the original.
 Third-party code in this repository keeps its own license: yt-dlp (The Unlicense) and certifi (MPL 2.0) in
 `android/app/src/main/python/`, and the 27 typefaces in `fonts/` (SIL Open Font License 1.1; Permanent Marker, Special
 Elite and Yellowtail under the Apache License 2.0), and Microsoft's Fluent Emoji in `emoji/` (MIT). The builds also include Electron (with Chromium, Node.js and FFmpeg),
-Capacitor, Chaquopy (with Python) and, on Windows, `yt-dlp.exe`, each under its own license. All license texts are in
+Capacitor, Chaquopy (with Python), electron-updater and, on Windows, `yt-dlp.exe`, each under its own license. All license texts are in
 [`licenses/`](licenses); the full list of components is in the app under About › Licenses.
 
 ## Contact

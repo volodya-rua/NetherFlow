@@ -1,7 +1,7 @@
 {
   "name": "netherflow",
   "productName": "NetherFlow",
-  "version": "1.0.3",
+  "version": "1.1.0",
   "description": "NetherFlow by Volodya.rua: search any song, hear it in full, read the lyrics in sync.",
   "author": "Volodya.rua",
   "license": "MIT",
@@ -9,7 +9,7 @@
   "scripts": {
     "start": "electron .",
     "test": "electron selftest.js",
-    "dist": "node tools/fetch-yt-dlp.js && electron-builder --win",
+    "dist": "node tools/fetch-yt-dlp.js && electron-builder --win --publish never",
     "android:web": "node -e \"const fs=require('fs');for(const to of ['www','android/app/src/main/assets/public']){fs.mkdirSync(to,{recursive:true});for(const f of ['index.html','lib.js','legal.html','frame-helper.js','logo.png'])fs.copyFileSync(f,to+'/'+f);for(const d of ['licenses','fonts'])fs.cpSync(d,to+'/'+d,{recursive:true})}\"",
     "android:sync": "npm run android:web && cap sync android",
     "android": "android-build.cmd",
@@ -72,6 +72,16 @@
         "from": "vendor/yt-dlp/yt-dlp.exe",
         "to": "yt-dlp.exe"
       }
+    ],
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "volodya-rua",
+        "repo": "NetherFlow"
+      }
     ]
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.9"
   }
 }
