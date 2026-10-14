@@ -89,19 +89,19 @@ even how the lyrics come in. Six of them (five on Android).
 
 ## 🌌 Backgrounds
 
-27 of them, and they take their colours straight from the album cover. Fractals, galaxies, a plasma globe, hyperbolic
-tilings and more. These are a few of my favourites:
+27 of them, and they take their colours straight from the album cover. Smoke, northern lights, liquid colour,
+starfields, galaxies, kaleidoscopes, fractals and more. These are a few of my favourites:
 
 <table>
   <tr>
-    <td width="33%"><img src="docs/media/backgrounds/fractal.webp" alt="Fractal"><br><b>Fractal</b></td>
-    <td width="33%"><img src="docs/media/backgrounds/julia.webp" alt="Julia"><br><b>Julia</b></td>
-    <td width="33%"><img src="docs/media/backgrounds/hyperbolic.webp" alt="Hyperbolic"><br><b>Hyperbolic</b></td>
+    <td width="33%"><img src="docs/media/backgrounds/smoke.webp" alt="Smoke"><br><b>Smoke</b></td>
+    <td width="33%"><img src="docs/media/backgrounds/aurora.webp" alt="Aurora"><br><b>Aurora</b></td>
+    <td width="33%"><img src="docs/media/backgrounds/liquid.webp" alt="Liquid"><br><b>Liquid</b></td>
   </tr>
   <tr>
-    <td width="33%"><img src="docs/media/backgrounds/plasma.webp" alt="Plasma"><br><b>Plasma</b></td>
+    <td width="33%"><img src="docs/media/backgrounds/cosmos.webp" alt="Cosmos"><br><b>Cosmos</b></td>
     <td width="33%"><img src="docs/media/backgrounds/galaxy.webp" alt="Galaxy"><br><b>Galaxy</b></td>
-    <td width="33%"><img src="docs/media/backgrounds/black-hole.webp" alt="Black Hole"><br><b>Black Hole</b></td>
+    <td width="33%"><img src="docs/media/backgrounds/kaleido.webp" alt="Kaleido"><br><b>Kaleido</b></td>
   </tr>
 </table>
 
@@ -161,9 +161,10 @@ wants a workout. On a slower phone it steps down by itself, so it never lags.
   same, signed and checked first (a store's build gets updated by the store). The portable app can't update itself
 - Minimized or in the background, it draws nothing at all, so it's light on your battery
 
+And this is it on a phone 👇 straight from the Android app:
+
 <p align="center">
-  <img src="docs/screenshots/phone-home-backgrounds.png" width="49%" alt="On a phone: the home screen and backgrounds">
-  <img src="docs/screenshots/phone-settings-equalizer.png" width="49%" alt="On a phone: Settings and the equalizer">
+  <img src="docs/media/phones.webp" width="100%" alt="NetherFlow on Android: the home screen on Smoke, the Spider theme, Settings, and the Blocks theme">
 </p>
 
 <a id="hucla"></a>
