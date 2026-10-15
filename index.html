@@ -642,7 +642,7 @@ kbd { font: inherit; border: 1px solid currentColor; border-radius: 3px; padding
 .results { min-height: 0; overflow-y: auto; border-top: 1px solid var(--hair); }
 .row { display: grid; grid-template-columns: 34px 56px minmax(0, 1fr) auto; gap: 18px; align-items: center; width: 100%;
   padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--hair);
-  transition: background-color .25s, color .25s, padding .4s cubic-bezier(.2,.9,.2,1); animation: fade .5s both; animation-delay: calc(var(--i) * 35ms); }
+  transition: background-color .25s, color .25s, padding .4s cubic-bezier(.2,.9,.2,1); animation: fade .5s both; animation-delay: calc(min(var(--i), 12) * 35ms); }
 .row img { width: 56px; height: 56px; object-fit: cover; background: var(--hair); border-radius: 3px; }
 .row b { display: block; font: italic 400 clamp(20px, 2.2vw, 30px)/1.05 var(--serif); letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .row small { display: block; margin-top: 5px; font-size: 10px; letter-spacing: .1em; text-transform: uppercase; opacity: .55; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -654,7 +654,7 @@ kbd { font: inherit; border: 1px solid currentColor; border-radius: 3px; padding
 .warn { color: var(--a); opacity: 1; max-width: 520px; line-height: 1.9; }
 
 /* ---------- song rows: a ⋯ button for the song's options sits at the row's right end ---------- */
-.ritem { position: relative; animation: fade .5s both; animation-delay: calc(var(--i) * 35ms); }
+.ritem { position: relative; animation: fade .5s both; animation-delay: calc(min(var(--i), 12) * 35ms); } /* (the first rows cascade in; the rest of a long list is there at once) */
 .ritem .row { padding-right: 58px; animation: none; }
 .ritem .rmore { position: absolute; right: 10px; top: 50%; translate: 0 -50%; }
 .ritem:has(.row:hover, .row:focus-visible) .rmore { color: var(--bg); }
@@ -2164,7 +2164,7 @@ function applyMood() {
   if (moodPref !== 'Auto') return setMood(MOODS.findIndex(m => m.name === moodPref));
   const tok = loadId;
   setMood(curTitle ? hash(curTitle) : 0);
-  if (curArt) paletteFromArt(curArt).then(p => { if (p && tok === loadId && moodPref === 'Auto') applyPalette(p); }).catch(() => {});
+  if (curArt) paletteFromArt(curArt).then(p => { if (p && tok === loadId && moodPref === 'Auto' && !skin) applyPalette(p); }).catch(() => {}); // (a theme picked meanwhile keeps its own)
 }
 function chooseMood(name) {
   moodPref = name;
@@ -4218,11 +4218,29 @@ function showHistory() {
 }
 
 // ---------- library: liked songs and playlists (kept on this device only) ----------
+// Kept in IndexedDB: a library of big imported playlists outgrows localStorage (5 MB a phone allows, 10,000 songs
+// near half of it), and a save there that doesn't fit fails without a word. localStorage keeps a copy while it fits
+// (it's what versions before 1.3.1 read, and where the library lived: brought over from there, once).
 const LIB = 'netherflow.library';
-let library;
-try { library = JSON.parse(store.get(LIB) || '{}'); } catch { library = {}; }
-library.liked ||= []; library.playlists ||= [];
-const saveLib = () => { store.set(LIB, JSON.stringify(library)); if ($('library').open) renderLibrary(); renderFolders(); };
+let library = { liked: [], playlists: [] }, libReady = false, libDb = null;
+const libStore = (mode, f) => (libDb ||= new Promise((res, rej) => { const r = indexedDB.open('netherflow-library', 1); r.onupgradeneeded = () => r.result.createObjectStore('kv'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }))
+  .then(db => new Promise((res, rej) => { const r = f(db.transaction('kv', mode).objectStore('kv')); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }));
+const saveLib = () => {
+  if (libReady) { // (not before it's loaded: that would save the empty one over it)
+    const s = JSON.stringify(library);
+    libStore('readwrite', kv => kv.put(s, LIB)).catch(() => toast('Couldn\'t save your library on this device'));
+    try { localStorage.setItem(LIB, s); } catch { store.set(LIB, ''); } // (too big for the copy: room kept for the rest)
+  }
+  if ($('library').open) renderLibrary(); renderFolders();
+};
+libStore('readonly', kv => kv.get(LIB)).catch(() => null).then(s => {
+  const old = s == null; // (first start with this version: what localStorage had)
+  try { library = JSON.parse((old ? store.get(LIB) : s) || '{}') || {}; } catch { library = {}; }
+  library.liked ||= []; library.playlists ||= [];
+  libReady = true;
+  if (old) saveLib(); else { renderFolders(); if ($('library').open) renderLibrary(); }
+  updateLikeBtn?.();
+});
 // Folders on the home screen (an option; folders, near the top): liked songs, downloads and the playlists, a tap from
 // the start. Only on the home screen, a song playing or not (see the CSS).
 function setFolders(v) { folders = v === 'On'; store.set('netherflow.folders', folders ? 'On' : ''); body.classList.toggle('folders-on', folders); renderFolders(); renderTextPanel(); }
@@ -5014,20 +5032,36 @@ const cutText = (g, s, w) => { if (g.measureText(s).width <= w) return s; while 
 // ---------- import a playlist (Library › Import playlist, or its link pasted in the search) ----------
 // A Spotify, Apple Music or YouTube (Music) playlist or album, from its link, made into a playlist here: its songs from
 // YouTube as they are; Apple's by their own catalog ids (the very recordings); Spotify's matched on YouTube Music —
-// the same name, artist and length (a few seconds' give) — four at a time. Those that can't be matched are counted.
-const PLAYLIST_LINK = /^https?:\/\/(music\.youtube\.com|(www\.|m\.)?youtube\.com|youtu\.be|open\.spotify\.com|music\.apple\.com)\S*(list=|\/playlist\/|\/album\/|\/browse\/VL)/i;
+// the same name, artist and length (a few seconds' give) — six at a time. Those that can't be matched are counted.
+// A long list is kept as it goes. YouTube slows down an app that searches thousands of songs in a row: a search that
+// fails is tried again, slower, never counted as not found; if YouTube stops answering for minutes, or the app closes
+// first, what's left is kept with the playlist, and importing the same link again finishes it (just those songs).
+const PLAYLIST_LINK = /^https?:\/\/((music\.youtube\.com|(www\.|m\.)?youtube\.com|youtu\.be|open\.spotify\.com|music\.apple\.com)\S*(list=|\/playlist\/|\/album\/|\/browse\/VL)|spotify\.(app\.)?link\/\w+)/i;
 const ytmToTrack = v => ({ kind: 'song', trackId: 'yt:' + v.id, ytId: v.id, ytTitle: v.title, trackName: v.title, artistName: v.artist, collectionName: v.album || 'YouTube Music', artworkUrl100: v.art, trackTimeMillis: v.dur * 1000 });
 async function importPlaylist(link) {
   const ours = SHARE_LINK.test(link);
   if (!ours && !PLAYLIST_LINK.test(link)) return toast('That isn\'t a Spotify, Apple Music, YouTube or NetherFlow playlist link');
-  toast('Reading the playlist…');
-  let pl;
-  try { pl = ours ? await readShareLink(link) : await api.playlist(link); }
-  catch (e) { return toast(ours ? 'That playlist link is cut short or broken' : 'Couldn\'t read that playlist: ' + (e.message || 'it may be private')); }
-  if (!pl?.tracks?.length) return toast('That playlist looks empty (or private)');
-  const out = new Array(pl.tracks.length).fill(null);
-  let done = 0;
-  const progress = () => toast(`Importing ${pl.name} · ${done} of ${pl.tracks.length}`);
+  let p = library.playlists.find(x => x.src === link && x.left?.length) || null, pl; // (one cut short before: its songs left)
+  if (p) pl = { name: p.name, tracks: p.left, store: p.store };
+  else {
+    toast('Reading the playlist…');
+    try { pl = ours ? await readShareLink(link) : await api.playlist(link); }
+    catch (e) { return toast(ours ? 'That playlist link is cut short or broken' : 'Couldn\'t read that playlist: ' + (e.message || 'it may be private')); }
+    if (!pl?.tracks?.length) return toast('That playlist looks empty (or private)');
+  }
+  const base = p ? p.tracks.slice() : [], out = new Array(pl.tracks.length).fill(null), total = pl.tracks.length;
+  let done = 0, notFound = 0;
+  const progress = (note = 'Importing') => toast(`${note} ${pl.name} · ${done} of ${total}`);
+  // into the Library as it goes: the songs found so far (once each), and those still to look for
+  const keep = left => {
+    const ids = new Set(base.map(t => t.trackId)), t = [...base];
+    for (const x of out) if (x && !ids.has(x.trackId)) { ids.add(x.trackId); t.push(slim(x)); }
+    if (!t.length) return;
+    p ||= newPlaylist(pl.name);
+    p.tracks = t;
+    if (left.length) Object.assign(p, { src: link, left: left.map(([s]) => s), store: pl.store }); else { delete p.src; delete p.left; delete p.store; }
+    saveLib();
+  };
   // Apple's: by their ids, in batches (the store's own entries: cover, album, genre, preview)
   const apple = pl.tracks.map((s, i) => [s, i]).filter(([s]) => s.apple);
   for (let k = 0; k < apple.length; k += 150) {
@@ -5037,24 +5071,39 @@ async function importPlaylist(link) {
   }
   // YouTube's: as they are
   pl.tracks.forEach((s, i) => { if (s.yt && !out[i]) { out[i] = ytmToTrack({ id: s.yt, title: s.title, artist: s.artist, album: s.album, dur: s.dur, art: `https://i.ytimg.com/vi/${s.yt}/hqdefault.jpg` }); done++; } });
-  // the rest: YouTube Music's song search, its best match
-  const rest = pl.tracks.map((s, i) => [s, i]).filter(([, i]) => !out[i]);
-  const fits = (v, s) => { const a = words(clean(v.title)).join(' '), b = words(clean(s.title)).join(' '), who = words(s.artist.split(/,|&| feat\.? | x /i)[0]).join(' ');
+  // the rest: YouTube Music's song search, its best match (only those with a name to search: a shared link's Apple
+  // song that Apple no longer has is just an id)
+  const rest = pl.tracks.map((s, i) => Object.assign([s, i], { tries: 0 })).filter(([s, i]) => !out[i] && s.title);
+  notFound = pl.tracks.filter((s, i) => !out[i] && !s.title).length; done += notFound;
+  keep(rest);
+  const fits = (v, s) => { const a = words(clean(v.title)).join(' '), b = words(clean(s.title)).join(' '), who = words((s.artist || '').split(/,|&| and | feat\.? | x /i)[0]).join(' '); // ("and" or "&": the same band)
     return !!a && (a === b || a.startsWith(b + ' ') || b.startsWith(a + ' ')) && (!who || words(v.artist).join(' ').includes(who)) && (!s.dur || !v.dur || Math.abs(v.dur - s.dur) <= 8); };
-  for (let k = 0; k < rest.length; k += 4) {
-    await Promise.all(rest.slice(k, k + 4).map(async ([s, i]) => {
-      const found = await api.ytm(`${s.artist} ${clean(s.title)}`).catch(() => []), v = found.find(x => fits(x, s));
-      if (v) out[i] = ytmToTrack(v);
-      done++;
+  let width = 6, streak = 0, since = 0, batches = 0;
+  while (rest.length) {
+    const batch = rest.splice(0, width), failed = [];
+    await Promise.all(batch.map(async it => {
+      const [s, i] = it;
+      try { const v = (await api.ytm(`${s.artist || ''} ${clean(s.title)}`.trim())).find(x => fits(x, s)); if (v) out[i] = ytmToTrack(v); else notFound++; done++; }
+      catch { it.tries++; failed.push(it); } // (not answered: tried again, not counted as not found)
     }));
-    progress();
+    // (one that keeps failing while the others answer is that song's search, not YouTube: after four tries, not found)
+    const again = failed.length < batch.length ? failed.filter(it => it.tries < 4) : failed;
+    notFound += failed.length - again.length; done += failed.length - again.length;
+    rest.unshift(...again);
+    if (failed.length === batch.length) { // (none answered: YouTube slowing the import down — a pause, longer each time)
+      if (!streak++) since = Date.now();
+      if (Date.now() - since > 5 * 60000) break; // (five minutes of no answers: the rest waits for the next import of this link)
+      width = 1;
+      const pause = Math.min(60, 2 ** streak);
+      toast(`YouTube is slowing the import down: carrying on in ${pause} s · ${pl.name} · ${done} of ${total}`);
+      await new Promise(r => setTimeout(r, pause * 1000));
+    } else { streak = 0; width = failed.length ? Math.max(1, width - 1) : Math.min(6, width + 1); progress(); } // (a search or two that timed out: just tried again)
+    if (++batches % 20 === 0) keep(rest);
   }
-  const tracks = out.filter(Boolean), missed = pl.tracks.length - tracks.length;
-  if (!tracks.length) return toast('None of its songs could be found here');
-  const p = newPlaylist(pl.name);
-  p.tracks = tracks.map(slim);
-  saveLib();
-  toast(`Imported ${pl.name}: ${tracks.length} songs` + (missed ? ` (${missed} not found)` : ''));
+  keep(rest);
+  if (!p) return toast(rest.length ? 'YouTube isn\'t answering right now: import it again in a while' : 'None of its songs could be found here');
+  if (rest.length) toast(`YouTube stopped answering for now: ${p.tracks.length} songs in. Import the same link again later for the other ${rest.length}`);
+  else toast(`Imported ${pl.name}: ${p.tracks.length} songs` + (notFound ? ` (${notFound} not found)` : '') + (pl.partial ? `. ${pl.from || 'The service'} stopped sending the rest: import it again later for all of it` : ''));
   openLibrary({ kind: 'playlist', id: p.id });
 }
 // ---------- share a playlist: a link, and its QR code, that carry the songs themselves ----------
@@ -5345,12 +5394,12 @@ const syncExport = () => ({ v: 1, dev: deviceId, name: native ? 'your phone' : '
 // and its stats under its own id (so they're counted once, however often it syncs)
 function syncMerge(x) {
   const ok = t => t && typeof t === 'object' && t.trackId != null && typeof t.trackName === 'string';
-  const had = new Set(library.liked.map(t => t.trackId)), liked = (Array.isArray(x.liked) ? x.liked : []).filter(t => ok(t) && !had.has(t.trackId)).slice(0, 5000);
+  const had = new Set(library.liked.map(t => t.trackId)), liked = (Array.isArray(x.liked) ? x.liked : []).filter(t => ok(t) && !had.has(t.trackId)).slice(0, 20000); // (as many as an import can bring: big lists sync whole)
   library.liked = [...library.liked, ...liked];
   let lists = 0;
-  for (const p of (Array.isArray(x.playlists) ? x.playlists : []).slice(0, 500)) {
+  for (const p of (Array.isArray(x.playlists) ? x.playlists : []).slice(0, 2000)) {
     if (!p || typeof p.id !== 'string' || !Array.isArray(p.tracks)) continue;
-    const mine = library.playlists.find(q => q.id === p.id), tracks = p.tracks.filter(ok).slice(0, 5000);
+    const mine = library.playlists.find(q => q.id === p.id), tracks = p.tracks.filter(ok).slice(0, 20000);
     if (!mine) { library.playlists.push({ id: p.id, name: String(p.name || 'Playlist').slice(0, 80), tracks }); lists++; continue; }
     const ids = new Set(mine.tracks.map(t => t.trackId)), more = tracks.filter(t => !ids.has(t.trackId));
     if (more.length) { mine.tracks.push(...more); lists++; }
@@ -5404,7 +5453,7 @@ async function syncJoin(code) {
   const pc = found[0];
   syStatus = `Syncing with ${pc.name}…`; syncRender();
   try {
-    const r = await H.post({ url: `http://${pc.h}:${pc.port}/nf-sync/swap`, headers: { 'Content-Type': 'text/plain' }, data: await syncSeal(code, syncExport()), responseType: 'json', connectTimeout: 5000, readTimeout: 30000 });
+    const r = await H.post({ url: `http://${pc.h}:${pc.port}/nf-sync/swap`, headers: { 'Content-Type': 'text/plain' }, data: await syncSeal(code, syncExport()), responseType: 'json', connectTimeout: 5000, readTimeout: 90000 });
     const d = typeof r.data === 'string' ? JSON.parse(r.data) : r.data;
     if (r.status === 403) syStatus = 'The computer says that code isn\'t its code';
     else if (r.status !== 200 || !d?.data) syStatus = 'The sync didn\'t go through: try again';
@@ -5508,8 +5557,10 @@ function dlProgress(j, label) {
   r.style.setProperty('--dp', j.dur ? Math.min(1, j.at / j.dur) : 0); // (a song whose length isn't known: no NaN)
   r.querySelector('small').textContent = label || `Downloading · ${pct(j) || 'starting'}`;
 }
+let libTok = 0;
 function renderLibrary() {
-  const v = libView, list = [], acts = [];
+  const v = libView, list = [], acts = [], tok = ++libTok;
+  let more = null; // (a long list: its first rows at once, the rest added a chunk at a time, so it opens straight away)
   const head = (kind, name, sub, art) => { // art: the sleeve, with a record slid out behind it
     $('libKind').textContent = kind; $('libName').replaceChildren(name); $('libSub').textContent = sub; $('libArt').replaceChildren(el('i', 'vinyl'), art);
   };
@@ -5569,6 +5620,11 @@ function renderLibrary() {
         }
       }
     }
+    if (p?.left?.length) { // (an import YouTube cut short: the rest, on a tap)
+      const more = el('button', 'pill', `Finish import · ${p.left.length} left`);
+      more.onclick = () => importPlaylist(p.src);
+      acts.push(more);
+    }
     if (p) {
       const rename = el('button', 'link', 'Rename'), del = el('button', 'link danger', 'Delete');
       rename.onclick = async () => {
@@ -5583,11 +5639,16 @@ function renderLibrary() {
       acts.push(rename, del);
     }
     if ((v.kind === 'saved' || tracks.some(t => dlJob(t.trackId))) && (dl.cur.length || dl.queue.length)) list.push(sectionHead('Downloading now'), ...dlRows());
-    if (tracks.length) list.push(...tracks.map((s, i) => row(s, i, tracks, p ? { playlist: p } : {})));
+    const opts = p ? { playlist: p } : {};
+    if (tracks.length) list.push(...tracks.slice(0, 200).map((s, i) => row(s, i, tracks, opts)));
+    if (tracks.length > 200) more = { n: tracks.length, rows: k => tracks.slice(k, k + 400).map((s, i) => row(s, k + i, tracks, opts)) };
     else list.push(el('p', 'empty', v.kind === 'saved' ? 'Nothing saved yet. Tap ••• on any song, then Save for offline.' : 'No songs yet. Tap ••• on any song to add it here.'));
   }
   $('libActs').replaceChildren(...acts);
   $('libList').replaceChildren(...list);
+  if (more) (async () => {
+    for (let k = 200; k < more.n; k += 400) { await new Promise(r => setTimeout(r, 16)); if (tok !== libTok) return; $('libList').append(...more.rows(k)); }
+  })();
 }
 $('openLib').onclick = () => openLibrary();
 $('closeLib').onclick = libBack;
@@ -6005,7 +6066,7 @@ $('closeAbout').onclick = () => $('about').close();
 // Links inside legal.html open in the real browser (legal.html calls this through window.parent).
 window.openExternal = url => native ? (location.href = url) : window.open(url, '_blank', 'noopener');
 
-const TERMS = 'netherflow.terms', TERMS_VERSION = '2026-10-15.1'; // bump when the terms change: everyone is asked again
+const TERMS = 'netherflow.terms', TERMS_VERSION = '2026-10-15.2'; // bump when the terms change: everyone is asked again
 if (store.get(TERMS) !== TERMS_VERSION) { $('consent').showModal(); placeWinctl(); }
 else if (fullSongs) setTimeout(() => loadYT().catch(() => {}), 2500); // (the first song then starts sooner)
 $('consent').addEventListener('cancel', e => e.preventDefault()); // Esc doesn't count as agreeing

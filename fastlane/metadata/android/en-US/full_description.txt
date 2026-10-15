@@ -11,7 +11,7 @@ NetherFlow is a free, open-source music player with a look of its own. Search an
 <li>Autoplay: when the list ends, songs like the one playing carry on, in its language and era, learning from what you skip and like</li>
 <li>Smooth mix: songs blend into each other on the beat, like a DJ mix</li>
 <li>Sing: karaoke, with the voice turned down as far as you like and the lyrics big</li>
-<li>Import playlists from Spotify, Apple Music or YouTube by pasting the link</li>
+<li>Import playlists of any length from Spotify, Apple Music or YouTube by pasting the link</li>
 <li>Share a playlist with a QR code or a link: a friend scans it and imports it, nothing uploaded</li>
 <li>Your stats: minutes, plays, a streak, top songs, artists and genres, and a card to share</li>
 <li>Listen together: up to 10 people hear the same song at the same moment, end-to-end encrypted</li>

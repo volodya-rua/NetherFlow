@@ -112,15 +112,50 @@
   // [{ title, artist, album, dur, yt (its YouTube video, when it's from there), apple (its iTunes id, from Apple) }] }.
   // ponytail: each service's public page or its web app's own API, read as they are now; if one reshapes, its branch is
   // the one spot to fix. Spotify's embed and Apple's page show a list's first 100 songs; the rest come from each one's
-  // own web API, with the pass its own player uses (Spotify keeps its editorial lists to itself: those stop at 100).
+  // web player's own API, with the pass that player uses. (Spotify's: the query its web player lists a playlist with,
+  // its id read from the player's script, so a new version of it is picked up by itself. Editorial lists too.)
+  const retry = async f => { for (let tries = 0; tries < 3; tries++) { if (tries) await new Promise(r => setTimeout(r, 2000 * tries)); const v = await f().catch(() => null); if (v) return v; } return null; };
+  let spotifyQuery = '';
+  const spotifyContents = async (get, post, id, pass) => {
+    if (!spotifyQuery) {
+      const page = await get('https://open.spotify.com/', { 'User-Agent': UA });
+      for (const src of page.match(/https:\/\/open\.spotifycdn\.com\/cdn\/build\/web-player\/web-player\.[\w]+\.js/g) || []) {
+        spotifyQuery = (await get(src, { 'User-Agent': UA })).match(/"fetchPlaylistContents","query","([0-9a-f]{64})"/)?.[1] || '';
+        if (spotifyQuery) break;
+      }
+      if (!spotifyQuery) throw new Error('Spotify web player changed');
+    }
+    const tracks = [];
+    let total = Infinity, partial = false;
+    for (let at = 0; at < total && at < 20000; at += 100) {
+      const body = JSON.stringify({ variables: { uri: 'spotify:playlist:' + id, offset: at, limit: 100 }, operationName: 'fetchPlaylistContents',
+        extensions: { persistedQuery: { version: 1, sha256Hash: spotifyQuery } } });
+      const c = await retry(() => post('https://api-partner.spotify.com/pathfinder/v2/query', body,
+        { Authorization: 'Bearer ' + pass, 'Content-Type': 'application/json;charset=UTF-8', 'User-Agent': UA }).then(t => JSON.parse(t).data?.playlistV2?.content).then(c => c?.items && c));
+      if (!c) { if (!tracks.length) throw new Error('Spotify playlist unreadable'); partial = true; break; } // (what came before is kept)
+      total = c.totalCount ?? 0;
+      for (const it of c.items) {
+        const t = it.itemV2?.data;
+        if (t?.__typename === 'Track' && t.name) tracks.push({ title: t.name, artist: t.artists?.items?.[0]?.profile?.name || '', album: t.albumOfTrack?.name || '', dur: Math.round((t.trackDuration?.totalMilliseconds || 0) / 1000) });
+      }
+      if (!c.items.length) break;
+    }
+    return { tracks, partial };
+  };
   lib.playlist = async (get, post, link) => {
     const u = new URL(link), find = (o, key) => { if (!o || typeof o !== 'object') return null; if (o[key]) return o[key]; for (const k in o) { const r = find(o[k], key); if (r) return r; } return null; };
+    if (/^spotify\.(app\.)?link$/.test(u.hostname)) { // (the Spotify app's short link: its page names the playlist)
+      const m = (await get(link, { 'User-Agent': UA })).match(/open\.spotify\.com\/(playlist|album|track)\/([A-Za-z0-9]{22})/);
+      if (!m || m[1] === 'track') throw new Error(m ? 'that\'s a song, not a playlist' : 'not a playlist link');
+      return lib.playlist(get, post, `https://open.spotify.com/${m[1]}/${m[2]}`);
+    }
     if (/(^|\.)youtube\.com$|^youtu\.be$/.test(u.hostname)) {
       const id = u.searchParams.get('list') || (u.pathname.match(/\/browse\/VL([\w-]+)/) || [])[1];
       if (!id) throw new Error('not a playlist link');
       let json = await ytmPost(post, 'browse', { context: WEB_MUSIC, browseId: 'VL' + id });
       const head = find(json, 'musicResponsiveHeaderRenderer') || find(json, 'musicDetailHeaderRenderer') || find(json, 'musicEditablePlaylistDetailHeaderRenderer');
       const name = (find(head, 'title')?.runs || []).map(x => x.text).join('') || 'YouTube playlist', tracks = [], seen = new Set();
+      let partial = false;
       for (let page = 0; page < 200 && json; page++) { // (every page of it: 200 at most, ~20,000 songs)
         (function walk(o) {
           if (!o || typeof o !== 'object') return;
@@ -134,9 +169,10 @@
           for (const k in o) walk(o[k]);
         })(json);
         const token = find(json, 'continuationCommand')?.token || find(json, 'nextContinuationData')?.continuation;
-        json = token ? await ytmPost(post, 'browse', { context: WEB_MUSIC, continuation: token }).catch(() => null) : null;
+        json = token ? await retry(() => ytmPost(post, 'browse', { context: WEB_MUSIC, continuation: token })) : null;
+        if (token && !json) partial = true;
       }
-      return { name, from: 'YouTube', tracks };
+      return { name, from: 'YouTube', tracks, partial };
     }
     if (/(^|\.)spotify\.com$/.test(u.hostname)) {
       const m = u.pathname.match(/\/(playlist|album)\/([A-Za-z0-9]+)/);
@@ -144,15 +180,14 @@
       const html = await get(`https://open.spotify.com/embed/${m[1]}/${m[2]}`, { 'User-Agent': UA });
       const st = JSON.parse(html.match(/<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/)?.[1] || '{}').props?.pageProps?.state, e = st?.data?.entity;
       if (!e?.trackList) throw new Error('Spotify page changed');
-      const tracks = e.trackList.map(t => ({ title: t.title, artist: (t.subtitle || '').split(',')[0].trim(), album: m[1] === 'album' ? e.name : '', dur: Math.round((t.duration || 0) / 1000) }));
+      let tracks = e.trackList.map(t => ({ title: t.title, artist: (t.subtitle || '').split(',')[0].trim(), album: m[1] === 'album' ? e.name : '', dur: Math.round((t.duration || 0) / 1000) })), partial = false;
       const pass = st.settings?.session?.accessToken;
-      if (m[1] === 'playlist' && tracks.length >= 100 && pass) for (let at = 100; at < 20000; at += 100) { // (past the embed's 100)
-        const r = JSON.parse(await get(`https://api.spotify.com/v1/playlists/${m[2]}/tracks?offset=${at}&limit=100&fields=next,items(track(name,duration_ms,artists(name),album(name)))`,
-          { Authorization: 'Bearer ' + pass, 'User-Agent': UA }).catch(() => '{}') || '{}');
-        for (const x of r.items || []) if (x?.track?.name) tracks.push({ title: x.track.name, artist: x.track.artists?.[0]?.name || '', album: x.track.album?.name || '', dur: Math.round((x.track.duration_ms || 0) / 1000) });
-        if (!r.next) break;
+      if (m[1] === 'playlist' && tracks.length >= 100 && pass) { // (past the embed's 100: the whole list, or the 100 if that fails)
+        const all = await spotifyContents(get, post, m[2], pass).catch(() => { spotifyQuery = ''; return null; });
+        if (!all) partial = true; // (Spotify not answering just now: the 100, and the importer says to try again later)
+        else if (all.tracks.length > tracks.length) ({ tracks, partial } = all);
       }
-      return { name: e.name || 'Spotify playlist', from: 'Spotify', tracks };
+      return { name: e.name || 'Spotify playlist', from: 'Spotify', tracks, partial };
     }
     if (/(^|\.)apple\.com$/.test(u.hostname)) {
       const html = await get(link, { 'User-Agent': UA });
@@ -165,18 +200,24 @@
         if (id && typeof o.title === 'string') { if (!seen.has(id)) { seen.add(id); tracks.push({ title: o.title, artist: o.artistName || o.subtitleLinks?.[0]?.title || '', dur: Math.round((o.duration || 0) / 1000), apple: id }); } return; }
         for (const k in o) walk(o[k]);
       })(j);
-      const name = (html.match(/<title>([^<]*)<\/title>/)?.[1] || '').replace(/^‎/, '').replace(/\s+-\s+(Playlist|Album|Single|EP).*$/, '').replace(/&amp;/g, '&').replace(/&#39;/g, "'") || 'Apple Music playlist';
+      // (its own clean name, apple:title; the page title's is "… by its curator - Apple Music")
+      const name = (html.match(/<meta name="apple:title" content="([^"]*)"/)?.[1] || (html.match(/<title>([^<]*)<\/title>/)?.[1] || '').replace(/^‎/, '').replace(/\s+-\s+(Playlist|Album|Single|EP).*$/, ''))
+        .replace(/&amp;/g, '&').replace(/&#39;/g, "'").replace(/&quot;/g, '"') || 'Apple Music playlist';
       const pl = u.pathname.match(/^\/([a-z]{2})\/playlist\/(?:[^/]+\/)?(pl\.[\w.-]+)/);
+      let partial = false;
       if (pl && tracks.length >= 100) { // (past the page's 100: Apple Music's web API, with its web player's own pass — in its script)
         const js = html.match(/\/assets\/index[^"']*\.js/)?.[0], pass = js && (await get('https://music.apple.com' + js, { 'User-Agent': UA }).catch(() => '')).match(/eyJ[\w-]+\.[\w-]+\.[\w-]+/)?.[0];
+        if (!pass) partial = true; // (its script reshaped: the page's 100, and the importer says so)
         for (let at = 100; pass && at < 20000; at += 100) {
-          const r = JSON.parse(await get(`https://amp-api.music.apple.com/v1/catalog/${pl[1]}/playlists/${pl[2]}/tracks?offset=${at}&limit=100`,
-            { Authorization: 'Bearer ' + pass, Origin: 'https://music.apple.com', 'User-Agent': UA }).catch(() => '{}') || '{}');
+          const r = await retry(() => get(`https://amp-api.music.apple.com/v1/catalog/${pl[1]}/playlists/${pl[2]}/tracks?offset=${at}&limit=100`,
+            { Authorization: 'Bearer ' + pass, Origin: 'https://music.apple.com', 'User-Agent': UA }).then(JSON.parse)
+            .then(r => r?.errors?.some(e => e.status === '404') ? { data: [] } : r?.data && r)); // (404: past its end, no more)
+          if (!r) { partial = true; break; }
           for (const t of r.data || []) if (t.attributes?.name && !seen.has(t.id)) { seen.add(t.id); tracks.push({ title: t.attributes.name, artist: t.attributes.artistName || '', dur: Math.round((t.attributes.durationInMillis || 0) / 1000), apple: t.id }); }
           if (!r.next) break;
         }
       }
-      return { name, from: 'Apple Music', tracks };
+      return { name, from: 'Apple Music', tracks, partial };
     }
     throw new Error('not a YouTube, Spotify or Apple Music link');
   };

@@ -66,7 +66,7 @@ async function handle(req, res) {
   if (url.pathname === '/api/playlist') {
     const link = (url.searchParams.get('url') || '').slice(0, 500);
     let host = ''; try { host = new URL(link).hostname; } catch {}
-    if (!/^(music\.youtube\.com|(www\.|m\.)?youtube\.com|youtu\.be|open\.spotify\.com|music\.apple\.com)$/.test(host)) return send(res, 400, JSON.stringify({ error: 'not a playlist link' }));
+    if (!/^(music\.youtube\.com|(www\.|m\.)?youtube\.com|youtu\.be|open\.spotify\.com|spotify\.(app\.)?link|music\.apple\.com)$/.test(host)) return send(res, 400, JSON.stringify({ error: 'not a playlist link' }));
     try { return send(res, 200, JSON.stringify(await lib.playlist(get, post, link))); }
     catch (e) { return send(res, 502, JSON.stringify({ error: e.message })); }
   }

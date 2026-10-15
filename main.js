@@ -248,11 +248,11 @@ function syncHandle(req, res) {
   if (req.method === 'GET' && req.url === '/nf-sync/hello') return send(200, JSON.stringify({ app: 'NetherFlow', name: os.hostname() }));
   if (req.method !== 'POST' || req.url !== '/nf-sync/swap') return send(404, '{}');
   const parts = []; let size = 0;
-  req.on('data', c => { size += c.length; if (size > 8e6) req.destroy(); else parts.push(c); });
+  req.on('data', c => { size += c.length; if (size > 64e6) req.destroy(); else parts.push(c); }); // (a library with big imported playlists runs to megabytes)
   req.on('end', async () => {
     if (!sync || !win || win.isDestroyed()) return send(410, '{}');
     const id = Math.random().toString(36).slice(2), s = sync;
-    const reply = await new Promise(r => { s.pending.set(id, r); win.webContents.send('sync-in', id, Buffer.concat(parts).toString()); setTimeout(() => r(null), 20000); });
+    const reply = await new Promise(r => { s.pending.set(id, r); win.webContents.send('sync-in', id, Buffer.concat(parts).toString()); setTimeout(() => r(null), 60000); });
     s.pending.delete(id);
     if (!reply || typeof reply.data !== 'string') { if (sync === s && ++s.fails >= 5) syncClose(); return send(403, JSON.stringify({ error: reply?.error || 'refused' })); }
     send(200, JSON.stringify({ data: reply.data }));

@@ -138,7 +138,8 @@ wants a workout. On a slower phone it steps down by itself, so it never lags.
 - **Equalizer** with presets, a volume booster, and every song at its **original loudness** (YouTube turns loud songs
   down, NetherFlow gives that back)
 - **Save for offline**: one song or a whole playlist with *Download all*
-- **Import playlists** of any length from Spotify, Apple Music or YouTube, just paste the link
+- **Import playlists** of any length from Spotify, Apple Music or YouTube, just paste the link (Spotify's short ones too).
+  Yes, even a 10,000-song one: it keeps going when YouTube slows it down, and picks up where it left off
 - **Your stats**: minutes, plays, streaks, top songs, artists and genres, and a card to share
 
 ### 🎤 Lyrics
