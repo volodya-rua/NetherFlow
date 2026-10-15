@@ -5809,7 +5809,8 @@ const ytmFind = memo(q => api.ytm(q), () => true);
 async function searchYtm(term) {
   if (!fullSongs) return [];
   // (given up on after 3 s: Apple's results don't wait longer for it)
-  const found = await Promise.race([ytmFind(term).catch(() => { searchFailed = true; return []; }), new Promise(r => setTimeout(r, 3000, []))]);
+  // (typed in another script, its answer is the one that knows the song meant — see runSearch: waited on longer)
+  const found = await Promise.race([ytmFind(term).catch(() => { searchFailed = true; return []; }), new Promise(r => setTimeout(r, /[^\p{Script=Latin}\p{N}\p{P}\p{Z}\p{S}]/u.test(term) ? 6000 : 3000, []))]);
   return Object.assign(found.map(v => ({ kind: 'song', trackId: 'yt:' + v.id, ytId: v.id, ytTitle: v.title, trackName: v.title,
     artistName: v.artist, collectionName: v.album || 'YouTube Music', artworkUrl100: v.art, trackTimeMillis: v.dur * 1000 })), { corrected: found.corrected || '' });
 }
@@ -5864,7 +5865,7 @@ async function searchYouTube(term) {
 let searchCtl, qTimer;
 // Remixes, covers, live takes, sped-up and slowed edits, karaoke…: listed after the original recordings.
 // Only the title's extras count — "(Live)", "[Acoustic]", "- Remix" — so a song called "Live Forever" stays an original.
-const MODDED = /\b(re-?mix(es)?|mix|edit|live|acoustic|unplugged|cover|karaoke|instrumental|sped[ -]?up|speed up|slowed|reverb|nightcore|8d|lo-?fi|piano|orchestral|symphonic|acapella|a cappella|tribute|lullaby|rendition|bass boosted|rework|bootleg|mash-?up|demo|remake|extended|club|dub|vip|chopped|screwed|reprise|rehearsal|session)\b/i;
+const MODDED = /\b(re-?mix(es)?|mix|edit|live|acoustic|unplugged|cover|karaoke|instrumental|sped[ -]?up|speed up|slowed|reverb|nightcore|8d|lo-?fi|piano|orchestral|symphonic|acapella|a cappella|tribute|lullaby|rendition|bass boosted|rework|bootleg|mash-?up|demo|remake|extended|club|dub|vip|chopped|screwed|reprise|rehearsal|session|inst|off[ -]?vocal)\b|\(mr\)|伴奏|カラオケ|노래방/i; // (and Korean, Japanese, Chinese releases' own: "(Inst.)", "(MR)", Off Vocal, accompaniment, karaoke)
 const ORIGINAL = /\b(original|album|radio|single|clean|explicit|taylor's) (mix|version|edit)\b|\bremaster(ed)?\b/gi;
 function isModded(s) {
   const extras = ((s.trackName || '').match(/[([][^)\]]*[)\]]|\s[-–—]\s.*$/g) || []).join(' ').replace(ORIGINAL, '');
@@ -5920,7 +5921,7 @@ function topHit(s, list, artist, term, album) {
     el('small', '', artist ? 'Artist · ' + (artist.primaryGenreName || 'top result') : album ? 'Album · ' + album.artistName : 'Song · ' + s.artistName));
   go.innerHTML = '<svg viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z"/></svg>';
   b.append(img, txt, go);
-  b.onclick = () => artist ? openArtist(artist) : album ? openAlbumPage(album) : (queue = list, playTrack(s, term));
+  b.onclick = () => artist ? openArtist(artist) : album ? openAlbumPage(album) : (queue = list.slice(), playTrack(s, term));
   return b;
 }
 // an album's page, from the search (no artist's page under it to go back to)
@@ -5947,6 +5948,20 @@ async function runSearch(term) {
     const fixed = ytm.corrected && !sameWords(ytm.corrected, term) && songs.match < 1 ? ytm.corrected : '';
     if (fixed) [songs, artists, albums] = await Promise.all([searchSongs(fixed, ctl.signal), searchArtists(fixed, ctl.signal), searchAlbums(fixed, ctl.signal)]);
     const asked = fixed || term;
+    // Typed in another script (Hindi, Arabic, Chinese...): Apple has the original under its Latin name ("Tum Hi Ho") or
+    // in the other Chinese characters (周杰倫), and found only covers named as typed. YouTube Music knows the song meant:
+    // its first, looked up at Apple by that name, goes first, and is the top result.
+    // (the same song: its name, its artist anywhere in the credits — "Pritam, Arijit Singh & …" — and no remix or lofi flip)
+    const top = ytm[0], isMeant = s => !!top && !isModded(s) && sameWords(clean(s.trackName), clean(top.trackName))
+      && words(s.artistName).join(' ').includes(words(top.artistName.split(/,|&| feat\.? | x /i)[0]).join(' '));
+    let meant = null;
+    if (top && !isModded(top) && /[^\p{Script=Latin}\p{N}\p{P}\p{Z}\p{S}]/u.test(term)) {
+      let orig = songs.filter(isMeant);
+      if (!orig.length) orig = (await searchSongs(`${clean(top.trackName)} ${top.artistName}`, ctl.signal).catch(quiet)).filter(isMeant);
+      if (ctl.signal.aborted) return;
+      songs = Object.assign([...orig, ...songs.filter(s => !orig.some(o => o.trackId === s.trackId))], { match: songs.match });
+      meant = orig[0] || top;
+    }
     // YouTube Music's songs that Apple doesn't have (or not by that name)
     const have = new Set(songs.map(songKey)), extra = rankSongs(ytm.filter(s => !have.has(songKey(s))), asked);
     // the search is an artist's name (a leading "the" optional, so "weeknd" finds The Weeknd)
@@ -5971,7 +5986,7 @@ async function runSearch(term) {
     // "after hours": a playlist album "After Hours Drift" full of other songs)
     const known = new Set(ytm.map(songKey)), knownBy = new Set(ytm.map(s => songKey(s).split('|')[1])), typed = words(asked);
     const named = s => words(s.trackName + ' ' + s.artistName).some(w => typed.includes(w));
-    const rank = s => isModded(s) ? 4 : known.has(songKey(s)) ? 0 : knownBy.has(songKey(s).split('|')[1]) ? 1 : named(s) ? 2 : 3;
+    const rank = s => meant && isMeant(s) ? -1 : isModded(s) ? 4 : known.has(songKey(s)) ? 0 : knownBy.has(songKey(s).split('|')[1]) ? 1 : named(s) ? 2 : 3;
     let list = oneEach(originalsFirst(songs)).map((s, i) => [s, i]).sort((a, b) => rank(a[0]) - rank(b[0]) || a[1] - b[1]).map(x => x[0]), label = 'Songs';
     if (exact) { list = originalsFirst(all); label = `All songs by ${exact.artistName}`; }
     if (list.length) out.push(sectionHead(label, exact && 'Artist page', () => openArtist(exact)), ...list.map((s, i) => row(s, i, list)));
@@ -5985,7 +6000,8 @@ async function runSearch(term) {
       if (ahead && at >= 0) out.splice(at, 0, ...section); else out.push(...section);
     };
     const yl = oneEach(originalsFirst(extra));
-    if (yl.length && !exact) add(songs.length ? 'More on YouTube Music' : 'Found on YouTube Music', yl, extra.match > songs.match && songs.match < .6);
+    if (meant) yl.sort((a, b) => isMeant(b) - isMeant(a)); // (the song meant first here too: not after songs that only have the word typed)
+    if (yl.length && !exact) add(songs.length ? 'More on YouTube Music' : 'Found on YouTube Music', yl, extra.match > songs.match && songs.match < .6 || meant === top); // (the song meant: only there)
     // Still few songs, or none that really match what was typed: YouTube has nearly everything else.
     let more = [];
     if (!exact && (list.length + yl.length < 10 || Math.max(songs.match, extra.match) < 0.6)) { // (counted once each)
@@ -5997,9 +6013,9 @@ async function runSearch(term) {
     const n = list.length + (exact ? 0 : yl.length) + more.length;
     // the top result: the artist typed; else the best song — YouTube Music's or YouTube's when Apple's were weak and went after
     // (a song named exactly as typed beats an album of that name)
-    const ytFirst = extra.match > songs.match && songs.match < .6, titled = list.find(s => core(clean(s.trackName)) === core(asked));
-    const best = exact ? null : titled || (ytFirst ? yl[0] : list[0]) || yl[0] || more[0], album = !exact && !titled && albumHit;
-    if (exact || album || best) out.splice(topAt, 0, topHit(best, exact ? all : ytFirst && yl.length && !titled ? yl : list.length ? list : yl.length ? yl : more, exact, term, album));
+    const ytFirst = extra.match > songs.match && songs.match < .6, titled = !meant && list.find(s => !isModded(s) && core(clean(s.trackName)) === core(asked));
+    const best = exact ? null : meant && [...list, ...yl].find(isMeant) || titled || (ytFirst ? yl[0] : list[0]) || yl[0] || more[0], album = !exact && !titled && !meant && albumHit;
+    if (exact || album || best) out.splice(topAt, 0, topHit(best, exact ? all : yl.includes(best) ? yl : more.includes(best) ? more : list.length ? list : yl.length ? yl : more, exact, term, album));
     $('results').replaceChildren(...out);
     $('results').scrollTop = 0;
     const note = fixed ? ` · showing results for “${fixed}”` : '';
@@ -6052,7 +6068,7 @@ function renderArtist() {
   apHeader('Artist', artist.artistName, artist.primaryGenreName || songs[0]?.primaryGenreName || '', artUrl(albums[0] || songs[0], 600), true);
   $('apStat').textContent = `${songs.length} songs · ${albums.length} albums & singles`;
   $('apPlay').hidden = !songs.length;
-  $('apPlay').onclick = () => { queue = songs; playTrack(songs[0]); };
+  $('apPlay').onclick = () => { queue = songs.slice(); playTrack(songs[0]); };
   const list = [];
   if (songs.length) {
     list.push(sectionHead('Popular'), ...songs.slice(0, 10).map((s, i) => row(s, i, songs)));
@@ -6085,7 +6101,7 @@ async function openAlbum(album) {
   if (id !== apLoad) return;
   $('apStat').textContent = `${songs.length} songs`;
   $('apPlay').hidden = !songs.length;
-  $('apPlay').onclick = () => { queue = songs; playTrack(songs[0]); };
+  $('apPlay').onclick = () => { queue = songs.slice(); playTrack(songs[0]); };
   $('apList').replaceChildren(...songs.map((s, i) => row(s, i, songs)));
   $('apList').scrollTop = 0;
 }
@@ -6130,7 +6146,9 @@ function row(s, i, list, from = {}) {
   name.prepend(heart);
   txt.append(name, sub);
   b.append(el('span', 'idx', pad(i + 1)), img, txt, el('span', 'len', fmt((s.trackTimeMillis || 0) / 1000)));
-  b.onclick = () => { queue = list; playTrack(s, dlg.open ? $('q').value.trim() : ''); };
+  // (a copy: the queue changed — a song taken out of it, the rest dragged about — mustn't change the playlist or Liked songs
+  // it came from, as it did, kept by the next save)
+  b.onclick = () => { queue = list.slice(); playTrack(s, dlg.open ? $('q').value.trim() : ''); };
   b.onpointerdown = e => { if (e.pointerType === 'mouse' && fullSongs && !saved.has(s.trackId)) videosFor(s).catch(() => {}); };
   more.innerHTML = DOTS;
   more.setAttribute('aria-label', `Options for ${s.trackName}`);
@@ -10280,6 +10298,8 @@ console.assert(JSON.stringify(parseLyrics('[00:01.50]hi\n[01:00]yo\nplain')) ===
   console.assert(got === 'Verse 1, Chorus, Verse 2, Chorus ×2, Bridge, Chorus ×3, Outro', 'labelSections broken: ' + got); }
 console.assert(clean('Song (feat. X) [Live] - Remastered 2011') === 'Song', 'clean broken');
 console.assert(linkIn('Listen on Spotify: https://open.spotify.com/playlist/x?si=1.') === 'https://open.spotify.com/playlist/x?si=1' && linkIn(' hi ') === 'hi', 'linkIn broken');
+console.assert(isModded({ trackName: '강남스타일 (Inst.)' }) && isModded({ trackName: 'Song (MR)' }) && isModded({ trackName: '晴天 (伴奏)' }) && !isModded({ trackName: 'Song (feat. Mr. X)' })
+  && !isModded({ trackName: 'Gangnam Style (강남스타일)' }), 'isModded broken');
 console.assert(linkKey('https://open.spotify.com/playlist/x?si=1') === linkKey('https://open.spotify.com/playlist/x/') && linkKey('https://www.youtube.com/playlist?list=A&si=2') === 'youtube.com/playlist?list=A'
   && linkKey('https://youtube.com/playlist?list=A') !== linkKey('https://youtube.com/playlist?list=B'), 'linkKey broken');
 { const y = parseYrc(netherflowLib.krcToYrc('[ti:x]\n[0,900]<0,300,0>Song <300,300,0>- <600,300,0>Artist\n[1000,900]<0,200,0>Hel<200,100,0>lo <500,400,0>there'));
