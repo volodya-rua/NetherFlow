@@ -2,6 +2,7 @@
 # Two facts about the Linux AppImage, checked on GitHub's Ubuntu by hand (Run workflow): (1) whether it starts without
 # --no-sandbox when Ubuntu 24.04's desktop default (AppArmor restricting unprivileged user namespaces) is on, and
 # (2) whether an older AppImage finds and downloads the newest release by itself. Screenshots and logs kept with the run.
+# With shots on, (3) also screenshots of it on a Linux desktop (Xfce), for the website and posts: only its own screens.
 name: Linux checks
 
 on:
@@ -10,6 +11,10 @@ on:
       old:
         description: The older version whose AppImage looks for the update
         default: 1.4.0
+      shots:
+        description: Also take screenshots of it on a Linux desktop (Xfce)
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -54,6 +59,37 @@ jobs:
           ./old/*.AppImage --no-sandbox --remote-debugging-port=9222 > update.log 2>&1 &
           node tools/linux-update-check.js
           ls -la ~/.cache/*updater* 2>/dev/null || true
+          pkill -f NetherFlow || true
+
+      - name: (3) Screenshots on a Linux desktop (Xfce)
+        if: inputs.shots
+        run: |
+          sudo apt-get install -y -qq xfce4 xdotool dbus-x11 > /dev/null
+          mkdir -p ~/.config/xfce4/xfconf/xfce-perchannel-xml   # (the panel's own layout: no "first start" question)
+          cp /etc/xdg/xfce4/panel/default.xml ~/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml
+          Xvfb :98 -screen 0 1920x1080x24 & sleep 2
+          export DISPLAY=:98
+          dbus-launch startxfce4 > xfce.log 2>&1 & sleep 15
+          ./new/*.AppImage --ignore-gpu-blocklist --enable-unsafe-swiftshader --remote-debugging-port=9224 > shots.log 2>&1 &
+          cat > "$RUNNER_TEMP/shots.mjs" <<'EOF'
+          import { execSync } from 'child_process';
+          const sleep = ms => new Promise(r => setTimeout(r, ms)), sh = c => execSync(c, { encoding: 'utf8' }).trim();
+          let t; for (let i = 0; i < 90 && !t; i++) { await sleep(1000); t = await fetch('http://127.0.0.1:9224/json').then(r => r.json()).then(l => l.find(x => x.type === 'page' && /^http:\/\/localhost:\d+\/$/.test(x.url))).catch(() => null); }
+          const ws = new WebSocket(t.webSocketDebuggerUrl); await new Promise(ok => ws.onopen = ok);
+          let n = 0; const w = new Map(); ws.onmessage = m => { const d = JSON.parse(m.data); w.get(d.id)?.(d); };
+          const page = js => new Promise(ok => { const id = ++n; w.set(id, d => ok(d.result?.result?.value)); ws.send(JSON.stringify({ id, method: 'Runtime.evaluate', params: { expression: js, awaitPromise: true, returnByValue: true } })); });
+          for (let i = 0; i < 60 && await page("typeof setSkin === 'function'") !== true; i++) await sleep(1000);
+          await page("$('agree').click(), 1"); await sleep(1500);
+          const win = sh("xdotool search --onlyvisible --name '^NetherFlow$' | head -1");
+          sh(`xdotool windowsize ${win} 1480 860 windowmove ${win} 220 95`); await sleep(6000);
+          sh('import -window root shot-linux-1-home.png');
+          await page("$('eqBtn').click(), 1"); await sleep(3000);
+          sh('import -window root shot-linux-2-equalizer.png');
+          await page("$('eqPanel').hidePopover(), setSkin('Stickman'), 1"); await sleep(6000);
+          sh('import -window root shot-linux-3-theme.png');
+          console.log('screenshots taken'); process.exit(0);
+          EOF
+          node "$RUNNER_TEMP/shots.mjs"
           pkill -f NetherFlow || true
 
       - name: Keep the logs and screenshots with the run
