@@ -447,7 +447,8 @@ please give it a different name and icon so nobody mistakes it for the original.
 Third-party code in this repository keeps its own license: yt-dlp (The Unlicense) and certifi (MPL 2.0) in
 `android/app/src/main/python/`, the 27 typefaces in `fonts/` (SIL Open Font License 1.1; Permanent Marker, Special
 Elite and Yellowtail under the Apache License 2.0), Microsoft's Fluent Emoji in `emoji/` (MIT), and three.js in
-`race/three/` (MIT). The builds also include Electron (with Chromium, Node.js and FFmpeg), Capacitor, Chaquopy (with
+`race/three/` (MIT). The three songs on the website in `docs/media/music/` are by HoliznaCC0, in the public domain
+(CC0 1.0). The builds also include Electron (with Chromium, Node.js and FFmpeg), Capacitor, Chaquopy (with
 Python), electron-updater and, on Windows, `yt-dlp.exe`, each under its own license. All license texts are in
 [`licenses/`](licenses); the full list of components is in the app under About › Licenses.
 

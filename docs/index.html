@@ -69,8 +69,10 @@ em { font: italic 400 1.06em/1 var(--serif); letter-spacing: -.02em; text-transf
 .brand { display: flex; align-items: baseline; gap: 7px; font: 800 20px/1 var(--sans); font-stretch: 125%; letter-spacing: -.035em; }
 .brand sup { font: 700 9px/1 var(--sans); letter-spacing: .08em; color: var(--ember); }
 .right { display: flex; align-items: center; gap: 24px; font-size: 14px; }
-.right .txt, .snd { opacity: .72; transition: opacity .2s; }
-.right .txt:hover, .snd:hover, .snd[aria-pressed=true] { opacity: 1; }
+.right .txt, .snd, .skip { opacity: .72; transition: opacity .2s; }
+.skip { font: 500 14px/1 var(--sans); white-space: nowrap; }
+.skip[hidden] { display: none; }
+.right .txt:hover, .snd:hover, .skip:hover, .snd[aria-pressed=true] { opacity: 1; }
 .snd { display: inline-flex; align-items: center; gap: 9px; font: 500 14px/1 var(--sans); }
 .eq { display: flex; align-items: center; gap: 2px; height: 12px; }
 .eq i { width: 2px; height: calc(2px + var(--h, 0) * 10px); border-radius: 1px; background: currentColor; }
@@ -185,7 +187,7 @@ main { height: 1500vh; }
 @media (max-width: 900px) {
   .rail, .right .txt { display: none; }
   .right { gap: 16px; }
-  .snd .t { display: none; }
+  .snd .t, .skip .hm { display: none; }
   .ch { padding: 96px var(--m) 40px; }
   .wm { font-size: 19vw; font-stretch: 92%; white-space: nowrap; letter-spacing: -.05em; }
   .say { font-size: 9vw; }
@@ -225,6 +227,7 @@ main { height: 1500vh; }
   <div class="right">
     <a class="txt" href="https://github.com/volodya-rua/NetherFlow">GitHub</a>
     <button class="snd" id="snd" type="button" aria-pressed="false"><span class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span class="t" id="sndT">Sound off</span></button>
+    <button class="skip" id="skip" type="button" hidden>Next<span class="hm"> song</span></button>
     <a class="btn" href="#play">Download</a>
   </div>
 </header>
@@ -307,7 +310,7 @@ main { height: 1500vh; }
         <a class="dl" id="dl-apk" href="https://github.com/volodya-rua/NetherFlow/releases/download/v1.3.0/NetherFlow-1.3.0.apk"><span><b>Android 7.0 and up</b></span><code>NetherFlow-1.3.0.apk</code><span class="sz">29 MB</span><small>Signed, and it updates itself.</small></a>
       </div>
     </div>
-    <p class="credit"><span>made by <b>Volodya.rua</b> · a <a class="u" href="https://github.com/volodya-rua/NetherFlow#hucla">HuCla</a> build · MIT</span><a href="https://github.com/volodya-rua/NetherFlow/releases/latest">Portable builds and checksums</a><a href="https://www.instagram.com/volodya.rua/">Instagram</a><a href="mailto:volodya.rua@gmail.com">Email</a><a href="https://github.com/volodya-rua/NetherFlow/blob/main/legal.html">Privacy</a></p>
+    <p class="credit"><span>made by <b>Volodya.rua</b> · a <a class="u" href="https://github.com/volodya-rua/NetherFlow#hucla">HuCla</a> build · MIT</span><a href="https://github.com/volodya-rua/NetherFlow/releases/latest">Portable builds and checksums</a><span>Music on this page: Retro Synths, Saturn and City In The Rearview by <a class="u" href="https://freemusicarchive.org/music/holiznacc0/">HoliznaCC0</a>, public domain (CC0)</span><a href="https://www.instagram.com/volodya.rua/">Instagram</a><a href="mailto:volodya.rua@gmail.com">Email</a><a href="https://github.com/volodya-rua/NetherFlow/blob/main/legal.html">Privacy</a></p>
   </section>
 </main>
 
@@ -350,45 +353,64 @@ const ANCHORS = { silence: 0, play: .985 };
 document.addEventListener('click', e => { const a = e.target.closest('a[href^="#"]'); if (!a) return; const id = a.hash.slice(1); const c = ANCHORS[id] ?? chs.find(c => c.el.id === id)?.a; if (c == null) return; e.preventDefault(); goU(c + (c ? .004 : 0)); });
 for (const c of chs) c.el.addEventListener('focusin', () => { if (c.v < .5) goU(c.a + .006); });
 
-// ============ the page's music (an original groove, made here with Web Audio) ============
+// ============ the page's music: three CC0 songs by HoliznaCC0, played in order ============
+// g: each song's gain, so they all sit at about -14 dB RMS (measured: -13.2, -7.8 and -13.1 dB)
+const SONGS = [
+  { title: 'Retro Synths', album: 'Power Pop', src: 'media/music/retro-synths.mp3', g: .91 },
+  { title: 'Saturn', album: 'Interstellar Pop Songs', src: 'media/music/saturn.mp3', g: .49 },
+  { title: 'City In The Rearview', album: 'We Drove All Night', src: 'media/music/city-in-the-rearview.mp3', g: .9 },
+];
 const Sound = (() => {
-  let ac, master, duck, delay, noise, an, bins, timer = 0, next = 0, step = 0, kicks = [], on = false;
-  const SPB = 60 / 94, S16 = SPB / 4, f = m => 440 * 2 ** ((m - 69) / 12);
-  const CH = [[57, 60, 64], [53, 57, 60], [48, 52, 55], [55, 59, 62]], ARP = { 0: 0, 3: 1, 6: 2, 8: 1, 11: 2, 14: 1 };
+  let ac, el, song, fade, an, bins, i = 0, on = false, prevBass = 0, avgFlux = .02, k = 0, lastHit = 0, lastT = 0, out = 0, onSong = () => {};
+  const lv = [0, 0, 0, 0], BANDS = [[1, 3], [4, 12], [13, 40], [41, 120]];
   function init() {
-    ac = new AudioContext(); master = ac.createGain(); master.gain.value = 0;
-    const comp = ac.createDynamicsCompressor(); comp.threshold.value = -16; comp.ratio.value = 3;
-    an = ac.createAnalyser(); an.fftSize = 64; bins = new Uint8Array(an.frequencyBinCount);
-    master.connect(comp).connect(an).connect(ac.destination);
-    duck = ac.createGain(); duck.connect(master);
-    delay = ac.createDelay(1); delay.delayTime.value = SPB * .75;
-    const fb = ac.createGain(), dlp = ac.createBiquadFilter(); fb.gain.value = .34; dlp.type = 'lowpass'; dlp.frequency.value = 2600;
-    delay.connect(dlp).connect(fb).connect(delay); dlp.connect(master);
-    noise = ac.createBuffer(1, ac.sampleRate * .2, ac.sampleRate); const d = noise.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    el = new Audio(); el.preload = 'auto';
+    ac = new AudioContext();
+    const src = ac.createMediaElementSource(el);
+    song = ac.createGain(); fade = ac.createGain(); fade.gain.value = 0;
+    an = ac.createAnalyser(); an.fftSize = 1024; an.smoothingTimeConstant = 0; bins = new Uint8Array(an.frequencyBinCount);
+    src.connect(song).connect(fade).connect(an).connect(ac.destination);
+    el.addEventListener('ended', () => { i = (i + 1) % SONGS.length; load(); el.play(); });
+    if ('mediaSession' in navigator) navigator.mediaSession.setActionHandler('nexttrack', () => api.next());
   }
-  const env = (g, t, peak, a, dec) => { g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(peak, t + a); g.gain.exponentialRampToValueAtTime(.0008, t + a + dec); };
-  const kick = t => { const o = ac.createOscillator(), g = ac.createGain(); o.frequency.setValueAtTime(150, t); o.frequency.exponentialRampToValueAtTime(43, t + .13); env(g, t, .9, .004, .4); o.connect(g).connect(master); o.start(t); o.stop(t + .45); duck.gain.setValueAtTime(.32, t); duck.gain.linearRampToValueAtTime(1, t + SPB * .55); kicks.push(t); };
-  const hat = (t, v) => { const s = ac.createBufferSource(), hp = ac.createBiquadFilter(), g = ac.createGain(); s.buffer = noise; hp.type = 'highpass'; hp.frequency.value = 7800; env(g, t, v, .002, .05); s.connect(hp).connect(g).connect(master); s.start(t); s.stop(t + .08); };
-  const pad_ = (t, notes, len) => { const lp = ac.createBiquadFilter(), g = ac.createGain(); lp.type = 'lowpass'; lp.Q.value = .6;
-    lp.frequency.setValueAtTime(420, t); lp.frequency.linearRampToValueAtTime(1500, t + len * .55); lp.frequency.linearRampToValueAtTime(520, t + len);
-    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.075, t + .7); g.gain.setValueAtTime(.075, t + len - .2); g.gain.linearRampToValueAtTime(0, t + len + .6); lp.connect(g).connect(duck);
-    for (const m of notes) for (const det of [-10, 0, 9]) { const o = ac.createOscillator(); o.type = 'sawtooth'; o.frequency.value = f(m); o.detune.value = det; o.connect(lp); o.start(t); o.stop(t + len + .7); } };
-  const bass = (t, m) => { const o = ac.createOscillator(), g = ac.createGain(); o.type = 'sine'; o.frequency.value = f(m - 24); env(g, t, .3, .015, .26); o.connect(g).connect(duck); o.start(t); o.stop(t + .32); };
-  const pluck = (t, m) => { const o = ac.createOscillator(), g = ac.createGain(); o.type = 'triangle'; o.frequency.value = f(m + 12); env(g, t, .06, .004, .32); o.connect(g); g.connect(master); g.connect(delay); o.start(t); o.stop(t + .4); };
-  function schedule() { while (next < ac.currentTime + .12) { const s = step % 16, ch = CH[Math.floor(step / 16) % 4];
-    if (s % 4 === 0) kick(next); if (s % 4 === 2) { hat(next, .05); bass(next, ch[0]); } else if (s % 2) hat(next, .016);
-    if (s === 0) pad_(next, ch, SPB * 4); if (s in ARP) pluck(next, ch[ARP[s]] + (s > 7 ? 12 : 0)); next += S16; step++; } }
-  return {
-    toggle() { if (!ac) init(); ac.resume(); on = !on;
-      if (on) { next = ac.currentTime + .05; step = 0; kicks = []; clearInterval(timer); timer = setInterval(schedule, 25); master.gain.cancelScheduledValues(ac.currentTime); master.gain.setTargetAtTime(.6, ac.currentTime, .3); }
-      else { master.gain.cancelScheduledValues(ac.currentTime); master.gain.setTargetAtTime(0, ac.currentTime, .15); clearInterval(timer); timer = 0; }
-      return on; },
-    kick() { if (!on) return 0; const t = ac.currentTime; while (kicks.length > 1 && kicks[1] <= t) kicks.shift(); return kicks[0] <= t ? Math.exp(-(t - kicks[0]) * 7) : 0; },
-    meter(n) { if (!on) return null; an.getByteFrequencyData(bins); return Array.from({ length: n }, (_, i) => bins[1 + i * 2] / 255); },
+  function load() {
+    const s = SONGS[i]; el.src = s.src; song.gain.value = s.g; onSong(s);
+    if ('mediaSession' in navigator) navigator.mediaSession.metadata = new MediaMetadata({ title: s.title, artist: 'HoliznaCC0', album: s.album });
+  }
+  const api = {
+    set onSong(f) { onSong = f; },
+    toggle() {
+      if (!ac) { init(); load(); }
+      ac.resume(); on = !on; const t = ac.currentTime;
+      fade.gain.cancelScheduledValues(t); fade.gain.setValueAtTime(fade.gain.value, t);
+      if (on) { el.play(); fade.gain.setTargetAtTime(.85, t, .25); }
+      else { fade.gain.setTargetAtTime(0, t, .12); setTimeout(() => on || el.pause(), 700); }
+      return on;
+    },
+    next() { if (!ac) return; i = (i + 1) % SONGS.length; load(); if (on) el.play(); },
+    // the kick: a jump in the 40–170 Hz band, against the song's own running average
+    kick() {
+      if (!on) return 0;
+      const now = performance.now(); if (now - lastT < 4) return out; // (once a frame, however many callers)
+      const dt = Math.min(.1, (now - (lastT || now)) / 1000); lastT = now;
+      an.getByteFrequencyData(bins);
+      const bass = (bins[1] + bins[2] + bins[3]) / 765, flux = Math.max(0, bass - prevBass); prevBass = bass;
+      avgFlux += (flux - avgFlux) * .02;
+      k *= Math.exp(-dt * 7);
+      if (flux > Math.max(.06, avgFlux * 4) && now - lastHit > 320) { k = 1; lastHit = now; } // (at most ~190 bpm, so offbeat bass notes do not count)
+      const vol = Math.min(1, fade.gain.value / .85);
+      BANDS.forEach(([a, b], j) => { let t = 0; for (let x = a; x <= b; x++) t += bins[x]; lv[j] += (t / (b - a + 1) / 255 * vol - lv[j]) * .3; });
+      return out = k * vol;
+    },
+    meter(n) { if (!on) return null; return lv.slice(0, n).map(v => Math.min(1, Math.max(0, (v - .25) * 1.6))); },
   };
+  return api;
 })();
-const snd = $('#snd'), sndT = $('#sndT'), eqs = $$('#snd .eq i');
-snd.addEventListener('click', () => { const on = Sound.toggle(); snd.setAttribute('aria-pressed', on); sndT.textContent = on ? 'Sound on' : 'Sound off'; });
+const snd = $('#snd'), sndT = $('#sndT'), skip = $('#skip'), eqs = $$('#snd .eq i');
+let songLabel = '';
+Sound.onSong = s => { songLabel = `${s.title} · HoliznaCC0`; if (snd.getAttribute('aria-pressed') === 'true') sndT.textContent = songLabel; };
+snd.addEventListener('click', () => { const on = Sound.toggle(); snd.setAttribute('aria-pressed', on); sndT.textContent = on ? songLabel : 'Sound off'; skip.hidden = !on; });
+skip.addEventListener('click', () => Sound.next());
 
 // ============ downloads: the newest release, straight from GitHub (the 1.3.0 links stay if that fails) ============
 fetch('https://api.github.com/repos/volodya-rua/NetherFlow/releases/latest').then(r => r.ok ? r.json() : null).then(rel => {
@@ -720,7 +742,7 @@ let camU = 0, prevU = 0, vel = 0, mx = .5, my = .5, px = .5, py = .5, last0 = pe
 let portalI = -1, worldI = -1, uiW = undefined, railI = -1, lastWordLit = -2;
 addEventListener('pointermove', e => { if (e.pointerType === 'mouse') { px = e.clientX / innerWidth; py = e.clientY / innerHeight; } });
 addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); composer.setSize(innerWidth, innerHeight); });
-window.__nf = { jump(u) { goU(u, true); camU = prevU = u; }, get u() { return camU; },
+window.__nf = { sound: Sound, jump(u) { goU(u, true); camU = prevU = u; }, get u() { return camU; },
   bench(n = 20) { const g = renderer.getContext(), px = new Uint8Array(4); composer.render(); g.readPixels(0, 0, 1, 1, g.RGBA, g.UNSIGNED_BYTE, px); const t = performance.now(); for (let i = 0; i < n; i++) { composer.render(); g.readPixels(0, 0, 1, 1, g.RGBA, g.UNSIGNED_BYTE, px); } return +((performance.now() - t) / n).toFixed(2); } };
 
 function frame(ts) {
