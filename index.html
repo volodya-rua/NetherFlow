@@ -5723,11 +5723,17 @@ const tgCode = () => Array.from(crypto.getRandomValues(new Uint8Array(9)), x => 
 const tgShow = c => c.match(/.{1,3}/g).join('-');
 // connected through the first relay of the three (in an order the topic picks, so both ends try the same, and which one
 // it is says nothing more about the code) that answers
-async function tgConnect(code) {
+// (from: how many of them to pass over first — a guest that found no host on one moves on; see tgJoin)
+async function tgConnect(code, from = 0) {
   Object.assign(tg, await tgKeys(code), { code });
   const start = parseInt(tg.topic.slice(-4), 16) % TG_BROKERS.length;
-  for (let i = 0; i < TG_BROKERS.length; i++) {
-    try { return tg.conn = await tgMqtt(TG_BROKERS[(start + i) % TG_BROKERS.length], tg.topic, b => tgOpen(b).then(m => m && m.f !== tg.me && tgOnMsg(m)), () => tgDropped()); } catch {}
+  for (let i = from; i < TG_BROKERS.length; i++) {
+    try {
+      let c = null; // (one left on purpose, for another relay, isn't "the connection dropped")
+      c = await tgMqtt(TG_BROKERS[(start + i) % TG_BROKERS.length], tg.topic, b => tgOpen(b).then(m => m && m.f !== tg.me && tgOnMsg(m)), () => { if (tg.conn === c) tgDropped(); });
+      tg.relay = i;
+      return tg.conn = c;
+    } catch {}
   }
   throw new Error('no relay answered');
 }
@@ -5753,9 +5759,22 @@ async function tgJoin(code) {
   try { await tgConnect(code); } catch { return tgSetStatus('Couldn\'t reach the relay: check the connection and try again'); }
   Object.assign(tg, { role: 'guest', host: '', held: false, state: null, offs: [] });
   tgSend({ k: 'hi', n: tgName });
-  setTimeout(() => { if (tg.role === 'guest' && !tg.host) { tgSetStatus('No session with that code (or it\'s ended)'); tgLeave(true); } }, 9000);
   tgEvery(() => tgGuestTick(), 300);
   tgEvery(() => tg.host && tgSend({ k: 'ping', t0: Date.now() }), 3000); // (the clocks compared now and then, and "still here")
+  // No host answering: each end takes the first relay that answers it, so the host may be on a later one (its first
+  // didn't answer it): those in turn, and only then "no session". (ponytail: a host that can't be reached on any relay the
+  // guest reaches still isn't found; the host on every relay would fix that.)
+  const look = () => setTimeout(async () => {
+    if (tg.role !== 'guest' || tg.host) return;
+    const old = tg.conn;
+    if (tg.relay + 1 < TG_BROKERS.length) try {
+      await tgConnect(code, tg.relay + 1); old?.close();
+      if (tg.role === 'guest' && !tg.host) { tgSend({ k: 'hi', n: tgName }); look(); }
+      return;
+    } catch {}
+    tgSetStatus('No session with that code (or it\'s ended)'); tgLeave(true);
+  }, 7000);
+  look();
 }
 function tgEvery(fn, ms) { tg.timers.push(setInterval(fn, ms)); }
 function tgLeave(quiet) {
@@ -5782,10 +5801,12 @@ function tgGuestTick() {
   tg.applying = true;
   try {
     if (current?.trackId !== s.id) { const t = { ...s.track, ...(s.vid ? { ytId: s.vid } : {}) }; queue = [t]; tg.held = false; playTrack(t, '', false, true); return; }
-    if (!P.loaded || !P.dur || tg.held) return;
+    if (!P.loaded || tg.held) return;
     if (s.playing && P.paused) P.play();
     else if (!s.playing && !P.paused) P.pause();
-    if (Math.abs(P.t - target) > .45 && target < P.dur - 1) P.seek(Math.max(0, target));
+    // (only a jump needs the length: YouTube can know none till it plays, and waiting for it to press play kept a guest
+    // paused at 0:00 for the whole first song)
+    if (P.dur && Math.abs(P.t - target) > .45 && target < P.dur - 1) P.seek(Math.max(0, target));
   } finally { tg.applying = false; }
 }
 async function tgOnMsg(m) {
