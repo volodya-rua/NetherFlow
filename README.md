@@ -209,7 +209,7 @@ wants a workout. On a slower phone it steps down by itself, so it never lags.
   the link, and they paste it in NetherFlow's search. The songs ride inside the link itself, nothing gets uploaded
 - **Playlists you make together**: *Edit together*, send the link, and everyone with it adds, removes and renames, live.
   End-to-end encrypted, no account
-- **Phone ↔ PC sync**: liked songs, playlists, history and stats over your own Wi-Fi with a 6-number code
+- **Phone ↔ PC sync**: liked songs, playlists, history and stats over your own Wi-Fi with a 12-number code
 - **Discord status** (Windows): your song on your Discord profile, cover and progress and all
 
 ### 💻 On Windows & Linux · 📱 On Android · 📺 On your TV

@@ -59,7 +59,7 @@ kbd { font: inherit; border: 1px solid currentColor; border-radius: 3px; padding
 .tg-row { display: flex; gap: 10px; align-items: center; padding: 6px 12px; }
 .tg-row .name-in { flex: 1; min-width: 0; margin: 0; }
 .tg-code { display: flex; align-items: baseline; justify-content: space-between; padding: 6px 14px; }
-.tg-code b { font: 400 46px/1 var(--poster); letter-spacing: .08em; color: var(--a); }
+.tg-code b { font: 400 46px/1 var(--poster); letter-spacing: .08em; color: var(--a); white-space: nowrap; } /* (smaller when a theme's type is too wide: fitCode) */
 .tg-mem { padding: 9px 14px; border-bottom: 1px solid var(--hair); font-size: 14px; }
 .tg-reacts { display: flex; gap: 4px; padding: 10px 8px; }
 .tg-reacts .icon-btn { font-size: 22px; width: 44px; height: 44px; }
@@ -5700,12 +5700,15 @@ function tgMqtt(url, topic, onMsg, onDrop) {
     };
   });
 }
-// the code → the key and the topic (the code itself never leaves the device)
+// the code → the key and the topic (the code itself never leaves the device). Both the slow way (PBKDF2), from salts of
+// their own: anyone on a public relay sees every topic, and a fast hash of it would give the code away to a few minutes
+// of trying codes; this way each try costs as much as the key's.
 async function tgKeys(code) {
-  const base = await crypto.subtle.importKey('raw', tgEnc(code), 'PBKDF2', false, ['deriveKey']);
-  const key = await crypto.subtle.deriveKey({ name: 'PBKDF2', salt: tgEnc('netherflow-together-1'), iterations: 120000, hash: 'SHA-256' }, base, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
-  const h = new Uint8Array(await crypto.subtle.digest('SHA-256', tgEnc('nf-topic:' + code)));
-  return { key, topic: 'nf1/' + [...h.slice(0, 16)].map(x => x.toString(16).padStart(2, '0')).join('') };
+  const base = await crypto.subtle.importKey('raw', tgEnc(code), 'PBKDF2', false, ['deriveKey', 'deriveBits']);
+  const kdf = salt => ({ name: 'PBKDF2', salt: tgEnc(salt), iterations: 120000, hash: 'SHA-256' });
+  const [key, h] = await Promise.all([crypto.subtle.deriveKey(kdf('netherflow-together-2'), base, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']),
+    crypto.subtle.deriveBits(kdf('netherflow-topic-2'), base, 128)]);
+  return { key, topic: 'nf2/' + [...new Uint8Array(h)].map(x => x.toString(16).padStart(2, '0')).join('') };
 }
 async function tgSend(msg) {
   if (!tg.conn) return;
@@ -5716,12 +5719,13 @@ async function tgSend(msg) {
 async function tgOpen(bytes) {
   try { return JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: bytes.slice(0, 12) }, tg.key, bytes.slice(12)))); } catch { return null; } // (not ours: dropped)
 }
-const tgCode = () => Array.from(crypto.getRandomValues(new Uint8Array(8)), x => TG_ABC[x % TG_ABC.length]).join('');
-const tgShow = c => c.slice(0, 4) + '-' + c.slice(4);
-// connected through the first relay of the three (in an order the code picks, so both ends try the same) that answers
+const tgCode = () => Array.from(crypto.getRandomValues(new Uint8Array(9)), x => TG_ABC[x % TG_ABC.length]).join(''); // (~45 bits: years of a GPU's tries)
+const tgShow = c => c.match(/.{1,3}/g).join('-');
+// connected through the first relay of the three (in an order the topic picks, so both ends try the same, and which one
+// it is says nothing more about the code) that answers
 async function tgConnect(code) {
   Object.assign(tg, await tgKeys(code), { code });
-  const start = [...code].reduce((a, c) => a + c.charCodeAt(0), 0) % TG_BROKERS.length;
+  const start = parseInt(tg.topic.slice(-4), 16) % TG_BROKERS.length;
   for (let i = 0; i < TG_BROKERS.length; i++) {
     try { return tg.conn = await tgMqtt(TG_BROKERS[(start + i) % TG_BROKERS.length], tg.topic, b => tgOpen(b).then(m => m && m.f !== tg.me && tgOnMsg(m)), () => tgDropped()); } catch {}
   }
@@ -5744,7 +5748,7 @@ async function tgStart() {
 }
 async function tgJoin(code) {
   code = code.toUpperCase().replace(/[^A-Z0-9]/g, '');
-  if (code.length !== 8) return tgSetStatus('A code has 8 letters and numbers');
+  if (code.length !== 9) return tgSetStatus(code.length === 8 ? 'That code is from an older NetherFlow: whoever started it needs to update' : 'A code has 9 letters and numbers');
   tgSetStatus('Joining…');
   try { await tgConnect(code); } catch { return tgSetStatus('Couldn\'t reach the relay: check the connection and try again'); }
   Object.assign(tg, { role: 'guest', host: '', held: false, state: null, offs: [] });
@@ -5835,7 +5839,7 @@ function tgRender() {
     const name = el('input', 'name-in'); name.value = tgName; name.maxLength = 30; name.placeholder = 'Your name'; name.setAttribute('aria-label', 'Your name');
     name.onchange = () => { tgName = name.value.trim() || tgName; store.set('netherflow.tgname', tgName); };
     const start = el('button', 'pill', 'Start a session'); start.onclick = () => tgStart();
-    const code = el('input', 'name-in'); code.placeholder = 'Code (XXXX-XXXX)'; code.maxLength = 12; code.setAttribute('aria-label', 'Session code'); code.autocapitalize = 'characters';
+    const code = el('input', 'name-in'); code.placeholder = 'Code (XXX-XXX-XXX)'; code.maxLength = 12; code.setAttribute('aria-label', 'Session code'); code.autocapitalize = 'characters';
     const join = el('button', 'pill ghost', 'Join'); join.onclick = () => tgJoin(code.value);
     code.onkeydown = e => { if (e.key === 'Enter') tgJoin(code.value); };
     out.push(box('tg-row', name), box('tg-row', start), sectionHead('Have a code?'), box('tg-row', code, join));
@@ -5850,7 +5854,14 @@ function tgRender() {
     out.push(reacts, box('tg-row', leave));
   }
   if (tg.status) out.push(el('p', 'q-empty lbl tg-status', tg.status));
-  $('togetherPanel').replaceChildren(...out);
+  $('togetherPanel').replaceChildren(...out); fitCode($('togetherPanel'));
+}
+// a code to read out stays on one line, in every theme's type: smaller when it wouldn't fit beside what's next to it
+function fitCode(panel) {
+  const b = panel.querySelector('.tg-code b');
+  if (!b) return;
+  const cs = getComputedStyle(b.parentElement), room = b.parentElement.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) - (b.nextElementSibling ? b.nextElementSibling.offsetWidth + 12 : 0);
+  if (b.offsetWidth > room) b.style.fontSize = parseFloat(getComputedStyle(b).fontSize) * room / b.offsetWidth + 'px';
 }
 // ---------- playlists you edit together: a playlist shared by its link, that everyone who has it can add songs to, take
 // them out of and rename, on any phone or PC — kept in step through the same public relays as Listen together,
@@ -6052,18 +6063,21 @@ function collabStart() { library.playlists.filter(p => p.collab).forEach((p, i) 
 const SYNC_PORTS = [47321, 47322, 47323];
 let sy = null, syStatus = ''; // sy: the computer's open sync — { code, port, addrs, name }
 const b64of = u => { let s = ''; for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode(...u.subarray(i, i + 0x8000)); return btoa(s); };
+// The swap goes over plain HTTP, so someone on the same Wi-Fi who records it (or answers the phone's search in the
+// computer's place) can try codes against it at leisure: hence 12 numbers, and a million rounds to make a key from one —
+// a year or two of a GPU's tries, not seconds. (Made once a side: a moment's work.)
 async function syncKey(code) {
   const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(code), 'PBKDF2', false, ['deriveKey']);
-  return crypto.subtle.deriveKey({ name: 'PBKDF2', salt: new TextEncoder().encode('netherflow-sync-1'), iterations: 150000, hash: 'SHA-256' }, base, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+  return crypto.subtle.deriveKey({ name: 'PBKDF2', salt: new TextEncoder().encode('netherflow-sync-2'), iterations: 1000000, hash: 'SHA-256' }, base, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
 }
-async function syncSeal(code, obj) {
-  const iv = crypto.getRandomValues(new Uint8Array(12)), ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, await syncKey(code), new TextEncoder().encode(JSON.stringify(obj))));
+async function syncSeal(key, obj) {
+  const iv = crypto.getRandomValues(new Uint8Array(12)), ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, new TextEncoder().encode(JSON.stringify(obj))));
   const out = new Uint8Array(12 + ct.length); out.set(iv); out.set(ct, 12);
   return b64of(out);
 }
-async function syncUnseal(code, b64) { // (a wrong code: it throws)
+async function syncUnseal(key, b64) { // (a wrong code: it throws)
   const u = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
-  return JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: u.slice(0, 12) }, await syncKey(code), u.slice(12))));
+  return JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: u.slice(0, 12) }, key, u.slice(12))));
 }
 const syncExport = () => ({ v: 1, dev: deviceId, name: native ? 'your phone' : 'your computer', liked: library.liked, playlists: library.playlists, hist: hist.tracks,
   stats: { dev: deviceId, mine: stats.mine, others: stats.others } });
@@ -6095,18 +6109,18 @@ function syncMerge(x) {
 const syncSaid = (name, got) => `Synced with ${name}: ` + (got.liked || got.lists ? [got.liked && `${got.liked} liked song${got.liked > 1 ? 's' : ''}`, got.lists && `${got.lists} playlist${got.lists > 1 ? 's' : ''}`].filter(Boolean).join(' and ') + ' new here' : 'all up to date');
 // the computer: open for 5 minutes, a code on the screen
 async function syncHost() {
-  const code = String(100000 + crypto.getRandomValues(new Uint32Array(1))[0] % 900000), at = await netherflowApp.syncOpen();
+  const code = Array.from(crypto.getRandomValues(new Uint32Array(12)), x => x % 10).join(''), [key, at] = await Promise.all([syncKey(code), netherflowApp.syncOpen()]);
   if (!at) { syStatus = 'Couldn\'t open the sync (another app has its network port): try again'; return syncRender(); }
-  sy = { code, ...at }; syStatus = ''; syncRender();
+  sy = { code, key, ...at }; syStatus = ''; syncRender();
 }
 if (window.netherflowApp?.onSyncIn) netherflowApp.onSyncIn(async (id, data) => {
   if (!id) { sy = null; syStatus = 'The sync closed (5 minutes)'; return syncRender(); }
   if (!sy) return netherflowApp.syncOut(id, { error: 'closed' });
-  const code = sy.code;
+  const key = sy.key;
   let x;
-  try { x = await syncUnseal(code, data); } catch { netherflowApp.syncOut(id, { error: 'wrong code' }); syStatus = 'A phone tried a code that isn\'t this one'; return syncRender(); }
+  try { x = await syncUnseal(key, data); } catch { netherflowApp.syncOut(id, { error: 'wrong code' }); syStatus = 'A phone tried a code that isn\'t this one'; return syncRender(); }
   const got = syncMerge(x);
-  netherflowApp.syncOut(id, { data: await syncSeal(code, syncExport()) });
+  netherflowApp.syncOut(id, { data: await syncSeal(key, syncExport()) });
   syStatus = syncSaid(x.name || 'your phone', got); toast(syStatus);
   setTimeout(() => { netherflowApp.syncClose(); sy = null; syncRender(); }, 1500);
   syncRender();
@@ -6114,8 +6128,9 @@ if (window.netherflowApp?.onSyncIn) netherflowApp.onSyncIn(async (id, data) => {
 // the phone: the computer found on the Wi-Fi (every address of this network, on the sync's port), and the swap
 async function syncJoin(code) {
   code = code.replace(/\D/g, '');
-  if (code.length !== 6) { syStatus = 'The code on the computer has 6 numbers'; return syncRender(); }
+  if (code.length !== 12) { syStatus = code.length === 6 ? 'That code is from an older NetherFlow: update it on the computer' : 'The code on the computer has 12 numbers'; return syncRender(); }
   syStatus = 'Looking for your computer…'; syncRender();
+  const key = syncKey(code); // (made while the computer's looked for)
   let ip = '';
   try { ip = (await Capacitor.Plugins.Net.wifi()).ip; } catch {}
   if (!/^\d+\.\d+\.\d+\.\d+$/.test(ip)) { syStatus = 'Connect this phone to the same Wi-Fi as the computer'; return syncRender(); }
@@ -6130,11 +6145,11 @@ async function syncJoin(code) {
   const pc = found[0];
   syStatus = `Syncing with ${pc.name}…`; syncRender();
   try {
-    const r = await H.post({ url: `http://${pc.h}:${pc.port}/nf-sync/swap`, headers: { 'Content-Type': 'text/plain' }, data: await syncSeal(code, syncExport()), responseType: 'json', connectTimeout: 5000, readTimeout: 90000 });
+    const r = await H.post({ url: `http://${pc.h}:${pc.port}/nf-sync/swap`, headers: { 'Content-Type': 'text/plain' }, data: await syncSeal(await key, syncExport()), responseType: 'json', connectTimeout: 5000, readTimeout: 90000 });
     const d = typeof r.data === 'string' ? JSON.parse(r.data) : r.data;
     if (r.status === 403) syStatus = 'The computer says that code isn\'t its code';
     else if (r.status !== 200 || !d?.data) syStatus = 'The sync didn\'t go through: try again';
-    else { const x = await syncUnseal(code, d.data); syStatus = syncSaid(pc.name, syncMerge(x)); toast(syStatus); }
+    else { const x = await syncUnseal(await key, d.data); syStatus = syncSaid(pc.name, syncMerge(x)); toast(syStatus); }
   } catch { syStatus = 'The sync didn\'t go through: try again'; }
   syncRender();
 }
@@ -6143,12 +6158,12 @@ function syncRender() {
   const out = [sectionHead(native ? 'Sync with your computer' : 'Sync with your phone')];
   if (native) {
     out.push(el('p', 'q-empty lbl', 'Your liked songs, playlists, history and stats, swapped with NetherFlow on your computer over your Wi-Fi: no account. On the computer: Settings › Sync with phone, then type the code it shows.'));
-    const code = el('input', 'name-in'); code.inputMode = 'numeric'; code.maxLength = 7; code.placeholder = '6-number code'; code.setAttribute('aria-label', 'The code on the computer');
+    const code = el('input', 'name-in'); code.inputMode = 'numeric'; code.maxLength = 18; code.placeholder = '12-number code'; code.setAttribute('aria-label', 'The code on the computer');
     const go = el('button', 'pill', 'Sync'); go.onclick = () => syncJoin(code.value);
     code.onkeydown = e => { if (e.key === 'Enter') syncJoin(code.value); };
     out.push(box('tg-row', code, go));
   } else if (sy) {
-    out.push(box('tg-code', el('b', '', sy.code.slice(0, 3) + ' ' + sy.code.slice(3))),
+    out.push(box('tg-code', el('b', '', sy.code.match(/.{3}/g).join(' '))),
       el('p', 'q-empty lbl', 'On your phone: Settings › Sync with computer, and type this code. Both on the same Wi-Fi. (If Windows asks, let NetherFlow use private networks.)'),
       el('p', 'q-empty lbl', `This computer: ${sy.name} · ${sy.addrs.join(', ') || 'no network'} · open for 5 minutes`));
     const stop = el('button', 'pill ghost', 'Cancel'); stop.onclick = () => { netherflowApp.syncClose(); sy = null; syStatus = ''; syncRender(); };
@@ -6159,7 +6174,7 @@ function syncRender() {
     out.push(box('tg-row', go));
   }
   if (syStatus) out.push(el('p', 'q-empty lbl tg-status', syStatus));
-  $('syncPanel').replaceChildren(...out);
+  $('syncPanel').replaceChildren(...out); fitCode($('syncPanel'));
 }
 // ---------- Android extras: the line being sung on the lock screen (and the widget, and a car's display); liked songs
 // saved for offline by themselves, on Wi-Fi ----------
@@ -7124,7 +7139,7 @@ $('closeAbout').onclick = () => $('about').close();
 // Links inside legal.html open in the real browser (legal.html calls this through window.parent).
 window.openExternal = url => native ? (location.href = url) : window.open(url, '_blank', 'noopener');
 
-const TERMS = 'netherflow.terms', TERMS_VERSION = '2026-10-16.1'; // bump when the terms change: everyone is asked again (and run npm run site:legal for the website's copy)
+const TERMS = 'netherflow.terms', TERMS_VERSION = '2026-10-16.2'; // bump when the terms change: everyone is asked again (and run npm run site:legal for the website's copy)
 if (store.get(TERMS) !== TERMS_VERSION) { $('consent').showModal(); placeWinctl(); }
 // its usual port taken (see main.js): the library and settings are kept under that one, so here all looks new; said so
 if (window.netherflowApp?.portMoved) setTimeout(() => { toast('Something else is using NetherFlow\'s port, so your library and settings aren\'t shown. Close it (or another NetherFlow) and open NetherFlow again.'); clearTimeout(toastTimer); toastTimer = setTimeout(() => $('toast').hidePopover(), 15000); }, 1500);

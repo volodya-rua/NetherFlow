@@ -19,7 +19,7 @@ NetherFlow is a free, open-source music player with a look of its own. Search an
 <li>Playlists you edit together: send the link, and everyone who has it can add, remove and rename songs, live, end-to-end encrypted</li>
 <li>Your stats: minutes, plays, a streak, top songs, artists and genres, and a card to share</li>
 <li>Listen together: up to 10 people hear the same song at the same moment, end-to-end encrypted</li>
-<li>Phone ↔ PC sync of your library over your own Wi-Fi, with a 6-number code and no account</li>
+<li>Phone ↔ PC sync of your library over your own Wi-Fi, with a 12-number code and no account</li>
 <li>Works on Android TV and Google TV, with the remote</li>
 <li>A home-screen widget, lyrics on the lock screen, and liked songs saved for offline on Wi-Fi by themselves</li>
 <li>Liked songs, playlists, queue and history</li>
