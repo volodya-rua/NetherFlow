@@ -1,0 +1,33 @@
+# NetherFlow - Copyright (C) 2026 Volodya.rua - GNU GPL v3 only, with additional terms (credit, name and logo): see LICENSE and NOTICE.
+# A copy of the code outside GitHub, at gitlab.com/Volodya.rua/NetherFlow: every push to main and every release tag is
+# pushed there too, history and all, so the code stays public if this repo is ever taken down. It needs the secret
+# GITLAB_MIRROR_TOKEN: a GitLab project access token for that project (role Maintainer, scope write_repository).
+name: Mirror to GitLab
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency: mirror
+
+jobs:
+  mirror:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Push main and the tags to GitLab
+        env:
+          TOKEN: ${{ secrets.GITLAB_MIRROR_TOKEN }}
+        run: |
+          [ -n "$TOKEN" ] || { echo "::error::The secret GITLAB_MIRROR_TOKEN isn't set"; exit 1; }
+          url="https://oauth2:${TOKEN}@gitlab.com/Volodya.rua/NetherFlow.git"
+          git push --force "$url" origin/main:refs/heads/main
+          git push --force "$url" --tags
