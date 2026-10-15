@@ -1,3 +1,4 @@
+// NetherFlow - Copyright (C) 2026 Volodya.rua - GNU GPL v3 only, with additional terms (credit, name and logo): see LICENSE and NOTICE.
 // Shared by the desktop app's server (Node) and the Android app (inside the page): keyless YouTube
 // search and word-by-word lyric timing. Each takes get(url, headers) → Promise<string>, so each side
 // brings its own HTTP (Node's fetch on desktop, native HTTP on Android — a browser page can't do it).

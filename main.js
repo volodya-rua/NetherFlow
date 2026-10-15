@@ -1,3 +1,4 @@
+// NetherFlow - Copyright (C) 2026 Volodya.rua - GNU GPL v3 only, with additional terms (credit, name and logo): see LICENSE and NOTICE.
 // NetherFlow desktop app: a window around the player page, served by the built-in server
 // (YouTube's player won't run on file:// pages), with YouTube ads skipped automatically.
 const { app, BrowserWindow, session, webFrameMain, shell, ipcMain, powerSaveBlocker, screen, powerMonitor } = require('electron');

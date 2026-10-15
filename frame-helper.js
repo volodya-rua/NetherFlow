@@ -1,3 +1,4 @@
+// NetherFlow - Copyright (C) 2026 Volodya.rua - GNU GPL v3 only, with additional terms (credit, name and logo): see LICENSE and NOTICE.
 // Runs inside YouTube's player frame, injected by the NetherFlow app (desktop: main.js, Android: MainActivity).
 //  1. Ads: if an ad still shows, jump to its end and press Skip ("ad-showing" is set while an ad plays).
 //  2. Equalizer and volume booster: the NetherFlow page sends band gains and a boost (1…2); they're applied to the

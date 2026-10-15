@@ -1,3 +1,4 @@
+# NetherFlow - Copyright (C) 2026 Volodya.rua - GNU GPL v3 only, with additional terms (credit, name and logo): see LICENSE and NOTICE.
 # NetherFlow (Android): saving a song for offline — yt-dlp downloads its audio from its YouTube upload, as YouTube has
 # it (usually Opus in WebM). Called by YtDlPlugin.java.
 #

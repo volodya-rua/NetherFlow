@@ -1,3 +1,4 @@
+// NetherFlow - Copyright (C) 2026 Volodya.rua - GNU GPL v3 only, with additional terms (credit, name and logo): see LICENSE and NOTICE.
 // A self-check for lib.qr, the QR codes of shared playlists:  node tools/qr-check.js
 // Each code below was checked once against an independent encoder (the qrcode package, module for module) and decoder
 // (jsQR); this keeps them from changing by accident. A change on purpose: check again, then update the fingerprints.

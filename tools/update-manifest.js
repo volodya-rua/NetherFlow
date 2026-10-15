@@ -1,3 +1,4 @@
+// NetherFlow - Copyright (C) 2026 Volodya.rua - GNU GPL v3 only, with additional terms (credit, name and logo): see LICENSE and NOTICE.
 // A release's Android update file (the app's Settings › Update): update.json, uploaded to the GitHub release with the APK.
 //   node tools/update-manifest.js <the release APK> [out file, default dist/update.json]
 // Run at the release's commit (its tag v<version>, pushed). It lists the page's files — those `npm run android:web` puts

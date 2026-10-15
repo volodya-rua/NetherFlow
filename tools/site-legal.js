@@ -1,5 +1,6 @@
+// NetherFlow - Copyright (C) 2026 Volodya.rua - GNU GPL v3 only, with additional terms (credit, name and logo): see LICENSE and NOTICE.
 // The website's copy of the in-app Terms, Privacy & Licenses page (docs/legal.html), so the policy has a public address
-// that shows as a page, not as source. Run it after changing legal.html:  npm run site:legal
+// that shows as a page, not as source. Run it after changing legal.html or NOTICE:  npm run site:legal
 const fs = require('fs');
 const FONTS = '<link rel="stylesheet" href="fonts/fonts.css">';
 let s = fs.readFileSync('legal.html', 'utf8');
@@ -9,4 +10,5 @@ s = s.replace(FONTS, '<style>' + // (the website's own copies of the two typefac
   '@font-face { font-family: "Martian Mono"; src: url(fonts/MartianMono-latin.woff2) format("woff2"); font-weight: 100 800; font-display: swap; }</style>')
   .replaceAll('href="licenses/', 'href="https://github.com/volodya-rua/NetherFlow/blob/main/licenses/'); // (not on the website)
 fs.writeFileSync('docs/legal.html', s);
+fs.copyFileSync('NOTICE', 'licenses/NetherFlow-NOTICE.txt'); // (the app's copy of the license's additional terms)
 console.log('docs/legal.html written');

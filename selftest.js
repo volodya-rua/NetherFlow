@@ -1,3 +1,4 @@
+// NetherFlow - Copyright (C) 2026 Volodya.rua - GNU GPL v3 only, with additional terms (credit, name and logo): see LICENSE and NOTICE.
 // Smoke test for the desktop app:  npx electron selftest.js
 // Opens the app muted, searches and plays a song, then prints what it found and quits.
 const { app } = require('electron');

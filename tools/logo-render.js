@@ -1,3 +1,4 @@
+// NetherFlow - Copyright (C) 2026 Volodya.rua - GNU GPL v3 only, with additional terms (credit, name and logo): see LICENSE and NOTICE.
 // Renders NetherFlow's logo: a black vinyl record melting — its lower half sagging back as if draped over an edge, and
 // dripping, one drop falling free — Dalí's melting clocks, for music. Dark, no glow: only studio light, catching the
 // grooves (vinyl's sheen) and the wet edges of the melt; one colour, the label.

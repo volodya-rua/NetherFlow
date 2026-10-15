@@ -1,3 +1,4 @@
+// NetherFlow - Copyright (C) 2026 Volodya.rua - GNU GPL v3 only, with additional terms (credit, name and logo): see LICENSE and NOTICE.
 // NetherFlow's built-in server, started by the desktop app (main.js). `node server.js` also runs it alone.
 //  1. Serves the page on localhost. YouTube's player refuses to run on file:// pages.
 //  2. /api/yt?q=… searches YouTube with no API key; /api/ytm?q=… searches YouTube Music's songs (the album recordings).

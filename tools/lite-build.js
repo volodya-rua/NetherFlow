@@ -1,3 +1,4 @@
+// NetherFlow - Copyright (C) 2026 Volodya.rua - GNU GPL v3 only, with additional terms (credit, name and logo): see LICENSE and NOTICE.
 // NetherFlow Lite for Windows: everything but Extreme+ (no Redline theme, its 3D race, three.js, the circuits' maps or
 // the cars: about 18 MB smaller). Its own file names, and its own update channel (lite.yml), so a Lite install updates
 // to Lite. The app knows it's Lite from package.json's "lite" (main.js), and tells the page (preload.js).

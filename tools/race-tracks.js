@@ -1,3 +1,4 @@
+// NetherFlow - Copyright (C) 2026 Volodya.rua - GNU GPL v3 only, with additional terms (credit, name and logo): see LICENSE and NOTICE.
 // Builds race/tracks.json, the circuits Redline's 3D races are driven on (desktop, Extreme+), from real map data:
 //  - the layout: each circuit's relation (type=circuit) in OpenStreetMap, © OpenStreetMap contributors, ODbL 1.0
 //  - the heights: NASA's SRTM (30 m, public domain) through OpenTopoData's API

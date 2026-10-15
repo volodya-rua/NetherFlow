@@ -1,3 +1,4 @@
+// NetherFlow - Copyright (C) 2026 Volodya.rua - GNU GPL v3 only, with additional terms (credit, name and logo): see LICENSE and NOTICE.
 // Redline's 3D races (the desktop app, on Extreme+): real circuits — their layouts and heights (tracks.json) and what's
 // round them (maps/: the ground, forests, buildings, grandstands, barriers, roads; all from OpenStreetMap, ODbL) — at
 // night under floodlights, with real cars (cars.json: CC-BY models from Sketchfab, credited in legal.html) racing each

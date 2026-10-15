@@ -1,3 +1,4 @@
+// NetherFlow - Copyright (C) 2026 Volodya.rua - GNU GPL v3 only, with additional terms (credit, name and logo): see LICENSE and NOTICE.
 // Downloads the yt-dlp.exe that the Windows app ships with (vendor/yt-dlp/yt-dlp.exe), from yt-dlp's official
 // release, and checks it against the release's published SHA-256 before keeping it. Run: npm run fetch-yt-dlp
 // To move to a newer yt-dlp: change VERSION and SHA256 (both from https://github.com/yt-dlp/yt-dlp/releases).

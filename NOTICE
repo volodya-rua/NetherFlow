@@ -1,0 +1,73 @@
+NetherFlow
+Copyright (C) 2026 Volodya.rua
+
+NetherFlow is free software: you can redistribute it and/or modify it under the terms
+of the GNU General Public License, version 3 only, as published by the Free Software
+Foundation, together with the additional terms below. The license's full text is in
+LICENSE.
+
+NetherFlow is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+NetherFlow 1.3.1 and earlier were released under the MIT License. Copies of those
+versions keep it; everything after them is under the license above.
+
+-------------------------------------------------------------------------------------
+Additional terms, under section 7 of the GNU General Public License version 3
+-------------------------------------------------------------------------------------
+
+These terms apply to NetherFlow's own code, design and artwork, and to every copy and
+every modified version of them, in source or in any built form (app, installer,
+website).
+
+1. Author credit (section 7(b)). Every copy and every modified version must keep
+   this author attribution, and show it in the Appropriate Legal Notices it displays
+   to its users (in an app: on its About, credits or licenses screen):
+
+       NetherFlow by Volodya.rua - https://github.com/volodya-rua/NetherFlow
+
+   A modified version may show it as "Based on NetherFlow by Volodya.rua", with the
+   same link.
+
+2. A name and icon of its own (section 7(c)). A modified version must be marked as
+   different from the original: it must use a name, and an icon or logo, of its own,
+   neither NetherFlow's nor confusingly similar to them, and it must not claim or
+   suggest that it is NetherFlow or that Volodya.rua made or approved it. It may say
+   truthfully that it is based on NetherFlow, as term 1 asks.
+
+3. No endorsement (section 7(d)). The name Volodya.rua may not be used to publicize,
+   promote or endorse a modified version, beyond the credit term 1 requires.
+
+4. No trademark rights (section 7(e)). This license grants no rights under trademark
+   law to the name NetherFlow, its logos and icons, or the name Volodya.rua. They
+   identify the original NetherFlow and its author. Naming NetherFlow truthfully as
+   the origin of a work, as term 1 requires, is allowed.
+
+-------------------------------------------------------------------------------------
+Third-party material
+-------------------------------------------------------------------------------------
+
+The license above covers NetherFlow's own code, design and artwork. Third-party
+material in this repository keeps its own license and is not covered by it:
+
+  android/app/src/main/python/yt_dlp/    yt-dlp: The Unlicense (public domain)
+  android/app/src/main/python/certifi/   certifi: Mozilla Public License 2.0
+  fonts/ and docs/fonts/                 the typefaces: SIL Open Font License 1.1,
+                                         except Permanent Marker, Special Elite and
+                                         Yellowtail: Apache License 2.0
+  emoji/                                 Microsoft's Fluent Emoji: MIT
+  race/three/                            three.js: MIT
+  race/tracks.json and race/maps/        made from map data © OpenStreetMap
+                                         contributors: Open Database License 1.0
+  race/cars/                             the 3D car models: Creative Commons
+                                         Attribution 4.0, by the authors named in
+                                         race/cars.json
+  docs/media/music/                      songs by HoliznaCC0: public domain (CC0 1.0)
+
+Their license texts are in licenses/. The full list of components and licenses is in
+the app (About › Licenses), in legal.html, and on the website:
+https://volodya-rua.github.io/NetherFlow/legal.html#licenses
+
+NetherFlow's license gives no rights to anyone else's trademarks, music, videos,
+lyrics or artwork, including the names and designs of the cars in race/cars/.

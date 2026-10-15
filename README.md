@@ -6,7 +6,7 @@
   <a href="https://github.com/volodya-rua/NetherFlow/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/volodya-rua/NetherFlow?style=for-the-badge&label=latest&color=ff4a1c&labelColor=160a06"></a>
   <img alt="Windows and Android" src="https://img.shields.io/badge/Windows%20%C2%B7%20Android-f6ede4?style=for-the-badge&labelColor=160a06">
   <img alt="Free, no ads, no account" src="https://img.shields.io/badge/free%20%C2%B7%20no%20ads%20%C2%B7%20no%20account-ffb21e?style=for-the-badge&labelColor=160a06">
-  <a href="LICENSE"><img alt="MIT License" src="https://img.shields.io/badge/license-MIT-f6ede4?style=for-the-badge&labelColor=160a06"></a>
+  <a href="LICENSE"><img alt="GPL v3 License" src="https://img.shields.io/badge/license-GPL%20v3-f6ede4?style=for-the-badge&labelColor=160a06"></a>
   <br>
   <a href="#hucla"><img alt="A HuCla build: Human × Claude" src="https://img.shields.io/badge/HuCla-Human%20%C3%97%20Claude-d97757?style=for-the-badge&logo=claude&logoColor=white&labelColor=160a06"></a>
   <a href="https://www.instagram.com/volodya.rua/"><img alt="Instagram @volodya.rua" src="https://img.shields.io/badge/Instagram-@volodya.rua-e1306c?style=for-the-badge&logo=instagram&logoColor=white&labelColor=160a06"></a>
@@ -298,7 +298,7 @@ catalog, sound, discovery and devices. Here's the deep version 👇
 | | NetherFlow | Spotify | Apple Music | YouTube Music |
 |:--|:--|:--|:--|:--|
 | Tracking | ✅ none, no analytics at all | ⚠️ your listening shapes ads (free) and suggestions | ⚠️ your listening shapes suggestions | ⚠️ tied to your whole Google account |
-| Open source | ✅ MIT | ❌ | ❌ | ❌ |
+| Open source | ✅ GPL v3 | ❌ | ❌ | ❌ |
 | **Score** | **10** | 4 | 7 | 3 |
 </details>
 
@@ -451,8 +451,16 @@ GitHub Pages, never gets the songs part). The full [Privacy Policy](https://volo
 
 ## 📄 License
 
-NetherFlow is © 2026 Volodya.rua and released under the [MIT License](LICENSE). If you publish a changed version,
-please give it a different name and icon so nobody mistakes it for the original.
+NetherFlow is © 2026 Volodya.rua and released under the [GNU General Public License v3](LICENSE), with a few additional
+terms in [NOTICE](NOTICE):
+
+- **Use it, change it, share it.** Anyone can, as long as their version stays open source under the same license
+- **Keep the credit.** Every copy and every changed version shows "NetherFlow by Volodya.rua", with a link here, in
+  its credits
+- **A name and logo of its own.** A changed version needs its own name and icon. The NetherFlow name and logo aren't
+  licensed to anyone
+
+NetherFlow 1.3.1 and earlier came out under the MIT License, and copies of those keep it.
 
 Third-party code in this repository keeps its own license: yt-dlp (The Unlicense) and certifi (MPL 2.0) in
 `android/app/src/main/python/`, the 27 typefaces in `fonts/` (SIL Open Font License 1.1; Permanent Marker, Special
