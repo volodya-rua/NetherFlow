@@ -13,9 +13,12 @@ contextBridge.exposeInMainWorld('netherflowApp', {
   ytdl: (id, key) => ipcRenderer.invoke('ytdl', { id, key }),
   ytdlCancel: key => ipcRenderer.send('ytdl-cancel', key),
   onYtdlProgress: cb => ipcRenderer.on('ytdl-progress', (_, m) => cb(m)), // { key, frac }
-  // the island (see main.js): what's playing, ~30 times a second (null: nothing), and what's pressed on it
-  island: state => ipcRenderer.send('island-state', state),
-  onIsland: cb => ipcRenderer.on('island-cmd', (_, cmd, v) => cb(cmd, v)),
+  // the island (see main.js): what's playing, ~30 times a second (null: nothing), and what's pressed on it. Windows only:
+  // with neither, the page shows no island settings
+  ...(process.platform === 'win32' ? {
+    island: state => ipcRenderer.send('island-state', state),
+    onIsland: cb => ipcRenderer.on('island-cmd', (_, cmd, v) => cb(cmd, v)),
+  } : {}),
   // Discord "Now playing" (see main.js): the song as it plays ({ title, artist, album, art, start, end, url }), or null
   presence: w => ipcRenderer.send('presence', w),
   // phone ↔ PC sync (see main.js): open the local server → { port, addrs, name }; what a phone sends (encrypted) comes in

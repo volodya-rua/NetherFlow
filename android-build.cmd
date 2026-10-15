@@ -1,4 +1,5 @@
 @echo off
+rem NetherFlow - Copyright (C) 2026 Volodya.rua - GNU GPL v3 only, with additional terms (credit, name and logo): see LICENSE and NOTICE.
 rem Builds the Android app into dist\NetherFlow.apk, signed with the key in %USERPROFILE%\.netherflow-signing (see README).
 rem Needs Java 21 (looked up in %USERPROFILE%\.jdks) and the Android SDK.
 setlocal

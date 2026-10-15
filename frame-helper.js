@@ -23,7 +23,7 @@
   let app = null, eq = null, ctx = null, bands = null, wired = null, meta = null, sentLat = null, analyser = null, wantViz = false, spec = null;
   let boost = null, limiter = null, port = null, src = null, path = null, tinyFor = null, sing = null; // port: the page's channel for the spectrum, when it gave one
   // read-only status, for checking the equalizer from developer tools / tests
-  window.__nfHelper = { gains: () => bands && bands.map(b => b.gain.value), audio: () => (ctx ? ctx.state : 'untouched'), boost: () => boost && boost.gain.value, path: () => path,
+  window.__nfHelper = { gains: () => bands && bands.map(b => b.gain.value), audio: () => (ctx ? ctx.state : 'untouched'), boost: () => boost && boost.gain.value, path: () => path, hp: () => hpNodes.map(n => n.type ? n.type + ' ' + Math.round(n.frequency.value) : 'pre ' + n.gain.value.toFixed(3)),
     edit: () => ed && { off: !!ed.off, cut: ed.cut, size: ed.cv.width + 'x' + ed.cv.height, drawn: Math.round(ed.drawn), asked: Math.round(edAt), err: ed.err || null } };
 
   // The sound's path once the equalizer, booster or beat visuals want it: video → equalizer bands → analyser → boost →
@@ -49,9 +49,28 @@
     m2.connect(out, 0, 0); m2.connect(out, 0, 1); side.connect(out, 0, 0); side.connect(sNeg); sNeg.connect(out, 0, 1);
     return { inp, out, set: a => { const t = c.currentTime; keep.gain.setTargetAtTime(1 - a, t, .05); lowG.gain.setTargetAtTime(a, t, .05); highG.gain.setTargetAtTime(a * .7, t, .05); } };
   }
+  // Headphone correction (eq.hp: { pre: dB, f: [[type, Hz, dB, Q], …] }, AutoEQ's measured correction for the listener's
+  // headphones): a preamp and its filters, ahead of the bands. Made again only when the headphones change.
+  let hpNodes = [], hpSig = '';
+  function hpChain() {
+    const want = eq && eq.hp && Array.isArray(eq.hp.f) && eq.hp.f.length ? eq.hp : null, sig = want ? JSON.stringify(want) : '';
+    if (sig === hpSig) return hpNodes;
+    hpSig = sig; path = null; // (a new chain: wired in again below)
+    for (const n of hpNodes) n.disconnect();
+    hpNodes = [];
+    if (!want) return hpNodes;
+    const pre = ctx.createGain();
+    pre.gain.value = Math.pow(10, Math.max(-20, Math.min(0, +want.pre || 0)) / 20);
+    hpNodes = [pre, ...want.f.slice(0, 12).filter(x => ['lowshelf', 'highshelf', 'peaking'].includes(x[0])).map(([type, f, g, q]) => {
+      const b = ctx.createBiquadFilter();
+      b.type = type; b.frequency.value = f; b.gain.value = g; b.Q.value = q;
+      return b;
+    })];
+    return hpNodes;
+  }
   function wireEq() {
     const v = document.querySelector('video');
-    if (!v || (!(eq && (eq.on || eq.boost > 1 || eq.orig || eq.sing > 0)) && !wantViz && !ctx)) return;
+    if (!v || (!(eq && (eq.on || eq.boost > 1 || eq.orig || eq.sing > 0 || eq.hp)) && !wantViz && !ctx)) return;
     if (!ctx) {
       // (playback: the larger buffers meant for music — with the smallest, a phone busy drawing misses one now and then:
       // a crack or a pop. The extra delay is measured and the lyrics wait for it: see nfLatency below)
@@ -90,12 +109,14 @@
     to(limiter.threshold, g > 1 ? -1 : 0); // not boosted by the slider, only what would clip anyway is touched
     const singing = eq && eq.sing > 0 ? Math.min(1, eq.sing) : 0;
     sing.set(singing);
-    const key = (useEq ? 'eq' : '') + (up ? '+boost' : '') + (singing ? '+sing' : '');
+    const hpc = hpChain();
+    const key = [hpc.length && 'hp', useEq && 'eq', up && 'boost', singing && 'sing'].filter(Boolean).join('+');
     if (key === path) return;
     path = key;
-    for (const n of [src, ...bands, sing.out, analyser, boost, limiter]) n.disconnect();
-    // (the limiter also while the equalizer's on: a band turned up can take the loudest peaks past full scale)
-    [src, ...(useEq ? bands : []), ...(singing ? [sing] : []), analyser, ...(up ? [boost] : []), ...(useEq || up ? [limiter] : []), ctx.destination].reduce((a, b) => (a.connect(b.inp || b), b.out || b));
+    for (const n of [src, ...hpc, ...bands, sing.out, analyser, boost, limiter]) n.disconnect();
+    // (the limiter also while the equalizer's or the headphones' correction is on: a band turned up can take the loudest
+    // peaks past full scale)
+    [src, ...hpc, ...(useEq ? bands : []), ...(singing ? [sing] : []), analyser, ...(up ? [boost] : []), ...(useEq || up || hpc.length ? [limiter] : []), ctx.destination].reduce((a, b) => (a.connect(b.inp || b), b.out || b));
   }
   // The spectrum, measured as if at full volume: the player's volume (and YouTube's loudness levelling) is
   // applied before the analyser, so its range shifts by the same amount and the visuals don't shrink with it.

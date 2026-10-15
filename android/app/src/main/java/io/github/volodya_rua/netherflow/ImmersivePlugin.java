@@ -93,6 +93,16 @@ public class ImmersivePlugin extends Plugin {
         call.resolve();
     }
 
+    // a TV (Android TV, Google TV, a TV box): the page is worked with the remote's arrows → { tv }
+    @PluginMethod
+    public void tv(PluginCall call) {
+        android.app.UiModeManager ui = (android.app.UiModeManager) getContext().getSystemService(android.content.Context.UI_MODE_SERVICE);
+        JSObject r = new JSObject();
+        r.put("tv", ui != null && ui.getCurrentModeType() == android.content.res.Configuration.UI_MODE_TYPE_TELEVISION
+            || getContext().getPackageManager().hasSystemFeature(android.content.pm.PackageManager.FEATURE_LEANBACK));
+        call.resolve(r);
+    }
+
     @PluginMethod
     public void enter(PluginCall call) { setFull(true); call.resolve(); }
 

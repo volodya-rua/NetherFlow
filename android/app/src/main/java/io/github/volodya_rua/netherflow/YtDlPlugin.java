@@ -10,6 +10,11 @@ import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -20,7 +25,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 // Saving for offline: yt-dlp (Python, run by Chaquopy; see src/main/python/nf_dl.py) downloads a song's audio from
 // its YouTube upload, as YouTube has it. The page reads the file (convertFileSrc), keeps it, and has it removed.
 //   download({ id, key }) → { path, ext, dur }   ·   events "progress" { key, frac }
-//   cancel({ key })   ·   remove({ path })   ·   setUpdates({ on })
+//   cancel({ key })   ·   remove({ path })   ·   setUpdates({ on })   ·   file({ url, key }): a podcast's own file (below)
 // Only if the user turns on "Update the downloader" (setUpdates; off till the page says so): yt-dlp looks for a newer
 // release of itself once a day, and when a download fails (YouTube changes things). Off, it's the one in the app.
 @CapacitorPlugin(name = "YtDl")
@@ -120,6 +125,58 @@ public class YtDlPlugin extends Plugin {
                 if (left != null) for (File f : left) f.delete();
                 call.reject(cancelled.containsKey(key) ? "cancelled" : message(e));
             } finally {
+                cancelled.remove(key);
+            }
+        });
+    }
+
+    // A podcast episode's or audiobook chapter's own file, as its host has it (no yt-dlp: it's a plain file). Redirects
+    // followed by hand, so http → https ones (podcast hosts' trackers) work too; everything asked of https.
+    //   file({ url, key }) → { path, type }   ·   events "progress" { key, frac }   ·   cancel({ key })
+    @PluginMethod
+    public void file(PluginCall call) {
+        String url = call.getString("url", ""), key = call.getString("key", "");
+        if (!url.matches("https?://\\S+") || !key.matches("\\w+")) { call.reject("bad request"); return; }
+        worker.execute(() -> {
+            File out = new File(outDir(), key + ".audio");
+            Listener tell = new Listener(key);
+            HttpURLConnection c = null;
+            try {
+                String at = url;
+                for (int hop = 0; ; hop++) {
+                    c = (HttpURLConnection) new URL(at.replaceFirst("^http:", "https:")).openConnection();
+                    c.setInstanceFollowRedirects(false);
+                    c.setConnectTimeout(20000); c.setReadTimeout(30000);
+                    c.setRequestProperty("User-Agent", "NetherFlow/1 (podcasts; +https://github.com/volodya-rua/NetherFlow)");
+                    int code = c.getResponseCode();
+                    String to = c.getHeaderField("Location");
+                    if (code < 300 || code > 399 || to == null) break;
+                    if (hop == 10) throw new Exception("it kept being sent elsewhere");
+                    at = new URL(new URL(at), to).toString();
+                    c.disconnect();
+                }
+                if (c.getResponseCode() != 200) throw new Exception("its host answered " + c.getResponseCode());
+                long size = c.getContentLengthLong(), got = 0, told = 0;
+                byte[] buf = new byte[64 * 1024];
+                try (InputStream in = c.getInputStream(); OutputStream o = new FileOutputStream(out)) {
+                    for (int n; (n = in.read(buf)) > 0; ) {
+                        if (tell.cancelled()) throw new Exception("cancelled");
+                        o.write(buf, 0, n);
+                        got += n;
+                        if (size > 0 && got - told > size / 100) { told = got; tell.progress((double) got / size); }
+                    }
+                }
+                if (size > 0 && got < size) throw new Exception("it didn't arrive whole");
+                JSObject r = new JSObject();
+                r.put("path", out.getAbsolutePath());
+                String type = c.getContentType();
+                r.put("type", type == null ? "" : type.split(";")[0].trim());
+                call.resolve(r);
+            } catch (Exception e) {
+                out.delete();
+                call.reject(cancelled.containsKey(key) ? "cancelled" : e instanceof java.net.UnknownHostException ? "no connection" : String.valueOf(e.getMessage()));
+            } finally {
+                if (c != null) c.disconnect();
                 cancelled.remove(key);
             }
         });

@@ -54,16 +54,18 @@ ipcMain.on('awake', (e, on) => {
 // Saving for offline: yt-dlp downloads the song's own audio from its YouTube upload, as it is (no re-recording), with
 // this app's own Node (ELECTRON_RUN_AS_NODE) as the JavaScript runtime YouTube's player code needs. It runs from a copy
 // in the app's data folder, so it can update itself when a change at YouTube makes saving fail.
-const BUNDLED_YTDLP = app.isPackaged ? path.join(process.resourcesPath, 'yt-dlp.exe') : path.join(__dirname, 'vendor', 'yt-dlp', 'yt-dlp.exe');
+const YTDLP_NAME = process.platform === 'win32' ? 'yt-dlp.exe' : 'yt-dlp'; // (Linux: yt-dlp's own yt-dlp_linux, as yt-dlp)
+const BUNDLED_YTDLP = app.isPackaged ? path.join(process.resourcesPath, YTDLP_NAME) : path.join(__dirname, 'vendor', 'yt-dlp', YTDLP_NAME);
 let ytdlpExe = null, ytdlpUpdated = 0;
 const ytdlKids = new Map(); // the page's job key → its yt-dlp process
 function ytdlp() {
   if (ytdlpExe) return ytdlpExe;
-  const dir = path.join(app.getPath('userData'), 'yt-dlp'), exe = path.join(dir, 'yt-dlp.exe'), mark = path.join(dir, 'bundled.txt');
+  const dir = path.join(app.getPath('userData'), 'yt-dlp'), exe = path.join(dir, YTDLP_NAME), mark = path.join(dir, 'bundled.txt');
   const tag = String(fs.statSync(BUNDLED_YTDLP).size); // (a new one with an app update: copied over the old)
   if (!fs.existsSync(exe) || (fs.existsSync(mark) && fs.readFileSync(mark, 'utf8')) !== tag) {
     fs.mkdirSync(dir, { recursive: true }); fs.copyFileSync(BUNDLED_YTDLP, exe); fs.writeFileSync(mark, tag);
   }
+  if (process.platform !== 'win32') fs.chmodSync(exe, 0o755); // (a program)
   return ytdlpExe = exe;
 }
 // One download: the best audio-only stream, as YouTube serves it (usually Opus in WebM). Progress goes to the page.
@@ -115,8 +117,8 @@ ipcMain.handle('ytdl', async (e, { id, key }) => {
     return ytdlOnce(e, id, key);
   }
 });
-// yt-dlp.exe unpacks and starts a second process of its own: stop both
-const stopKid = kid => spawn('taskkill', ['/pid', String(kid.pid), '/T', '/F'], { windowsHide: true }).on('error', () => kid.kill());
+// yt-dlp.exe unpacks and starts a second process of its own: stop both (Linux: its starter passes the signal on)
+const stopKid = kid => process.platform === 'win32' ? spawn('taskkill', ['/pid', String(kid.pid), '/T', '/F'], { windowsHide: true }).on('error', () => kid.kill()) : kid.kill();
 ipcMain.on('ytdl-cancel', (e, key) => { if (!win || e.sender !== win.webContents) return; const kid = ytdlKids.get(key); if (kid) { kid.cancelled = true; stopKid(kid); } });
 
 // ---------- the island: what's playing, in a small black island at the top middle of the screen, over every other app
@@ -195,10 +197,15 @@ const DISCORD_ID = process.env.NETHERFLOW_DISCORD_ID || '1559725339968540834';
 const net = require('net');
 const rpc = { sock: null, ready: false, want: null, sent: '', retryAt: 0, buf: Buffer.alloc(0), timer: null, last: 0 };
 const rpcFrame = (op, obj) => { const j = Buffer.from(JSON.stringify(obj)), h = Buffer.alloc(8); h.writeInt32LE(op, 0); h.writeInt32LE(j.length, 4); return Buffer.concat([h, j]); };
+// Where Discord listens: Windows, a named pipe; Linux, a socket in the session's own folder (or Flatpak's or Snap's
+// Discord's, inside it). Discord takes the first free of ten. (Another name: for testing.)
+const RUN = process.env.XDG_RUNTIME_DIR || process.env.TMPDIR || '/tmp';
+const DISCORD_PIPES = process.env.NETHERFLOW_DISCORD_PIPE ? [process.env.NETHERFLOW_DISCORD_PIPE]
+  : process.platform === 'win32' ? ['\\\\?\\pipe\\discord-ipc-'] : ['', 'app/com.discordapp.Discord', 'snap.discord'].map(d => path.join(RUN, d, 'discord-ipc-'));
 function rpcConnect(i = 0) {
   if (!DISCORD_ID || rpc.sock || Date.now() < rpc.retryAt) return;
-  const s = net.createConnection((process.env.NETHERFLOW_DISCORD_PIPE || '\\\\?\\pipe\\discord-ipc-') + i); // (Discord takes the first free of ten; another name: for testing)
-  s.once('error', () => { s.destroy(); if (i < 9) rpcConnect(i + 1); else rpc.retryAt = Date.now() + 20000; }); // (not running: asked again later)
+  const s = net.createConnection(DISCORD_PIPES[Math.floor(i / 10)] + (i % 10));
+  s.once('error', () => { s.destroy(); if (i < DISCORD_PIPES.length * 10 - 1) rpcConnect(i + 1); else rpc.retryAt = Date.now() + 20000; }); // (not running: asked again later)
   s.once('connect', () => {
     rpc.sock = s; rpc.ready = false; rpc.buf = Buffer.alloc(0);
     s.removeAllListeners('error'); s.on('error', () => {});
@@ -281,11 +288,14 @@ ipcMain.on('sync-close', e => { if (win && e.sender === win.webContents) syncClo
 // ---------- updates (the page's Settings › Update): the installed app, from its GitHub releases — only the parts of the
 // installer that changed come down (electron-updater, by the installer's block map) — put in place by restarting. The
 // portable app is one file run from anywhere and can't update itself: the page sends it to the release page instead.
+// (Linux: the AppImage updates itself the same way; the .deb, installed by the system, doesn't: the page sends it to the
+// release page too)
+const DEB = process.platform === 'linux' && !process.env.APPIMAGE;
 let updater;
 function getUpdater() {
   if (updater !== undefined) return updater;
   updater = null;
-  if (!app.isPackaged || process.env.PORTABLE_EXECUTABLE_DIR) return updater;
+  if (!app.isPackaged || process.env.PORTABLE_EXECUTABLE_DIR || DEB) return updater;
   try {
     updater = require('electron-updater').autoUpdater;
     updater.autoDownload = false; updater.autoInstallOnAppQuit = true;
@@ -297,7 +307,7 @@ function getUpdater() {
 ipcMain.handle('update-check', async e => {
   if (!win || e.sender !== win.webContents) return null;
   const u = getUpdater(), version = app.getVersion();
-  if (!u) return { version, can: false, portable: !!process.env.PORTABLE_EXECUTABLE_DIR }; // (or run from the source: nothing to update)
+  if (!u) return { version, can: false, portable: !!process.env.PORTABLE_EXECUTABLE_DIR, deb: app.isPackaged && DEB }; // (or run from the source: nothing to update)
   try { const r = await u.checkForUpdates(); return { version, can: true, next: r?.isUpdateAvailable ? r.updateInfo.version : null }; }
   catch (er) {
     const m = String(er.message || er).split('\n')[0];
@@ -362,7 +372,9 @@ app.whenReady().then(async () => {
 
   win.loadURL(`http://localhost:${port}`);
 
-  islandPort = port; makeIsland();
+  // (Windows only. ponytail: Linux would need a compositor for the see-through window, and Wayland ignores always-on-top
+  // and placing; try it there on X11 if people ask)
+  islandPort = port; if (process.platform === 'win32') makeIsland();
   for (const ev of ['focus', 'blur', 'minimize', 'restore', 'show', 'hide']) win.on(ev, syncIsland);
   win.on('closed', () => { if (island && !island.isDestroyed()) island.destroy(); });
   for (const ev of ['display-metrics-changed', 'display-added', 'display-removed']) screen.on(ev, placeIsland);

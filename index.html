@@ -33,7 +33,7 @@ body { background: var(--bg); color: var(--ink); overflow: hidden; transition: b
 input, textarea { user-select: text; -webkit-user-select: text; }
 ::selection { background: var(--a); color: var(--bg); }
 :focus { outline: none; }
-.kb :focus-visible:not(input:not([type=range]), textarea) { outline: 2px solid var(--a); outline-offset: 3px; } /* (going round by Tab: see tabbing; text fields have their own line and caret) */
+.kb :focus-visible:not(input:not([type=range]), textarea, [tabindex="-1"]) { outline: 2px solid var(--a); outline-offset: 3px; } /* (going round by Tab: see tabbing; text fields have their own line and caret) */
 button { font: inherit; color: inherit; background: none; border: 0; padding: 0; letter-spacing: inherit; cursor: var(--cur-hand, pointer); }
 /* scrollbars: a thin rounded thumb in the mood's color, no track, no arrow buttons (not Windows' grey ones) */
 /* scrollbars: a thin bar, inset from the edge and clear of rounded corners, so it never runs over a box's border */
@@ -549,10 +549,49 @@ kbd { font: inherit; border: 1px solid currentColor; border-radius: 3px; padding
 .eq-graph .curve { fill: none; stroke: var(--a); stroke-width: 2.5; filter: drop-shadow(0 0 6px color-mix(in srgb, var(--a) 60%, transparent)); }
 .eq-graph .node { fill: var(--bg); stroke: var(--a); stroke-width: 2.5; cursor: grab; transition: r .15s; }
 .eq-graph .node:hover, .eq-graph .node:focus { r: 11; outline: none; stroke: var(--ink); }
+.eq-graph .node.tv-edit { fill: var(--a); stroke: var(--ink); r: 12; } /* (a TV: being changed, up and down) */
 .eq-graph text { fill: var(--ink); font: 500 10px var(--mono); letter-spacing: .06em; opacity: .65; }
 .eq-graph .db { fill: var(--a); opacity: 1; }
 .eq.off .curve, .eq.off .area, .eq.off .node, .eq.off .db { opacity: .3; }
 .eq-note { margin: 0; opacity: .5; font-size: 10px; }
+/* Explore: moods and genres as tiles in YouTube Music's own colours (a stripe of it), the charts' groups */
+.x-moods { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; padding: 4px 0 8px; }
+.x-mood { position: relative; overflow: hidden; padding: 16px 14px 16px 18px; border: 1px solid var(--hair); border-radius: 10px; text-align: left; font: 500 12px/1.2 var(--mono); letter-spacing: .06em; text-transform: uppercase;
+  background: linear-gradient(100deg, color-mix(in srgb, var(--c, var(--a)) 22%, transparent), transparent 70%); transition: border-color .2s, transform .2s; }
+.x-mood::before { content: ''; position: absolute; inset: 0 auto 0 0; width: 4px; background: var(--c, var(--a)); }
+.x-mood:hover, .x-mood:focus-visible { border-color: var(--c, var(--a)); transform: translateY(-1px); outline: none; }
+.x-group { margin: 14px 0 2px; opacity: .6; font-size: 10px; }
+.x-more { margin: 10px 0 4px; }
+/* podcasts and audiobooks: the search line, a show's about, an episode's progress (a line under it), played ones dimmed */
+.x-q { margin: 6px 0 4px; }
+.ep-stage { display: grid; gap: 14px; align-content: center; }
+.ep-title { margin: 0; font-family: var(--poster); font-size: clamp(30px, min(5.4vw, 9vh), 78px); line-height: 1.02; text-transform: uppercase; overflow-wrap: anywhere;
+  display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+.ep-about { margin: 0; max-width: 62ch; font: italic 400 clamp(15px, 1.5vw, 20px)/1.45 var(--serif); opacity: .7;
+  display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+.x-about { margin: 4px 0 14px; max-width: 70ch; opacity: .7; font-size: 13px; line-height: 1.55; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4; overflow: hidden; overflow-wrap: anywhere; cursor: pointer; }
+.x-about.open { -webkit-line-clamp: unset; }
+.ep-row { position: relative; }
+.ep-row::after { content: ''; position: absolute; left: 0; bottom: 0; height: 2px; width: calc(var(--ep, 0) * 100%); background: var(--a); }
+.ritem.played .row { opacity: .5; }
+.ep-save .ico { fill: none; } .ep-save { font-size: 10px; letter-spacing: 0; } /* (a stroke icon; the percentage while it saves) */
+.x-fail { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.x-fail .empty { margin: 0; }
+.eq-graph .hpcurve { fill: none; stroke: var(--ink); stroke-opacity: .5; stroke-width: 1.5; stroke-dasharray: 4 5; } /* (the headphones' correction, under the bands) */
+.eq-hp { display: grid; gap: 10px; border-top: 1px solid var(--hair); padding-top: 12px; }
+.hp-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.hp-k { flex: none; }
+.hp-acts { flex: none; display: flex; align-items: center; gap: 14px; margin-left: auto; }
+.hp-name { flex: 1; min-width: 140px; display: grid; gap: 3px; text-transform: none; letter-spacing: 0; }
+.hp-name b { font: italic 400 18px/1.1 var(--serif); }
+.hp-name small { opacity: .55; font: 500 10px/1.3 var(--mono); letter-spacing: .04em; }
+.hp-q { width: 100%; padding: 8px 0; background: none; border: 0; border-bottom: 1px solid var(--a); color: var(--ink); font: 400 15px var(--mono); outline: none; }
+.hp-note { margin: 0; opacity: .6; font-size: 10px; }
+.hp-list { display: grid; max-height: min(240px, 34vh); overflow: auto; }
+.hp-item { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 8px 6px; text-align: left; border-bottom: 1px solid var(--hair); }
+.hp-item b { font-weight: 500; }
+.hp-item small { flex: none; opacity: .5; font-size: 9px; }
+.hp-item:hover, .hp-item:focus-visible { background: var(--a); color: var(--bg); outline: none; }
 .eq-loud .bgq { padding: 12px 0 0; }
 /* ---------- the search's top result: the best match, big, with its own play button ---------- */
 .top-hit { display: grid; grid-template-columns: 104px minmax(0, 1fr) auto; align-items: center; gap: 18px; width: calc(100% - 24px); margin: 6px 12px 16px; padding: 14px;
@@ -1357,6 +1396,7 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
   <div id="eqPresets" class="presets lbl"></div>
   <svg id="eqGraph" class="eq-graph" viewBox="0 0 600 210" aria-label="Equalizer bands"></svg>
   <p class="eq-note lbl">Drag the points · arrow keys on a point nudge it</p>
+  <div id="eqHp" class="eq-hp"></div>
   <div id="eqLoud" class="eq-loud"></div>
 </div>
 <div id="winctl" class="winctl">
@@ -1466,7 +1506,7 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
 <dialog id="consent" class="consent" aria-labelledby="consentTitle">
   <div class="kicker lbl">Welcome to NetherFlow · by Volodya.rua</div>
   <h2 id="consentTitle" tabindex="-1" autofocus>Before you press play</h2>
-  <p>NetherFlow is a free, open-source player for personal use. It plays songs from YouTube and shows lyrics from third-party services. It doesn't host any music or lyrics, and it isn't affiliated with any of those services. It may skip or block ads in their players. It can also save songs on your device for offline listening by downloading them from YouTube, which YouTube's terms don't allow (and the rights holders or the law where you live may not either), and make short story clips of a song to share: those choices are yours. There are no accounts and no tracking.</p>
+  <p>NetherFlow is a free, open-source player for personal use. It plays songs from YouTube, podcasts from their own hosts and free audiobooks from the Internet Archive, and shows lyrics from third-party services. It doesn't host any music, podcasts or lyrics, and it isn't affiliated with any of those services. It may skip or block ads in their players. It can also save songs on your device for offline listening by downloading them from YouTube, which YouTube's terms don't allow (and the rights holders or the law where you live may not either), and make short story clips of a song to share: those choices are yours. A playlist you choose to edit together is kept, encrypted, on public relays, and anyone with its link can see and change it. There are no accounts and no tracking.</p>
   <p>By continuing you agree to the <button class="inline-link" data-legal="terms">Terms of Use</button> and the <button class="inline-link" data-legal="privacy">Privacy Policy</button>.</p>
   <p id="declined" hidden>You need to accept the terms to use NetherFlow.</p>
   <div class="acts lbl"><button id="decline" class="link">Decline</button><button id="agree" class="pill">Agree &amp; continue</button></div>
@@ -1549,6 +1589,10 @@ const fmt = s => isFinite(s) ? `${pad(Math.floor(s / 60))}:${pad(Math.floor(s % 
 const hash = s => [...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
 const status = s => { $('status').textContent = s; };
 const audio = new Audio();
+// podcasts' episodes and audiobooks' chapters play in one of their own, never wired into this page's sound graph: their
+// hosts mostly don't let a page read their sound (and one that can't is heard as silence through the graph), and talk
+// needs no equalizer or beat visuals anyway
+const epAudio = new Audio(); epAudio.preload = 'auto';
 audio.crossOrigin = 'anonymous'; // iTunes previews send CORS headers, so the visualizer can read them
 const root = document.documentElement, body = document.body, stage = $('stage'), dlg = $('search');
 const motion = !matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -1599,6 +1643,11 @@ const api = {
     const r = await fetch('/api/playlist?' + new URLSearchParams({ url: link })), j = await r.json(); if (!r.ok) throw new Error(j.error || 'couldn\'t read it'); return j; },
   // YouTube Music's radio for a song (what Autoplay picks from): [{ id, title, artist, album, year, dur, art }]
   radio: async id => native ? netherflowLib.ytmRadio(nativePost, id) : (await fetch('/api/radio?' + new URLSearchParams({ id }))).json(),
+  // Explore: YouTube Music's explore page, its charts, a mood's playlists, an album (see lib.ytmExplore…), for this country
+  explore: kind => { const [what, arg] = kind.split(':'), gl = STORE;
+    if (native) return what === 'explore' ? netherflowLib.ytmExplore(nativePost, gl) : what === 'charts' ? netherflowLib.ytmCharts(nativePost, gl)
+      : what === 'mood' ? netherflowLib.ytmMood(nativePost, arg, gl) : netherflowLib.ytmAlbum(nativePost, arg, gl);
+    return fetch(`/api/${what}?` + new URLSearchParams({ gl, ...(what === 'mood' ? { p: arg } : what === 'album' ? { id: arg } : {}) })).then(async r => { const j = await r.json(); if (!r.ok) throw new Error(j.error || 'it didn\'t load'); return j; }); },
   agents: async () => native ? netherflowLib.agents(nativeGet) : (await fetch('/api/agents')).json(), // (the Tactical theme's: see lib.agents)
   audius: async q => native ? netherflowLib.audius(nativeGet, q).catch(() => [])
     : (await fetch('/api/audius?' + new URLSearchParams({ q }))).json(),
@@ -1615,14 +1664,23 @@ let ctx, analyser, freq, boostNode = null, limiterNode = null, boostLevel = 1, a
 // The sound's path here (previews, saved songs): this page's <audio> → the equalizer's bands, while it's on → analyser →
 // boost and limiter, while boosting → speakers. Only what's in use is in it, as in frame-helper.js (a node more is work
 // for the sound's own thread; on a phone, that thread late is a crack).
+let hpNodes = [], hpSig = ''; // (the headphones' correction here: its preamp and filters, made again when they change)
 function routeAudio() {
   if (!audioSrc) return;
-  const useEq = eqState.on, boosting = boostLevel > 1, singing = singAmount(), key = +useEq + '' + +boosting + +!!singing;
+  const sig = hp ? JSON.stringify([hp.pre, hp.filters]) : '';
+  if (sig !== hpSig) {
+    for (const n of hpNodes) n.disconnect();
+    hpSig = sig; routed = null;
+    hpNodes = hp ? [ctx.createGain(), ...hp.filters.map(([type, f, g, q]) => {
+      const b = ctx.createBiquadFilter(); b.type = type; b.frequency.value = f; b.gain.value = g; b.Q.value = q; return b; })] : [];
+    if (hp) hpNodes[0].gain.value = Math.pow(10, hp.pre / 20);
+  }
+  const useEq = eqState.on, boosting = boostLevel > 1, singing = singAmount(), key = +!!hpNodes.length + '' + +useEq + +boosting + +!!singing;
   singNode.set(singing);
   if (key === routed) return;
   routed = key;
-  for (const n of [audioSrc, ...eqNodes, singNode.out, analyser, boostNode, limiterNode]) n.disconnect();
-  [audioSrc, ...(useEq ? eqNodes : []), ...(singing ? [singNode] : []), analyser, ...(boosting ? [boostNode] : []), ...(useEq || boosting ? [limiterNode] : []), ctx.destination].reduce((a, b) => (a.connect(b.inp || b), b.out || b));
+  for (const n of [audioSrc, ...hpNodes, ...eqNodes, singNode.out, analyser, boostNode, limiterNode]) n.disconnect();
+  [audioSrc, ...hpNodes, ...(useEq ? eqNodes : []), ...(singing ? [singNode] : []), analyser, ...(boosting ? [boostNode] : []), ...(useEq || boosting || hpNodes.length ? [limiterNode] : []), ctx.destination].reduce((a, b) => (a.connect(b.inp || b), b.out || b));
 }
 // Sing mode's voice remover (see frame-helper.js, where a YouTube song's is): the middle of the stereo picture between the
 // bass and the sizzle, where a singer's mixed, turned down by a (0…1); the sides and the middle's bass and top kept
@@ -1792,7 +1850,19 @@ function applySkin() {
   document.querySelector('.badge textPath').textContent = S?.badge || BADGE;
   const [m1, m2] = S?.msg || ['Turn silence', 'into song'], msg = document.querySelector('.home-stage .msg');
   msg.replaceChildren(m1, el('br'), el('em', '', m2));
+  fitHome();
 }
+// The welcome's headline on a short screen (a TV, a phone sideways, a laptop at 200 %): as large as its theme makes it,
+// but smaller till the welcome fits between the header and the player (it ran up over the header). Again whenever the
+// welcome's room changes.
+function fitHome() {
+  const st = $('home'), deck = st.querySelector('.deck'), msg = st.querySelector('.msg');
+  if (!deck || !msg) return;
+  msg.style.fontSize = '';
+  for (let i = 0; i < 3 && st.clientHeight && deck.offsetHeight > st.clientHeight + 1; i++)
+    msg.style.fontSize = Math.max(28, parseFloat(getComputedStyle(msg).fontSize) * Math.max(.3, 1 - (deck.offsetHeight - st.clientHeight) / msg.offsetHeight)) + 'px';
+}
+new ResizeObserver(() => fitHome()).observe($('home'));
 function setSkin(name) {
   const need = SKINS[name]?.needs;
   if (need && bgq !== need && SKIN_LIST.includes(name)) { bgq = need; store.set('netherflow.bg', need); resize(); applyKin(); } // (a theme for one quality: that quality on)
@@ -1948,7 +2018,7 @@ function setView(v) {
 // before anything's downloaded.
 const Upd = native ? Capacitor.Plugins.Updater : null, RELEASES = 'https://github.com/volodya-rua/NetherFlow/releases/latest';
 // state: '' not asked yet · checking · none (the latest) · ready (one to get) · getting · got (Windows: restart to finish) ·
-// store (an app store's build) · portable · error
+// store (an app store's build) · portable · deb (Linux's .deb) · error
 const upd = { state: '', version: '', next: '', kind: '', size: 0, frac: 0, err: '', u: null };
 // (no connection, in whatever words the system had for it: said plainly)
 const updErr = m => !navigator.onLine || /internet|resolve host|ENOTFOUND|ERR_NAME|ECONN|timed? ?out|network|connect/i.test(m || '') ? 'GitHub couldn\'t be reached (check the connection)' : m || 'GitHub couldn\'t be reached';
@@ -1960,7 +2030,7 @@ async function updCheck(quiet) {
     if (window.netherflowApp?.updateCheck) {
       const r = await netherflowApp.updateCheck();
       upd.version = r?.version || '';
-      Object.assign(upd, !r?.can ? { state: r?.portable ? 'portable' : 'none' } : r.error ? { state: 'error', err: updErr(r.error) } : r.next ? { state: 'ready', next: r.next, kind: 'app' } : { state: 'none' });
+      Object.assign(upd, !r?.can ? { state: r?.portable ? 'portable' : r?.deb ? 'deb' : 'none' } : r.error ? { state: 'error', err: updErr(r.error) } : r.next ? { state: 'ready', next: r.next, kind: 'app' } : { state: 'none' });
     } else if (Upd) {
       const i = await Upd.info();
       upd.version = i.web;
@@ -1979,7 +2049,7 @@ async function updCheck(quiet) {
   if (quiet && upd.state === 'ready' && store.get('netherflow.updtold') !== upd.next) { store.set('netherflow.updtold', upd.next); toast(`NetherFlow ${upd.next} is out · Settings › Update`); }
 }
 async function updGet() {
-  if (upd.state === 'portable') return openExternal(RELEASES);
+  if (upd.state === 'portable' || upd.state === 'deb') return openExternal(RELEASES);
   if (upd.state === 'got') return netherflowApp.updateInstall();
   if (upd.state !== 'ready') return updCheck();
   Object.assign(upd, { state: 'getting', frac: 0 }); updShow();
@@ -2004,10 +2074,11 @@ function updRow() {
     getting: `Downloading NetherFlow ${upd.next}…`, got: 'Downloaded. Restart NetherFlow to finish: it opens again by itself.',
     store: 'Updates come from the app store NetherFlow was installed from.',
     portable: 'This portable NetherFlow can\'t update itself. The installed one can, in place, downloading only what changed: get the installer.',
+    deb: 'NetherFlow installed from the .deb doesn\'t update itself: get the newest .deb from the release page (or the AppImage, which updates itself).',
     error: `Couldn't update: ${upd.err}.`,
   }[upd.state];
   const label = { '': 'Check for updates', checking: 'Checking…', none: 'Check again', ready: `Update to ${upd.next}`, getting: `Downloading… ${Math.round(upd.frac * 100)}%`,
-    got: 'Restart now', portable: 'Get the installer', error: 'Try again' }[upd.state];
+    got: 'Restart now', portable: 'Get the installer', deb: 'Open the release page', error: 'Try again' }[upd.state];
   q.append(el('span', '', 'Update'), el('small', '', note));
   if (label) { const b = el('button', 'pill', label); b.disabled = upd.state === 'checking' || upd.state === 'getting'; b.onclick = updGet; q.append(b); }
   return q;
@@ -2378,19 +2449,20 @@ if (native) Capacitor.Plugins.Playback.addListener('action', ({ action, position
   else if (action === 'back') skipBy(-jump);
 });
 
-// ---------- playback engines: <audio> (previews, local files) or YouTube (full songs) ----------
+// ---------- playback engines: <audio> (previews, local files), YouTube (full songs), or 'ep' (podcasts, audiobooks) ----------
 let engine = 'audio', yt = null, ytLoading = null, ytQueue = [];
+const A = () => engine === 'ep' ? epAudio : audio; // (the <audio> playing: songs' or talk's)
 const P = {
-  get paused() { return engine === 'yt' ? yt?.getPlayerState() !== 1 : audio.paused; },
-  get t() { return (engine === 'yt' ? yt?.getCurrentTime() : audio.currentTime) || 0; },
+  get paused() { return engine === 'yt' ? yt?.getPlayerState() !== 1 : A().paused; },
+  get t() { return (engine === 'yt' ? yt?.getCurrentTime() : A().currentTime) || 0; },
   // recordings saved for offline don't carry their length in the file: the length saved with them stands in
-  get dur() { return (engine === 'yt' ? yt?.getDuration() : isFinite(audio.duration) ? audio.duration : savedDur) || 0; },
-  get loaded() { return engine === 'yt' ? !!yt : !!audio.src; },
-  play() { engine === 'yt' ? yt?.playVideo() : audio.play().catch(() => {}); },
-  pause() { mixAbort(); engine === 'yt' ? yt?.pauseVideo() : audio.pause(); },
+  get dur() { return (engine === 'yt' ? yt?.getDuration() : isFinite(A().duration) ? A().duration : savedDur) || 0; },
+  get loaded() { return engine === 'yt' ? !!yt : !!A().src; },
+  play() { engine === 'yt' ? yt?.playVideo() : A().play().catch(() => {}); },
+  pause() { mixAbort(); engine === 'yt' ? yt?.pauseVideo() : A().pause(); },
   seek(t) {
     mixAbort();
-    engine === 'yt' ? yt?.seekTo(t, true) : (audio.currentTime = t);
+    engine === 'yt' ? yt?.seekTo(t, true) : (A().currentTime = t);
     clock.t = clock.hold = t; clock.until = performance.now() + 1500; // (the lyrics go there at once: see songTime)
     setTimeout(notifyNative, 300);
   },
@@ -2431,7 +2503,9 @@ function setPlaying(on) {
 function useEngine(kind) {
   if (engine === kind) return;
   engine = kind;
-  if (kind === 'yt') { audio.pause(); ctx?.suspend(); } else yt?.pauseVideo(); // (this page's own sound idle meanwhile: one stream fewer — playing here resumes it, see initAudio)
+  if (kind !== 'audio') audio.pause();
+  if (kind !== 'ep') epAudio.pause();
+  if (kind === 'yt') ctx?.suspend(); else yt?.pauseVideo(); // (this page's own sound idle meanwhile: one stream fewer — playing here resumes it, see initAudio)
   setPlaying(false);
 }
 
@@ -2475,7 +2549,91 @@ if (!eqState?.gains || eqState.gains.length !== 6) eqState = { on: false, preset
 // Loudness: YouTube turns loud songs down to one level (by up to ~8 dB). Original gives that back in its player (see
 // frame-helper.js), so a song plays as loud and full as it was mastered, as a saved one does; Levelled keeps YouTube's.
 let loud = store.get('netherflow.loud') === 'Levelled' ? 'Levelled' : 'Original';
-const eqMsg = () => ({ on: eqState.on, gains: eqState.gains.slice(), boost: boostLevel, orig: loud === 'Original', sing: singAmount() });
+const eqMsg = () => ({ on: eqState.on, gains: eqState.gains.slice(), boost: boostLevel, orig: loud === 'Original', sing: singAmount(), hp: hp && { pre: hp.pre, f: hp.filters } });
+// ---------- headphones (Equalizer › Headphones): AutoEQ's correction for the listener's own headphones — measured on a
+// test rig, their colour (a bump in the bass, a dip at 3 kHz…) evened out toward a neutral target — ahead of the bands.
+// 8,000+ models, from AutoEq (MIT, Jaakko Pasanen): its index when the list is opened, then the one chosen (a preamp and up
+// to 10 filters), kept on this device, so it works offline. In both players (frame-helper.js, routeAudio). ----------
+const AUTOEQ = 'https://raw.githubusercontent.com/jaakkopasanen/AutoEq/master/results/';
+let hp = null; try { hp = JSON.parse(store.get('netherflow.hp')); } catch {}
+if (!hp?.filters?.length) hp = null;
+// a ParametricEQ.txt: "Preamp: -6.0 dB", then "Filter 1: ON PK Fc 105 Hz Gain 2.6 dB Q 0.70" (PK, LSC, HSC)
+function parseHp(txt) {
+  const pre = Math.max(-20, Math.min(0, +(String(txt).match(/Preamp:\s*(-?[\d.]+)\s*dB/i) || [])[1] || 0));
+  const filters = [...String(txt).matchAll(/Filter\s*\d+:\s*ON\s+(PK|PEQ|LSC|LS|HSC|HS)\s+Fc\s+([\d.]+)\s*Hz\s+Gain\s+(-?[\d.]+)\s*dB\s+Q\s+([\d.]+)/gi)]
+    .map(m => [/^L/i.test(m[1]) ? 'lowshelf' : /^H/i.test(m[1]) ? 'highshelf' : 'peaking', +m[2], +m[3], +m[4]])
+    .filter(([, f, g, q]) => f >= 10 && f <= 22000 && Math.abs(g) <= 20 && q > 0 && q <= 20).slice(0, 12);
+  return { pre, filters };
+}
+// the index: "- [Sennheiser HD 650](./oratory1990/over-ear/Sennheiser%20HD%20650) by oratory1990" — one each, from the
+// most trusted measurements there are of it (AutoEq's own order of preference)
+const HP_BY = ['oratory1990', 'crinacle', 'Rtings', 'Innerfidelity', 'Super Review', 'Headphone.com Legacy'];
+let hpIndex = null;
+const hpLoadIndex = () => hpIndex ||= fetch(AUTOEQ + 'INDEX.md').then(r => { if (!r.ok) throw new Error('the list didn\'t load'); return r.text(); }).then(t => {
+  const best = new Map(), rank = by => { const i = HP_BY.findIndex(b => by.startsWith(b)); return i < 0 ? HP_BY.length : i; };
+  for (const m of t.matchAll(/^- \[(.+?)\]\(\.\/(.+?)\) by (.+?)\s*$/gm)) {
+    const h = { name: m[1], path: m[2], by: m[3] }, k = h.name.toLowerCase(), had = best.get(k);
+    if (!had || rank(h.by) < rank(had.by)) best.set(k, h);
+  }
+  return [...best.values()];
+}).catch(e => { hpIndex = null; throw e; });
+const hpFind = (list, q) => { const w = words(q); if (!w.length) return []; const has = h => { const n = words(h.name); return w.every(x => n.some(y => y.startsWith(x))); };
+  return list.filter(has).sort((a, b) => (b.name.toLowerCase().startsWith(q.toLowerCase().trim()) - a.name.toLowerCase().startsWith(q.toLowerCase().trim())) || a.name.length - b.name.length).slice(0, 40); };
+async function setHp(h) {
+  if (!h) { hp = null; store.set('netherflow.hp', ''); }
+  else {
+    const folder = h.path.split('/').pop(), url = AUTOEQ + h.path + '/' + folder + '%20ParametricEQ.txt'; // (the path as the index has it: already escaped)
+    const r = await fetch(url);
+    if (!r.ok) throw new Error('its correction didn\'t load');
+    const p = parseHp(await r.text());
+    if (!p.filters.length) throw new Error('no correction for these');
+    hp = { name: h.name, by: h.by, ...p };
+    store.set('netherflow.hp', JSON.stringify(hp));
+  }
+  applyEq(); drawEq(); renderHp();
+}
+// the row: the headphones chosen (or none), and, opened, a search over all of them
+let hpOpen = false;
+function renderHp() {
+  const box = $('eqHp'), row = el('div', 'hp-row lbl'), pick = el('button', 'pill ghost', hp ? 'Change' : 'Pick yours');
+  const name = el('span', 'hp-name');
+  name.append(el('b', '', hp ? hp.name : 'None'), el('small', '', hp ? `measured by ${hp.by} · ${hp.filters.length} filters · preamp ${hp.pre} dB` : 'Evens out your headphones\' own sound (AutoEQ)'));
+  pick.onclick = () => { hpOpen = !hpOpen; renderHp(); if (hpOpen) $('hpQ')?.focus(); };
+  const acts = el('span', 'hp-acts');
+  acts.append(pick);
+  if (hp) { const off = el('button', 'link', 'Off'); off.onclick = () => setHp(null); acts.append(off); }
+  row.append(el('span', 'hp-k', 'Headphones'), name, acts);
+  box.replaceChildren(row);
+  if (!hpOpen) return;
+  const q = el('input', 'hp-q'), list = el('div', 'hp-list'), note = el('p', 'hp-note lbl', 'Loading the list…');
+  q.id = 'hpQ'; q.type = 'search'; q.placeholder = 'Your headphones (Sony WH-1000XM5, AirPods Pro…)'; q.autocomplete = 'off'; q.spellcheck = false; q.setAttribute('aria-label', 'Search headphones');
+  box.append(q, note, list);
+  const show = () => hpLoadIndex().then(all => {
+    const found = hpFind(all, q.value);
+    note.textContent = !q.value.trim() ? `${all.length.toLocaleString()} headphones and earphones. Type yours.` : found.length ? '' : 'None of that name. Try just the model (WH-1000XM4, HD 600).';
+    list.replaceChildren(...found.map(h => { const b = el('button', 'hp-item');
+      b.append(el('b', '', h.name), el('small', 'lbl', h.by));
+      b.onclick = () => { note.textContent = 'Getting its correction…'; setHp(h).then(() => { hpOpen = false; renderHp(); toast(`Corrected for ${h.name}`); }).catch(e => { note.textContent = 'Couldn\'t get it: ' + e.message + '. Check the connection.'; }); };
+      return b; }));
+  }).catch(() => { note.textContent = navigator.onLine ? 'The list didn\'t load (GitHub didn\'t answer): try again in a moment.' : 'You\'re offline: the list needs the internet (once chosen, it works offline).'; });
+  q.oninput = show; show();
+}
+// its curve on the graph (dashed, under the bands): what it does to each frequency, as measured from its filters
+function hpCurve() {
+  if (!hp) return '';
+  const N = 120, fs = new Float32Array(N), mag = new Float32Array(N), ph = new Float32Array(N), total = new Float32Array(N).fill(hp.pre);
+  // (x as the graph has it: each band's frequency at its point, log-spaced between them, beyond the ends at the end gaps' pace)
+  const lx = Math.log, F = EQ.freqs, xs = F.map((f, i) => EQX(i));
+  const fx = f => { let i = F.findIndex(v => v >= f); i = i <= 0 ? 1 : i; return xs[i - 1] + (xs[i] - xs[i - 1]) * (lx(f) - lx(F[i - 1])) / (lx(F[i]) - lx(F[i - 1])); };
+  for (let k = 0; k < N; k++) fs[k] = 20 * Math.pow(1000, k / (N - 1)); // 20 Hz … 20 kHz
+  const oc = new OfflineAudioContext(1, 128, 48000);
+  for (const [type, f, g, q] of hp.filters) {
+    const b = oc.createBiquadFilter(); b.type = type; b.frequency.value = f; b.gain.value = g; b.Q.value = q;
+    b.getFrequencyResponse(fs, mag, ph);
+    for (let k = 0; k < N; k++) total[k] += 20 * Math.log10(Math.max(mag[k], 1e-6));
+  }
+  return [...fs].map((f, k) => `${k ? 'L' : 'M'}${Math.max(0, Math.min(600, fx(f))).toFixed(1)},${Math.max(4, Math.min(186, EQY(total[k]))).toFixed(1)}`).join(' ');
+}
 // ---------- Sing (the mic by the like button): karaoke — the voice turned down, the lyrics big. The slider: how much of
 // the voice stays (none to all). ----------
 let singOn = false, singVoice = Math.max(0, Math.min(100, +(store.get('netherflow.voice') || 20)));
@@ -2517,7 +2675,7 @@ function drawEq() {
   const line = smoothPath([[0, pts[0][1]], ...pts, [600, pts[5][1]]]);
   const kids = [svgEl('defs', {}), svgEl('path', { class: 'grid', d: 'M0,20H600M0,170H600' }), svgEl('path', { class: 'grid zero', d: 'M0,95H600' }),
     svgEl('text', { x: 4, y: 16 }, '+12'), svgEl('text', { x: 4, y: 91 }, '0'), svgEl('text', { x: 4, y: 166 }, '−12'),
-    svgEl('path', { class: 'area', d: line + ' L600,210 L0,210 Z', fill: 'url(#eqFill)' }), svgEl('path', { class: 'curve', d: line })];
+    svgEl('path', { class: 'area', d: line + ' L600,210 L0,210 Z', fill: 'url(#eqFill)' }), ...(hp ? [svgEl('path', { class: 'hpcurve', d: hpCurve() })] : []), svgEl('path', { class: 'curve', d: line })];
   kids[0].innerHTML = '<linearGradient id="eqFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--a);stop-opacity:.35"/><stop offset="1" style="stop-color:var(--a);stop-opacity:0"/></linearGradient>';
   eqState.gains.forEach((v, i) => {
     kids.push(svgEl('text', { class: 'db', x: EQX(i), y: EQY(v) - 16, 'text-anchor': 'middle' }, (v > 0 ? '+' : '') + v));
@@ -2532,9 +2690,13 @@ function drawEq() {
   for (const b of $('eqPresets').children) b.setAttribute('aria-pressed', b.textContent === eqState.preset);
 }
 function setBand(i, v, focus) {
+  const editing = document.activeElement?.classList?.contains('tv-edit'); // (a TV's band being changed: still, once drawn anew)
   eqState.gains[i] = v; eqState.preset = 'Custom'; eqState.on = true;
   drawEq(); applyEq(true);
-  if (focus) $('eqGraph').querySelector(`[data-band="${i}"]`).focus();
+  if (!focus) return;
+  const n = $('eqGraph').querySelector(`[data-band="${i}"]`);
+  n.focus();
+  if (editing) n.classList.add('tv-edit');
 }
 $('eqPresets').replaceChildren(...Object.keys(EQ.presets).map(name => {
   const b = el('button', '', name);
@@ -2559,10 +2721,14 @@ $('eqGraph').addEventListener('keydown', e => {
   if (step) { e.preventDefault(); setBand(i, Math.max(-12, Math.min(12, eqState.gains[i] + step * (e.shiftKey ? 3 : 1))), true); }
   if (e.key === 'Home') { e.preventDefault(); setBand(i, 0, true); }
 });
-drawEq(); renderLoud();
+drawEq(); renderLoud(); renderHp();
 audio.onplay = () => { initAudio(); if (engine === 'audio') setPlaying(true); };
 audio.onpause = () => { if (engine === 'audio') setPlaying(false); };
 audio.onended = () => { if (engine === 'audio') { setPlaying(false); songEnded(); } };
+epAudio.onplay = () => { if (engine === 'ep') setPlaying(true); };
+epAudio.onpause = () => { if (engine === 'ep') { setPlaying(false); epKeep(); } };
+epAudio.onended = () => { if (engine === 'ep') { setPlaying(false); epKeep(true); songEnded(); } };
+epAudio.onerror = () => { if (engine === 'ep' && epAudio.getAttribute('src') && current?.kind === 'episode') { setPlaying(false); status("◇ couldn't load it"); message("Couldn't play it", navigator.onLine ? "the episode didn't load: try again, or another" : "you're offline"); } };
 
 // The queue is the list a song was picked from (search results, history, a playlist…): next / previous walk it,
 // and when a song ends the next one starts. Repeat: off, all (the list starts over), or one (the same song again).
@@ -2623,6 +2789,7 @@ function setAutoplay(v) {
 // a song starting: heard (so not picked again soon); the one leaving, if Autoplay picked it: skipped early, a little
 // less of its artist from now on; played through, a little more
 function autoStart(t, prev, at, dur) {
+  if (t?.kind === 'episode' || prev?.kind === 'episode') return; // (talk: nothing to learn about music from it)
   if (prev && prev !== t && auto.items.has(prev) && dur > 0) { if (at < Math.min(30, dur * .4)) autoTaste(prev, -3); else if (at > dur * .8) autoTaste(prev, 1); }
   const k = songKey(t);
   auto.more = []; // (what it would pick after the last song: picked again for this one, if it's the last)
@@ -2660,7 +2827,7 @@ const autoTrack = c => { const s = { kind: 'song', trackId: 'yt:' + c.id, ytId: 
 // the song playing the last of the list (and nothing added by hand): the next one picked — one of the best few, at random
 // (the same song needn't always lead to the same next one)
 function autoFill(t) {
-  if (tg.role === 'guest' || !autoOn || !t || repeat !== 'off' || hasNext() || !fullSongs) return;
+  if (tg.role === 'guest' || !autoOn || !t || t.kind === 'episode' || repeat !== 'off' || hasNext() || !fullSongs) return;
   const p = auto.pending = (async () => {
     const seed = await seedFor(t);
     if (!seed || current !== t) return;
@@ -4165,12 +4332,14 @@ async function playTrack(t, term = '', queued = false, stay = false, mixed = nul
   fromUpNext = queued;
   if (!queued) { qi = queue.findIndex(x => x.trackId === t.trackId); if (qi < 0) { queue = [t]; qi = 0; } }
   if ($('queuePanel').matches(':popover-open')) renderQueue();
-  remember(t, term);
-  autoFill(t);
+  const ep = t.kind === 'episode';
+  if (!ep) { remember(t, term); autoFill(t); }
   updateSkips(); updateLikeBtn();
   if (!stay) for (const d of [dlg, $('artistPage'), $('library')]) if (d.open) d.close();
   const kept = saved.get(t.trackId);
   setNow(t.trackName, t.artistName, kept?.coverUrl || t.artworkUrl100?.replace('100x100bb', '600x600bb'), t.collectionName);
+  if (ep) return playEpisode(t, id);
+  audio.playbackRate = audio.defaultPlaybackRate = 1;
   if (kept) return playSaved(t, id);
   message('Loading', fullSongs ? 'finding the full song' : 'finding a preview');
   status('● loading');
@@ -4244,7 +4413,7 @@ let hist;
 try { hist = JSON.parse(store.get(HIST) || '{}'); } catch { hist = {}; }
 hist.tracks ||= []; hist.terms ||= [];
 // what's kept of a song (history, playlists, saved songs): enough to show it and play it again
-const TRACK_KEYS = ['trackId', 'trackName', 'artistId', 'artistName', 'collectionName', 'artworkUrl100', 'trackTimeMillis', 'previewUrl', 'releaseDate', 'primaryGenreName', 'kind', 'ytId', 'ytTitle'];
+const TRACK_KEYS = ['trackId', 'trackName', 'artistId', 'artistName', 'collectionName', 'artworkUrl100', 'trackTimeMillis', 'previewUrl', 'releaseDate', 'primaryGenreName', 'kind', 'ytId', 'ytTitle', 'epUrl', 'epShow', 'epBook', 'epAbout'];
 const slim = t => Object.fromEntries(TRACK_KEYS.map(k => [k, t[k]]));
 function remember(t, term) {
   hist.tracks = [slim(t), ...hist.tracks.filter(x => x.trackId !== t.trackId)].slice(0, 12);
@@ -4309,6 +4478,7 @@ const saveLib = () => {
     const s = JSON.stringify(library);
     libStore('readwrite', kv => kv.put(s, LIB)).catch(() => toast('Couldn\'t save your library on this device'));
     try { localStorage.setItem(LIB, s); } catch { store.set(LIB, ''); } // (too big for the copy: room kept for the rest)
+    collabChanged();
   }
   if ($('library').open) renderLibrary(); renderFolders();
 };
@@ -4318,6 +4488,7 @@ libStore('readonly', kv => kv.get(LIB)).catch(() => null).then(s => {
   library.liked ||= []; library.playlists ||= [];
   libReady = true;
   if (old) saveLib(); else { renderFolders(); if ($('library').open) renderLibrary(); }
+  collabStart();
   updateLikeBtn?.();
 });
 // Folders on the home screen (an option; folders, near the top): liked songs, downloads and the playlists, a tap from
@@ -4343,7 +4514,7 @@ function toggleLike(t) {
 }
 function updateLikeBtn() {
   const on = isLiked(current);
-  $('likeBtn').disabled = $('nowMore').disabled = !current;
+  $('likeBtn').disabled = $('nowMore').disabled = !current || current.kind === 'episode'; // (an episode: no liking it, no song's menu)
   $('likeBtn').setAttribute('aria-pressed', on);
   $('likeBtn').setAttribute('aria-label', on ? 'Remove from Liked songs' : 'Add to Liked songs');
 }
@@ -4401,6 +4572,9 @@ const ICONS = {
   next: '<path d="M5 5.5v13l9.5-6.5z"/><path d="M18.5 5.5v13"/>',
   queue: '<path d="M4 6h12M4 11h12M4 16h7"/><path d="M15.5 14v7l5.5-3.5z"/>',
   out: '<path d="M13.5 4.5H19.5V10.5M19.5 4.5L11 13"/><path d="M17.5 14v4.5a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1v-11a1 1 0 0 1 1-1H10"/>',
+  book: '<path d="M4 5.5c2.7-1.2 5.3-1.2 8 .5v13c-2.7-1.7-5.3-1.7-8-.5zM20 5.5c-2.7-1.2-5.3-1.2-8 .5v13c2.7-1.7 5.3-1.7 8-.5z"/>',
+  compass: '<circle cx="12" cy="12" r="8.5"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/>',
+  together: '<circle cx="9" cy="8" r="3.2"/><path d="M3 19.5c.6-3.3 3-5.2 6-5.2s5.4 1.9 6 5.2"/><circle cx="16.5" cy="9" r="2.6"/><path d="M16.8 14.3c2.3.2 3.9 1.8 4.4 4.4"/>',
   story: '<rect x="6" y="2.5" width="12" height="19" rx="2.5"/><circle cx="12" cy="10.5" r="3.2"/><path d="M9 16.5h6"/>',
 };
 const ico = name => { const s = document.createElementNS(SVGNS, 'svg'); s.setAttribute('viewBox', '0 0 24 24'); s.setAttribute('class', 'ico'); s.innerHTML = ICONS[name]; return s; };
@@ -4925,11 +5099,12 @@ async function saveOne(job) {
   dlChanged();
   try {
     // the artist's own upload on Audius (320 kbps, straight from there) when it's there; else YouTube's, by yt-dlp
-    const [au, vids] = await Promise.all([audiusFor(job.t), videosFor(job.t).catch(() => [])]);
-    if (!au && !vids.length) throw new Error('it isn\'t on YouTube');
-    const lyrics = job.withLyrics ? lyricsFor(job.t) : null; // fetched while it downloads
+    const ep = job.t.kind === 'episode'; // (a podcast episode or audiobook chapter: its own file, no lyrics)
+    const [au, vids] = ep ? [null, []] : await Promise.all([audiusFor(job.t), videosFor(job.t).catch(() => [])]);
+    if (!ep && !au && !vids.length) throw new Error('it isn\'t on YouTube');
+    const lyrics = job.withLyrics && !ep ? lyricsFor(job.t) : null; // fetched while it downloads
     const onFrac = f => { job.at = job.dur * f; dlProgress(job); };
-    const file = au ? await fetchAudius(job, au, onFrac) : await downloadSong(job, vids, onFrac);
+    const file = ep ? await fetchEpisode(job, onFrac) : au ? await fetchAudius(job, au, onFrac) : await downloadSong(job, vids, onFrac);
     job.at = job.dur; dlProgress(job, 'Finishing');
     const [cover, lyr] = await Promise.all([fetchCover(job.t), lyrics && lyrics(file.dur, au ? vids[0] && { ...vids[0], channel: 'Audius' } : vids.find(v => v.id === file.vid))]);
     const entry = { trackId: job.t.trackId, track: job.t, audio: file.blob, mime: file.blob.type, cover, lyrics: lyr?.raw ? lyr : null,
@@ -4988,17 +5163,56 @@ async function downloadSong(job, vids, onFrac) {
 }
 // An Audius upload's file, straight from there (its own MP3, 320 kbps) → { vid: '', blob, dur }; onFrac(0…1) as it
 // comes in. job.cancel() stops it.
-async function fetchAudius(job, au, onFrac) {
+const fetchAudius = async (job, au, onFrac) => ({ vid: '', blob: new Blob([await fetchWhole(job, au.url, onFrac, 'Audius didn\'t send it')], { type: 'audio/mpeg' }), dur: au.dur });
+// a file, as it comes in → a Blob of its own type. Nothing for 30 s: given up on (the Internet Archive stops now and then).
+async function fetchWhole(job, url, onFrac, why) {
   const ctl = new AbortController();
+  let idle = 0, stalled = false;
+  const poke = () => { clearTimeout(idle); idle = setTimeout(() => { stalled = true; ctl.abort(); }, 30000); };
   job.cancel = () => ctl.abort();
   try {
-    const r = await fetch(au.url, { signal: ctl.signal });
-    if (!r.ok) throw new Error('Audius didn\'t send it');
+    poke();
+    const r = await fetch(url, { signal: ctl.signal });
+    if (!r.ok) throw new Error((await r.json().catch(() => null))?.error || why);
     const n = +r.headers.get('content-length') || 0, rd = r.body.getReader(), parts = [];
-    for (let got = 0; ;) { const { done, value } = await rd.read(); if (done) break; parts.push(value); got += value.length; if (n) onFrac(got / n); }
-    return { vid: '', blob: new Blob(parts, { type: 'audio/mpeg' }), dur: au.dur };
-  } catch (e) { throw new Error(e.name === 'AbortError' ? 'cancelled' : e.message); }
-  finally { job.cancel = null; }
+    for (let got = 0; ;) { const { done, value } = await rd.read(); if (done) break; poke(); parts.push(value); got += value.length; if (n) onFrac(got / n); }
+    if (n && parts.reduce((a, p) => a + p.length, 0) < n) throw new Error('it didn\'t arrive whole');
+    return new Blob(parts, { type: (r.headers.get('content-type') || '').split(';')[0] });
+  } catch (e) { throw new Error(stalled ? 'its host stopped sending it' : e.name === 'AbortError' ? 'cancelled' : e.message); }
+  finally { clearTimeout(idle); job.cancel = null; }
+}
+// A podcast episode's or audiobook chapter's own file → { vid: '', blob, dur }. Their hosts don't let a page read them:
+// desktop, through this app's server; Android, the phone's own download (YtDl.file).
+async function fetchEpisode(job, onFrac) {
+  const t = job.t, once = async () => {
+    if (!YtDl) return fetchWhole(job, '/api/media?url=' + encodeURIComponent(t.epUrl), onFrac, 'its host didn\'t send it');
+    const key = Math.random().toString(36).slice(2);
+    job.cancel = () => YtDl.cancel({ key }).catch(() => {});
+    dlFrac.set(key, onFrac);
+    try {
+      const f = await YtDl.file({ url: t.epUrl, key });
+      const b = new Blob([await (await fetch(Capacitor.convertFileSrc(f.path))).blob()], { type: f.type });
+      YtDl.remove({ path: f.path }).catch(() => {});
+      return b;
+    } catch (e) { throw new Error(String(e.message || e)); }
+    finally { dlFrac.delete(key); job.cancel = null; }
+  };
+  // (hosts that stop or answer 500 now and then: twice more, a little later; stopped meanwhile, it stays stopped)
+  let blob;
+  for (let i = 0; !blob; i++) {
+    try { blob = await once(); }
+    catch (e) {
+      if (e.message === 'cancelled' || i === 2) throw e;
+      let stop = false; job.cancel = () => { stop = true; };
+      await new Promise(ok => setTimeout(ok, 3000 * (i + 1)));
+      job.cancel = null;
+      if (stop) throw new Error('cancelled');
+      job.at = 0; onFrac(0);
+    }
+  }
+  if (/^(text|application\/(json|xml|xhtml))/.test(blob.type) || blob.size < 1000) throw new Error('its host sent a page, not the audio');
+  if (!/^(audio|video)\//.test(blob.type)) blob = new Blob([blob], { type: /\.m4a|\.mp4|\.aac/i.test(t.epUrl) ? 'audio/mp4' : 'audio/mpeg' }); // (sent as "octet-stream")
+  return { vid: '', blob, dur: (t.trackTimeMillis || 0) / 1000 };
 }
 async function fetchCover(t) {
   const url = artUrl(t, 600);
@@ -5029,7 +5243,7 @@ function statsSave() {
 }
 setInterval(() => {
   const t = current;
-  if (!t || P.paused || !body.classList.contains('playing')) return;
+  if (!t || t.kind === 'episode' || P.paused || !body.classList.contains('playing')) return; // (your music's stats: talk not counted)
   const m = stats.mine, mon = monthKey(), add = (o, k, s = 5) => { o[k] = (o[k] || 0) + s; };
   add(m.d, dayKey()); m.h[new Date().getHours()] += 5;
   const k = songKey(t), s = m.songs[k] ||= { t: { trackId: t.trackId, trackName: t.trackName, artistName: t.artistName, collectionName: t.collectionName, artworkUrl100: t.artworkUrl100, ytId: t.ytId, trackTimeMillis: t.trackTimeMillis, kind: 'song' }, m: {}, n: 0 };
@@ -5124,6 +5338,7 @@ const ytmToTrack = v => ({ kind: 'song', trackId: 'yt:' + v.id, ytId: v.id, ytTi
 async function importPlaylist(link) {
   link = linkIn(link);
   const ours = SHARE_LINK.test(link);
+  if (COLLAB_LINK.test(link)) return collabJoin(link.match(COLLAB_LINK)[1]);
   if (!ours && !PLAYLIST_LINK.test(link)) return toast('That isn\'t a Spotify, Apple Music, YouTube or NetherFlow playlist link');
   // imported from this link before: into that one again (one cut short: just its songs left; else the songs it lacks —
   // new in the list since, or cut off by the service last time — not a second copy)
@@ -5259,7 +5474,7 @@ $('qrSave').onclick = () => { // a card to post or send: the name, the code, how
   for (const [x, y, r, col] of [[160, 140, 620, a], [960, 1260, 680, b2]]) { const gl = g.createRadialGradient(x, y, 0, x, y, r); gl.addColorStop(0, col); gl.addColorStop(1, 'transparent'); g.globalAlpha = .35; g.fillStyle = gl; g.fillRect(0, 0, W, H); }
   g.globalAlpha = 1; g.fillStyle = '#fff';
   const poster = getComputedStyle(body).getPropertyValue('--poster') || 'Impact, sans-serif';
-  g.font = `600 30px 'Martian Mono', monospace`; g.globalAlpha = .7; g.fillText('NETHERFLOW · A PLAYLIST FOR YOU', 80, 120); g.globalAlpha = 1;
+  g.font = `600 30px 'Martian Mono', monospace`; g.globalAlpha = .7; g.fillText(qrShared.together ? 'NETHERFLOW · A PLAYLIST WE EDIT TOGETHER' : 'NETHERFLOW · A PLAYLIST FOR YOU', 80, 120); g.globalAlpha = 1;
   g.font = `400 96px ${poster}`; g.fillText(cutText(g, qrShared.name, 920), 76, 236);
   g.font = `600 32px 'Martian Mono', monospace`; g.globalAlpha = .75; g.fillText(`${qrShared.total} SONGS`, 82, 296); g.globalAlpha = 1;
   const code = document.createElement('canvas'), m = qrShared.modules, px = Math.floor(760 / (m.length + 8));
@@ -5302,12 +5517,12 @@ function tgMqtt(url, topic, onMsg, onDrop) {
         let n = 0, mul = 1, i = 1, c;
         do { if (i >= buf.length) return; c = buf[i++]; n += (c & 127) * mul; mul *= 128; } while (c & 128);
         if (buf.length < i + n) return;
-        const type = buf[0] >> 4, body = buf.subarray(i, i + n);
+        const head = buf[0], type = head >> 4, body = buf.subarray(i, i + n); // (the header read before the buffer moves on: two packets in one frame)
         buf = buf.slice(i + n);
         if (type === 2) ws.send(pkt(0x82, [0, 1, ...str(topic), 0])); // connected: subscribe
         else if (type === 9) { ok = true; clearTimeout(fail); ping = setInterval(() => ws.send(new Uint8Array([0xc0, 0])), 20000);
-          res({ pub: bytes => ws.readyState === 1 && ws.send(pkt(0x30, [...str(topic), ...bytes])), close: () => { ok = false; ws.close(); } }); }
-        else if (type === 3) { const tl = (body[0] << 8) | body[1], q = (buf[0] >> 1) & 3; onMsg(body.slice(2 + tl + (q ? 2 : 0))); }
+          res({ pub: (bytes, retain) => ws.readyState === 1 && ws.send(pkt(retain ? 0x31 : 0x30, [...str(topic), ...bytes])), close: () => { ok = false; ws.close(); } }); } // (retain: the relay keeps it for whoever comes next)
+        else if (type === 3) { const tl = (body[0] << 8) | body[1], q = (head >> 1) & 3; onMsg(body.slice(2 + tl + (q ? 2 : 0))); }
       }
     };
   });
@@ -5464,6 +5679,200 @@ function tgRender() {
   if (tg.status) out.push(el('p', 'q-empty lbl tg-status', tg.status));
   $('togetherPanel').replaceChildren(...out);
 }
+// ---------- playlists you edit together: a playlist shared by its link, that everyone who has it can add songs to, take
+// them out of and rename, on any phone or PC — kept in step through the same public relays as Listen together,
+// end-to-end encrypted with a key made from the link's code. The relay keeps the latest copy (only noise to it) for
+// whoever opens it next, and every member's app keeps the whole of it, so it's put back if the relay ever loses it. Each
+// song remembers when it was added and when taken out (a name, when it was given), so two people editing at once both
+// count: for the same song, the later of the two. Songs in the order they were added. No server of NetherFlow's, no
+// account. ----------
+const COLLAB_LINK = /^https:\/\/volodya-rua\.github\.io\/NetherFlow\/p\/?#e\.([A-Z0-9]{16})$/i, COLLAB_MAX = 2500;
+const collab = new Map(), collabWaiting = new Map(); // code → its connection; code → a join waiting for the playlist
+const collabCode = () => Array.from(crypto.getRandomValues(new Uint8Array(16)), x => TG_ABC[x % TG_ABC.length]).join('');
+const collabLink = code => SHARE_URL + 'e.' + code;
+async function collabKeys(code) {
+  const base = await crypto.subtle.importKey('raw', tgEnc(code), 'PBKDF2', false, ['deriveKey']);
+  const key = await crypto.subtle.deriveKey({ name: 'PBKDF2', salt: tgEnc('netherflow-list-1'), iterations: 120000, hash: 'SHA-256' }, base, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+  const h = new Uint8Array(await crypto.subtle.digest('SHA-256', tgEnc('nf-list:' + code)));
+  return { key, topic: 'nf1/l' + [...h.slice(0, 16)].map(x => x.toString(16).padStart(2, '0')).join('') };
+}
+async function collabSeal(key, obj) { // squeezed, then sealed
+  const z = new Uint8Array(await pipe(tgEnc(JSON.stringify(obj)), new CompressionStream('deflate-raw')));
+  const iv = crypto.getRandomValues(new Uint8Array(12)), ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, z));
+  const out = new Uint8Array(12 + ct.length); out.set(iv); out.set(ct, 12);
+  return out;
+}
+async function collabUnseal(key, bytes) { // (not ours, or broken: null; its unpacking capped)
+  try {
+    const z = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: bytes.slice(0, 12) }, key, bytes.slice(12));
+    const r = new Blob([z]).stream().pipeThrough(new DecompressionStream('deflate-raw')).getReader(), parts = [];
+    for (let size = 0; ;) { const { done, value } = await r.read(); if (done) break; if ((size += value.length) > 8e6) { r.cancel(); return null; } parts.push(value); }
+    return JSON.parse(await new Blob(parts).text());
+  } catch { return null; }
+}
+// a song as another member's copy has it: only the fields a song has, of the kinds they are, its pictures and preview only
+// from Apple's and YouTube's own hosts (anyone with the link can write to it: nothing else gets in)
+const COLLAB_ID = /^(yt:[\w-]{11}|\d{1,15})$/;
+function collabTrack(t) {
+  if (!t || typeof t !== 'object' || !COLLAB_ID.test(String(t.trackId))) return null;
+  const o = {};
+  for (const k of TRACK_KEYS) { const v = t[k]; if (!k.startsWith('ep') && (typeof v === 'string' ? v.length <= 500 : typeof v === 'number' && isFinite(v))) o[k] = v; }
+  if (o.kind === 'episode') delete o.kind; // (songs only: never an episode's audio from anyone's address)
+  if (o.artworkUrl100 && !/^https:\/\/([\w-]+\.)*(mzstatic\.com|ytimg\.com|googleusercontent\.com|ggpht\.com)\//.test(o.artworkUrl100)) delete o.artworkUrl100;
+  if (o.previewUrl && !/^https:\/\/([\w-]+\.)*(apple\.com|mzstatic\.com)\//.test(o.previewUrl)) delete o.previewUrl;
+  if (o.ytId && !/^[\w-]{11}$/.test(o.ytId)) delete o.ytId;
+  o.trackId = /^\d+$/.test(String(t.trackId)) ? +t.trackId : String(t.trackId);
+  o.kind = 'song';
+  return o.trackName ? o : null;
+}
+// what changed here since the last time, as times on each song (and on the name): every way a playlist changes (a song
+// added or taken out, an import, a sync with the phone) is caught by looking, not by each of them saying so
+function collabNote(p) {
+  const now = Date.now(), ops = p.ops ||= {}, here = new Set();
+  let k = 0;
+  for (const t of p.tracks) {
+    const id = String(t.trackId), o = ops[id];
+    here.add(id);
+    if (!o || o[1] >= o[0]) ops[id] = [Math.max(now + k++, (o ? o[1] : 0) + 1), o ? o[1] : 0]; // (a ms apart: the order they're in)
+  }
+  for (const id in ops) if (ops[id][0] > ops[id][1] && !here.has(id)) ops[id][1] = Math.max(now, ops[id][0] + 1);
+  if (p.name !== p.nameSeen) { p.nameAt = now; p.nameSeen = p.name; }
+}
+// the playlist as sent (songs taken out are sent as just their id, for 90 days, so they're taken out everywhere), and its
+// signature: what it holds, whatever order the songs' details came in (two equal copies never trade sends forever)
+function collabSnap(p) {
+  const have = new Map(p.tracks.map(t => [String(t.trackId), t])), old = Date.now() - 90 * 864e5;
+  const ids = Object.keys(p.ops || {}).filter(id => { const [a, r] = p.ops[id]; return a > r ? have.has(id) : r > old; }).sort();
+  return { v: 1, n: p.name, na: p.nameAt || 0, i: ids.map(id => { const [a, r] = p.ops[id]; return [a > r ? slim(have.get(id)) : { trackId: id }, a, r]; }) };
+}
+const collabSig = s => JSON.stringify([s.n, s.na, s.i.map(x => [String(x[0].trackId), x[1], x[2]])]);
+// another member's copy into this one: for each song, the later of the two adds and the later of the two removals; the
+// later of the two names
+function collabMerge(p, s) {
+  if (!s || s.v !== 1 || !Array.isArray(s.i)) return false;
+  const ops = p.ops ||= {}, known = new Map(p.tracks.map(t => [String(t.trackId), t]));
+  const soon = Date.now() + 7 * 864e5; // (a time from the far future is someone's broken clock: not believed)
+  let changed = false;
+  for (const it of s.i.slice(0, COLLAB_MAX * 3)) {
+    if (!Array.isArray(it) || !it[0]) continue;
+    const id = String(it[0].trackId), a = +it[1] || 0, r = +it[2] || 0;
+    if (!COLLAB_ID.test(id) || a > soon || r > soon || a < 0 || r < 0) continue;
+    const o = ops[id] || [0, 0], n = [Math.max(o[0], a), Math.max(o[1], r)];
+    if (n[0] > n[1] && !known.has(id)) { const t = collabTrack(it[0]); if (t) known.set(id, t); else n[0] = o[0]; } // (a song this copy can't take: its add left out, never sent back as a removal)
+    if (n[0] !== o[0] || n[1] !== o[1]) { ops[id] = n; changed = true; }
+  }
+  if (+s.na > (p.nameAt || 0) && +s.na <= soon && typeof s.n === 'string' && s.n.trim()) { p.name = s.n.trim().slice(0, 80); p.nameAt = +s.na; p.nameSeen = p.name; changed = true; }
+  if (changed) p.tracks = Object.keys(ops).filter(id => ops[id][0] > ops[id][1] && known.has(id)).map(id => known.get(id));
+  return collabOrder(p) || changed;
+}
+// the order every copy has: when each was added, then its id (nothing about this device in it: two adds at the same
+// moment come out the same way everywhere)
+function collabOrder(p) {
+  const at = id => (p.ops?.[id] || [0])[0], key = t => String(t.trackId), before = p.tracks.map(key).join();
+  p.tracks.sort((x, y) => at(key(x)) - at(key(y)) || (key(x) < key(y) ? -1 : key(x) > key(y) ? 1 : 0));
+  if (p.tracks.length > COLLAB_MAX) p.tracks.length = COLLAB_MAX;
+  return p.tracks.map(key).join() !== before;
+}
+// connected to the first of the relays that answers (in an order the code picks, so every member tries the same first;
+// from: further along it, when the playlist wasn't found on the first)
+async function collabConnect(code, from = 0) {
+  const had = collab.get(code);
+  if (had?.conn) return had;
+  const c = had || { ...(await collabKeys(code)), conn: null, sent: '', at: -1 };
+  collab.set(code, c);
+  const start = [...code].reduce((a, ch) => a + ch.charCodeAt(0), 0) + from;
+  for (let i = 0; i < TG_BROKERS.length && !c.conn; i++) {
+    const at = (start + i) % TG_BROKERS.length;
+    try {
+      c.conn = await tgMqtt(TG_BROKERS[at], c.topic, b => collabUnseal(c.key, b).then(s => s && collabGot(code, s)),
+        () => { c.conn = null; c.sent = ''; if (library.playlists.some(p => p.collab === code)) setTimeout(() => collabConnect(code).then(() => collabSoon(code)).catch(() => {}), 8000); }); // (dropped: back in a while)
+      c.at = at;
+    } catch {}
+  }
+  if (!c.conn) throw new Error('no relay answered');
+  return c;
+}
+function collabGot(code, s) {
+  const p = library.playlists.find(x => x.collab === code), c = collab.get(code);
+  if (!p) return collabWaiting.get(code)?.(s);
+  if (!c) return;
+  c.sent = collabSig(s); // (what the relay holds now)
+  collabNote(p);
+  if (collabMerge(p, s)) saveLib();
+  collabSoon(code); // (and if this copy has what that one hadn't, it's sent)
+  if ($('library').open && libView?.id === p.id) renderLibrary();
+}
+// sent to the relay (kept there): a moment after the last change, once
+const collabTimers = new Map();
+function collabSoon(code, ms = 700) { clearTimeout(collabTimers.get(code)); collabTimers.set(code, setTimeout(() => collabPush(code), ms)); }
+async function collabPush(code) {
+  const p = library.playlists.find(x => x.collab === code), c = collab.get(code);
+  if (!p || !c?.conn) return;
+  collabNote(p);
+  if (collabOrder(p)) saveLib();
+  const snap = collabSnap(p), sig = collabSig(snap);
+  if (sig === c.sent) return;
+  const bytes = await collabSeal(c.key, snap);
+  if (bytes.length > 240000) return toast(`${p.name} is too big to edit together: up to about ${COLLAB_MAX} songs`);
+  c.conn.pub(bytes, true);
+  c.sent = sig;
+}
+function collabChanged() { if (libReady) for (const p of library.playlists) if (p.collab) collabSoon(p.collab); } // (from saveLib)
+// a playlist made one to edit together: its code, the relay, the link to invite with
+async function collabShare(p) {
+  if (p.tracks.length > COLLAB_MAX) return toast(`Up to ${COLLAB_MAX} songs can be edited together: this one has ${p.tracks.length}`);
+  if (!p.collab) {
+    p.collab = collabCode(); p.ops = {}; p.nameAt = 0; p.nameSeen = null;
+    collabNote(p); saveLib();
+  }
+  try { await collabConnect(p.collab); } catch { return toast('Couldn\'t reach the relay: check the connection and try again'); }
+  collabSoon(p.collab, 0);
+  collabInvite(p);
+  renderLibrary();
+}
+function collabInvite(p) {
+  const link = collabLink(p.collab);
+  qrShared = { name: p.name, link, modules: netherflowLib.qr(link), n: p.tracks.length, total: p.tracks.length, together: true };
+  drawQr($('qrCode'), qrShared.modules, 8);
+  $('qrTitle').textContent = p.name;
+  $('qrNote').textContent = 'Anyone with this link can add songs, take them out and rename it, on their phone or PC: they paste it in NetherFlow\'s search to join. Changes show up for everyone.';
+  $('qrShare').showModal(); placeWinctl();
+}
+// joining from a link: the playlist as the relay has it (a few seconds), into the Library; already in it, opened
+async function collabJoin(code) {
+  code = code.toUpperCase();
+  const mine = library.playlists.find(x => x.collab === code);
+  if (mine) return openLibrary({ kind: 'playlist', id: mine.id });
+  toast('Joining the playlist…');
+  let snap = null;
+  for (let from = 0; from < TG_BROKERS.length && !snap; from++) { // (not on the first relay that answers: the others, in turn)
+    try {
+      const c = collab.get(code);
+      if (c?.conn && from) { c.conn.close(); c.conn = null; }
+      const got = new Promise(r => { collabWaiting.set(code, r); setTimeout(() => r(null), 7000); });
+      await collabConnect(code, from);
+      snap = await got;
+    } catch { break; }
+  }
+  collabWaiting.delete(code);
+  if (!snap) { collab.get(code)?.conn?.close(); collab.delete(code); return toast(navigator.onLine ? 'Couldn\'t find that playlist: someone in it needs to open NetherFlow (the relay only keeps it a while), then try again' : 'You\'re offline: joining needs the internet'); }
+  const p = { id: 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7), name: 'Shared playlist', tracks: [], collab: code, ops: {}, nameAt: 0, nameSeen: 'Shared playlist' };
+  collabMerge(p, snap);
+  library.playlists.push(p);
+  collab.get(code).sent = collabSig(snap);
+  saveLib();
+  toast(`Joined ${p.name}: ${p.tracks.length} songs, edited together`);
+  openLibrary({ kind: 'playlist', id: p.id });
+}
+// no longer edited together, here: this copy stays, as an ordinary playlist (the others go on without it)
+function collabLeave(p) {
+  const c = collab.get(p.collab);
+  c?.conn?.close(); collab.delete(p.collab); clearTimeout(collabTimers.get(p.collab));
+  delete p.collab; delete p.ops; delete p.nameAt; delete p.nameSeen;
+  saveLib();
+}
+// at the start: each one connected (a little apart), what changed while away taken in, and this copy's changes sent
+function collabStart() { library.playlists.filter(p => p.collab).forEach((p, i) => setTimeout(() => collabConnect(p.collab).then(() => collabSoon(p.collab, 5000)).catch(() => {}), 400 * i)); }
 // ---------- phone ↔ PC sync (Settings: Sync): liked songs, playlists, history and stats, swapped over your own Wi-Fi — no
 // account, no server. The computer shows a code; the phone, given it, finds the computer on the network, and the two
 // swap what each has: each keeps all of both (a sync never deletes). It's encrypted with a key made from the code. ----------
@@ -5602,7 +6011,7 @@ function openLibrary(view = null) {
   renderLibrary();
   $('libList').scrollTop = 0;
 }
-function libBack() { if (libView) openLibrary(null); else $('library').close(); }
+function libBack() { if (libView?.from) openLibrary(libView.from); else if (libView) openLibrary(null); else $('library').close(); } // (a page opened from another: back to that one)
 const mb = n => n >= 1e9 ? (n / 1e9).toFixed(1) + ' GB' : Math.max(1, Math.round(n / 1e6)) + ' MB';
 const coverOf = t => saved.get(t.trackId)?.coverUrl || artUrl(t, 300);
 // A tile (Liked songs, Downloads, New playlist, a playlist with no covers yet): a line icon, the name running
@@ -5625,6 +6034,8 @@ function mosaic(tracks, fallback) {
   for (const c of covers.slice(0, covers.length < 4 ? 1 : 4)) { const i = el('img'); i.alt = ''; i.src = c; box.append(i); }
   return box;
 }
+// "1 song", "12 songs · 2 episodes" (Downloads holds both)
+const counted = ts => { const e = ts.filter(t => t.kind === 'episode').length, s = ts.length - e, n = (k, w) => `${k} ${w}${k === 1 ? '' : 's'}`; return [(s || !e) && n(s, 'song'), e && n(e, 'episode')].filter(Boolean); };
 function libCard(art, name, sub, onclick, cls = '') {
   const b = el('button', 'album ' + cls);
   b.append(art, el('b', '', name), el('small', '', sub));
@@ -5647,12 +6058,318 @@ function dlRows() {
   });
 }
 function dlProgress(j, label) {
-  const r = [...document.querySelectorAll('.dlrow')].find(x => x.dataset.dl === String(j.t.trackId));
+  for (const x of document.querySelectorAll('.ep-save')) if (x.dataset.dl === String(j.t.trackId)) x.textContent = pct(j) || '…';
+  const r =[...document.querySelectorAll('.dlrow')].find(x => x.dataset.dl === String(j.t.trackId));
   if (!r) return;
   r.style.setProperty('--dp', j.dur ? Math.min(1, j.at / j.dur) : 0); // (a song whose length isn't known: no NaN)
   r.querySelector('small').textContent = label || `Downloading · ${pct(j) || 'starting'}`;
 }
 let libTok = 0;
+// ---------- Explore (Library › Explore): YouTube Music's own — this country's charts, new albums and singles, what's
+// trending, its moods and genres (each a shelf of its curated playlists) — and, made here from what you play and like,
+// your mixes and what's new from the artists you play (nothing about your listening leaves the device: only the songs
+// it looks up). Each page kept 20 minutes, so back and forth is instant. ----------
+const xCache = new Map();
+const xGet = (key, f) => { const c = xCache.get(key); if (c && Date.now() - c.at < 20 * 60e3) return c.p; const p = f().catch(e => { xCache.delete(key); throw e; }); xCache.set(key, { at: Date.now(), p }); return p; };
+const xFail = e => { // (what went wrong, and Try again: what failed asked again)
+  const box = el('div', 'x-fail'), again = el('button', 'pill ghost', 'Try again');
+  again.onclick = () => { for (const k of [...xCache.keys()]) if (!k.startsWith('mix:')) xCache.delete(k); renderLibrary(); };
+  box.append(el('p', 'empty', navigator.onLine ? `Couldn't load it (${String(e?.message || 'no answer').slice(0, 80)}).` : 'You\'re offline: Explore needs the internet.'), again);
+  return box;
+};
+// a cover: in a shelf, YouTube's small one, fetched as it scrolls into view (a mood's page has hundreds: all at once, its
+// server turned some away); big, at a list's head
+const coverTile = (url, big) => { const box = el('div', 'pc-art one'), i = el('img'); i.alt = ''; i.loading = 'lazy'; i.decoding = 'async'; i.src = big ? url : url.replace(/=w544-h544/, '=w226-h226'); box.append(i); return box; };
+const ytPlTracks = pl => pl.tracks.filter(t => t.yt).map(t => ytmToTrack({ id: t.yt, title: t.title, artist: t.artist, album: t.album, dur: t.dur, art: `https://i.ytimg.com/vi/${t.yt}/hqdefault.jpg` }));
+// a list of songs to play (a chart, a playlist, an album, a mix): { key, label, title, art, load: () => { name, sub, art,
+// tracks, src } }, opened over the page it came from (Back returns there)
+function openList(spec) { openLibrary({ ...spec, kind: 'list', from: libView }); }
+const openYtList = (id, title, art, label = 'Playlist') => openList({ key: 'pl:' + id, label, title, art,
+  load: () => api.playlist('https://music.youtube.com/playlist?list=' + id).then(pl => ({ name: pl.name || title, tracks: ytPlTracks(pl), src: 'https://music.youtube.com/playlist?list=' + id })) });
+const openYtAlbum = a => openList({ key: 'album:' + a.id, label: a.kind || 'Album', title: a.title, art: a.art,
+  load: () => api.explore('album:' + a.id).then(al => ({ name: al.title, sub: [al.kind, al.artist, al.year].filter(Boolean).join(' · '), art: al.art,
+    tracks: al.tracks.map(t => ytmToTrack({ id: t.id, title: t.title, artist: t.artist, album: al.title, dur: t.dur, art: al.art })) })) });
+function renderList(v, head, list, tok) {
+  head(v.label || 'Playlist', v.title, 'Loading…', v.art ? coverTile(v.art, true) : tile('note', v.title));
+  xGet(v.key, v.load).then(d => {
+    if (tok !== libTok) return;
+    const mins = Math.round(d.tracks.reduce((a, t) => a + (t.trackTimeMillis || 0), 0) / 60000);
+    head(v.label || 'Playlist', d.name || v.title, d.sub || [`${d.tracks.length} songs`, mins && `${mins} min`].filter(Boolean).join(' · '), d.art || v.art ? coverTile(d.art || v.art, true) : mosaic(d.tracks, () => tile('note', v.title)));
+    const acts = [];
+    if (d.tracks.length) {
+      const play = el('button', 'pill', 'Play all'), save = el('button', 'pill ghost');
+      play.onclick = () => { queue = d.tracks.slice(); playTrack(queue[0]); };
+      save.append(ico('plus'), 'Save to Library');
+      save.onclick = () => { const p = newPlaylist(d.name || v.title); addToPlaylist(p, d.tracks); if (d.src) { p.src = d.src; saveLib(); } openLibrary({ kind: 'playlist', id: p.id }); };
+      acts.push(play, save);
+    }
+    $('libActs').replaceChildren(...acts);
+    $('libList').replaceChildren(...(d.tracks.length ? d.tracks.map((s, i) => row(s, i, d.tracks)) : [el('p', 'empty', d.empty || 'Nothing in it right now.')]));
+  }).catch(e => { if (tok === libTok) { $('libSub').textContent = ''; $('libList').replaceChildren(xFail(e)); } });
+  list.push(el('p', 'empty', 'Loading…'));
+}
+// Explore's page: its shelves, each filled as its part arrives
+function renderExplore(head, list, tok) {
+  head('Explore', 'Explore', 'Charts, new music, moods · and mixes made from what you play', tile('compass', 'Explore'));
+  const mine = el('div', 'albums strip'), fresh = el('div', 'albums strip'), charts = el('div'), albums = el('div', 'albums strip'), trend = el('div'), moods = el('div', 'x-moods');
+  const wait = box => box.replaceChildren(el('p', 'empty', 'Loading…'));
+  for (const b of [fresh, charts, albums, trend, moods]) wait(b);
+  mine.append(
+    libCard(tile('heart', 'Your mix'), 'Your mix', 'Your most played, and more like them', () => openList({ key: 'mix:mine', label: 'Made for you', title: 'Your mix', load: () => makeMix('mine') })),
+    libCard(tile('compass', 'Discover'), 'Discover', 'Songs new to you, like the ones you love', () => openList({ key: 'mix:new', label: 'Made for you', title: 'Discover', load: () => makeMix('new') })));
+  list.push(sectionHead('Made for you'), mine, sectionHead('New from artists you play'), fresh, sectionHead('Charts'), charts, sectionHead('New albums & singles'), albums, sectionHead('Trending'), trend, sectionHead('Moods & genres'), moods);
+  const live = () => tok === libTok;
+  xGet('fresh', newFromArtists).then(l => live() && fresh.replaceChildren(...(l.length ? l.map(a => albumTile(a, openAlbumPage)) : [el('p', 'empty', 'Play and like some songs: new albums and singles from those artists show up here.')]))).catch(e => live() && fresh.replaceChildren(xFail(e)));
+  xGet('charts', () => api.explore('charts')).then(c => {
+    if (!live()) return;
+    const groups = new Map(); for (const l of c.lists) groups.set(l.group, [...(groups.get(l.group) || []), l]);
+    charts.replaceChildren(...[...groups].flatMap(([g, ls]) => [el('p', 'x-group lbl', `${g}${c.where ? ' · ' + c.where : ''}`),
+      (s => { s.append(...ls.map(l => libCard(coverTile(l.art), l.title, l.sub, () => openYtList(l.id, l.title, l.art, 'Chart')))); return s; })(el('div', 'albums strip'))]));
+  }).catch(e => live() && charts.replaceChildren(xFail(e)));
+  xGet('explore', () => api.explore('explore')).then(x => {
+    if (!live()) return;
+    albums.replaceChildren(...x.albums.map(a => libCard(coverTile(a.art), a.title, `${a.kind} · ${a.artist}`, () => openYtAlbum(a))));
+    const songs = x.trending.map(t => ytmToTrack({ id: t.id, title: t.title, artist: t.artist, album: '', dur: 0, art: t.art }));
+    trend.replaceChildren(...songs.slice(0, 10).map((s, i) => row(s, i, songs)), ...(songs.length > 10 ? [(b => { b.onclick = () => openList({ key: 'trending', label: 'Trending', title: 'Trending', load: async () => ({ name: 'Trending', tracks: songs }) }); return b; })(el('button', 'pill ghost x-more', `All ${songs.length} trending`))] : []));
+    moods.replaceChildren(...x.moods.map(m => { const b = el('button', 'x-mood', m.title); if (m.color) b.style.setProperty('--c', m.color); b.onclick = () => openLibrary({ kind: 'mood', from: libView, params: m.params, title: m.title }); return b; }));
+  }).catch(e => { if (live()) for (const b of [albums, trend, moods]) b.replaceChildren(xFail(e)); });
+}
+// a mood or genre: YouTube Music's playlists for it, in its shelves
+function renderMood(v, head, list, tok) {
+  head('Moods & genres', v.title, 'Loading…', tile('compass', v.title));
+  const box = el('div'); box.append(el('p', 'empty', 'Loading…')); list.push(box);
+  xGet('mood:' + v.params, () => api.explore('mood:' + v.params)).then(m => {
+    if (tok !== libTok) return;
+    $('libSub').textContent = `${m.groups.reduce((a, g) => a + g.lists.length, 0)} playlists · by YouTube Music`;
+    box.replaceChildren(...m.groups.flatMap(g => [sectionHead(g.title), (s => { s.append(...g.lists.map(l => libCard(coverTile(l.art), l.title, l.sub.replace(/^Playlist • /, ''), () => openYtList(l.id, l.title, l.art)))); return s; })(el('div', 'albums strip'))]));
+  }).catch(e => tok === libTok && box.replaceChildren(xFail(e)));
+}
+// Made for you: songs like your most played and liked (their YouTube Music radios, ranked by what you skip and like here),
+// with them ('mine'), or only ones you've never played or liked ('new')
+async function makeMix(kind) {
+  const st = statsFor('all'), seen = new Set(), seeds = [];
+  for (const t of [...st.songs.map(x => x[0]), ...library.liked]) { const k = songKey(t); if (t?.trackName && !seen.has(k)) { seen.add(k); seeds.push(t); } }
+  if (!seeds.length) return { name: kind === 'mine' ? 'Your mix' : 'Discover', tracks: [], empty: 'Play and like some songs first: your mixes are made from them.' };
+  const pickFrom = kind === 'mine' ? seeds.slice(0, 5) : seeds.slice(0, 30).sort(() => Math.random() - .5).slice(0, 5);
+  const radios = await Promise.all(pickFrom.map(async t => { const id = await seedFor(t).catch(() => ''); return id ? radioFor(id) : []; }));
+  const known = new Set([...seen, ...library.playlists.flatMap(p => p.tracks.map(songKey)), ...auto.mem.heard]), taken = new Set(), out = [];
+  const lists = radios.map(r => r.map(c => ytmToTrack({ id: c.id, title: c.title, artist: c.artist, album: c.album, dur: c.dur, art: c.art }))
+    .filter(t => !isModded(t) && t.trackTimeMillis >= 60e3 && t.trackTimeMillis <= 600e3 && (kind === 'mine' || !known.has(songKey(t))))
+    .sort((a, b) => (auto.mem.taste[artKey(b)] || 0) - (auto.mem.taste[artKey(a)] || 0)));
+  for (let i = 0; out.length < 40 && lists.some(l => i < l.length); i++) for (const l of lists) { const t = l[i]; if (t && !taken.has(songKey(t))) { taken.add(songKey(t)); out.push(t); } } // (each radio in turn)
+  if (kind === 'mine') pickFrom.forEach((t, i) => out.splice(Math.min(out.length, i * 6), 0, t)); // (your own among them)
+  if (!out.length) throw new Error('YouTube Music didn\'t answer');
+  return { name: kind === 'mine' ? 'Your mix' : 'Discover', tracks: out.slice(0, 40), sub: kind === 'mine' ? 'Your most played, and more like them' : 'Songs you haven\'t played, like the ones you love' };
+}
+// new albums and singles (the last four months) from the artists you play most and like
+async function newFromArtists() {
+  const st = statsFor('all'), names = [...new Set([...st.artists.map(([n]) => n), ...library.liked.map(t => (t.artistName || '').split(/,|&| feat\.? | x /i)[0].trim())])].filter(Boolean).slice(0, 10);
+  const since = new Date(Date.now() - 120 * 864e5).toISOString(), out = [], ids = new Set();
+  await Promise.all(names.map(async n => {
+    const a = (await searchArtists(n).catch(() => [])).find(x => sameWords(x.artistName, n));
+    if (!a) return;
+    for (const al of await artistAlbums(a).catch(() => [])) if ((al.releaseDate || '') > since && !ids.has(al.collectionId)) { ids.add(al.collectionId); out.push(al); }
+  }));
+  return out.sort((a, b) => b.releaseDate.localeCompare(a.releaseDate)).slice(0, 24);
+}
+// ---------- podcasts and audiobooks (Library › Podcasts, Audiobooks): shows from Apple's podcast directory (its search and
+// its top charts), their episodes from each show's own feed; audiobooks from LibriVox (free, public domain in the US, read by
+// volunteers), as the Internet Archive keeps them. They play here (epAudio: not on YouTube), from where you left off, at
+// the speed you like; the shows you follow and the books you're reading are kept on this device. ----------
+const PODS = 'netherflow.pods', BOOKS = 'netherflow.books', EPPOS = 'netherflow.eppos', SPEEDS = [0.8, 1, 1.25, 1.5, 1.75, 2];
+const jsonOr = (k, d) => { try { return JSON.parse(store.get(k)) || d; } catch { return d; } };
+let pods = jsonOr(PODS, []), books = jsonOr(BOOKS, []), epPos = jsonOr(EPPOS, {}), epSpeed = SPEEDS.includes(+store.get('netherflow.epspeed')) ? +store.get('netherflow.epspeed') : 1;
+// where each was left (seconds, -1 played to the end): the latest 600
+function epKeep(done) {
+  const t = current;
+  if (!t || t.kind !== 'episode' || engine !== 'ep') return;
+  const at = done ? -1 : Math.floor(epAudio.currentTime || 0);
+  if (!done && (at < 5 || epPos[t.trackId] === -1 && at < 30)) return;
+  delete epPos[t.trackId]; epPos[t.trackId] = at;
+  const ks = Object.keys(epPos); if (ks.length > 600) for (const k of ks.slice(0, ks.length - 600)) delete epPos[k];
+  store.set(EPPOS, JSON.stringify(epPos));
+}
+setInterval(() => { if (engine === 'ep' && !epAudio.paused) epKeep(); }, 10000);
+async function playEpisode(t, id) {
+  useEngine('ep');
+  const kept = saved.has(t.trackId) && await idb.get(t.trackId).catch(() => null); // (saved on this device: from there)
+  if (id !== loadId) return;
+  if (epAudio.src.startsWith('blob:')) URL.revokeObjectURL(epAudio.src);
+  epAudio.src = kept?.audio ? URL.createObjectURL(kept.audio) : native && /^http:/.test(t.epUrl) ? t.epUrl.replace(/^http:/, 'https:') : t.epUrl; // (a phone's app may not load plain http)
+  epAudio.playbackRate = epAudio.defaultPlaybackRate = epSpeed;
+  savedDur = (t.trackTimeMillis || 0) / 1000;
+  const at = epPos[t.trackId];
+  if (at > 0) epAudio.addEventListener('loadedmetadata', () => { if (id === loadId && at < (epAudio.duration || Infinity) - 15) epAudio.currentTime = at; }, { once: true });
+  P.play();
+  status(`◆ ${t.epBook ? 'audiobook' : 'podcast'}${kept?.audio ? ' · saved' : ''}${epSpeed !== 1 ? ' · ' + epSpeed + '×' : ''}${at > 0 ? ' · from ' + fmt(at) : ''}`);
+  epStage(t);
+  if (t.epBook && !books.some(b => b.id === t.epShow)) { books.unshift({ id: t.epShow, title: t.collectionName, author: t.artistName, art: t.artworkUrl100 }); store.set(BOOKS, JSON.stringify(books.slice(0, 50))); } // (a book begun: in Your books)
+}
+// the stage while talk plays: what it is, its name large, what it's about
+function epStage(t) {
+  lines = []; synced = false; lastLyr = null;
+  $('csLine').textContent = '';
+  buildMap();
+  const d = el('div', 'deck ep-stage');
+  d.append(el('div', 'count lbl', (t.epBook ? 'Audiobook · ' : 'Podcast · ') + (t.epBook ? t.collectionName : t.artistName)), el('p', 'ep-title', t.trackName), ...(t.epAbout ? [el('p', 'ep-about', t.epAbout)] : []));
+  stage.replaceChildren(d);
+}
+function setEpSpeed(v) { epSpeed = v; store.set('netherflow.epspeed', v === 1 ? '' : String(v)); epAudio.playbackRate = epAudio.defaultPlaybackRate = v; if (engine === 'ep') status(`◆ ${current?.epBook ? 'audiobook' : 'podcast'}${v !== 1 ? ' · ' + v + '×' : ''}`); }
+// what a show or book is about: four lines, all of it on a tap (or Enter)
+const aboutEl = s => { const p = el('p', 'x-about', s); p.tabIndex = 0; p.title = 'Show all'; p.onclick = () => p.classList.toggle('open'); p.onkeydown = e => { if (e.key === 'Enter') p.click(); }; return p; };
+const speedBtn = () => { const b = el('button', 'pill ghost', `Speed ${epSpeed}×`); b.onclick = () => { setEpSpeed(SPEEDS[(SPEEDS.indexOf(epSpeed) + 1) % SPEEDS.length]); b.textContent = `Speed ${epSpeed}×`; }; return b; };
+// a show: Apple's directory entry → { id, feed, name, artist, art, genre }
+const podOf = p => ({ id: p.collectionId, feed: p.feedUrl, name: p.collectionName, artist: p.artistName, art: (p.artworkUrl600 || p.artworkUrl100 || '').replace(/\d+x\d+bb/, '600x600bb'), genre: p.primaryGenreName || '' });
+const podSearch = async q => (await itunes('search', { media: 'podcast', entity: 'podcast', term: q, limit: 30 })).filter(p => p.feedUrl).map(podOf);
+const podTop = () => xGet('pods:top', async () => {
+  // Apple's chart for this country: its older feed (which a page may read itself) first; its newer one (through the app's
+  // server, or the phone's own requests) when that doesn't answer. (The newer one answers "502 Bad Gateway" now and then.)
+  const cc = STORE.toLowerCase();
+  let ids = await fetch(`https://itunes.apple.com/${cc}/rss/toppodcasts/limit=50/json`).then(r => r.json())
+    .then(j => (j.feed?.entry || []).map(e => +e.id?.attributes?.['im:id']).filter(Boolean)).catch(() => []);
+  if (!ids.length) {
+    const getLong = (url, headers) => Capacitor.Plugins.CapacitorHttp.get({ url, headers, responseType: 'text', connectTimeout: 15000, readTimeout: 20000 }).then(r => typeof r.data === 'string' ? r.data : JSON.stringify(r.data));
+    const top = native ? await netherflowLib.topPodcasts(getLong, cc) : await fetch('/api/toppods?cc=' + cc).then(r => r.json());
+    if (!Array.isArray(top)) throw new Error(top?.error || 'Apple didn\'t answer');
+    ids = top.map(x => x.id);
+  }
+  const found = await itunes('lookup', { media: 'podcast', entity: 'podcast', id: ids.slice(0, 50).join(',') });
+  return ids.map(id => found.find(f => f.collectionId === id)).filter(f => f?.feedUrl).map(podOf);
+});
+// a show's feed: { name, artist, art, about, episodes: [tracks, kind 'episode'] } (its newest 400)
+const epHash = s => { let h = 2166136261; for (const c of String(s)) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return (h >>> 0).toString(36); };
+const plainText = s => { const d = new DOMParser().parseFromString(String(s || ''), 'text/html'); return (d.body.textContent || '').replace(/\s+/g, ' ').trim(); };
+const httpsOnly = u => /^https:\/\//.test(u || '') ? u : '';
+const hms = d => String(d || '').trim().split(':').reduce((a, n) => a * 60 + (+n || 0), 0); // "3906.1", "65:06", "1:05:06" → seconds
+async function feedOf(url, apple) { // (apple: Apple's copy of its cover, which a page may read: for the colours, and to save)
+  const xml = native ? await Capacitor.Plugins.CapacitorHttp.get({ url, responseType: 'text', connectTimeout: 10000, readTimeout: 30000, headers: { 'User-Agent': 'NetherFlow/1 (podcasts)' } })
+      .then(r => { if (r.status >= 400) throw new Error('the feed answered ' + r.status); return typeof r.data === 'string' ? r.data : ''; })
+    : await fetch('/api/feed?' + new URLSearchParams({ url })).then(async r => { if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || 'the feed didn\'t load'); return r.text(); });
+  const doc = new DOMParser().parseFromString(xml, 'text/xml'), ch = doc.getElementsByTagName('channel')[0];
+  if (!ch || doc.getElementsByTagName('parsererror').length) throw new Error('that isn\'t a podcast feed');
+  const kid = (e, n) => [...e.children].find(c => c.nodeName === n), txt = (e, n) => kid(e, n)?.textContent?.trim() || '';
+  const show = { name: txt(ch, 'title') || 'Podcast', artist: txt(ch, 'itunes:author'), about: plainText(txt(ch, 'description')).slice(0, 500),
+    art: httpsOnly(kid(ch, 'itunes:image')?.getAttribute('href')) || httpsOnly(kid(ch, 'image') && txt(kid(ch, 'image'), 'url')) };
+  const lead = /^https:\/\/[\w.-]+\.mzstatic\.com\//.test(apple || '') ? apple : '', own = it => httpsOnly(kid(it, 'itunes:image')?.getAttribute('href'));
+  show.episodes = [...ch.getElementsByTagName('item')].slice(0, 400).map(it => {
+    const enc = kid(it, 'enclosure'), src = enc?.getAttribute('url') || '';
+    if (!/^https?:\/\//.test(src) || !/audio|mpeg|mp3|m4a|aac|ogg|opus/i.test((enc.getAttribute('type') || '') + src)) return null;
+    const date = Date.parse(txt(it, 'pubDate'));
+    return { kind: 'episode', trackId: 'ep:' + epHash(txt(it, 'guid') || src), trackName: txt(it, 'title') || 'Episode', artistName: show.name, collectionName: show.artist || show.name,
+      artworkUrl100: lead || own(it) || show.art, epArt: own(it) || lead || show.art, trackTimeMillis: Math.round(hms(txt(it, 'itunes:duration')) * 1000), epUrl: src, epShow: url,
+      releaseDate: isFinite(date) ? new Date(date).toISOString() : '', epAbout: plainText(txt(it, 'itunes:summary') || txt(it, 'description')).slice(0, 300) };
+  }).filter(Boolean);
+  return show;
+}
+// audiobooks: LibriVox's, at the Internet Archive (its search and its pages, which a page may ask itself)
+const ARCHIVE = 'https://archive.org';
+async function bookSearch(q) {
+  const terms = String(q || '').replace(/[^\p{L}\p{N} ]/gu, ' ').trim();
+  const query = 'collection:librivoxaudio AND mediatype:audio' + (terms ? ` AND (title:(${terms}) OR creator:(${terms}))` : '');
+  const url = `${ARCHIVE}/advancedsearch.php?q=${encodeURIComponent(query)}&fl[]=identifier&fl[]=title&fl[]=creator&sort[]=downloads+desc&rows=40&output=json`;
+  const j = await fetch(url).then(r => { if (!r.ok) throw new Error('the Internet Archive answered ' + r.status); return r.json(); });
+  return (j.response?.docs || []).filter(d => d.identifier && !/collection|m4b/i.test(d.identifier)).map(d => ({ id: d.identifier, title: String(d.title || ''), author: [].concat(d.creator || '')[0] || '', art: `${ARCHIVE}/services/img/${d.identifier}` }));
+}
+async function bookOf(id) {
+  const j = await fetch(`${ARCHIVE}/metadata/${encodeURIComponent(id)}`).then(r => { if (!r.ok) throw new Error('the Internet Archive answered ' + r.status); return r.json(); });
+  const m = j.metadata || {}, files = j.files || [], form = ['64Kbps MP3', 'VBR MP3'].find(f => files.some(x => x.format === f));
+  const num = x => parseInt(String(x.track || '').split('/')[0], 10) || 1e6;
+  const ch = files.filter(x => form ? x.format === form : /\.mp3$/i.test(x.name)).sort((a, b) => num(a) - num(b) || a.name.localeCompare(b.name));
+  // (its cover: its own picture by its download address, which lets a page read it — for the mood's colours — as the item's
+  // tile address doesn't)
+  const pic = files.find(x => x.format === 'JPEG' && !/_thumb/i.test(x.name)) || files.find(x => x.format === 'Item Tile');
+  const title = plainText([].concat(m.title || id)[0]), author = plainText([].concat(m.creator || '')[0]), art = pic ? `${ARCHIVE}/download/${encodeURIComponent(id)}/${encodeURIComponent(pic.name)}` : `${ARCHIVE}/services/img/${id}`;
+  return { id, title, author, art, about: plainText([].concat(m.description || '')[0]).slice(0, 500),
+    chapters: ch.map((x, i) => ({ kind: 'episode', epBook: true, trackId: 'bk:' + epHash(id + '/' + x.name), trackName: plainText(x.title) || `Chapter ${i + 1}`, artistName: author, collectionName: title,
+      artworkUrl100: art, trackTimeMillis: Math.round(hms(x.length) * 1000), epUrl: `${ARCHIVE}/download/${encodeURIComponent(id)}/${x.name.split('/').map(encodeURIComponent).join('/')}`, epShow: id })) };
+}
+// an episode's or chapter's row: its name; when, and how long (left), or played
+function epRow(t, i, list) {
+  const r = el('div', 'ritem'), b = el('button', 'row ep-row'), img = el('img'), txt = el('span'), pos = epPos[t.trackId], total = (t.trackTimeMillis || 0) / 1000;
+  img.alt = ''; img.loading = 'lazy'; if (t.epArt || t.artworkUrl100) img.src = t.epArt || t.artworkUrl100;
+  const when = t.releaseDate ? new Date(t.releaseDate).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: new Date(t.releaseDate).getFullYear() === new Date().getFullYear() ? undefined : 'numeric' }) : '';
+  const left = pos === -1 ? 'played' : pos > 0 && total ? `${Math.max(1, Math.round((total - pos) / 60))} min left` : '';
+  txt.append(el('b', '', t.trackName), el('small', 'lbl', [when, left].filter(Boolean).join(' · ')));
+  b.append(el('span', 'idx', pad(i + 1)), img, txt, el('span', 'len', total ? fmt(total) : ''));
+  if (pos > 0 && total) b.style.setProperty('--ep', Math.min(1, pos / total));
+  r.classList.toggle('played', pos === -1); r.classList.toggle('going', pos > 0);
+  b.onclick = () => { queue = list.slice(); playTrack(t); };
+  // save it for offline; while it downloads, how far (tap: stop); saved, a tick (tap: remove it from this device)
+  const sv = el('button', 'icon-btn rmore ep-save'), job = dlJob(t.trackId), kept = saved.has(t.trackId);
+  sv.dataset.dl = t.trackId;
+  if (job) sv.textContent = pct(job) || '…'; else sv.append(ico(kept ? 'check' : 'down'));
+  sv.setAttribute('aria-label', (job ? 'Stop saving ' : kept ? 'Remove from this device: ' : 'Save for offline: ') + t.trackName);
+  sv.title = job ? 'Stop saving' : kept ? 'Saved on this device (tap to remove)' : 'Save for offline';
+  sv.onclick = () => job ? cancelSave(t.trackId) : kept ? removeSaved(t.trackId) : saveOffline([t], false);
+  r.append(b, sv);
+  return r;
+}
+// the first not yet played to the end: where to carry on
+const epNext = list => list.find(t => epPos[t.trackId] > 0) || list.find(t => epPos[t.trackId] !== -1) || list[0];
+function renderPods(head, list, tok) {
+  head('Podcasts', 'Podcasts', `${pods.length} followed · from Apple's podcast directory`, tile('mic', 'Podcasts'));
+  const q = el('input', 'hp-q x-q'), found = el('div', 'albums strip'), mine = el('div', 'albums strip'), fresh = el('div'), top = el('div', 'albums strip'), live = () => tok === libTok;
+  q.type = 'search'; q.placeholder = 'Find a show'; q.setAttribute('aria-label', 'Find a podcast'); q.autocomplete = 'off'; q.spellcheck = false;
+  const card = p => libCard(coverTile(p.art), p.name, p.artist, () => openLibrary({ kind: 'show', from: libView, feed: p.feed, name: p.name, art: p.art, pod: p }));
+  let qt = 0;
+  q.oninput = () => { clearTimeout(qt); qt = setTimeout(() => { if (!q.value.trim()) return found.replaceChildren(); found.replaceChildren(el('p', 'empty', 'Searching…'));
+    podSearch(q.value).then(l => q.isConnected && found.replaceChildren(...(l.length ? l.map(card) : [el('p', 'empty', 'No show of that name.')]))).catch(e => found.replaceChildren(xFail(e))); }, 350); };
+  mine.append(...(pods.length ? pods.map(card) : [el('p', 'empty', 'Follow shows and they\'re here, with their new episodes below.')]));
+  list.push(q, found, sectionHead('Your shows'), mine, ...(pods.length ? [sectionHead('New episodes'), fresh] : []), sectionHead(`Top podcasts · ${STORE}`), top);
+  top.append(el('p', 'empty', 'Loading…'));
+  podTop().then(l => live() && top.replaceChildren(...l.map(card))).catch(e => live() && top.replaceChildren(xFail(e)));
+  if (pods.length) {
+    fresh.append(el('p', 'empty', 'Loading…'));
+    Promise.all(pods.slice(0, 12).map(p => xGet('feed:' + p.feed, () => feedOf(p.feed, p.art)).then(s => s.episodes.slice(0, 5)).catch(() => []))).then(ls => {
+      if (!live()) return;
+      const eps = ls.flat().sort((a, b) => (b.releaseDate || '').localeCompare(a.releaseDate || '')).slice(0, 15);
+      fresh.replaceChildren(...(eps.length ? eps.map((t, i) => epRow(t, i, eps)) : [el('p', 'empty', 'Nothing new.')]));
+    });
+  }
+}
+function renderShow(v, head, list, tok) {
+  const p = v.pod || pods.find(x => x.feed === v.feed) || { feed: v.feed, name: v.name, art: v.art };
+  head('Podcast', v.name || 'Podcast', 'Loading…', v.art ? coverTile(v.art, true) : tile('mic', v.name || 'Podcast'));
+  list.push(el('p', 'empty', 'Loading…'));
+  xGet('feed:' + v.feed, () => feedOf(v.feed, v.art || pods.find(p => p.feed === v.feed)?.art)).then(s => {
+    if (tok !== libTok) return;
+    const following = pods.some(x => x.feed === v.feed);
+    head('Podcast', s.name, [s.artist, `${s.episodes.length} episodes`].filter(Boolean).join(' · '), coverTile(s.art || v.art, true));
+    const follow = el('button', following ? 'pill ghost' : 'pill', following ? 'Following' : 'Follow'), go = el('button', 'pill'), next = epNext(s.episodes);
+    follow.onclick = () => { if (pods.some(x => x.feed === v.feed)) pods = pods.filter(x => x.feed !== v.feed); else pods.unshift({ ...p, name: s.name, art: s.art || p.art, artist: s.artist || p.artist }); store.set(PODS, JSON.stringify(pods)); renderLibrary(); };
+    go.textContent = next && epPos[next.trackId] > 0 ? 'Continue' : 'Play latest';
+    go.onclick = () => { if (next) { queue = s.episodes.slice(); playTrack(next); } };
+    $('libActs').replaceChildren(...(s.episodes.length ? [go] : []), follow, speedBtn());
+    $('libList').replaceChildren(...(s.about ? [aboutEl(s.about)] : []), ...(s.episodes.length ? s.episodes.map((t, i) => epRow(t, i, s.episodes)) : [el('p', 'empty', 'No episodes it can play (audio) in its feed.')]));
+  }).catch(e => { if (tok === libTok) { $('libSub').textContent = ''; $('libList').replaceChildren(xFail(e)); } });
+}
+function renderBooks(head, list, tok) {
+  head('Audiobooks', 'Audiobooks', 'Free, read by volunteers · LibriVox', tile('book', 'Audiobooks'));
+  const q = el('input', 'hp-q x-q'), found = el('div', 'albums strip'), mine = el('div', 'albums strip'), top = el('div', 'albums strip'), live = () => tok === libTok;
+  q.type = 'search'; q.placeholder = 'A book or an author'; q.setAttribute('aria-label', 'Find an audiobook'); q.autocomplete = 'off'; q.spellcheck = false;
+  const card = b => libCard(coverTile(b.art), b.title, b.author, () => openLibrary({ kind: 'book', from: libView, id: b.id, title: b.title, art: b.art }));
+  let qt = 0;
+  q.oninput = () => { clearTimeout(qt); qt = setTimeout(() => { if (!q.value.trim()) return found.replaceChildren(); found.replaceChildren(el('p', 'empty', 'Searching…'));
+    bookSearch(q.value).then(l => q.isConnected && found.replaceChildren(...(l.length ? l.map(card) : [el('p', 'empty', 'No book of that name.')]))).catch(e => found.replaceChildren(xFail(e))); }, 400); };
+  mine.append(...(books.length ? books.map(card) : [el('p', 'empty', 'The books you start are kept here, where you left off.')]));
+  list.push(q, found, sectionHead('Your books'), mine, sectionHead('Most listened'), top);
+  top.append(el('p', 'empty', 'Loading…'));
+  xGet('books:top', () => bookSearch('')).then(l => live() && top.replaceChildren(...l.map(card))).catch(e => live() && top.replaceChildren(xFail(e)));
+}
+function renderBook(v, head, list, tok) {
+  head('Audiobook', v.title || 'Audiobook', 'Loading…', v.art ? coverTile(v.art, true) : tile('book', v.title || 'Audiobook'));
+  list.push(el('p', 'empty', 'Loading…'));
+  xGet('book:' + v.id, () => bookOf(v.id)).then(b => {
+    if (tok !== libTok) return;
+    const mins = Math.round(b.chapters.reduce((a, t) => a + t.trackTimeMillis, 0) / 60000), next = epNext(b.chapters), had = books.some(x => x.id === b.id);
+    head('Audiobook', b.title, [b.author, `${b.chapters.length} chapters`, mins && `${Math.floor(mins / 60)} h ${mins % 60} min`].filter(Boolean).join(' · '), coverTile(b.art, true));
+    const go = el('button', 'pill', next && (epPos[next.trackId] > 0 || next !== b.chapters[0]) ? 'Continue' : 'Start listening'), keep = el('button', 'pill ghost', had ? 'Remove from Your books' : 'Add to Your books');
+    go.onclick = () => { if (next) { queue = b.chapters.slice(); playTrack(next); } };
+    keep.onclick = () => { books = had ? books.filter(x => x.id !== b.id) : [{ id: b.id, title: b.title, author: b.author, art: b.art }, ...books]; store.set(BOOKS, JSON.stringify(books.slice(0, 50))); renderLibrary(); };
+    $('libActs').replaceChildren(...(b.chapters.length ? [go] : []), keep, speedBtn());
+    $('libList').replaceChildren(...(b.about ? [aboutEl(b.about)] : []), ...(b.chapters.length ? b.chapters.map((t, i) => epRow(t, i, b.chapters)) : [el('p', 'empty', 'No chapters it can play.')]));
+  }).catch(e => { if (tok === libTok) { $('libSub').textContent = ''; $('libList').replaceChildren(xFail(e)); } });
+}
 function renderLibrary() {
   const v = libView, list = [], acts = [], tok = ++libTok;
   let more = null; // (a long list: its first rows at once, the rest added a chunk at a time, so it opens straight away)
@@ -5672,23 +6389,34 @@ function renderLibrary() {
     grid.append(
       libCard(tile('heart', 'Liked songs', library.liked.length), 'Liked songs', `${library.liked.length} songs`, () => openLibrary({ kind: 'liked' })),
       libCard(tile('down', 'Saved offline', saved.size), 'Downloads', `${saved.size} songs${saved.size ? ' · ' + mb(savedSize) : ''}`, () => openLibrary({ kind: 'saved' })),
-      ...library.playlists.map(p => libCard(mosaic(p.tracks, listTile(p)), p.name, `${p.tracks.length} songs`, () => openLibrary({ kind: 'playlist', id: p.id }))),
+      ...library.playlists.map(p => libCard(mosaic(p.tracks, listTile(p)), p.name, `${p.tracks.length} songs${p.collab ? ' · together' : ''}`, () => openLibrary({ kind: 'playlist', id: p.id }))),
       fresh,
       libCard(tile('import', 'Import playlist', null, true), 'Import playlist', 'From Spotify, Apple Music, YouTube or a friend', async () => {
         const link = await askName('Import a playlist', '', 'Import', 20000, 'Paste its link (Spotify, Apple Music, YouTube, NetherFlow)');
         if (link) importPlaylist(link);
       }),
       libCard(tile('chart', 'Your stats', fmtMins(statsFor('month').secs)), 'Your stats', `${fmtMins(statsFor('month').secs)} min this month`, () => openLibrary({ kind: 'stats' })));
-    list.push(sectionHead('Playlists'), grid);
+    const discover = el('div', 'albums');
+    discover.append(libCard(tile('compass', 'Explore'), 'Explore', 'Charts, new music, moods, your mixes', () => openLibrary({ kind: 'explore' })),
+      libCard(tile('mic', 'Podcasts', pods.length || null), 'Podcasts', pods.length ? `${pods.length} followed` : 'Shows, from where you left off', () => openLibrary({ kind: 'pods' })),
+      libCard(tile('book', 'Audiobooks', books.length || null), 'Audiobooks', 'Free classics, read by volunteers', () => openLibrary({ kind: 'books' })));
+    list.push(sectionHead('Discover'), discover, sectionHead('Playlists'), grid);
     if (dl.cur.length || dl.queue.length) list.push(sectionHead('Downloading'), ...dlRows());
-  } else if (v.kind === 'stats') renderStats(head, list, acts);
+  } else if (v.kind === 'explore') renderExplore(head, list, tok);
+  else if (v.kind === 'mood') renderMood(v, head, list, tok);
+  else if (v.kind === 'list') renderList(v, head, list, tok);
+  else if (v.kind === 'pods') renderPods(head, list, tok);
+  else if (v.kind === 'show') renderShow(v, head, list, tok);
+  else if (v.kind === 'books') renderBooks(head, list, tok);
+  else if (v.kind === 'book') renderBook(v, head, list, tok);
+  else if (v.kind === 'stats') renderStats(head, list, acts);
   else {
     const p = v.kind === 'playlist' && library.playlists.find(x => x.id === v.id);
     if (v.kind === 'playlist' && !p) return openLibrary(null);
     const tracks = v.kind === 'liked' ? library.liked : v.kind === 'saved' ? [...saved.values()].sort((a, b) => b.savedAt - a.savedAt).map(x => x.track) : p.tracks;
     const mins = Math.round(tracks.reduce((a, t) => a + (t.trackTimeMillis || 0), 0) / 60000);
     head({ liked: 'Liked songs', saved: 'Saved on this device', playlist: 'Playlist' }[v.kind], v.kind === 'liked' ? 'Liked songs' : v.kind === 'saved' ? 'Downloads' : p.name,
-      [`${tracks.length} songs`, tracks.length && `${mins} min`, v.kind === 'saved' && saved.size && mb(savedSize)].filter(Boolean).join(' · '),
+      [...counted(tracks), tracks.length && `${mins} min`, v.kind === 'saved' && saved.size && mb(savedSize), p?.collab && (collab.get(p.collab)?.conn ? 'edited together · live' : 'edited together')].filter(Boolean).join(' · '),
       v.kind === 'liked' ? tile('heart', 'Liked songs', tracks.length) : v.kind === 'saved' ? tile('down', 'Saved offline', tracks.length) : mosaic(tracks, listTile(p)));
     if (tracks.length) {
       const play = el('button', 'pill', 'Play all');
@@ -5720,6 +6448,17 @@ function renderLibrary() {
       more.onclick = () => importPlaylist(p.src);
       acts.push(more);
     }
+    if (p && !p.collab) {
+      const together = el('button', 'pill ghost');
+      together.append(ico('together'), 'Edit together');
+      together.onclick = () => collabShare(p);
+      acts.push(together);
+    } else if (p) {
+      const invite = el('button', 'pill ghost');
+      invite.append(ico('together'), 'Invite');
+      invite.onclick = () => collabInvite(p);
+      acts.push(invite);
+    }
     if (p) {
       const rename = el('button', 'link', 'Rename'), del = el('button', 'link danger', 'Delete');
       rename.onclick = async () => {
@@ -5727,17 +6466,23 @@ function renderLibrary() {
         if (name) { p.name = name; saveLib(); }
       };
       del.onclick = () => { // twice, so one stray tap can't delete a playlist
-        if (del.dataset.sure) { library.playlists = library.playlists.filter(x => x !== p); libView = null; saveLib(); toast(`Deleted ${p.name}`); return; }
+        if (del.dataset.sure) { if (p.collab) collabLeave(p); library.playlists = library.playlists.filter(x => x !== p); libView = null; saveLib(); toast(`Deleted ${p.name}`); return; }
         del.dataset.sure = 1; del.textContent = 'Tap again to delete';
         setTimeout(() => { if (del.isConnected) { delete del.dataset.sure; del.textContent = 'Delete'; } }, 3000);
       };
       acts.push(rename, del);
+      if (p.collab) {
+        const stop = el('button', 'link', 'Stop editing together');
+        stop.onclick = () => { collabLeave(p); toast(`${p.name}: no longer edited together here (your copy stays)`); };
+        acts.push(stop);
+      }
     }
     if ((v.kind === 'saved' || tracks.some(t => dlJob(t.trackId))) && (dl.cur.length || dl.queue.length)) list.push(sectionHead('Downloading now'), ...dlRows());
     const opts = p ? { playlist: p } : {};
-    if (tracks.length) list.push(...tracks.slice(0, 200).map((s, i) => row(s, i, tracks, opts)));
-    if (tracks.length > 200) more = { n: tracks.length, rows: k => tracks.slice(k, k + 400).map((s, i) => row(s, k + i, tracks, opts)) };
-    else list.push(el('p', 'empty', v.kind === 'saved' ? 'Nothing saved yet. Tap ••• on any song, then Save for offline.' : 'No songs yet. Tap ••• on any song to add it here.'));
+    const rowOf = (s, i) => s.kind === 'episode' ? epRow(s, i, tracks) : row(s, i, tracks, opts); // (a saved episode or chapter: as on its show's page)
+    if (!tracks.length) list.push(el('p', 'empty', v.kind === 'saved' ? 'Nothing saved yet. Tap ••• on any song, then Save for offline.' : 'No songs yet. Tap ••• on any song to add it here.'));
+    list.push(...tracks.slice(0, 200).map(rowOf));
+    if (tracks.length > 200) more = { n: tracks.length, rows: k => tracks.slice(k, k + 400).map((s, i) => rowOf(s, k + i)) };
   }
   $('libActs').replaceChildren(...acts);
   $('libList').replaceChildren(...list);
@@ -5746,6 +6491,22 @@ function renderLibrary() {
   })();
 }
 $('openLib').onclick = () => openLibrary();
+// a cover YouTube's image server turned away (a few at a time, when a page asks for many): once more, a moment later, by
+// another of its addresses (a size a pixel smaller; a thumbnail without its signed extras), not the failed one again
+$('libList').addEventListener('error', e => {
+  const i = e.target;
+  if (i.tagName !== 'IMG') return;
+  i.style.visibility = 'hidden'; // (no broken-picture sign meanwhile: the tile's own ground)
+  const n = +(i.dataset.again || 0);
+  if (n >= 2) return;
+  i.dataset.again = n + 1;
+  i.addEventListener('load', () => { i.style.visibility = ''; }, { once: true });
+  setTimeout(() => {
+    if (/googleusercontent\.com\/.*=(w\d+-h\d+|s\d+)/.test(i.src)) i.src = i.src.replace(/=w(\d+)-h(\d+)|=s(\d+)/, (m, w, h, s) => s ? `=s${s - 1}` : `=w${w - 1}-h${h - 1}`); // (another size: not the failure the browser kept)
+    else if (/ytimg\.com\/.*\?/.test(i.src)) i.src = i.src.split('?')[0];
+    else if (/ytimg\.com\//.test(i.src)) i.src += '?nf=' + (n + 1);
+  }, 1500 * (n + 1));
+}, true);
 $('closeLib').onclick = libBack;
 $('library').addEventListener('cancel', e => { if (libView) { e.preventDefault(); libBack(); } }); // Esc: back a step first
 $('library').addEventListener('close', () => body.classList.remove('lib-open'));
@@ -5931,6 +6692,12 @@ async function runSearch(term) {
   searchCtl?.abort();
   if (!term.trim()) return showHistory();
   const lk = linkIn(term);
+  if (COLLAB_LINK.test(lk)) {
+    const b = el('button', 'pill', 'Join this playlist');
+    b.onclick = () => { dlg.close(); collabJoin(lk.match(COLLAB_LINK)[1]); };
+    $('sstat').textContent = 'A playlist you edit together';
+    return $('results').replaceChildren(el('p', 'empty', "Join it and it's in your Library: songs anyone in it adds or takes out, and its name, change for everyone."), b);
+  }
   if (PLAYLIST_LINK.test(lk) || SHARE_LINK.test(lk)) {
     const b = el('button', 'pill', 'Import this playlist');
     b.onclick = () => { dlg.close(); importPlaylist(lk); };
@@ -6146,7 +6913,7 @@ function row(s, i, list, from = {}) {
   heart.setAttribute('class', 'likemark'); heart.setAttribute('aria-label', 'Liked');
   name.prepend(heart);
   txt.append(name, sub);
-  b.append(el('span', 'idx', pad(i + 1)), img, txt, el('span', 'len', fmt((s.trackTimeMillis || 0) / 1000)));
+  b.append(el('span', 'idx', pad(i + 1)), img, txt, el('span', 'len', s.trackTimeMillis ? fmt(s.trackTimeMillis / 1000) : ''));
   // (a copy: the queue changed — a song taken out of it, the rest dragged about — mustn't change the playlist or Liked songs
   // it came from, as it did, kept by the next save)
   b.onclick = () => { queue = list.slice(); playTrack(s, dlg.open ? $('q').value.trim() : ''); };
@@ -6184,7 +6951,7 @@ $('closeAbout').onclick = () => $('about').close();
 // Links inside legal.html open in the real browser (legal.html calls this through window.parent).
 window.openExternal = url => native ? (location.href = url) : window.open(url, '_blank', 'noopener');
 
-const TERMS = 'netherflow.terms', TERMS_VERSION = '2026-10-15.4'; // bump when the terms change: everyone is asked again (and run npm run site:legal for the website's copy)
+const TERMS = 'netherflow.terms', TERMS_VERSION = '2026-10-15.5'; // bump when the terms change: everyone is asked again (and run npm run site:legal for the website's copy)
 if (store.get(TERMS) !== TERMS_VERSION) { $('consent').showModal(); placeWinctl(); }
 // its usual port taken (see main.js): the library and settings are kept under that one, so here all looks new; said so
 if (window.netherflowApp?.portMoved) setTimeout(() => { toast('Something else is using NetherFlow\'s port, so your library and settings aren\'t shown. Close it (or another NetherFlow) and open NetherFlow again.'); clearTimeout(toastTimer); toastTimer = setTimeout(() => $('toast').hidePopover(), 15000); }, 1500);
@@ -6228,7 +6995,11 @@ $('q').oninput = e => { if (composing(e)) return; clearTimeout(qTimer); qTimer =
 $('q').addEventListener('compositionend', e => { if (!native) $('q').oninput({ target: e.target }); });
 $('q').onkeydown = e => {
   if (composing(e)) return;
-  if (e.key === 'Enter') { clearTimeout(qTimer); clearTimeout(sTimer); $('sugg').replaceChildren(); runSearch(e.target.value); }
+  if (e.key === 'Enter') {
+    clearTimeout(qTimer); clearTimeout(sTimer); $('sugg').replaceChildren();
+    const done = runSearch(e.target.value);
+    if (tv) done.then(() => { if (dlg.open) $('results').querySelector('.row')?.focus(); }); // (a TV: off its keyboard, onto the songs)
+  }
   if (e.key === 'ArrowDown') { e.preventDefault(); $('results').firstElementChild?.focus(); }
 };
 $('results').onkeydown = e => {
@@ -6240,7 +7011,7 @@ $('results').onkeydown = e => {
   (n || (e.key === 'ArrowUp' ? $('q') : null))?.focus();
 };
 
-if (native) $('hint').textContent = 'Tap Search to find any song';
+if (native) $('hint').textContent = 'Tap Search to find any song'; // (a TV: see tv, below)
 if (!fullSongs) {
   $('hint').className = 'hint lbl warn';
   $('hint').textContent = 'You opened the page file directly, so songs only play 30-second previews and lyrics can\'t sync. Open the NetherFlow app instead.';
@@ -6376,7 +7147,7 @@ const volPct = () => Math.round(volume * 100) + '%' + (volume > 1 ? ' boost' : '
 function setVolume(v, mute = muted, fromPhone = false) {
   volume = Math.min(2, Math.max(0, v)); muted = mute;
   const boosted = !muted && volume > 1;
-  audio.volume = playerLevel();
+  audio.volume = epAudio.volume = playerLevel();
   levelAnalyser();
   yt?.setVolume(playerLevel() * 100);
   if (sysLink && !fromPhone && !muted) setPhoneVolume(Math.min(1, volume));
@@ -6475,6 +7246,92 @@ if (native) Capacitor.Plugins.App.addListener('backButton', () => {
   else if (body.classList.contains('has-song') && !body.classList.contains('home')) goHome(true);
   else Capacitor.Plugins.App.minimizeApp();
 });
+// ---------- TV (Android TV, Google TV, a TV box): worked with the remote. Its arrows go from control to control, to the
+// nearest one that way, as a TV's own apps do; the middle button presses it; Back is Android's (above). Where the
+// focus is: the keyboard's ring (.kb). A slider keeps its own arrows (left and right; the equalizer's bands, up and
+// down); a text field brings up the TV's keyboard only when it's chosen. ----------
+let tv = false;
+Immersive?.tv?.().then(r => {
+  if (!r?.tv) return;
+  tv = true; tabbing = true; body.classList.add('kb', 'tv'); tvWatch.observe(body, { childList: true, subtree: true });
+  $('hint').textContent = 'Choose Search to find any song';
+  document.querySelector('.eq-note').textContent = 'Choose a point, then up and down change it · choose it again to stop';
+  if (!topDialog() && $('cta').checkVisibility?.()) $('cta').focus(); // (where to start: the ring seen from the first moment)
+}).catch(() => {});
+const FOCUSABLE = 'button, a[href], input, select, textarea, summary, [tabindex]:not([tabindex="-1"])';
+function tvMove(dir) {
+  const pops = [...document.querySelectorAll(':popover-open:not(.toast)')];
+  const scope = pops.at(-1) || topDialog() || document, cur = document.activeElement;
+  const from = cur && cur !== body && scope.contains(cur) ? cur : null;
+  const all = [...scope.querySelectorAll(FOCUSABLE)].filter(e => !e.disabled && !e.closest('[inert]') && e.getClientRects().length
+    && (!e.checkVisibility || e.checkVisibility({ checkVisibilityCSS: true })));
+  if (!all.length) return;
+  let to = null;
+  if (!from) to = all.find(e => e.id === 'cta' || e.id === 'play') || all.find(e => { const r = e.getBoundingClientRect(); return r.bottom > 0 && r.top < innerHeight && r.right > 0 && r.left < innerWidth; }) || all[0]; // (nothing yet: Search on the welcome, else play, else the first in sight)
+  else {
+    const f = from.getBoundingClientRect(), fx = f.left + f.width / 2, fy = f.top + f.height / 2, h = dir === 'left' || dir === 'right', s = dir === 'right' || dir === 'down' ? 1 : -1;
+    let best = Infinity;
+    for (const e of all) {
+      if (e === from || from.contains(e) || e.contains(from)) continue;
+      const r = e.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+      if ((h ? (cx - fx) * s : (cy - fy) * s) <= 1) continue; // (not that way)
+      const ahead = h ? (s > 0 ? r.left - f.right : f.left - r.right) : (s > 0 ? r.top - f.bottom : f.top - r.bottom); // the gap that way (negative: over it, like a row's ••• on the row)
+      const side = h ? Math.max(0, r.top - f.bottom, f.top - r.bottom) : Math.max(0, r.left - f.right, f.left - r.right); // off to the side (0: in line)
+      if (h && side > 0) continue; // (left and right stay in the row: at its end, nowhere, as on a TV's own apps)
+      const d = Math.max(0, ahead) + side * 3 + (h ? Math.abs(cy - fy) : Math.abs(cx - fx)) / 4;
+      if (d < best) { best = d; to = e; }
+    }
+  }
+  if (!to) return;
+  if (to.matches(TEXT_FIELD) && to.dataset.tvIm == null) { to.dataset.tvIm = to.getAttribute('inputmode') || ''; to.inputMode = 'none'; } // (see below: no keyboard till it's chosen)
+  to.focus({ preventScroll: true });
+  to.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+}
+// (the TV's keyboard closing gives the page its height back: what's focused, in sight again — it was scrolled to while
+// the keyboard covered half the screen)
+addEventListener('resize', () => { if (tv) setTimeout(() => document.activeElement?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' }), 150); });
+// (a screen closed — a song picked in Search, say — and the focus with it: on play, so it's always somewhere to be seen)
+document.addEventListener('close', () => { if (tv) setTimeout(() => { if (document.activeElement === body && !topDialog()) (body.classList.contains('home') || !body.classList.contains('has-song') ? $('cta') : $('play')).focus(); }, 50); }, true);
+const TEXT_FIELD = 'textarea, input:not([type=button], [type=checkbox], [type=radio], [type=range])';
+addEventListener('keydown', e => {
+  if (!tv || e.altKey || e.ctrlKey) return;
+  const t = e.target, across = e.key === 'ArrowLeft' || e.key === 'ArrowRight', text = t.matches?.(TEXT_FIELD);
+  // a text field arrived at by the arrows has no keyboard yet (it'd take the arrows): the middle button brings it up
+  if (e.key === 'Enter' && text && t.dataset.tvIm != null) {
+    e.preventDefault(); e.stopImmediatePropagation();
+    tvKeyboard(t); t.blur(); t.focus();
+    return;
+  }
+  // an equalizer band: the middle button to change it (up and down, then), again to stop; till then the arrows go by it
+  if (t.dataset?.band != null && e.key === 'Enter') { e.preventDefault(); e.stopImmediatePropagation(); t.classList.toggle('tv-edit'); return; }
+  if (!e.key.startsWith('Arrow')) return;
+  if (t.matches?.('input[type=range]') && across) return; // (a slider: its own left and right. A text field doesn't keep them: the TV's keyboard has its own)
+  if (t.classList?.contains('tv-edit') && !across) return; // (a band being changed)
+  e.preventDefault(); e.stopImmediatePropagation();
+  wake(); tvMove(e.key.slice(5).toLowerCase());
+}, true);
+// (its keyboard kept away again once the field's left: brought up only when it's chosen)
+addEventListener('focusout', e => { if (e.target.dataset?.tvIm != null) tvKeyboard(e.target); e.target.classList?.remove('tv-edit'); }, true);
+function tvKeyboard(t) { if (t.dataset.tvIm) t.inputMode = t.dataset.tvIm; else t.removeAttribute('inputmode'); delete t.dataset.tvIm; } // (its own keyboard back)
+// What's focused, said the same way after a page is drawn again (its id, its download, its words), so the focus can come
+// back to it: a list redrawn under it (a download finished, a page refreshed) took it away, to nowhere.
+const tvKey = e => e.id ? '#' + e.id : e.dataset?.dl ? 'dl:' + e.dataset.dl : e.className + '|' + (e.getAttribute('aria-label') || e.textContent.trim().slice(0, 80));
+let tvLast = '';
+addEventListener('focusin', e => { if (tv && e.target !== body) tvLast = tvKey(e.target); }, true);
+function tvLand() {
+  const cur = document.activeElement;
+  if (cur && cur !== body && cur.isConnected) return;
+  const scope = [...document.querySelectorAll(':popover-open:not(.toast)')].at(-1) || topDialog() || document;
+  const all = [...scope.querySelectorAll(FOCUSABLE)].filter(e => !e.disabled && e.getClientRects().length && (!e.checkVisibility || e.checkVisibility({ checkVisibilityCSS: true })));
+  const seen = e => { const r = e.getBoundingClientRect(); return r.bottom > 0 && r.top < innerHeight && r.right > 0 && r.left < innerWidth; };
+  const to = all.find(e => tvKey(e) === tvLast) // the same one, drawn again
+    || all.find(e => seen(e) && !e.matches(TEXT_FIELD) && !/^(closeLib|apBack)$/.test(e.id) && !e.closest('header, .top')) // else the first in sight on the page (not a field, not Back)
+    || all.find(seen);
+  to?.focus({ preventScroll: true });
+  to?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+}
+let tvLandSoon = 0;
+const tvWatch = new MutationObserver(() => { if (!tvLandSoon) tvLandSoon = requestAnimationFrame(() => { tvLandSoon = 0; tvLand(); }); }); // (watching from when it's known to be a TV)
 // Home: the welcome screen, with a way back to the song (which keeps playing)
 // Drive mode: a page of big, simple controls for the road (and the song's name in large type, and its lyric line), in
 // full screen with the screen kept on. Swipe left or right anywhere on it to change songs.
@@ -10282,6 +11139,8 @@ function stepDown(fps, janky = 0) {
 
 requestAnimationFrame(frame);
 
+console.assert(hms('3906.5') === 3906.5 && hms('65:06') === 3906 && hms('1:05:06') === 3906 && hms('') === 0 && hms(null) === 0, 'hms broken'); // (episode and chapter lengths)
+console.assert(counted([]).join() === '0 songs' && counted([{}]).join() === '1 song' && counted([{ kind: 'episode' }]).join() === '1 episode' && counted([{}, {}, { kind: 'episode' }]).join(' · ') === '2 songs · 1 episode', 'counted broken');
 // (the themes: each with its backdrop in the shader's list, and only looks that exist)
 console.assert(Object.entries(SKINS).every(([k, s]) => SCENES.has(k) && THEMES.includes(k) && s.looks.every(l => KIN_LOOKS[l]) && FONT_PAIRS && s.font.poster) && SCENES.size === Object.keys(SKINS).length, 'themes broken');
 // Self-checks for the parsing helpers.

@@ -87,6 +87,83 @@
     return plain ? { plain } : {};
   };
 
+  // ---- Explore: YouTube Music's own explore page (new albums and singles, moods and genres, what's trending), its charts
+  // (a country's: the most played music videos, by genre and language), a mood's or genre's playlists, an album's songs.
+  // gl: the country (two letters). ponytail: its web pages' shapes as they are now; if they reshape, these walks are the
+  // spots to fix.
+  const ctxFor = gl => ({ client: { ...WEB_MUSIC.client, gl: /^[A-Z]{2}$/.test(gl || '') ? gl : 'US' } });
+  const runsOf = t => (t?.runs || []).map(x => x.text).join('');
+  const firstOf = (o, key) => { if (!o || typeof o !== 'object') return null; if (o[key]) return o[key]; for (const k in o) { const r = firstOf(o[k], key); if (r) return r; } return null; };
+  const artOf = o => ((o?.musicThumbnailRenderer?.thumbnail?.thumbnails || o?.thumbnails || []).slice(-1)[0]?.url || '').replace(/=w\d+-h\d+[\w-]*$/, '=w544-h544-l90-rj');
+  const shelvesOf = json => { const out = []; (function walk(o) { if (!o || typeof o !== 'object') return; const sh = o.musicCarouselShelfRenderer || o.gridRenderer;
+    if (sh) return void out.push({ title: runsOf(sh.header?.musicCarouselShelfBasicHeaderRenderer?.title) || runsOf(sh.header?.gridHeaderRenderer?.title), items: sh.contents || sh.items || [] });
+    for (const k in o) walk(o[k]); })(json); return out; };
+  const twoRow = c => { const t = c?.musicTwoRowItemRenderer; return t && { id: t.navigationEndpoint?.browseEndpoint?.browseId || '', title: runsOf(t.title), sub: runsOf(t.subtitle), art: artOf(t.thumbnailRenderer) }; };
+  // (asked again, a little later, when it doesn't answer: YouTube Music is slow now and then)
+  const ytmTry = async f => { for (let tries = 0; tries < 3; tries++) { if (tries) await new Promise(r => setTimeout(r, 1500 * tries)); try { return await f(); } catch {} } throw new Error("YouTube Music didn't answer"); };
+  const listOf = (shelf, test) => shelf.items.map(twoRow).filter(t => t && test.test(t.id));
+  // { albums: [{ id (MPREb_…), title, artist, kind (Album, Single, EP), art }], moods: [{ title, params, color }], trending:
+  // [{ id (a video), title, artist, art }] }
+  lib.ytmExplore = async (post, gl) => {
+    const json = await ytmTry(() => ytmPost(post, 'browse', { context: ctxFor(gl), browseId: 'FEmusic_explore' })), out = { albums: [], moods: [], trending: [] };
+    for (const sh of shelvesOf(json)) for (const c of sh.items) {
+      const t = twoRow(c);
+      if (t && /^MPREb_/.test(t.id)) { const [kind, ...by] = t.sub.split(' • '); out.albums.push({ id: t.id, title: t.title, artist: by.join(' • ') || kind, kind: by.length ? kind : 'Album', art: t.art }); continue; }
+      const n = c.musicNavigationButtonRenderer, be = n?.clickCommand?.browseEndpoint;
+      if (be?.browseId === 'FEmusic_moods_and_genres_category' && be.params) {
+        out.moods.push({ title: runsOf(n.buttonText), params: be.params, color: n.solid?.leftStripeColor ? '#' + (n.solid.leftStripeColor & 0xffffff).toString(16).padStart(6, '0') : '' }); continue;
+      }
+      const r = c.musicResponsiveListItemRenderer, id = r?.playlistItemData?.videoId;
+      if (id && /^[\w-]{11}$/.test(id)) { const col = i => runsOf(r.flexColumns?.[i]?.musicResponsiveListItemFlexColumnRenderer?.text); out.trending.push({ id, title: col(0), artist: col(1).split(' • ')[0], art: artOf(r.thumbnail) }); }
+    }
+    if (!out.albums.length && !out.moods.length && !out.trending.length) throw new Error('YouTube Music explore page changed');
+    return out;
+  };
+  // { where (the country YouTube Music gave charts for: "Global" where it has none of its own), lists: [{ id (a playlist),
+  // title, sub, art, group }] }
+  lib.ytmCharts = async (post, gl) => {
+    const json = await ytmTry(() => ytmPost(post, 'browse', { context: ctxFor(gl), browseId: 'FEmusic_charts', formData: { selectedValues: [/^[A-Z]{2}$/.test(gl || '') ? gl : 'US'] } }));
+    const lists = [];
+    for (const sh of shelvesOf(json)) for (const t of listOf(sh, /^VL[\w-]+$/)) lists.push({ id: t.id.slice(2), title: t.title, sub: t.sub, art: t.art, group: sh.title });
+    if (!lists.length) throw new Error('YouTube Music charts changed');
+    return { where: runsOf(firstOf(json, 'musicSortFilterButtonRenderer')?.title), lists };
+  };
+  // a mood's or genre's page: { title, groups: [{ title, lists: [{ id, title, sub, art }] }] } (YouTube Music's own playlists)
+  lib.ytmMood = async (post, params, gl) => {
+    if (!/^[\w-]{8,120}={0,2}$/.test(params || '')) throw new Error('not a mood');
+    const json = await ytmTry(() => ytmPost(post, 'browse', { context: ctxFor(gl), browseId: 'FEmusic_moods_and_genres_category', params }));
+    const groups = shelvesOf(json).map(sh => ({ title: sh.title, lists: listOf(sh, /^VL[\w-]+$/).map(t => ({ id: t.id.slice(2), title: t.title, sub: t.sub, art: t.art })) })).filter(g => g.lists.length);
+    if (!groups.length) throw new Error('YouTube Music mood page changed');
+    return { title: runsOf(firstOf(json, 'musicHeaderRenderer')?.title), groups };
+  };
+  // an album (MPREb_…): { title, artist, kind, year, art, tracks: [{ id (its song), title, artist, dur }] }
+  lib.ytmAlbum = async (post, id, gl) => {
+    if (!/^MPREb_[\w-]{4,40}$/.test(id || '')) throw new Error('not an album');
+    const json = await ytmTry(() => ytmPost(post, 'browse', { context: ctxFor(gl), browseId: id }));
+    const h = firstOf(json, 'musicResponsiveHeaderRenderer') || firstOf(json, 'musicDetailHeaderRenderer') || {}, sub = runsOf(h.subtitle).split(' • ');
+    const artist = runsOf(h.straplineTextOne) || sub[1] || '', tracks = [];
+    (function walk(o) {
+      if (!o || typeof o !== 'object') return;
+      const r = o.musicResponsiveListItemRenderer, v = r?.playlistItemData?.videoId;
+      if (v) {
+        const col = i => runsOf(r.flexColumns?.[i]?.musicResponsiveListItemFlexColumnRenderer?.text);
+        tracks.push({ id: v, title: col(0), artist: col(1) || artist, dur: secs(runsOf(r.fixedColumns?.[0]?.musicResponsiveListItemFixedColumnRenderer?.text)) });
+        return;
+      }
+      for (const k in o) walk(o[k]);
+    })(json);
+    if (!tracks.length) throw new Error('YouTube Music album page changed');
+    return { title: runsOf(h.title), artist, kind: sub[0] || 'Album', year: +sub.find(x => /^\d{4}$/.test(x)) || 0, art: artOf(h.thumbnail), tracks };
+  };
+
+  // Apple's top podcasts in a country (its own chart): [{ id (Apple's), name, artist, art, genre }] — their feeds looked up
+  // by id at Apple (which a page may ask itself)
+  lib.topPodcasts = async (get, cc) => {
+    let j; try { j = JSON.parse(await get(`https://rss.marketingtools.apple.com/api/v2/${/^[a-z]{2}$/.test(cc) ? cc : 'us'}/podcasts/top/50/podcasts.json`, { 'User-Agent': UA })); }
+    catch (e) { throw new Error(/timeout/i.test(e.message) ? 'Apple\'s chart took too long' : 'Apple\'s chart didn\'t answer'); } // (an error page, not the chart)
+    return (j.feed?.results || []).filter(x => /^\d+$/.test(x.id)).map(x => ({ id: +x.id, name: String(x.name || ''), artist: String(x.artistName || ''), art: String(x.artworkUrl100 || ''), genre: x.genres?.[0]?.name || '' }));
+  };
+
   // YouTube Music's radio for a song: what its Autoplay plays after it — songs alike in genre, mood, era and language, by
   // what listeners play together. Each { id (the label's own upload, an album recording), title, artist, album, year, dur,
   // art, type }; the song itself left out.
@@ -153,7 +230,8 @@
     if (/(^|\.)youtube\.com$|^youtu\.be$/.test(u.hostname)) {
       const id = u.searchParams.get('list') || (u.pathname.match(/\/browse\/VL([\w-]+)/) || [])[1];
       if (!id) throw new Error('not a playlist link');
-      let json = await ytmPost(post, 'browse', { context: WEB_MUSIC, browseId: 'VL' + id });
+      let json = await retry(() => ytmPost(post, 'browse', { context: WEB_MUSIC, browseId: 'VL' + id })); // (its first page too: YouTube Music is slow to answer now and then)
+      if (!json) throw new Error("YouTube didn't answer: try again in a moment");
       const head = find(json, 'musicResponsiveHeaderRenderer') || find(json, 'musicDetailHeaderRenderer') || find(json, 'musicEditablePlaylistDetailHeaderRenderer');
       const name = (find(head, 'title')?.runs || []).map(x => x.text).join('') || 'YouTube playlist', tracks = [], seen = new Set();
       let partial = false;

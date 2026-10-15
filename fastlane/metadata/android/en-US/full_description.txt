@@ -3,19 +3,24 @@ NetherFlow is a free, open-source music player with a look of its own. Search an
 <b>Features</b>
 <ul>
 <li>Search songs, artists and albums, and play them in full, with typos fixed and suggestions as you type</li>
-<li>Synced lyrics, word by word where available, with 19 lyric animations (Wave, Spiral, Shatter, Fireworks, Swarm, Black Hole, Cylinder, Globe, Helix, DNA, Tornado, Knot, Möbius, Ribbon, Orbit, Atom, Tunnel, Cube and Classic)</li>
-<li>5 themes that change the whole look at once, with a backdrop, timeline and cursor of their own: Stickman (notebook paper, stick figures dancing to the beat), Spider (a comic book at night), Blocks (a blocky world at dusk), Tactical (an agent by the lyrics, a round timer) and Ops (a desert bomb site, smoke and tracers, a HUD)</li>
-<li>27 animated backgrounds, including fractals, galaxies and a plasma globe, that take their colors from the album cover, or a still gradient that is lightest on slower phones</li>
+<li>Synced lyrics, word by word where available, with 19 lyric animations, from Wave and Fireworks to Black Hole and DNA</li>
+<li>5 themes that change the whole look at once, each with its own backdrop, timeline and cursor: Stickman, Spider, Blocks, Tactical and Ops</li>
+<li>27 animated backgrounds that take their colors from the album cover</li>
 <li>A beat ring and screen edges that move with the music</li>
-<li>Equalizer with presets, a volume booster, and each song at its original loudness</li>
+<li>Explore: your country's charts, new releases, trending, moods and genres with their playlists, and mixes made from what you play</li>
+<li>Podcasts: every show in Apple's podcast directory; follow shows, resume where you left off, 0.8× to 2×, save episodes for offline</li>
+<li>Audiobooks: free classics read by LibriVox's volunteers (public domain in the US), chapter by chapter</li>
+<li>Equalizer with presets, a volume booster, headphone correction for 6,000+ headphones (AutoEQ), and each song at its original loudness</li>
 <li>Autoplay: when the list ends, songs like the one playing carry on, in its language and era, learning from what you skip and like</li>
 <li>Smooth mix: songs blend into each other on the beat, like a DJ mix</li>
 <li>Sing: karaoke, with the voice turned down as far as you like and the lyrics big</li>
 <li>Import playlists of any length from Spotify, Apple Music or YouTube by pasting the link</li>
 <li>Share a playlist with a QR code or a link: a friend scans it and imports it, nothing uploaded</li>
+<li>Playlists you edit together: send the link, and everyone who has it can add, remove and rename songs, live, end-to-end encrypted</li>
 <li>Your stats: minutes, plays, a streak, top songs, artists and genres, and a card to share</li>
 <li>Listen together: up to 10 people hear the same song at the same moment, end-to-end encrypted</li>
 <li>Phone ↔ PC sync of your library over your own Wi-Fi, with a 6-number code and no account</li>
+<li>Works on Android TV and Google TV, with the remote</li>
 <li>A home-screen widget, lyrics on the lock screen, and liked songs saved for offline on Wi-Fi by themselves</li>
 <li>Liked songs, playlists, queue and history</li>
 <li>Save songs for offline listening, one at a time or a whole playlist at once</li>
@@ -27,7 +32,7 @@ NetherFlow is a free, open-source music player with a look of its own. Search an
 The idea and the vision are mine (Volodya.rua): what NetherFlow does, how it looks, how it feels. Most of the code is written by Claude, Anthropic's AI. I test every build and put it out.
 
 <b>How it works</b>
-NetherFlow doesn't host any music or lyrics. It finds songs in Apple's iTunes catalog and YouTube Music, plays them through YouTube's embedded player (or from Audius at 320 kbps when the artist's own upload is there), and gets lyrics from LRCLIB, NetEase Cloud Music, Kugou and YouTube Music (lyrics by LyricFind). Saving for offline downloads the audio from YouTube with yt-dlp.
+NetherFlow doesn't host any music or lyrics. It finds songs in Apple's iTunes catalog and YouTube Music, plays them through YouTube's embedded player (or from Audius at 320 kbps when the artist's own upload is there), and gets lyrics from LRCLIB, NetEase Cloud Music, Kugou and YouTube Music (lyrics by LyricFind). Saving for offline downloads the audio from YouTube with yt-dlp. Podcasts come from Apple's directory and each show's feed, audiobooks from LibriVox at the Internet Archive, headphone corrections from AutoEQ.
 
 <b>Please note</b>
-NetherFlow isn't affiliated with YouTube, Google, Apple or any of the services it uses. Downloading from YouTube isn't allowed by YouTube's Terms of Service, and copyright law where you live may not allow it either: whether to use offline saving is your choice and your responsibility. The full Terms of Use and Privacy Policy are in the app and at https://volodya-rua.github.io/NetherFlow/legal.html
+NetherFlow isn't affiliated with YouTube, Google, Apple or any of the services it uses. Downloading from YouTube isn't allowed by YouTube's Terms of Service, and copyright law where you live may not allow it either: whether to use offline saving is your choice and your responsibility. A playlist you edit together is kept, encrypted, on public MQTT test servers, and anyone with its link can see and change it. The full Terms of Use and Privacy Policy are in the app and at https://volodya-rua.github.io/NetherFlow/legal.html

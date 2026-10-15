@@ -1,0 +1,71 @@
+# NetherFlow - Copyright (C) 2026 Volodya.rua - GNU GPL v3 only, with additional terms (credit, name and logo): see LICENSE and NOTICE.
+# NetherFlow for Linux (an AppImage and a .deb), built on GitHub's Ubuntu: by hand (Run workflow: its files kept with
+# the run), and on each release, put on it with latest-linux.yml (which the AppImage updates itself from). Before that,
+# both are started on a virtual screen and checked (tools/linux-smoke.js); screenshots kept with the run.
+name: Linux
+
+on:
+  workflow_dispatch:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  linux:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build
+        run: npm run dist:linux
+
+      - name: Check the .deb (installed as people install it, sandbox and all)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq xvfb imagemagick ./dist/NetherFlow-*-amd64.deb
+          Xvfb :99 -screen 0 1280x800x24 &
+          export DISPLAY=:99
+          sleep 2
+          netherflow --remote-debugging-port=9222 > deb.log 2>&1 &
+          node tools/linux-smoke.js /opt/NetherFlow
+          import -window root shot-deb.png
+          pkill -f /opt/NetherFlow/netherflow || true
+          sleep 3
+
+      - name: Check the AppImage
+        run: |
+          export DISPLAY=:99
+          chmod +x dist/NetherFlow-*-x86_64.AppImage
+          # (Ubuntu 24.04 doesn't let an AppImage set up Chromium's sandbox: people there start it with --no-sandbox,
+          # or use the .deb)
+          ./dist/NetherFlow-*-x86_64.AppImage --appimage-extract-and-run --no-sandbox --remote-debugging-port=9222 > appimage.log 2>&1 &
+          node tools/linux-smoke.js "" quick
+          import -window root shot-appimage.png
+          pkill -f NetherFlow || true
+
+      - name: Keep the files and screenshots with the run
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: netherflow-linux
+          path: |
+            dist/*.AppImage
+            dist/*.deb
+            dist/latest-linux.yml
+            shot-*.png
+            *.log
+
+      - name: Put them on the release
+        if: github.event_name == 'release'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ github.event.release.tag_name }}" dist/NetherFlow-*-x86_64.AppImage dist/NetherFlow-*-amd64.deb dist/latest-linux.yml --clobber

@@ -6,6 +6,8 @@
 //     for a video (time-synced when it has them); /api/suggest?q=… what YouTube Music suggests while a search is typed;
 //     /api/audius?q=… Audius's tracks (an artist's own uploads there play at 320 kbps); /api/radio?id=… YouTube Music's radio
 //     for a song (what Autoplay picks from); /api/playlist?url=… a Spotify, Apple Music or YouTube playlist's songs;
+//     /api/explore, /api/charts, /api/mood, /api/album: YouTube Music's explore page, charts, a mood's playlists, an album;
+//     /api/toppods Apple's top podcasts; /api/feed?url=… a podcast's feed, /api/media?url=… an episode's audio (saving it);
 //     /api/agents the Tactical theme's agents (Riot Games' art, by valorant-api.com).
 // (2 and 3 live in lib.js, which the Android app runs inside the page instead.)
 const http = require('http'), fs = require('fs'), path = require('path');
@@ -33,6 +35,21 @@ if (fs.existsSync(path.join(__dirname, 'race'))) (function race(dir) {
 const get = (url, headers) => fetch(url, { headers, signal: AbortSignal.timeout(8000) }).then(r => r.text());
 const post = (url, body, headers) => fetch(url, { method: 'POST', body, headers, signal: AbortSignal.timeout(8000) }).then(r => r.text());
 const send = (res, code, body, type = 'application/json') => { res.writeHead(code, { 'Content-Type': type }); res.end(body); };
+// A podcast's addresses (its feed's, its episodes') are anyone's to write: only http(s), and never this computer or its
+// network, checked at each redirect too. (ponytail: names only, not where they resolve; a name pointed at 127.0.0.1
+// still gets through, read-only and only to this app's own page. Resolve and check the address if that ever matters.)
+const outside = u => /^https?:$/.test(u.protocol) && !/^(localhost|.*\.localhost|.*\.local|.*\.internal|127\.|10\.|192\.168\.|169\.254\.|172\.(1[6-9]|2\d|3[01])\.|0\.|\[)/i.test(u.hostname) && !/^\d+$/.test(u.hostname);
+async function fetchOut(href, headers, signal) {
+  for (let hop = 0; hop <= 10; hop++) {
+    let u; try { u = new URL(href || ''); } catch { throw new Error('not a feed address'); }
+    if (!outside(u)) throw new Error('not a feed address');
+    const r = await fetch(u, { headers: { 'User-Agent': 'NetherFlow/1 (podcasts; +https://github.com/volodya-rua/NetherFlow)', ...headers }, signal, redirect: 'manual' });
+    const to = r.status >= 300 && r.status < 400 && r.headers.get('location');
+    if (!to) return r;
+    href = new URL(to, u).href;
+  }
+  throw new Error('too many redirects');
+}
 
 async function handle(req, res) {
   // Only for this app's own page: a request named for any other host is a web page trying to reach in (DNS rebinding)
@@ -70,6 +87,47 @@ async function handle(req, res) {
     if (!/^(music\.youtube\.com|(www\.|m\.)?youtube\.com|youtu\.be|open\.spotify\.com|spotify\.(app\.)?link|music\.apple\.com)$/.test(host)) return send(res, 400, JSON.stringify({ error: 'not a playlist link' }));
     try { return send(res, 200, JSON.stringify(await lib.playlist(get, post, link))); }
     catch (e) { return send(res, 502, JSON.stringify({ error: e.message })); }
+  }
+  // Explore (see lib.ytmExplore…): gl, the country; p, a mood's page; id, an album
+  if (/^\/api\/(explore|charts|mood|album)$/.test(url.pathname)) {
+    const p = url.searchParams, gl = /^[A-Z]{2}$/.test(p.get('gl') || '') ? p.get('gl') : 'US', kind = url.pathname.slice(5);
+    try {
+      const out = kind === 'explore' ? await lib.ytmExplore(post, gl) : kind === 'charts' ? await lib.ytmCharts(post, gl)
+        : kind === 'mood' ? await lib.ytmMood(post, (p.get('p') || '').slice(0, 200), gl) : await lib.ytmAlbum(post, (p.get('id') || '').slice(0, 60), gl);
+      return send(res, 200, JSON.stringify(out));
+    } catch (e) { return send(res, 502, JSON.stringify({ error: e.message })); }
+  }
+  if (url.pathname === '/api/toppods') {
+    const cc = (url.searchParams.get('cc') || 'us').toLowerCase();
+    try { return send(res, 200, JSON.stringify(await lib.topPodcasts(get, cc))); }
+    catch (e) { return send(res, 502, JSON.stringify({ error: e.message })); }
+  }
+  // a podcast's feed (its RSS, which most hosts don't let a page read itself): 30 MB at most, 25 s
+  if (url.pathname === '/api/feed') {
+    try {
+      const r = await fetchOut(url.searchParams.get('url'), { Accept: 'application/rss+xml, application/xml, text/xml, */*' }, AbortSignal.timeout(25000));
+      if (!r.ok) return send(res, 502, JSON.stringify({ error: 'the feed answered ' + r.status }));
+      const parts = []; let size = 0;
+      for await (const c of r.body) { size += c.length; if (size > 30e6) return send(res, 502, JSON.stringify({ error: 'the feed is too big' })); parts.push(c); }
+      return send(res, 200, Buffer.concat(parts), 'text/xml; charset=utf-8');
+    } catch (e) { return send(res, e.message === 'not a feed address' ? 400 : 502, JSON.stringify({ error: e.name === 'TimeoutError' ? 'the feed took too long' : e.message === 'not a feed address' ? e.message : 'the feed didn\'t load' })); }
+  }
+  // an episode's or chapter's audio, passed through as it comes (saving it for offline: hosts don't let a page read it)
+  if (url.pathname === '/api/media') {
+    const stop = new AbortController();
+    res.on('close', () => stop.abort()); // (the page cancelled)
+    try {
+      const r = await fetchOut(url.searchParams.get('url'), {}, stop.signal);
+      if (!r.ok) return send(res, 502, JSON.stringify({ error: 'its host answered ' + r.status }));
+      const len = r.headers.get('content-length');
+      res.writeHead(200, { 'Content-Type': r.headers.get('content-type') || 'application/octet-stream', ...(len ? { 'Content-Length': len } : {}) });
+      // (read and written by hand: Readable.fromWeb + pipeline stalled the next one after a download was stopped)
+      for await (const c of r.body) {
+        if (res.destroyed) break;
+        if (!res.write(c)) await new Promise(ok => { const go = () => { res.off('drain', go); res.off('close', go); ok(); }; res.on('drain', go); res.on('close', go); });
+      }
+      return res.end();
+    } catch (e) { return res.headersSent ? res.destroy() : send(res, 502, JSON.stringify({ error: e.message === 'not a feed address' ? 'not an address it can fetch' : 'its host didn\'t answer' })); }
   }
   if (url.pathname === '/api/agents') { // (the Tactical theme's agents: see lib.agents)
     try { return send(res, 200, JSON.stringify(await lib.agents(get))); }

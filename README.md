@@ -1,10 +1,10 @@
 <p align="center">
-  <img src="docs/media/hero.webp" width="100%" alt="NetherFlow — turn silence into song. Windows, Android, free and open source">
+  <img src="docs/media/hero.webp" width="100%" alt="NetherFlow — turn silence into song. Free and open source">
 </p>
 
 <p align="center">
   <a href="https://github.com/volodya-rua/NetherFlow/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/volodya-rua/NetherFlow?style=for-the-badge&label=latest&color=ff4a1c&labelColor=160a06"></a>
-  <img alt="Windows and Android" src="https://img.shields.io/badge/Windows%20%C2%B7%20Android-f6ede4?style=for-the-badge&labelColor=160a06">
+  <img alt="Windows, Linux, Android and Android TV" src="https://img.shields.io/badge/Windows%20%C2%B7%20Linux%20%C2%B7%20Android%20%C2%B7%20TV-f6ede4?style=for-the-badge&labelColor=160a06">
   <img alt="Free, no ads, no account" src="https://img.shields.io/badge/free%20%C2%B7%20no%20ads%20%C2%B7%20no%20account-ffb21e?style=for-the-badge&labelColor=160a06">
   <a href="LICENSE"><img alt="GPL v3 License" src="https://img.shields.io/badge/license-GPL%20v3-f6ede4?style=for-the-badge&labelColor=160a06"></a>
   <br>
@@ -15,8 +15,8 @@
 <h3 align="center">yo, this is NetherFlow 🎧</h3>
 
 <p align="center">
-  A free music player for Windows and Android that turns any song into a whole vibe.<br>
-  Full songs, lyrics hitting word by word, and backgrounds that actually move with the music.<br>
+  A free music player for Windows, Linux, Android and Android TV that turns any song into a whole vibe.<br>
+  Full songs, lyrics hitting word by word, and backgrounds that actually move with the music. Podcasts and audiobooks too.<br>
   No account, no ads, no tracking. Just you and the song.
 </p>
 
@@ -43,14 +43,33 @@ Grab it from the **[latest release](https://github.com/volodya-rua/NetherFlow/re
 |:--|:--|:--|
 | ⭐ **Windows Lite**<br><sub>recommended</sub> | `NetherFlow-Lite-Setup-<version>.exe`<br><sub>installs just for you (no admin), shortcuts, uninstaller, and it updates itself</sub> | `NetherFlow-Lite-<version>-Windows.exe`<br><sub>just run it, nothing to install</sub> |
 | 🏎️ **Windows** | `NetherFlow-Setup-<version>.exe` | `NetherFlow-<version>-Windows.exe` |
-| 🤖 **Android** 7.0+ | `NetherFlow-<version>.apk` | |
+| 🐧 **Linux** (64-bit) | `NetherFlow-<version>-amd64.deb`<br><sub>Ubuntu, Debian, Mint, Pop!_OS and the like</sub> | `NetherFlow-<version>-x86_64.AppImage`<br><sub>any distro; it updates itself. On Ubuntu 24.04 and newer start it with `--no-sandbox`, or get the .deb</sub> |
+| 🤖 **Android** 7.0+<br>📺 **Android TV**, Google TV | `NetherFlow-<version>.apk` | <sub>the same app: on a TV it's worked with the remote</sub> |
 
-**Not sure? Get Lite.** It's the exact same app minus Extreme+ (so no Redline races or cars, which need a beefy graphics
+**On Windows and not sure? Get Lite.** It's the exact same app minus Extreme+ (so no Redline races or cars, which need a beefy graphics
 card anyway), about 18 MB smaller, and it updates to Lite.
 
 <a id="whats-new"></a>
 
 ## 🔥 What's new
+
+### 🎙️ 1.4: podcasts, audiobooks, Explore, playlists you make together, Linux and your TV
+
+- **Podcasts.** Every show in Apple's podcast directory, plus your country's top 50. Follow a show and its new episodes
+  show up for you. It picks up where you left off, plays at 0.8× to 2×, and you can **save episodes for offline**
+- **Audiobooks.** Thousands of free classics read by LibriVox's volunteers (Sherlock Holmes, Moby Dick, Jane Austen…),
+  chapter by chapter, from where you stopped
+- **Explore.** Your country's charts, fresh albums and singles, what's trending, and every mood and genre with its
+  playlists. Plus **Your mix** and **Discover**, made from what you actually play (and Discover only has songs you haven't
+  heard), and **New from artists you play**
+- **Playlists you make together.** Hit *Edit together*, send the link, and everyone who opens it can add, remove and rename,
+  live, on any phone or PC. No account, and it's end-to-end encrypted
+- **Headphone correction.** Pick your headphones (6,000+ models, from AutoEQ) and the equalizer evens out their sound
+- **Linux.** A .deb and an AppImage, same app, same everything
+- **Android TV and Google TV.** It's on your TV's home screen, and the whole app works with the remote: the arrows go from
+  thing to thing, OK presses, Back goes back. Runs on 32-bit TV boxes too (Chromecast with Google TV, Fire TV…)
+- **A new license: GPL v3.** Still free and open source. Changed versions have to stay open source too, keep the credit,
+  and use a name and logo of their own ([details](#license)). 1.3.1 and earlier stay under MIT
 
 ### 🛠️ 1.3.1: playlists of any length, and a ton of fixes
 
@@ -144,9 +163,12 @@ wants a workout. On a slower phone it steps down by itself, so it never lags.
 - **Autoplay**: when your list runs out it keeps going with songs like the one playing, in the same language and era, and
   it learns from what you skip, play through and like
 - **Smooth mix**: songs blend into each other like a DJ set, right on the beat
-- **Equalizer** with presets, a volume booster, and every song at its **original loudness** (YouTube turns loud songs
-  down, NetherFlow gives that back)
-- **Save for offline**: one song or a whole playlist with *Download all*
+- **Explore**: charts, new releases, trending, moods and genres with their playlists, and **Your mix** and **Discover**
+  made from what you play
+- **Podcasts and audiobooks**: follow shows, pick up where you left off, any speed from 0.8× to 2×
+- **Equalizer** with presets, a volume booster, **headphone correction** for 6,000+ headphones (AutoEQ), and every song at
+  its **original loudness** (YouTube turns loud songs down, NetherFlow gives that back)
+- **Save for offline**: one song, a whole playlist with *Download all*, or podcast episodes and audiobook chapters
 - **Import playlists** of any length from Spotify, Apple Music or YouTube, just paste the link (Spotify's short ones too).
   Yes, even a 10,000-song one: it keeps going when YouTube slows it down, and picks up where it left off
 - **Your stats**: minutes, plays, streaks, top songs, artists and genres, and a card to share
@@ -179,16 +201,21 @@ wants a workout. On a slower phone it steps down by itself, so it never lags.
   add songs, skip and react. End-to-end encrypted, no account
 - **Share playlists with a QR code**: hit Share on any playlist and your friend points their phone camera at it. Or send
   the link, and they paste it in NetherFlow's search. The songs ride inside the link itself, nothing gets uploaded
+- **Playlists you make together**: *Edit together*, send the link, and everyone with it adds, removes and renames, live.
+  End-to-end encrypted, no account
 - **Phone ↔ PC sync**: liked songs, playlists, history and stats over your own Wi-Fi with a 6-number code
 - **Discord status** (Windows): your song on your Discord profile, cover and progress and all
 
-### 💻 On Windows · 📱 On Android
+### 💻 On Windows & Linux · 📱 On Android · 📺 On your TV
 - **Windows**: a **now-playing island** at the top of your screen, over every app. Click it for the cover, timeline,
   volume and controls
+- **Linux**: the same app as a .deb or an AppImage, with your song in your desktop's media controls
 - **Android**: a home-screen widget, lyrics on the lock screen (and in the notification and on your car's display), and
   liked songs saving themselves for offline on Wi-Fi
-- **Updates right in the app**: the Windows installer only downloads what changed; NetherFlow's own Android app does the
-  same, signed and checked first (a store's build gets updated by the store). The portable app can't update itself
+- **Android TV & Google TV**: on the TV's home screen, and everything works with the remote
+- **Updates right in the app**: the Windows installer only downloads what changed; so does the Linux AppImage; NetherFlow's
+  own Android app does the same, signed and checked first (a store's build gets updated by the store). The portable app
+  and the .deb don't update themselves
 - Minimized or in the background, it draws nothing at all, so it's light on your battery
 
 Here's how it looks on a PC 👇
@@ -211,18 +238,18 @@ Okay so how does it actually stack up against the big ones? I scored all four on
 And no cap, NetherFlow doesn't win everything. I'm not gonna pretend it does.
 
 <p align="center">
-  <img src="docs/media/score.png" width="100%" alt="The real score, out of 100: NetherFlow 82.0, Apple Music 78.5, Spotify 78.0, YouTube Music 66.5">
+  <img src="docs/media/score.png" width="100%" alt="The real score, out of 100: NetherFlow 88.0, Apple Music 78.5, Spotify 78.0, YouTube Music 66.5">
 </p>
 
 | | App | Score | Wins at |
 |:-:|:--|:-:|:--|
-| 🥇 | **NetherFlow** | **82.0** | price, lyrics, the look, privacy, offline |
+| 🥇 | **NetherFlow** | **88.0** | price, lyrics, the look, privacy, offline, together |
 | 🥈 | **Apple Music** | **78.5** | sound quality, offline, catalog |
-| 🥉 | **Spotify** | **78.0** | discovery, devices, listening together, catalog |
+| 🥉 | **Spotify** | **78.0** | discovery, devices, together, catalog |
 | 4 | **YouTube Music** | **66.5** | catalog (covers, live versions, remixes) |
 
-So NetherFlow comes out on top, **first in five categories**. But it still doesn't win everything: the big ones beat it on
-catalog, sound, discovery and devices. Here's the deep version 👇
+So NetherFlow comes out on top, **first (or tied for first) in six categories**. But it still doesn't win everything:
+the big ones beat it on catalog, sound, discovery and devices. Here's the deep version 👇
 
 <details open>
 <summary><b>💸 Price & what's free</b></summary>
@@ -243,9 +270,10 @@ catalog, sound, discovery and devices. Here's the deep version 👇
 |:--|:--|:--|:--|:--|
 | Songs | everything on YouTube, found through Apple's catalog | 100M+ | 100M+ | 100M+, plus YouTube's covers, live versions and remixes |
 | Officially licensed | ❌ it plays through YouTube's own player | ✅ | ✅ | ✅ |
-| Podcasts & audiobooks | ❌ | ✅ both | ⚠️ podcasts, in a separate app | ✅ podcasts |
+| Podcasts | ✅ every show in Apple's directory, saved for offline too | ✅ | ⚠️ in a separate app | ✅ |
+| Audiobooks | ⚠️ free classics only (LibriVox, public domain in the US) | ✅ the bestsellers | ⚠️ in Apple Books | ❌ |
 | Can break when YouTube changes stuff | ⚠️ yes, until an update fixes it | ✅ no | ✅ no | ✅ no |
-| **Score** | 6 | **10** | **10** | **10** |
+| **Score** | 7 | **10** | **10** | **10** |
 </details>
 
 <details open>
@@ -255,7 +283,8 @@ catalog, sound, discovery and devices. Here's the deep version 👇
 |:--|:--|:--|:--|:--|
 | Best quality | ~160 kbps Opus (320 kbps from Audius when the artist uploaded it there) | Lossless, up to 24-bit/44.1 kHz | Hi-Res Lossless up to 24-bit/192 kHz, plus Dolby Atmos | 256 kbps |
 | Equalizer | ✅ built in, presets and a volume booster | ⚠️ on phones | ✅ presets | ⚠️ the phone's own (Android) |
-| **Score** | 7 | 8 | **10** | 6 |
+| Headphone correction | ✅ 6,000+ headphones (AutoEQ) | ❌ | ⚠️ Apple's own headphones | ❌ |
+| **Score** | 8 | 8 | **10** | 6 |
 </details>
 
 <details open>
@@ -286,10 +315,10 @@ catalog, sound, discovery and devices. Here's the deep version 👇
 
 | | NetherFlow | Spotify | Apple Music | YouTube Music |
 |:--|:--|:--|:--|:--|
-| Recommendations | ⚠️ Autoplay that learns from what you skip and like | ✅ Discover Weekly, AI DJ, daylist | ✅ stations, personal mixes | ✅ Supermix, strong recommendations |
-| Curated playlists | ❌ | ✅ | ✅ | ✅ |
+| Recommendations | ✅ Your mix and Discover, from what you play, and Autoplay that learns from what you skip and like | ✅ Discover Weekly, AI DJ, daylist | ✅ stations, personal mixes | ✅ Supermix, strong recommendations |
+| Curated playlists, charts, new releases | ✅ YouTube Music's charts, moods & genres, and new music from your artists | ✅ | ✅ | ✅ |
 | Your year in music | ✅ your stats, any time | ✅ Wrapped | ✅ Replay | ✅ Recap |
-| **Score** | 6 | **10** | 8 | 9 |
+| **Score** | 8 | **10** | 8 | 9 |
 </details>
 
 <details open>
@@ -308,9 +337,9 @@ catalog, sound, discovery and devices. Here's the deep version 👇
 | | NetherFlow | Spotify | Apple Music | YouTube Music |
 |:--|:--|:--|:--|:--|
 | Phone | Android | Android, iPhone | iPhone, Android | Android, iPhone |
-| Computer | Windows | Windows, Mac, Linux, web | Mac, Windows, web | ⚠️ web only |
-| TV, speakers, car, watch | ⚠️ lyrics on your car's display (Android) | ✅ basically everything | ✅ Apple's devices, and plenty more | ✅ lots |
-| **Score** | 6 | **10** | 8 | 8 |
+| Computer | Windows, Linux | Windows, Mac, Linux, web | Mac, Windows, web | ⚠️ web only |
+| TV, speakers, car, watch | ⚠️ Android TV and Google TV, and lyrics on your car's display (Android) | ✅ basically everything | ✅ Apple's devices, and plenty more | ✅ lots |
+| **Score** | 7 | **10** | 8 | 8 |
 </details>
 
 <details open>
@@ -321,17 +350,18 @@ catalog, sound, discovery and devices. Here's the deep version 👇
 | Download songs | ✅ free, whole playlists at once (⚠️ YouTube's terms don't allow it) | ✅ Premium, 10,000 a device | ✅ up to 100,000 in your library | ✅ Premium |
 | Listen together, live | ✅ up to 10 people, any phone or PC, no account, end-to-end encrypted | ✅ Jam | ✅ SharePlay (Apple devices) | ❌ not built in |
 | Share a playlist | ✅ a QR code or a link (the songs show up even without the app) | ✅ a link, or a Spotify Code to scan | ✅ a link | ✅ a link |
-| Playlists you edit together | ❌ | ✅ | ✅ | ✅ |
+| Playlists you edit together | ✅ anyone with the link, live, end-to-end encrypted, no account | ✅ | ✅ | ✅ |
 | **Offline score** | **10** | 9 | **10** | 9 |
-| **Together score** | 8 | **9** | 7 | 5 |
+| **Together score** | **9** | **9** | 7 | 5 |
 </details>
 
 ### 😤 Where NetherFlow loses (real talk)
 - **It's not a licensed service.** It plays songs through YouTube's own player, so it depends on YouTube. If YouTube
   changes something, stuff can break until an update fixes it
 - **The sound tops out around 160 kbps.** On good headphones, Apple Music's and Spotify's lossless is clearly better
-- **Windows and Android only.** No iPhone, no Mac (yet?)
-- **No podcasts, audiobooks or curated playlists**, and finding new music is basic next to Spotify
+- **No iPhone and no Mac** (yet?). Windows, Linux, Android and Android TV
+- **Audiobooks are free classics only** (LibriVox's), not the bestsellers Spotify and Apple have. And finding new music is
+  good now, but Spotify's is still better
 - **Artists earn less from your plays** than on the paid apps, since YouTube's ads get skipped. If you love an artist,
   show them some love: buy the merch, go to the show, or stream them on a paid app too 🫶
 
@@ -378,11 +408,17 @@ NetherFlow doesn't host any music, videos or lyrics. It finds them on other serv
 | Song search, artwork | Apple's iTunes Search API, YouTube Music |
 | Playback | YouTube's embedded player; [Audius](https://audius.co) when the artist's own upload is there (320 kbps) |
 | Lyrics | [LRCLIB](https://lrclib.net), NetEase Cloud Music, Kugou, YouTube Music (lyrics by LyricFind) |
-| Saving for offline | [yt-dlp](https://github.com/yt-dlp/yt-dlp) downloads the audio from YouTube, as YouTube serves it |
+| Explore | YouTube Music's charts, new releases, moods and genres; your mixes from its radio for the songs you play most |
+| Podcasts | Apple's podcast directory and charts; the episodes from each show's own feed and host |
+| Audiobooks | [LibriVox](https://librivox.org)'s recordings (public domain in the US), from the [Internet Archive](https://archive.org) |
+| Headphone correction | [AutoEQ](https://github.com/jaakkopasanen/AutoEq)'s published results (MIT), fetched when you pick your headphones |
+| Playlists you make together | public MQTT relays, end-to-end encrypted with a key from the playlist link |
+| Saving for offline | [yt-dlp](https://github.com/yt-dlp/yt-dlp) downloads the audio from YouTube, as YouTube serves it; podcast episodes and audiobook chapters come as their host serves them |
 | Redline's circuits | [OpenStreetMap](https://www.openstreetmap.org/copyright) map data and NASA's SRTM heights, made into `race/` ahead of time |
 
-The desktop app is [Electron](https://www.electronjs.org), the Android app is [Capacitor](https://capacitorjs.com) with
-yt-dlp running in Python through [Chaquopy](https://chaquo.com/chaquopy/), and both run the same page, `index.html`.
+The desktop app (Windows and Linux) is [Electron](https://www.electronjs.org), the Android app (phones and TVs) is
+[Capacitor](https://capacitorjs.com) with yt-dlp running in Python through [Chaquopy](https://chaquo.com/chaquopy/), and
+both run the same page, `index.html`.
 Redline's races are drawn with [three.js](https://threejs.org).
 
 <details>
@@ -404,6 +440,13 @@ NetherFlow Lite: `npx electron-builder --win nsis portable --publish never --con
 Discord status uses NetherFlow's own application at Discord (its id, public, is `DISCORD_ID` in `main.js`; a fork can
 use its own there or with the `NETHERFLOW_DISCORD_ID` environment variable). Its logo, for Discord, is in `docs/logo/`.
 
+**Linux** (on Linux; GitHub's Ubuntu builds the releases' with `.github/workflows/linux.yml`)
+
+```bash
+npm ci
+npm run dist:linux   # an AppImage and a .deb into dist/ (fetches yt-dlp_linux first and checks its SHA-256)
+```
+
 **Android**: you also need JDK 21 and the Android SDK (API level 36).
 
 ```bash
@@ -415,7 +458,7 @@ cd android && ./gradlew assembleRelease
 The APK lands in `android/app/build/outputs/apk/release/`. Release builds are signed only if a signing key is set up
 outside the repository, in `~/.netherflow-signing/` (or the folder named by `NETHERFLOW_SIGNING`): a
 `keystore.properties` with `storeFile`, `storePassword`, `keyAlias` and `keyPassword`, next to the key file. Otherwise
-they come out unsigned (as F-Droid wants them). Add `-PnfEmulator` to include x86_64 for an emulator. On Windows,
+they come out unsigned (as F-Droid wants them). Add `-PnfEmulator` to include x86 and x86_64 for an emulator. On Windows,
 `android-build.cmd` does all of this.
 </details>
 
@@ -424,13 +467,15 @@ they come out unsigned (as F-Droid wants them). Add `-PnfEmulator` to include x8
 NetherFlow has no accounts and no analytics, and sends nothing to its developer. Your settings, library and saved songs
 stay on your device. When you use it, it talks directly to the services above (GitHub too: to look for a newer
 NetherFlow, and to update yt-dlp, on Android only if you turn on "Update the downloader"; and valorant-api.com, only with
-the Tactical theme), which see your IP address. A playlist you share lives only inside its link (the page it opens, on
-GitHub Pages, never gets the songs part). The full [Privacy Policy](https://volodya-rua.github.io/NetherFlow/legal.html#privacy) is in the app and on the website.
+the Tactical theme; podcast hosts and the Internet Archive for podcasts and audiobooks), which see your IP address. A
+playlist you share lives only inside its link (the page it opens, on GitHub Pages, never gets the songs part); one you
+edit together is kept on public relays, encrypted with a key from its link, so anyone with the link can read and change it. The full [Privacy Policy](https://volodya-rua.github.io/NetherFlow/legal.html#privacy) is in the app and on the website.
 
 ## ⚖️ Legal
 
 - NetherFlow is an independent project. It is **not affiliated with, endorsed by or sponsored by** YouTube, Google,
-  Apple, Audius, LRCLIB, NetEase, Kugou, LyricFind or any artist, label or publisher. All names, trademarks, music,
+  Apple, Audius, LRCLIB, NetEase, Kugou, LyricFind, the Internet Archive, LibriVox, AutoEQ, any podcast or its publisher,
+  or any artist, label or publisher. All names, trademarks, music,
   videos, lyrics and artwork belong to their respective owners.
 - NetherFlow **hosts no content**. Everything it plays comes straight from the services above to your device.
 - **Saving for offline downloads from YouTube, which YouTube's Terms of Service don't allow**, and copyright law where
@@ -448,6 +493,8 @@ GitHub Pages, never gets the songs part). The full [Privacy Policy](https://volo
   models from Sketchfab, credited in `race/cars.json` and the app (they come inside it); the cars' makers don't endorse
   or sponsor NetherFlow. The race images here show map data © OpenStreetMap contributors.
 - The software is provided **as is**, without warranty of any kind (see the license).
+
+<a id="license"></a>
 
 ## 📄 License
 
@@ -467,8 +514,8 @@ Third-party code in this repository keeps its own license: yt-dlp (The Unlicense
 Elite and Yellowtail under the Apache License 2.0), Microsoft's Fluent Emoji in `emoji/` (MIT), and three.js in
 `race/three/` (MIT). The three songs on the website in `docs/media/music/` are by HoliznaCC0, in the public domain
 (CC0 1.0). The builds also include Electron (with Chromium, Node.js and FFmpeg), Capacitor, Chaquopy (with
-Python), electron-updater and, on Windows, `yt-dlp.exe`, each under its own license. All license texts are in
-[`licenses/`](licenses); the full list of components is in the app under About › Licenses.
+Python), electron-updater and, on Windows and Linux, yt-dlp's own build of itself, each under its own license. All
+license texts are in [`licenses/`](licenses); the full list of components is in the app under About › Licenses.
 
 <a id="hit-me-up"></a>
 
