@@ -53,6 +53,12 @@ card anyway), about 18 MB smaller, and it updates to Lite.
 
 ## 🔥 What's new
 
+### 🎯 1.4.1: Tactical got its own crew
+
+- **Six agents of its own** in the Tactical theme: Vanta, Onyx, Kestrel, Solstice, Halcyon and Tempest, drawn by the app
+  itself. Pick your favourite in Settings, or get a different one every song
+- Nothing gets fetched from anywhere for the theme anymore
+
 ### 🎙️ 1.4: podcasts, audiobooks, Explore, playlists you make together, Linux and your TV
 
 - **Podcasts.** Every show in Apple's podcast directory, plus your country's top 50. Follow a show and its new episodes

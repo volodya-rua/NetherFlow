@@ -1,0 +1,1 @@
+The Tactical theme has six agents of its own now (Vanta, Onyx, Kestrel, Solstice, Halcyon and Tempest), drawn by the app itself: pick one in Settings or get a different one every song. Nothing is fetched for the theme anymore.
