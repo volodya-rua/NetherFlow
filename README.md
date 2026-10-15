@@ -125,7 +125,7 @@ even how the lyrics come in. Six of them (five on Android).
     <td width="33%" valign="top"><img src="docs/media/themes/blocks.webp" alt="The Blocks theme"><br><b>Blocks</b><br><sub>a blocky world at dusk to fly over, stone buttons, an XP bar</sub></td>
   </tr>
   <tr>
-    <td width="33%" valign="top"><img src="docs/media/themes/tactical.webp" alt="The Tactical theme"><br><b>Tactical</b><br><sub>an agent from VALORANT next to the lyrics, a round timer, ACE and CLUTCH banners</sub></td>
+    <td width="33%" valign="top"><img src="docs/media/themes/tactical.webp" alt="The Tactical theme"><br><b>Tactical</b><br><sub>one of six agents of its own next to the lyrics, a round timer, ACE and CLUTCH banners</sub></td>
     <td width="33%" valign="top"><img src="docs/media/themes/ops.webp" alt="The Ops theme"><br><b>Ops</b><br><sub>a desert bomb site, smoke and tracers on the kick, the lyrics as a kill feed</sub></td>
     <td width="33%" valign="top"><img src="docs/media/themes/redline.webp" alt="The Redline theme"><br><b>Redline</b> <sub>· Windows, Extreme+</sub><br><sub>real cars on real circuits in 3D, a rev counter round the play button</sub></td>
   </tr>
@@ -466,8 +466,7 @@ they come out unsigned (as F-Droid wants them). Add `-PnfEmulator` to include x8
 
 NetherFlow has no accounts and no analytics, and sends nothing to its developer. Your settings, library and saved songs
 stay on your device. When you use it, it talks directly to the services above (GitHub too: to look for a newer
-NetherFlow, and to update yt-dlp, on Android only if you turn on "Update the downloader"; and valorant-api.com, only with
-the Tactical theme; podcast hosts and the Internet Archive for podcasts and audiobooks), which see your IP address. A
+NetherFlow, and to update yt-dlp, on Android only if you turn on "Update the downloader"; podcast hosts and the Internet Archive for podcasts and audiobooks), which see your IP address. A
 playlist you share lives only inside its link (the page it opens, on GitHub Pages, never gets the songs part); one you
 edit together is kept on public relays, encrypted with a key from its link, so anyone with the link can read and change it. The full [Privacy Policy](https://volodya-rua.github.io/NetherFlow/legal.html#privacy) is in the app and on the website.
 
@@ -484,9 +483,6 @@ edit together is kept on public relays, encrypted with a key from its link, so a
 - NetherFlow also skips and blocks ads inside YouTube's player, which YouTube's terms may not allow.
 - The [Terms of Use](https://volodya-rua.github.io/NetherFlow/legal.html#terms) apply to using the app. If you hold rights in something and have a concern,
   contact the developer (below): every notice is reviewed in good faith.
-- The Tactical theme shows VALORANT's agents: NetherFlow was created under Riot Games' "Legal Jibber Jabber" policy using
-  assets owned by Riot Games. Riot Games does not endorse or sponsor this project. The art isn't in this repository or
-  under its license (the images here leave it out): the app fetches it from valorant-api.com while that theme is on.
 - Redline's 3D races are built from [© OpenStreetMap contributors](https://www.openstreetmap.org/copyright)' map data:
   the circuits and what's round them (ODbL 1.0, as are `race/tracks.json` and `race/maps/`, made from it by
   `tools/race-tracks.js`), with heights from NASA's SRTM (public domain) through OpenTopoData. The cars are CC BY 4.0

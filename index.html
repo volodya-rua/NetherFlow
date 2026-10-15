@@ -1319,12 +1319,16 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
 .race-tag small { font: 500 10px 'Chakra Petch', sans-serif; letter-spacing: .06em; opacity: .55; } /* (OpenStreetMap's credit: the circuit and what's round it are its map data) */
 
 /* — the themes' extras (see "the themes' extras" in the script) — */
-/* Tactical's agent (Riot Games' art) by the lyrics: its backdrop art behind it, a glow in its colours, sliding in */
+/* Tactical's agent by the lyrics (one of its own, drawn by the script): its codename in giant letters behind it, a glow
+   in its colours, sliding in */
 .agent { display: none; position: fixed; z-index: 1; right: 3vw; bottom: 0; height: 94vh; aspect-ratio: .9; pointer-events: none; }
 .skin-tactical .agent { display: block; }
 .agent::before { content: ''; position: absolute; inset: 22% 0 0; background: radial-gradient(closest-side, color-mix(in srgb, var(--ag1, #ff4655) 60%, transparent), transparent); opacity: .5; }
 .agent img { position: absolute; left: 50%; bottom: 0; height: 100%; translate: -50% 0; object-fit: contain; }
-.agent .ag-bg { height: 84%; bottom: 8%; opacity: .16; mix-blend-mode: screen; }
+.agent .ag-bg { position: absolute; inset: 4% -12% 16%; display: grid; place-content: center; justify-items: center; overflow: hidden; opacity: 0; transition: opacity .8s;
+  font: 400 26vh/.8 'Anton', Impact, sans-serif; text-transform: uppercase; white-space: nowrap; color: transparent; -webkit-text-stroke: 2px var(--ag1, #ff4655); }
+.agent .ag-bg :nth-child(2) { color: color-mix(in srgb, var(--ag1, #ff4655) 30%, transparent); -webkit-text-stroke: 0; translate: -8% 0; }
+.agent.in .ag-bg { opacity: .2; }
 .agent .ag-pt { opacity: 0; translate: -35% 0; transition: opacity .5s, translate .8s cubic-bezier(.16,1,.3,1);
   -webkit-mask: linear-gradient(to top, transparent, #000 24%); mask: linear-gradient(to top, transparent, #000 24%); filter: drop-shadow(0 18px 40px rgba(0,0,0,.55)); }
 .agent.in .ag-pt { opacity: .95; translate: -50% 0; }
@@ -1377,7 +1381,7 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
 <canvas id="fx" aria-hidden="true"></canvas>
 <div class="cover-bg" aria-hidden="true"></div>
 <div class="grain" aria-hidden="true"></div>
-<div id="agent" class="agent" aria-hidden="true"><img class="ag-bg" alt=""><img class="ag-pt" alt=""></div><!-- the Tactical theme's agent: Riot Games' art (see "the themes' extras") -->
+<div id="agent" class="agent" aria-hidden="true"><b class="ag-bg"></b><img class="ag-pt" alt=""></div><!-- the Tactical theme's agent (see "the themes' extras") -->
 <div class="vedit" id="vedit" inert aria-hidden="true"><div id="ytv"></div></div><!-- Extreme lyrics: the song's music video, cut like an edit -->
 <div class="race" inert aria-hidden="true"><canvas id="race"></canvas><div class="race-tag" id="raceTag"><b></b><span></span><small>Map data © OpenStreetMap contributors</small></div></div><!-- Redline on Extreme+: a 3D race (race/race.js) -->
 <canvas id="kin" aria-hidden="true"></canvas><!-- Extreme lyrics: the music video (over the backdrop, under everything else) -->
@@ -1648,7 +1652,6 @@ const api = {
     if (native) return what === 'explore' ? netherflowLib.ytmExplore(nativePost, gl) : what === 'charts' ? netherflowLib.ytmCharts(nativePost, gl)
       : what === 'mood' ? netherflowLib.ytmMood(nativePost, arg, gl) : netherflowLib.ytmAlbum(nativePost, arg, gl);
     return fetch(`/api/${what}?` + new URLSearchParams({ gl, ...(what === 'mood' ? { p: arg } : what === 'album' ? { id: arg } : {}) })).then(async r => { const j = await r.json(); if (!r.ok) throw new Error(j.error || 'it didn\'t load'); return j; }); },
-  agents: async () => native ? netherflowLib.agents(nativeGet) : (await fetch('/api/agents')).json(), // (the Tactical theme's: see lib.agents)
   audius: async q => native ? netherflowLib.audius(nativeGet, q).catch(() => [])
     : (await fetch('/api/audius?' + new URLSearchParams({ q }))).json(),
   words: async (artist, title, dur) => native ? netherflowLib.words(nativeGet, artist, title, dur)
@@ -1826,9 +1829,179 @@ const SKIN_LIST = Object.keys(SKINS).filter(k => fullPc || !SKINS[k].pc);
 let skin = SKIN_LIST.includes(store.get('netherflow.skin')) ? store.get('netherflow.skin') : '';
 if (SKINS[skin]?.needs && SKINS[skin].needs !== bgq) skin = '';
 // (the extras' state: see "the themes' extras")
-const RIOT_NOTICE = 'NetherFlow was created under Riot Games\' "Legal Jibber Jabber" policy using assets owned by Riot Games. Riot Games does not endorse or sponsor this project.';
-const agents = { list: null, asking: null, cur: null }, banner = { sec: null, n: 0, bomb: '', timer: 0 };
-let agentPick = store.get('netherflow.agent') || '', hudLast = '', sfxLast = 0;
+const banner = { sec: null, n: 0, bomb: '', timer: 0 };
+let agentPick = store.get('netherflow.agent') || '', agentCur = null, hudLast = '', sfxLast = 0;
+// Tactical's agents (see "the themes' extras"): each a silhouette of no one in particular, a bust turned three-quarters
+// to the lyrics, cel-shaded in deep navy and lit from behind in its colours (a hot rim on one side, a cool one on the
+// other, a glow round it), its eyes, lights and powers glowing. Drawn as SVG (900×1000) from a few shapes, each lit the
+// same way: no image files. (Here, not with the extras: Settings, built at the start, lists them.)
+const { AGENTS, agentArt } = (() => {
+  const rd = v => Math.round(v * 10) / 10;
+  // a smooth outline through the points [x, y, x, y…] (Catmull-Rom, as Béziers)
+  const cr = P => {
+    const p = []; for (let i = 0; i < P.length; i += 2) p.push([P[i], P[i + 1]]);
+    const n = p.length, at = i => p[(i + n) % n];
+    let d = `M${p[0].map(rd)}`;
+    for (let i = 0; i < n; i++) {
+      const a = at(i - 1), b = at(i), c = at(i + 1), e = at(i + 2);
+      d += `C${rd(b[0] + (c[0] - a[0]) / 6)},${rd(b[1] + (c[1] - a[1]) / 6)} ${rd(c[0] - (e[0] - b[0]) / 6)},${rd(c[1] - (e[1] - b[1]) / 6)} ${c.map(rd)}`;
+    }
+    return d + 'Z';
+  };
+  // a limb, a lock of hair, a scarf's tail: along its middle [x, y, width, (lean, + to its left)…], rounded at the ends
+  const limb = (...C) => {
+    const L = [], R = [], n = C.length, dir = i => { const a = C[Math.max(0, i - 1)], b = C[Math.min(n - 1, i + 1)], dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy); return [dx / l, dy / l]; };
+    C.forEach(([x, y, w, o = 0], i) => { const [tx, ty] = dir(i), cx = x - ty * o, cy = y + tx * o; L.push(cx - ty * w / 2, cy + tx * w / 2); R.unshift(cx + ty * w / 2, cy - tx * w / 2); });
+    const [ex, ey] = dir(n - 1), [sx, sy] = dir(0), e = C[n - 1], s = C[0];
+    return cr([...L, e[0] + ex * e[2] * .42, e[1] + ey * e[2] * .42, ...R, s[0] - sx * s[2] * .42, s[1] - sy * s[2] * .42]);
+  };
+  // the shoulders and chest, s their breadth; where the arms meet the chest; a head in profile (to the chin) and its neck
+  const bust = (s = 1) => { const x = v => rd(480 + (v - 480) * s);
+    return `M${x(130)},1000 C${x(134)},900 ${x(140)},800 ${x(160)},740 C${x(176)},692 ${x(210)},664 ${x(262)},648 C${x(330)},628 ${x(400)},606 484,596 C${x(570)},602 ${x(652)},622 ${x(716)},646 C${x(770)},668 ${x(806)},712 ${x(822)},770 C${x(836)},830 ${x(842)},900 ${x(848)},1000 Z`; };
+  const CREASE = '<path stroke="#1c2836" stroke-width="3" fill="none" d="M214,770 C236,850 242,930 240,1000 M744,750 C732,830 730,920 732,1000"/>';
+  const HEAD = 'M372,190 C410,150 470,136 530,146 C600,158 640,214 644,290 C646,340 636,372 624,400 C614,424 600,440 590,452 L604,560 L436,572 L430,504 L350,490 L330,470 L336,444 L322,430 L330,420 L318,410 L326,398 L320,380 L304,366 L334,322 L344,300 L338,284 L346,240 C350,220 358,204 372,190 Z';
+  const mix = (a, b, t) => '#' + [1, 3, 5].map(i => Math.round(parseInt(a.slice(i, i + 2), 16) * (1 - t) + parseInt(b.slice(i, i + 2), 16) * t).toString(16).padStart(2, '0')).join('');
+  // Each: its two colours (@1, @2 in its own drawing), its shapes back to front (a { d, fill } one flat, unlit), then
+  // lines (seams, folds), fx (what glows) and back (behind it); flip: lit from the left
+  const AGENTS = [
+    { name: 'Vanta', c: ['#ff4655', '#ffd6d9'], // (hooded, a mask in the dark, red smoke rising)
+      defs: '<filter id="sm" x="-40%" y="-20%" width="180%" height="140%"><feTurbulence type="fractalNoise" baseFrequency=".008 .016" numOctaves="4" seed="7"/><feDisplacementMap in="SourceGraphic" scale="120" xChannelSelector="R" yChannelSelector="G"/><feGaussianBlur stdDeviation="2.5"/></filter><filter id="sw" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="24"/></filter>',
+      back: '<g fill="none" stroke="@1" stroke-linecap="round"><g filter="url(#sw)" opacity=".35"><path stroke-width="90" d="M110,1000 C130,860 90,760 150,640"/><path stroke-width="80" d="M820,1000 C850,880 800,800 850,700"/></g>'
+        + '<g filter="url(#sm)" opacity=".6"><path stroke-width="10" d="M70,1000 C120,880 60,800 110,700 C150,620 110,560 150,480 C170,440 160,400 180,360"/><path stroke-width="5" d="M150,1000 C190,900 140,820 190,740 C220,690 200,640 230,590"/><path stroke-width="8" d="M840,1000 C880,900 820,830 860,740 C890,670 860,620 880,560 C890,520 880,480 900,440"/><path stroke-width="4" d="M760,1000 C790,920 760,860 790,800"/></g></g>',
+      parts: [
+        bust(1.06),
+        'M150,780 C176,700 236,650 330,618 L470,598 L612,604 C704,622 784,664 834,736 L850,812 L640,846 L560,890 L520,848 L170,850 Z', // the mantle, a notch at the front
+        'M640,640 L760,654 L842,724 L852,800 L780,790 L700,736 L630,700 Z', // a plate on the near shoulder
+        cr([320,600, 360,540, 440,520, 560,522, 650,548, 690,600, 640,650, 540,664, 430,660, 350,640]), // the cowl
+        'M316,214 C350,150 420,104 520,108 C600,112 650,170 662,250 C672,320 668,380 684,440 C700,500 730,540 760,590 C700,612 620,616 560,610 L420,604 C370,600 330,580 318,540 C304,500 300,450 302,400 C304,330 306,270 316,214 Z', // the hood…
+        { d: cr([318,226, 384,204, 466,226, 524,288, 542,372, 524,462, 462,518, 380,522, 330,486, 306,404, 300,306]), fill: '#0d141d' }, // its lining,
+        { d: cr([322,238, 380,220, 450,238, 500,292, 516,372, 500,452, 450,502, 382,507, 336,472, 314,400, 308,310]), fill: '#020408' }, // the dark inside,
+        { d: 'M322,392 L410,382 L496,398 L490,450 L440,494 L372,496 L332,462 Z', fill: '#0a0f16' }, // a mask in it
+      ],
+      lines: CREASE + '<g stroke="#1c2836" stroke-width="3"><path d="M560,140 C620,200 640,300 630,420 M600,540 C640,500 660,450 664,390 M380,560 C420,590 520,600 600,580"/></g>',
+      fx: '<path stroke="@1" stroke-width="8" fill="none" d="M322,350 L392,330 L488,344"/><path stroke="#fff" stroke-width="2.5" fill="none" d="M330,349 L392,333 L478,344"/>'
+        + '<g stroke="@1" stroke-width="3" opacity=".7"><path d="M350,420 L380,418 M352,436 L384,434 M420,420 L460,424 M418,438 L456,442"/></g>'
+        + '<path stroke="@1" stroke-width="3" fill="none" opacity=".85" d="M184,836 L520,834 L560,872 L640,830 L836,800"/><path fill="@1" d="M716,664 L790,676 L800,692 L728,682 Z"/>'
+        + '<g fill="@1"><circle cx="150" cy="560" r="3"/><circle cx="196" cy="470" r="2"/><circle cx="830" cy="520" r="3"/><circle cx="780" cy="430" r="2.5"/><circle cx="110" cy="640" r="2"/><circle cx="240" cy="400" r="1.8"/><circle cx="720" cy="360" r="1.8"/></g>' },
+    { name: 'Onyx', c: ['#9d7bff', '#e6dcff'], // (armoured: a helmet with a crest, a visor, a vent, an ear and its aerial; shards floating)
+      parts: [
+        bust(1.1),
+        'M290,660 L470,630 L640,660 L670,820 L620,1000 L300,1000 L270,820 Z', // the chest plate
+        'M400,500 L590,490 L650,540 L640,600 L470,622 L380,602 L360,550 Z', // the collar
+        'M90,860 L110,780 L230,760 L360,720 L370,780 L240,840 Z', 'M100,780 L130,690 L220,630 L350,610 L400,650 L360,720 L230,760 Z', // the shoulders, two plates a side
+        'M600,700 L730,760 L846,800 L856,880 L710,856 L612,780 Z', 'M560,620 L700,600 L810,650 L866,760 L846,800 L730,760 L600,700 Z',
+        'M352,262 C360,170 430,118 510,118 C590,118 650,170 664,250 C676,320 668,400 640,450 L600,500 L500,520 L420,512 L380,470 L372,420 L352,392 L340,330 Z', // the helmet
+        'M470,112 C540,102 612,132 652,194 L638,210 C598,158 540,130 472,130 Z', // its crest
+        'M352,262 L470,250 L520,280 L530,400 L500,520 L420,512 L380,470 L372,420 L352,392 L340,330 Z', // its face plate
+        'M564,360 a48,48 0 1,0 96,0 a48,48 0 1,0 -96,0 Z', 'M640,320 L712,236 L724,246 L660,334 Z', // the ear, the aerial
+      ],
+      lines: CREASE + '<g stroke="#26364a" stroke-width="3"><path d="M420,606 L430,560 M520,612 L526,566 M600,596 L612,550 M470,630 L470,1000 M290,760 L470,740 L655,760"/></g>',
+      fx: '<path fill="@1" d="M342,318 L478,304 L528,316 L530,350 L478,346 L346,356 Z"/><path stroke="#fff" stroke-width="3" d="M352,334 L478,324 L522,332"/>'
+        + '<g stroke="@1" stroke-width="4" opacity=".75"><path d="M392,452 L450,448 M396,470 L452,466 M400,488 L454,484"/></g>'
+        + '<circle cx="612" cy="360" r="26" fill="none" stroke="@1" stroke-width="4"/><circle cx="612" cy="360" r="7" fill="#fff"/>'
+        + '<path fill="@1" d="M700,622 L790,662 L798,680 L708,640 Z M150,700 L236,648 L246,664 L160,716 Z"/>'
+        + '<path d="M470,690 L500,707 L500,742 L470,759 L440,742 L440,707 Z" fill="none" stroke="@1" stroke-width="4"/><path d="M470,708 L484,716 L484,733 L470,741 L456,733 L456,716 Z" fill="#fff"/>'
+        + '<g fill="@1" opacity=".9"><path d="M180,330 L200,392 L182,470 L162,396 Z"/><path d="M790,300 L812,350 L796,420 L776,352 Z"/><path d="M120,560 L134,594 L122,640 L108,598 Z"/><path d="M840,470 L852,498 L842,536 L830,500 Z"/><path d="M250,210 L260,236 L251,268 L241,238 Z"/></g>'
+        + '<g stroke="#fff" stroke-width="2" opacity=".8"><path d="M180,336 L182,464 M790,306 L796,414"/></g>' },
+    { name: 'Kestrel', c: ['#2ee6b6', '#d9fff4'], // (a visor, hair swept back in blades, a scarf out in the wind)
+      parts: [
+        limb([596,520,70], [680,480,64,6], [760,470,56,-8], [840,420,50,6], [940,376,44]), limb([606,566,56], [700,560,50,-6], [790,540,44,6], [870,520,40,-4], [950,500,36]), // the scarf's tails
+        bust(),
+        'M330,640 L366,560 L450,600 L540,600 L640,548 L680,640 L560,700 L420,700 Z', // the jacket's collar, up
+        HEAD,
+        limb([520,226,16], [590,226,54], [660,248,34], [740,286,3]), limb([560,180,14], [630,190,46], [700,214,22], [770,236,2]), // the hair, back to front
+        limb([450,170,14], [530,136,50], [620,118,36], [700,106,16], [760,96,2]),
+        limb([372,200,12], [430,160,54], [530,130,48], [640,124,26], [730,130,3]),
+        limb([380,236,14], [420,196,56], [520,166,58], [620,170,36], [720,196,3]),
+        'M558,330 a30,38 0 1,0 60,0 a30,38 0 1,0 -60,0 Z', // the ear
+        cr([416,520, 520,498, 612,474, 656,536, 646,612, 540,646, 428,636, 396,574]), // the scarf round the neck, an end hanging
+        limb([450,610,64], [432,690,58,-6], [420,780,50,4], [416,860,44]),
+      ],
+      lines: CREASE + '<g stroke="#22313f" stroke-width="3"><path d="M430,540 C500,580 560,520 636,500 M420,600 C500,620 590,560 650,560 M410,720 L440,700 M404,800 L432,782 M520,700 L520,1000"/></g>',
+      fx: '<path fill="@1" d="M332,282 L470,270 L548,296 L470,296 L336,304 Z"/><path stroke="#fff" stroke-width="2.5" d="M342,290 L468,281"/>'
+        + '<circle cx="588" cy="330" r="12" fill="@1"/><circle cx="470" cy="770" r="9" fill="#fff"/><circle cx="470" cy="770" r="20" fill="none" stroke="@1" stroke-width="3"/>'
+        + '<g fill="none" stroke="@1"><path stroke-width="4" d="M40,720 C160,640 280,650 360,720"/><path stroke-width="2" opacity=".7" d="M80,770 C190,710 280,720 340,770"/><path stroke-width="3" d="M740,190 C830,220 880,290 880,370"/><path stroke-width="2" opacity=".6" d="M780,160 C870,190 906,250 906,310"/><path stroke-width="3" d="M150,300 C200,240 270,220 320,226"/></g>' },
+    { name: 'Solstice', c: ['#ffb238', '#fff1d6'], flip: true, // (long hair in the wind, a lens over one eye, a sun behind)
+      back: '<circle cx="490" cy="320" r="250" fill="none" stroke="@1" stroke-width="5" opacity=".75"/><circle cx="490" cy="320" r="226" fill="none" stroke="@1" stroke-width="1.5" opacity=".5"/>'
+        + '<g stroke="@1" stroke-width="3" opacity=".5">' + Array.from({ length: 36 }, (_, i) => { const t = i / 36 * Math.PI * 2, r = i % 3 ? 286 : 320; return `<path d="M${rd(490 + Math.cos(t) * 262)},${rd(320 + Math.sin(t) * 262)}L${rd(490 + Math.cos(t) * r)},${rd(320 + Math.sin(t) * r)}"/>`; }).join('') + '</g>',
+      parts: [
+        'M430,150 C560,120 660,190 700,300 C740,400 800,470 880,520 C840,540 800,540 770,530 C820,600 850,660 900,720 C840,720 790,690 750,660 C760,740 790,800 820,860 C740,830 690,760 660,690 C640,620 620,560 600,520 Z', // the hair behind
+        limb([640,330,60], [700,450,54,10], [780,560,40,-10], [880,640,4]),
+        bust(.9),
+        cr([450,476, 520,460, 574,428, 590,520, 604,610, 520,630, 432,616, 440,540]), // the neck
+        cr([428,580, 520,566, 606,532, 628,610, 618,672, 520,692, 424,684, 414,630]), // a high collar
+        'M420,160 C500,140 580,170 610,240 C630,290 624,350 600,400 C580,440 540,470 490,480 L430,484 C400,484 380,478 368,466 L362,450 L356,428 L344,420 L346,410 L340,402 L344,394 L338,386 L344,376 L330,364 L326,354 L340,326 L344,296 L348,262 C352,220 376,176 420,160 Z', // the head
+        'M342,256 C346,190 400,138 476,130 C566,124 636,172 656,244 C668,294 660,356 648,410 C632,360 612,300 572,262 C522,222 452,212 400,232 C378,240 358,248 342,256 Z', // the hair over it
+        limb([560,200,56], [640,270,48,6], [690,380,34,-6], [720,500,4]),
+      ],
+      lines: CREASE,
+      fx: '<circle cx="372" cy="300" r="7" fill="#fff"/><circle cx="372" cy="300" r="20" fill="none" stroke="@1" stroke-width="4"/><path stroke="@1" stroke-width="2" fill="none" d="M392,300 L560,330"/>'
+        + '<g fill="@1"><circle cx="200" cy="600" r="3"/><circle cx="240" cy="520" r="2"/><circle cx="760" cy="420" r="2.5"/><circle cx="180" cy="420" r="2"/><circle cx="820" cy="600" r="2"/></g>'
+        + '<path fill="@1" d="M490,720 L500,760 L540,770 L500,780 L490,820 L480,780 L440,770 L480,760 Z"/>' },
+    { name: 'Halcyon', c: ['#49a8ff', '#e0f0ff'], // (a pilot's helmet, fins, its visor, a harness; lightning)
+      defs: '<linearGradient id="vz" x1="0" y1="0" x2=".4" y2="1"><stop offset="0" stop-color="#2a6cb0"/><stop offset=".35" stop-color="#0d2440"/><stop offset="1" stop-color="#03070d"/></linearGradient>',
+      parts: [
+        bust(1.04),
+        'M300,660 L400,620 L470,700 L440,1000 L380,1000 L400,720 Z', 'M560,620 L680,660 L620,1000 L560,1000 L600,700 Z', // the harness
+        'M400,500 L580,496 L630,560 L600,620 L470,640 L380,620 L360,560 Z', // the collar
+        'M552,166 L726,96 L708,146 L604,220 Z', 'M606,316 L776,250 L760,298 L646,378 Z', // the fins
+        cr([470,120, 580,136, 650,200, 676,300, 664,410, 624,480, 548,520, 440,522, 370,494, 334,420, 322,320, 344,220, 400,150]), // the helmet
+        { d: 'M340,232 C390,206 470,206 534,230 C560,282 562,380 542,450 C490,482 410,488 356,462 C334,402 328,300 340,232 Z', fill: 'url(#vz)' }, // its visor
+      ],
+      lines: CREASE + '<path stroke="#26364a" stroke-width="3" d="M420,620 L428,580 M520,628 L522,584 M600,612 L610,570"/>',
+      fx: '<path stroke="@1" stroke-width="3" fill="none" d="M560,150 C630,180 668,250 676,330 M664,410 L640,456"/><path stroke="#fff" stroke-width="6" fill="none" opacity=".5" d="M358,256 C410,232 470,230 516,242"/><path stroke="#fff" stroke-width="3" fill="none" opacity=".3" d="M520,270 C536,320 538,380 528,430"/><path stroke="@1" stroke-width="2" fill="none" opacity=".85" d="M360,340 L440,336 M360,356 L410,354 M480,380 a22,22 0 1,0 1,0 M380,420 L470,420"/>'
+        + '<circle cx="470" cy="770" r="14" fill="#fff"/><circle cx="470" cy="770" r="30" fill="none" stroke="@1" stroke-width="3"/>'
+        + '<g fill="none" stroke="@1" stroke-width="5"><path d="M120,560 L170,480 L150,450 L210,380 L186,350 L240,280"/><path d="M170,480 L110,450"/><path d="M800,580 L770,500 L810,460 L780,400 L820,340"/><path d="M780,400 L840,410"/></g>'
+        + '<g fill="none" stroke="#fff" stroke-width="1.6"><path d="M120,560 L170,480 L150,450 L210,380 L186,350 L240,280"/><path d="M800,580 L770,500 L810,460 L780,400 L820,340"/></g>' },
+    { name: 'Tempest', c: ['#ff4fa8', '#ffe0f0'], // (wild hair, headphones on, the sound coming off them, a meter on the chest)
+      parts: [
+        bust(),
+        cr([330,640, 350,570, 430,530, 560,532, 660,572, 700,646, 600,644, 430,654]), // the hood, down
+        HEAD,
+        limb([540,244,14], [620,232,50], [690,246,26], [766,262,2]), limb([480,200,14], [560,166,54], [650,152,30], [740,138,2]), // the hair, back to front
+        limb([420,196,14], [480,140,52], [550,104,34], [624,70,2]),
+        limb([440,210,12], [490,150,40], [540,100,22], [590,60,2]),
+        limb([380,226,12], [410,170,44], [450,120,30], [500,70,2]),
+        limb([586,288,26], [584,210,26], [548,150,24], [480,124,22], [410,140,20]), 'M530,344 a58,70 0 1,0 116,0 a58,70 0 1,0 -116,0 Z', // the headphones' band, a cup
+      ],
+      lines: CREASE + '<g stroke="#22313f" stroke-width="3"><path d="M470,616 L470,1000"/></g>',
+      fx: '<path fill="@1" d="M346,292 L392,284 L382,302 Z"/><path fill="#fff" d="M356,292 L382,288 L378,296 Z"/>'
+        + '<g stroke="@1" stroke-width="7"><path d="M392,760 L392,800 M414,736 L414,800 M436,750 L436,800 M458,720 L458,800 M480,744 L480,800 M502,730 L502,800 M524,756 L524,800"/></g>'
+        + '<circle cx="588" cy="344" r="36" fill="none" stroke="@1" stroke-width="5"/><circle cx="588" cy="344" r="12" fill="#fff"/>'
+        + '<g fill="none" stroke="@1" stroke-width="3"><path d="M684,264 C724,304 724,384 684,424"/><path d="M724,234 C784,294 784,394 724,454" opacity=".7"/><path d="M764,204 C844,284 844,404 764,484" opacity=".45"/></g>'
+        + '<g fill="@1"><circle cx="200" cy="520" r="3"/><circle cx="160" cy="420" r="2"/><circle cx="820" cy="560" r="2.5"/><circle cx="250" cy="300" r="2"/></g>' },
+  ];
+  // Its drawing, as an image's address (vb: a part of it — the HUD's faces). Each shape: a dark fill (with a shadow on
+  // what's behind it), its lit side (the shape less itself moved away from the light: cel shading), the light's rim
+  // (the same, moved a little and soft inside) with a white-hot hairline, and the cool light's rim on the other side.
+  const memo = {};
+  const art = (a, vb = '0 0 900 1000') => memo[a.name + vb] ||= (() => {
+    const [c1, c2] = a.c, F = a.flip ? -1 : 1, col = s => (s || '').replaceAll('@1', c1).replaceAll('@2', c2);
+    let defs = '', fig = '', glow = '';
+    a.parts.forEach((p, i) => {
+      defs += `<path id="p${i}" d="${p.d || p}"/>`;
+      if (p.fill) { fig += `<use href="#p${i}" fill="${p.fill}"/>`; return; }
+      const less = (id, x, y, blur) => `<mask id="${id}${i}"><use href="#p${i}" fill="#fff"/><use href="#p${i}" fill="#000"${blur ? ` filter="url(#${blur})"` : ''} transform="translate(${x} ${y})"/></mask>`;
+      defs += less('l', -42 * F, 30, 'ms') + less('k', -10 * F, 7, 'mb') + less('e', -2.5 * F, 2) + less('f', 6 * F, -1, 'mb');
+      fig += `<use href="#p${i}" fill="url(#b)" filter="url(#ds)"/><use href="#p${i}" fill="url(#lt)" mask="url(#l${i})"/>`
+        + `<use href="#p${i}" fill="url(#r)" mask="url(#k${i})"/><use href="#p${i}" fill="#fff" opacity=".85" mask="url(#e${i})"/><use href="#p${i}" fill="${c2}" opacity=".32" mask="url(#f${i})"/>`;
+      glow += `<use href="#p${i}"/>`;
+    });
+    return 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vb}"><defs>`
+      + '<linearGradient id="b" gradientUnits="userSpaceOnUse" x1="250" y1="80" x2="560" y2="1000"><stop offset="0" stop-color="#101822"/><stop offset=".45" stop-color="#0a1018"/><stop offset="1" stop-color="#05080c"/></linearGradient>'
+      + `<linearGradient id="lt" gradientUnits="userSpaceOnUse" x1="300" y1="80" x2="700" y2="1000"><stop offset="0" stop-color="${mix('#24344a', c1, .14)}"/><stop offset=".6" stop-color="${mix('#16212f', c1, .1)}"/><stop offset="1" stop-color="#0a1018"/></linearGradient>`
+      + `<linearGradient id="r" gradientUnits="userSpaceOnUse" x1="0" y1="40" x2="0" y2="1000"><stop offset="0" stop-color="#fff"/><stop offset=".1" stop-color="${c1}"/><stop offset=".75" stop-color="${c1}"/><stop offset="1" stop-color="${c1}" stop-opacity=".2"/></linearGradient>`
+      + '<filter id="mb" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="3.5"/></filter><filter id="ms" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="1.2"/></filter>'
+      + `<filter id="ds" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="${-7 * F}" dy="8" stdDeviation="7" flood-color="#000" flood-opacity=".55"/></filter>`
+      + '<filter id="g" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="6" result="s"/><feMerge><feMergeNode in="s"/><feMergeNode in="s"/><feMergeNode in="SourceGraphic"/></feMerge></filter>'
+      + `<filter id="h" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="26"/></filter>${defs}${a.defs || ''}</defs>`
+      + `<g filter="url(#h)" fill="${c1}" opacity=".5" transform="translate(${18 * F} -8)">${glow}</g>${col(a.back)}${fig}`
+      + `<g fill="none" stroke-linecap="round" stroke-linejoin="round">${col(a.lines)}</g><g filter="url(#g)" stroke-linecap="round" stroke-linejoin="round">${col(a.fx)}</g></svg>`);
+  })();
+  return { AGENTS, agentArt: art };
+})();
+if (!AGENTS.some(a => a.name === agentPick)) agentPick = ''; // (one picked before they were these: each song again)
+store.set('netherflow.agents', ''); // (what an older version kept of another list of agents)
 const race = { m: null, loading: false, show: false, key: '', tagged: '', status: '' }; // (Redline's race: see "Redline's races"; here, before Settings first asks after it)
 const BADGE = 'PLAY IT LOUD ✦ NETHERFLOW ✦ PLAY IT LOUD ✦ NETHERFLOW ✦';
 // (Blocks: a 16×16 texture, each texel one of these shades at random — the same every time — for the stone buttons and
@@ -2092,8 +2265,8 @@ function renderTextPanel() {
       'The whole look at once: every button and panel, the colours, the background, the timeline, the lyrics\' faces and the cursor. ' +
       SKIN_LIST.map(k => `${k}: ${SKINS[k].note.charAt(0).toLowerCase() + SKINS[k].note.slice(1)}.`).join(' ')),
     ...(skin === 'Redline' ? [raceRow()] : []),
-    ...(skin === 'Tactical' && agents.list ? [settingRow('Agent', ['Each song', ...agents.list.map(a => a.name)], agentPick || 'Each song', setAgent,
-      'The agent by the lyrics: a new one for each song, or always the one you pick. ' + RIOT_NOTICE)] : []),
+    ...(skin === 'Tactical' ? [settingRow('Agent', ['Each song', ...AGENTS.map(a => a.name)], agentPick || 'Each song', setAgent,
+      'The agent by the lyrics: a new one for each song, or always the one you pick.')] : []),
     updRow(),
     settingRow('Show', ['Lyrics', 'Cover'], view, setView, 'Cover: the record spinning, with a ring that moves to the beat. Tap the cover in the player to switch.'),
     settingRow('Lyrics animation', LANIMS, lanimPick, setLanim, 'How the lyrics move. 2D: Wave, Spiral, Shatter, Fireworks. 3D: Swarm, Black Hole, Cylinder, Globe, Helix, DNA, Tornado, Knot, Möbius, Ribbon, Orbit, Atom, Tunnel, Cube.' + (kin.on ? ' (Extreme lyrics are on, in the mood menu: this is for when they\x27re off.)' : '')),
@@ -2308,7 +2481,7 @@ function skinCards() {
 }
 function renderMoodMenu() {
   $('mood').querySelector('span').textContent = skin ? 'Theme' : 'Mood';
-  $('moods').replaceChildren(skinCards(), ...(skin ? [el('p', 'skin-note lbl', `${SKINS[skin].note}. The theme sets the colours: NetherFlow, above, brings the moods back.` + (skin === 'Tactical' ? ' ' + RIOT_NOTICE : ''))]
+  $('moods').replaceChildren(skinCards(), ...(skin ? [el('p', 'skin-note lbl', `${SKINS[skin].note}. The theme sets the colours: NetherFlow, above, brings the moods back.`)]
     : [{ name: 'Auto' }, ...MOODS].map(m => {
     const b = el('button', 'mchip'), sw = el('i');
     sw.style.background = m.a ? `radial-gradient(circle at 30% 30%, ${m.a}, ${m.b} 62%, ${m.bg})`
@@ -6951,7 +7124,7 @@ $('closeAbout').onclick = () => $('about').close();
 // Links inside legal.html open in the real browser (legal.html calls this through window.parent).
 window.openExternal = url => native ? (location.href = url) : window.open(url, '_blank', 'noopener');
 
-const TERMS = 'netherflow.terms', TERMS_VERSION = '2026-10-15.5'; // bump when the terms change: everyone is asked again (and run npm run site:legal for the website's copy)
+const TERMS = 'netherflow.terms', TERMS_VERSION = '2026-10-16.1'; // bump when the terms change: everyone is asked again (and run npm run site:legal for the website's copy)
 if (store.get(TERMS) !== TERMS_VERSION) { $('consent').showModal(); placeWinctl(); }
 // its usual port taken (see main.js): the library and settings are kept under that one, so here all looks new; said so
 if (window.netherflowApp?.portMoved) setTimeout(() => { toast('Something else is using NetherFlow\'s port, so your library and settings aren\'t shown. Close it (or another NetherFlow) and open NetherFlow again.'); clearTimeout(toastTimer); toastTimer = setTimeout(() => $('toast').hidePopover(), 15000); }, 1500);
@@ -10922,37 +11095,29 @@ function kinFlush(K, CW, CH) {
 applyKin();
 
 // ---------- the themes' extras: Tactical's agent and HUD, Ops' HUD, round banners, Spider's sound effects ----------
-// Tactical: an agent of VALORANT by the lyrics — Riot Games' own art, by valorant-api.com (see lib.agents), used under
-// Riot's fan policy (its notice: RIOT_NOTICE) — a new one each song or the one picked (Settings › Agent), on its own
-// backdrop art in its colours, sliding in; in the header, a round timer (the time left in the song) between the scores
-// (the song's place in the list, and the list's length) with five agents' icons a side. Ops: the same timer with the
-// two teams' colours and five players a side. A chorus brings a round banner (Tactical: ACE, CLUTCH…; Ops: a team's
-// win, and near the end the bomb planted). Spider: comic sound effects popping up round the edges on the big kicks.
-function agentsGet() { // (kept on the device for a week)
-  if (agents.list) return Promise.resolve();
-  let kept = null;
-  try { kept = JSON.parse(store.get('netherflow.agents') || 'null'); } catch {}
-  if (kept?.list?.length && Date.now() - kept.t < 7 * 864e5) { agents.list = kept.list; return Promise.resolve(); }
-  return agents.asking ||= api.agents().then(l => { if (l?.length) { agents.list = l; store.set('netherflow.agents', JSON.stringify({ t: Date.now(), list: l })); } })
-    .catch(() => {}).finally(() => { agents.asking = null; });
-}
+// Tactical: an agent by the lyrics — one of six of its own (AGENTS, with the themes) — a new one each song or the one picked
+// (Settings › Agent), its codename in giant letters behind it, sliding in; in the header, a round timer (the time left
+// in the song) between the scores (the song's place in the list, and the list's length) with five agents' faces a
+// side. Ops: the same timer with the two teams' colours and five players a side. A chorus brings a round banner
+// (Tactical: ACE, CLUTCH…; Ops: a team's win, and near the end the bomb planted). Spider: comic sound effects popping
+// up round the edges on the big kicks.
 function setAgent(v) { agentPick = v === 'Each song' ? '' : v; store.set('netherflow.agent', agentPick); showAgent(); renderTextPanel(); }
 function showAgent() {
-  const L = agents.list, box = $('agent');
-  if (skin !== 'Tactical' || !L?.length) return;
-  const a = L.find(x => x.name === agentPick) || L[hash(curTitle || 'NetherFlow') % L.length];
-  if (agents.cur !== a) {
-    agents.cur = a;
+  if (skin !== 'Tactical') return;
+  const box = $('agent'), a = AGENTS.find(x => x.name === agentPick) || AGENTS[hash(curTitle || 'NetherFlow') % AGENTS.length];
+  if (agentCur !== a) {
+    agentCur = a;
     const [bg, pt] = box.children;
     box.classList.remove('in');
-    pt.onload = () => { if (agents.cur === a) box.classList.add('in'); };
-    pt.src = a.portrait; bg.src = a.bg || '';
-    box.style.setProperty('--ag1', a.colors[0] || '#ff4655'); box.style.setProperty('--ag2', a.colors[2] || '#0f1923');
+    bg.replaceChildren(...[0, 1, 2].map(() => el('span', '', a.name)));
+    pt.onload = () => { if (agentCur === a) box.classList.add('in'); };
+    pt.src = agentArt(a); box.style.setProperty('--ag1', a.c[0]);
   }
-  const others = L.filter(x => x !== a), r = kinRand(hash(curTitle || 'x') | 1), team = [a, ...Array.from({ length: 9 }, () => others.splice(Math.floor(r() * others.length), 1)[0]).filter(Boolean)];
-  const icon = x => { const i = el('img'); i.src = x.icon; i.alt = ''; return i; };
+  // (the teams: this one and four others, against five; the same each time for a song)
+  const r = kinRand(hash(curTitle || 'x') | 1), shuffle = L => L.map(x => [r(), x]).sort((p, q) => p[0] - q[0]).map(p => p[1]);
+  const icon = x => { const i = el('img'); i.src = agentArt(x, '290 100 440 440'); i.alt = ''; return i; };
   const h = $('mood').querySelector('.hud');
-  h.children[0].replaceChildren(...team.slice(0, 5).map(icon)); h.children[4].replaceChildren(...team.slice(5, 10).map(icon));
+  h.children[0].replaceChildren(...[a, ...shuffle(AGENTS.filter(x => x !== a)).slice(0, 4)].map(icon)); h.children[4].replaceChildren(...shuffle(AGENTS).slice(0, 5).map(icon));
 }
 // (Ops: five players a side, as plain boxes)
 function opsHud() { const h = $('mood').querySelector('.hud'); for (const k of [0, 4]) h.children[k].replaceChildren(...Array.from({ length: 5 }, () => el('i'))); }
@@ -10963,7 +11128,7 @@ function skinExtras() { // (a theme put on, or a new song)
     $('shift').append(...Array.from({ length: 15 }, (_, i) => { const e = el('i'); e.style.setProperty('--i', i); e.style.setProperty('--c', i < 5 ? '#2bff5a' : i < 10 ? '#ff2030' : '#3d6bff'); return e; }));
   banner.sec = null; banner.n = 0; hudLast = '';
   if (skin === 'Ops') opsHud();
-  if (skin === 'Tactical') { if (agents.list) showAgent(); else agentsGet().then(() => { showAgent(); if ($('textPanel').matches(':popover-open')) renderTextPanel(); }); }
+  if (skin === 'Tactical') showAgent();
 }
 function hudTick(t, dur) {
   const left = Math.max(0, (dur || 0) - (t || 0)), s = `${Math.floor(left / 60)}:${String(Math.floor(left % 60)).padStart(2, '0')}`;

@@ -7,8 +7,7 @@
 //     /api/audius?q=… Audius's tracks (an artist's own uploads there play at 320 kbps); /api/radio?id=… YouTube Music's radio
 //     for a song (what Autoplay picks from); /api/playlist?url=… a Spotify, Apple Music or YouTube playlist's songs;
 //     /api/explore, /api/charts, /api/mood, /api/album: YouTube Music's explore page, charts, a mood's playlists, an album;
-//     /api/toppods Apple's top podcasts; /api/feed?url=… a podcast's feed, /api/media?url=… an episode's audio (saving it);
-//     /api/agents the Tactical theme's agents (Riot Games' art, by valorant-api.com).
+//     /api/toppods Apple's top podcasts; /api/feed?url=… a podcast's feed, /api/media?url=… an episode's audio (saving it).
 // (2 and 3 live in lib.js, which the Android app runs inside the page instead.)
 const http = require('http'), fs = require('fs'), path = require('path');
 const lib = require('./lib');
@@ -128,10 +127,6 @@ async function handle(req, res) {
       }
       return res.end();
     } catch (e) { return res.headersSent ? res.destroy() : send(res, 502, JSON.stringify({ error: e.message === 'not a feed address' ? 'not an address it can fetch' : 'its host didn\'t answer' })); }
-  }
-  if (url.pathname === '/api/agents') { // (the Tactical theme's agents: see lib.agents)
-    try { return send(res, 200, JSON.stringify(await lib.agents(get))); }
-    catch { return send(res, 200, '[]'); }
   }
   if (url.pathname === '/api/radio') {
     const id = url.searchParams.get('id') || '';

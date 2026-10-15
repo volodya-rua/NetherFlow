@@ -301,13 +301,6 @@
     throw new Error('not a YouTube, Spotify or Apple Music link');
   };
 
-  // The Tactical theme's agents: Riot Games' own art for VALORANT's agents, as valorant-api.com (a community site) serves
-  // it — used under Riot's "Legal Jibber Jabber" policy for free fan projects (the notice is in the app and its README).
-  // Nothing of it is in this repository. → [{ id, name, role, portrait, bg (its backdrop art), icon, colors (4 hex) }]
-  lib.agents = async get => JSON.parse(await get('https://valorant-api.com/v1/agents?isPlayableCharacter=true', { 'User-Agent': UA })).data
-    .filter(a => a.fullPortrait).map(a => ({ id: a.uuid, name: a.displayName, role: a.role?.displayName || '', portrait: a.fullPortrait, bg: a.background || '',
-      icon: a.displayIcon, colors: (a.backgroundGradientColors || []).map(c => '#' + String(c).slice(0, 6)) }));
-
   // Audius (an open music platform with a public API for apps): its tracks for a search, each { id, title, artist,
   // verified (the artist's own, checked account), dur, url (its full stream: 320 kbps MP3) }.
   lib.audius = async (get, q) => {
