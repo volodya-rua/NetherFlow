@@ -4,13 +4,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>NetherFlow: free music player for Windows and Android</title>
-<meta name="description" content="NetherFlow is a free, open-source music player for Windows and Android: full songs, word-synced lyrics, glowing music-reactive backgrounds, themes and Listen together. No account, no ads, no tracking.">
+<title>NetherFlow: free music player for Windows, Linux, Android and TV</title>
+<meta name="description" content="NetherFlow is a free, open-source music player for Windows, Linux, Android and Android TV: full songs, word-synced lyrics, podcasts and audiobooks, glowing music-reactive backgrounds, themes and Listen together. No account, no ads, no tracking.">
 <link rel="canonical" href="https://volodya-rua.github.io/NetherFlow/">
 <link rel="icon" href="logo/netherflow-logo.png">
 <meta name="theme-color" content="#050403">
 <meta property="og:title" content="NetherFlow: turn silence into song">
-<meta property="og:description" content="A free music player for Windows and Android. Full songs, lyrics word by word, backgrounds that move with the music.">
+<meta property="og:description" content="A free music player for Windows, Linux, Android and your TV. Full songs, lyrics word by word, backgrounds that move with the music.">
 <meta property="og:image" content="https://volodya-rua.github.io/NetherFlow/social-preview.jpg">
 <meta property="og:url" content="https://volodya-rua.github.io/NetherFlow/">
 <meta name="twitter:card" content="summary_large_image">
@@ -28,10 +28,10 @@
       "@type": "SoftwareApplication",
       "name": "NetherFlow",
       "url": "https://volodya-rua.github.io/NetherFlow/",
-      "description": "A free, open-source music player for Windows and Android: full songs, word-synced lyrics, music-reactive backgrounds, six themes and Listen together. No account, no ads, no tracking.",
+      "description": "A free, open-source music player for Windows, Linux, Android and Android TV: full songs, word-synced lyrics, podcasts and audiobooks, music-reactive backgrounds, six themes and Listen together. No account, no ads, no tracking.",
       "applicationCategory": "MultimediaApplication",
       "applicationSubCategory": "Music player",
-      "operatingSystem": "Windows 10, Windows 11, Android 7.0+",
+      "operatingSystem": "Windows 10, Windows 11, Linux, Android 7.0+, Android TV",
       "isAccessibleForFree": true,
       "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
       "downloadUrl": "https://github.com/volodya-rua/NetherFlow/releases/latest",
@@ -192,6 +192,7 @@ main { height: 1500vh; }
 .nw .also { margin-top: 24px; max-width: 58ch; }
 .nw figure { margin: 0; justify-self: center; display: grid; gap: 12px; text-shadow: none; }
 .nw figure img { width: min(300px, 24vw); border-radius: 16px; box-shadow: 0 30px 80px -30px #ff4a1c88, 0 0 0 1px #f3ece41f; }
+.nw figure.wide img { width: min(460px, 34vw); border-radius: 0; box-shadow: none; filter: drop-shadow(0 30px 60px #ff4a1c40); }
 .nw figcaption { font: italic 400 22px/1.2 var(--serif); color: var(--gold); text-align: center; }
 
 /* press play */
@@ -236,6 +237,7 @@ main { height: 1500vh; }
   .nw { grid-template-columns: 1fr; align-content: center; gap: 22px; }
   .nw .also { display: none; }
   .nw figure img { width: 44vw; }
+  .nw figure.wide img { width: 78vw; }
   .nw figcaption { font-size: 18px; }
   .pl .mid .p { display: none; }
   .dl { grid-template-columns: minmax(0, 1fr) auto; padding: 13px 16px; }
@@ -277,7 +279,7 @@ main { height: 1500vh; }
     <div class="wm" id="wm" aria-hidden="true">NetherFlow</div>
     <p class="say" aria-hidden="true">turn silence into song.</p>
     <div class="foot">
-      <p class="p">yo, this is NetherFlow. A free music player for Windows and Android that turns any song into a whole vibe: full songs, lyrics hitting word by word, and backgrounds that actually move with the music.</p>
+      <p class="p">yo, this is NetherFlow. A free music player for Windows, Linux, Android and your TV that turns any song into a whole vibe: full songs, lyrics hitting word by word, and backgrounds that actually move with the music.</p>
       <div class="acts"><a class="btn" href="#play">Download</a><a class="u" href="https://github.com/volodya-rua/NetherFlow">or read the code</a></div>
     </div>
   </section>
@@ -294,7 +296,7 @@ main { height: 1500vh; }
     </div>
   </section>
 
-  <section class="ch ap" id="app" data-a=".398" data-b=".452" aria-label="On Windows">
+  <section class="ch ap" id="app" data-a=".398" data-b=".452" aria-label="On a PC">
     <h2 class="h2">This is it on a PC.</h2>
     <p class="p">Home over Black Hole, Settings over Aurora, the equalizer over Liquid, and the theme picker. YouTube turns loud songs down, so NetherFlow plays everything at its original loudness, and there's an equalizer and a booster if you want more.</p>
     <img class="fb" src="media/pc.webp" alt="NetherFlow on Windows: the home screen on Black Hole, Settings over Aurora, the equalizer over Liquid, and the themes and moods" width="1368" height="992" loading="lazy">
@@ -302,7 +304,7 @@ main { height: 1500vh; }
 
   <section class="ch pk" id="pocket" data-a=".46" data-b=".515" aria-label="On Android">
     <h2 class="h2">And on your phone.</h2>
-    <p class="p">Android 7.0 and up. There's a home-screen widget, the lyrics show up on your lock screen and your car's display, and your liked songs save themselves for offline when you're on Wi-Fi.</p>
+    <p class="p">Android 7.0 and up, and Android TV and Google TV too, worked with the remote. There's a home-screen widget, the lyrics show up on your lock screen and your car's display, and your liked songs save themselves for offline when you're on Wi-Fi.</p>
     <img class="fb" src="media/phones.webp" alt="NetherFlow on Android: the home screen on Smoke, the Spider theme, Settings, and the Blocks theme" width="1268" height="664" loading="lazy">
   </section>
 
@@ -319,18 +321,18 @@ main { height: 1500vh; }
     <div class="bot">
       <div class="tname" id="tName">Stickman</div>
       <p class="tnote" id="tNote">Notebook paper and ink, stick figures dancing to the beat, everything drawn by hand.</p>
-      <span class="small tplat" id="tPlat">Windows and Android</span>
+      <span class="small tplat" id="tPlat">Windows, Linux and Android</span>
       <div class="tabs" id="tTabs" role="tablist" aria-label="Themes"></div>
     </div>
   </section>
 
-  <section class="ch nw" id="new" data-a=".905" data-b=".948" aria-label="New in 1.3">
+  <section class="ch nw" id="new" data-a=".905" data-b=".948" aria-label="New in 1.4">
     <div>
-      <h2 class="h2">New in 1.3: send someone a playlist as a QR code.</h2>
-      <p class="p">Open any playlist, hit Share, and boom, there's a QR code. Your friend points their phone camera at it and sees the whole playlist, even without the app. Nothing gets uploaded, the songs ride inside the link itself.</p>
-      <p class="small also">Also in there: Listen together with up to 10 people (end-to-end encrypted), phone and PC sync over your own Wi-Fi, your song on your Discord profile, a now-playing island over every app on Windows, songs that blend into each other like a DJ set, and your stats on a card you can share.</p>
+      <h2 class="h2">New in 1.4: podcasts, audiobooks, and NetherFlow on your TV.</h2>
+      <p class="p">Every show in Apple's podcast directory and thousands of free audiobooks, right next to your music. It remembers where you stopped, plays them at any speed, and saves episodes for offline. And it's on Android TV and Google TV now: the whole app works with the remote.</p>
+      <p class="small also">Also in there: Explore, with your country's charts, every mood and genre, and mixes made from what you play; playlists you edit together with friends, live; headphone correction for 6,000+ headphones; and NetherFlow on Linux. Plus everything from before: Listen together, playlists as QR codes, phone and PC sync, and your song on your Discord profile.</p>
     </div>
-    <figure><img src="media/share.webp" alt="Sharing the playlist Late night drive: its QR code, Save QR and Copy link" width="560" height="679" loading="lazy"><figcaption>Go on, scan it. It's a real playlist.</figcaption></figure>
+    <figure class="wide"><img src="media/tv.webp" alt="NetherFlow on a TV: the welcome screen, worked with the remote" width="960" height="622" loading="lazy"><figcaption>Grab the remote. It's on your TV now.</figcaption></figure>
   </section>
 
   <section class="ch pl" id="play" data-a=".958" data-b="1.1" aria-label="Download">
@@ -340,14 +342,15 @@ main { height: 1500vh; }
       <span class="sig" aria-label="Volodya.rua">Volodya.rua</span>
     </div>
     <div class="dls-wrap" style="width:100%;display:grid;justify-items:center">
-      <p class="small ver" id="ver">Version 1.3.0, out 15 October 2026</p>
+      <p class="small ver" id="ver">Version 1.4.0, out 16 October 2026</p>
       <div class="dls">
-        <a class="dl" id="dl-lite" href="https://github.com/volodya-rua/NetherFlow/releases/download/v1.3.0/NetherFlow-Lite-Setup-1.3.0.exe"><span><b>Windows</b><span class="pick">the one I'd pick</span></span><code>NetherFlow-Lite-Setup-1.3.0.exe</code><span class="sz">137 MB</span><small>Everything except the Extreme+ 3D races, which need a beefy graphics card anyway.</small></a>
-        <a class="dl" id="dl-full" href="https://github.com/volodya-rua/NetherFlow/releases/download/v1.3.0/NetherFlow-Setup-1.3.0.exe"><span><b>Windows, with the 3D races</b></span><code>NetherFlow-Setup-1.3.0.exe</code><span class="sz">154 MB</span><small>The full app, Redline and Extreme+ included.</small></a>
-        <a class="dl" id="dl-apk" href="https://github.com/volodya-rua/NetherFlow/releases/download/v1.3.0/NetherFlow-1.3.0.apk"><span><b>Android 7.0 and up</b></span><code>NetherFlow-1.3.0.apk</code><span class="sz">29 MB</span><small>Signed, and it updates itself.</small></a>
+        <a class="dl" id="dl-lite" href="https://github.com/volodya-rua/NetherFlow/releases/download/v1.4.0/NetherFlow-Lite-Setup-1.4.0.exe"><span><b>Windows</b><span class="pick">the one I'd pick</span></span><code>NetherFlow-Lite-Setup-1.4.0.exe</code><span class="sz">137 MB</span><small>Everything except the Extreme+ 3D races, which need a beefy graphics card anyway.</small></a>
+        <a class="dl" id="dl-full" href="https://github.com/volodya-rua/NetherFlow/releases/download/v1.4.0/NetherFlow-Setup-1.4.0.exe"><span><b>Windows, with the 3D races</b></span><code>NetherFlow-Setup-1.4.0.exe</code><span class="sz">154 MB</span><small>The full app, Redline and Extreme+ included.</small></a>
+        <a class="dl" id="dl-linux" href="https://github.com/volodya-rua/NetherFlow/releases/download/v1.4.0/NetherFlow-1.4.0-amd64.deb"><span><b>Linux</b></span><code>NetherFlow-1.4.0-amd64.deb</code><span class="sz">165 MB</span><small>Ubuntu, Debian, Mint and the like. On any other distro, the AppImage below.</small></a>
+        <a class="dl" id="dl-apk" href="https://github.com/volodya-rua/NetherFlow/releases/download/v1.4.0/NetherFlow-1.4.0.apk"><span><b>Android 7.0 and up</b></span><code>NetherFlow-1.4.0.apk</code><span class="sz">39 MB</span><small>Phones and Android TV. Signed, and it updates itself.</small></a>
       </div>
     </div>
-    <p class="credit"><span>made by <b>Volodya.rua</b> · a <a class="u" href="https://github.com/volodya-rua/NetherFlow#hucla">HuCla</a> build · GPL v3</span><a href="https://github.com/volodya-rua/NetherFlow/releases/latest">Portable builds and checksums</a><span>Music on this page: Retro Synths, Saturn and City In The Rearview by <a class="u" href="https://freemusicarchive.org/music/holiznacc0/">HoliznaCC0</a>, public domain (CC0)</span><a href="https://www.instagram.com/volodya.rua/">Instagram</a><a href="mailto:volodya.rua@gmail.com">Email</a><a href="legal.html#privacy">Privacy</a></p>
+    <p class="credit"><span>made by <b>Volodya.rua</b> · a <a class="u" href="https://github.com/volodya-rua/NetherFlow#hucla">HuCla</a> build · GPL v3</span><a href="https://github.com/volodya-rua/NetherFlow/releases/latest">Portable builds, the AppImage and checksums</a><span>Music on this page: Retro Synths, Saturn and City In The Rearview by <a class="u" href="https://freemusicarchive.org/music/holiznacc0/">HoliznaCC0</a>, public domain (CC0)</span><a href="https://www.instagram.com/volodya.rua/">Instagram</a><a href="mailto:volodya.rua@gmail.com">Email</a><a href="legal.html#privacy">Privacy</a></p>
   </section>
 </main>
 
@@ -449,11 +452,11 @@ Sound.onSong = s => { songLabel = `${s.title} · HoliznaCC0`; if (snd.getAttribu
 snd.addEventListener('click', () => { const on = Sound.toggle(); snd.setAttribute('aria-pressed', on); sndT.textContent = on ? songLabel : 'Sound off'; skip.hidden = !on; });
 skip.addEventListener('click', () => Sound.next());
 
-// ============ downloads: the newest release, straight from GitHub (the 1.3.0 links stay if that fails) ============
+// ============ downloads: the newest release, straight from GitHub (the 1.4.0 links stay if that fails) ============
 fetch('https://api.github.com/repos/volodya-rua/NetherFlow/releases/latest').then(r => r.ok ? r.json() : null).then(rel => {
   if (!rel?.assets) return;
   const find = re => rel.assets.find(a => re.test(a.name));
-  for (const [id, re] of [['dl-lite', /^NetherFlow-Lite-Setup-[\d.]+\.exe$/], ['dl-full', /^NetherFlow-Setup-[\d.]+\.exe$/], ['dl-apk', /^NetherFlow-[\d.]+\.apk$/]]) {
+  for (const [id, re] of [['dl-lite', /^NetherFlow-Lite-Setup-[\d.]+\.exe$/], ['dl-full', /^NetherFlow-Setup-[\d.]+\.exe$/], ['dl-linux', /^NetherFlow-[\d.]+-amd64\.deb$/], ['dl-apk', /^NetherFlow-[\d.]+\.apk$/]]) {
     const a = find(re), el = $('#' + id); if (!a || !el) continue;
     el.href = a.browser_download_url; el.querySelector('code').textContent = a.name; el.querySelector('.sz').textContent = Math.round(a.size / 1048576) + ' MB';
   }
@@ -627,12 +630,12 @@ const HU0 = .534, HU1 = .606;
 
 // ---- 06 six worlds ----
 const WORLDS = [
-  { name: 'Stickman', font: "'Permanent Marker'", s: 1, bg: '#f2eee4', ink: '#1d1b18', a: '#e0362a', fog: .04, bl: [.08, .98], img: 'stickman', plat: 'Windows and Android', note: 'Notebook paper and ink, stick figures dancing to the beat, everything drawn by hand.' },
-  { name: 'Spider', font: "'Sedgwick Ave Display'", s: 1.1, pb: .55, bg: '#140b26', ink: '#fff5ef', a: '#ff2d55', fog: .03, bl: [.42, .42], img: 'spider', plat: 'Windows and Android', note: 'A comic book at night: a masked hero swinging through the city, POW and WHAM on the beat.' },
-  { name: 'Blocks', font: "'Press Start 2P'", s: .5, bg: '#3a2236', ink: '#ffffff', a: '#7ed321', fog: .026, bl: [.3, .62], img: 'blocks', plat: 'Windows and Android', note: 'A blocky world at dusk to fly over, stone buttons, an XP bar.' },
-  { name: 'Tactical', font: 'Anton', s: 1.05, bg: '#0f1923', ink: '#ece8e1', a: '#ff4655', fog: .03, bl: [.62, .32], img: 'tactical', plat: 'Windows and Android', note: 'Signal red on deep navy: an agent by the lyrics, a round timer, ACE and CLUTCH banners.' },
-  { name: 'Ops', font: "'Black Ops One'", s: 1, bg: '#3b2b1b', ink: '#f6ecdc', a: '#f0a830', fog: .028, bl: [.3, .6], img: 'ops', plat: 'Windows and Android', note: 'A desert bomb site in the afternoon: smoke and tracers on the kick, the lyrics as a kill feed.' },
-  { name: 'Redline', font: 'Unbounded', s: .68, bg: '#060708', ink: '#f5f6f7', a: '#ff1e2d', fog: .024, bl: [.5, .42], img: 'redline', plat: 'Windows, on Extreme+', note: 'Real cars on real circuits in 3D, filmed like a broadcast, a rev counter round the play button.' },
+  { name: 'Stickman', font: "'Permanent Marker'", s: 1, bg: '#f2eee4', ink: '#1d1b18', a: '#e0362a', fog: .04, bl: [.08, .98], img: 'stickman', plat: 'Windows, Linux and Android', note: 'Notebook paper and ink, stick figures dancing to the beat, everything drawn by hand.' },
+  { name: 'Spider', font: "'Sedgwick Ave Display'", s: 1.1, pb: .55, bg: '#140b26', ink: '#fff5ef', a: '#ff2d55', fog: .03, bl: [.42, .42], img: 'spider', plat: 'Windows, Linux and Android', note: 'A comic book at night: a masked hero swinging through the city, POW and WHAM on the beat.' },
+  { name: 'Blocks', font: "'Press Start 2P'", s: .5, bg: '#3a2236', ink: '#ffffff', a: '#7ed321', fog: .026, bl: [.3, .62], img: 'blocks', plat: 'Windows, Linux and Android', note: 'A blocky world at dusk to fly over, stone buttons, an XP bar.' },
+  { name: 'Tactical', font: 'Anton', s: 1.05, bg: '#0f1923', ink: '#ece8e1', a: '#ff4655', fog: .03, bl: [.62, .32], img: 'tactical', plat: 'Windows, Linux and Android', note: 'Signal red on deep navy: an agent by the lyrics, a round timer, ACE and CLUTCH banners.' },
+  { name: 'Ops', font: "'Black Ops One'", s: 1, bg: '#3b2b1b', ink: '#f6ecdc', a: '#f0a830', fog: .028, bl: [.3, .6], img: 'ops', plat: 'Windows, Linux and Android', note: 'A desert bomb site in the afternoon: smoke and tracers on the kick, the lyrics as a kill feed.' },
+  { name: 'Redline', font: 'Unbounded', s: .68, bg: '#060708', ink: '#f5f6f7', a: '#ff1e2d', fog: .024, bl: [.5, .42], img: 'redline', plat: 'Windows and Linux, on Extreme+', note: 'Real cars on real circuits in 3D, filmed like a broadcast, a rev counter round the play button.' },
 ];
 const W0 = .622, WS = .0458;
 WORLDS.forEach((w, i) => { w.u0 = W0 + i * WS; w.u1 = w.u0 + WS; w.g = new THREE.Group(); w.tick = () => {}; scene.add(w.g); });
