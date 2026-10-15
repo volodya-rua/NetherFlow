@@ -5,7 +5,7 @@
 <p align="center">
   <a href="https://github.com/volodya-rua/NetherFlow/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/volodya-rua/NetherFlow?style=for-the-badge&label=latest&color=ff4a1c&labelColor=160a06"></a>
   <img alt="Windows, Linux, Android and Android TV" src="https://img.shields.io/badge/Windows%20%C2%B7%20Linux%20%C2%B7%20Android%20%C2%B7%20TV-f6ede4?style=for-the-badge&labelColor=160a06">
-  <img alt="Free, no ads, no account" src="https://img.shields.io/badge/free%20%C2%B7%20no%20ads%20%C2%B7%20no%20account-ffb21e?style=for-the-badge&labelColor=160a06">
+  <img alt="Free, no ads of its own, no account" src="https://img.shields.io/badge/free%20%C2%B7%20no%20ads%20of%20its%20own%20%C2%B7%20no%20account-ffb21e?style=for-the-badge&labelColor=160a06">
   <a href="LICENSE"><img alt="GPL v3 License" src="https://img.shields.io/badge/license-GPL%20v3-f6ede4?style=for-the-badge&labelColor=160a06"></a>
   <br>
   <a href="#hucla"><img alt="A HuCla build: Human × Claude" src="https://img.shields.io/badge/HuCla-Human%20%C3%97%20Claude-d97757?style=for-the-badge&logo=claude&logoColor=white&labelColor=160a06"></a>
@@ -17,7 +17,7 @@
 <p align="center">
   A free music player for Windows, Linux, Android and Android TV that turns any song into a whole vibe.<br>
   Full songs, lyrics hitting word by word, and backgrounds that actually move with the music. Podcasts and audiobooks too.<br>
-  No account, no ads, no tracking. Just you and the song.
+  No account, no ads of its own, no analytics. Just you and the song.
 </p>
 
 <p align="center">
@@ -43,7 +43,7 @@ Grab it from the **[latest release](https://github.com/volodya-rua/NetherFlow/re
 |:--|:--|:--|
 | ⭐ **Windows Lite**<br><sub>recommended</sub> | `NetherFlow-Lite-Setup-<version>.exe`<br><sub>installs just for you (no admin), shortcuts, uninstaller, and it updates itself</sub> | `NetherFlow-Lite-<version>-Windows.exe`<br><sub>just run it, nothing to install</sub> |
 | 🏎️ **Windows** | `NetherFlow-Setup-<version>.exe` | `NetherFlow-<version>-Windows.exe` |
-| 🐧 **Linux** (64-bit) | `NetherFlow-<version>-amd64.deb`<br><sub>Ubuntu, Debian, Mint, Pop!_OS and the like</sub> | `NetherFlow-<version>-x86_64.AppImage`<br><sub>any distro; it updates itself. On Ubuntu 24.04 and newer start it with `--no-sandbox`, or get the .deb</sub> |
+| 🐧 **Linux** (64-bit) | `NetherFlow-<version>-amd64.deb`<br><sub>Ubuntu, Debian, Mint, Pop!_OS and the like</sub> | `NetherFlow-<version>-x86_64.AppImage`<br><sub>any distro; it updates itself. Ubuntu 24.04 and newer don't let it use Chromium's sandbox, so it runs without; the .deb keeps it</sub> |
 | 🤖 **Android** 7.0+<br>📺 **Android TV**, Google TV | `NetherFlow-<version>.apk` | <sub>the same app: on a TV it's worked with the remote</sub> |
 
 **On Windows and not sure? Get Lite.** It's the exact same app minus Extreme+ (so no Redline races or cars, which need a beefy graphics
@@ -114,12 +114,11 @@ whole playlist. Then they paste the link in NetherFlow's search and it's theirs.
   <img src="docs/media/race.webp" width="100%" alt="Redline: a 3D night race on a real circuit, filmed like a broadcast">
 </p>
 
-- **Redline got real 3D races.** Like actual circuits: Spa, Monza, Suzuka, Interlagos, the Nürburgring, Zandvoort,
-  Imola and the Red Bull Ring, built from real map data with the real hills, buildings, grandstands with crowds,
-  barriers and forests. Five real cars (a 911 Turbo, a Revuelto, a Temerario, an M4 CSL and the Hoonicorn) race each
-  other all on their own: braking for every corner, slipstreaming, overtaking side by side, the Hoonicorn drifting in its
-  own smoke. And see, it's filmed like a TV broadcast and cut on the beat. In a build-up the start lights come on one by
-  one, and when the chorus drops they go out and the whole field blasts under the gantry in slow-mo. Windows, on Extreme+
+- **Redline got real 3D races.** On famous circuits, built from real map data with the real hills, buildings,
+  grandstands with crowds, barriers and forests. Five supercars race each other all on their own: braking for every
+  corner, slipstreaming, overtaking side by side, one of them drifting in its own smoke. And see, it's filmed like a TV
+  broadcast and cut on the beat. In a build-up the start lights come on one by one, and when the chorus drops they go
+  out and the whole field blasts under the gantry in slow-mo. Windows, on Extreme+
 - **Music videos are smooth now.** Behind Extreme lyrics the song's official video plays straight through, in sync with
   the song. No more jumpy cuts
 - **It never freezes.** As long as NetherFlow is on your screen it keeps moving, even with another window on top
@@ -272,7 +271,7 @@ the big ones beat it on catalog, sound, discovery and devices. Here's the deep v
 |:--|:--|:--|:--|:--|
 | Price (US, a month) | ✅ **Free** | $12.99 | $11.99 | $11.99 |
 | Free version | ✅ everything, unlocked | ⚠️ ads, limited on phones | ❌ just a free trial | ⚠️ ads, no background play on phones |
-| Ads | ✅ none | ⚠️ on the free version | ✅ none | ⚠️ on the free version |
+| Ads | ✅ none of its own | ⚠️ on the free version | ✅ none | ⚠️ on the free version |
 | Account | ✅ not needed | needed | Apple ID | Google account |
 | **Score** | **10** | 6 | 4 | 5 |
 </details>
@@ -340,7 +339,7 @@ the big ones beat it on catalog, sound, discovery and devices. Here's the deep v
 
 | | NetherFlow | Spotify | Apple Music | YouTube Music |
 |:--|:--|:--|:--|:--|
-| Tracking | ✅ none, no analytics at all | ⚠️ your listening shapes ads (free) and suggestions | ⚠️ your listening shapes suggestions | ⚠️ tied to your whole Google account |
+| Tracking | ✅ no analytics, nothing sent to us | ⚠️ your listening shapes ads (free) and suggestions | ⚠️ your listening shapes suggestions | ⚠️ tied to your whole Google account |
 | Open source | ✅ GPL v3 | ❌ | ❌ | ❌ |
 | **Score** | **10** | 4 | 7 | 3 |
 </details>
@@ -380,7 +379,7 @@ the big ones beat it on catalog, sound, discovery and devices. Here's the deep v
   show them some love: buy the merch, go to the show, or stream them on a paid app too 🫶
 
 ### 🎯 So which one's for you?
-- **NetherFlow**: you want your music to *look and feel* insane, lyrics that hit, and all of it free, with no account and no ads
+- **NetherFlow**: you want your music to *look and feel* insane, lyrics that hit, and all of it free, with no account and no ads of its own
 - **Spotify**: the best all-rounder. Finding new music, podcasts, and it works on literally everything
 - **Apple Music**: the best sound, especially if you're on iPhone or Mac
 - **YouTube Music**: covers, live versions and remixes nobody else has, or you already pay for YouTube Premium
