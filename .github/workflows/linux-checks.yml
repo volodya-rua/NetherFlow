@@ -38,10 +38,12 @@ jobs:
         run: |
           echo "before: $(sysctl -n kernel.apparmor_restrict_unprivileged_userns 2>/dev/null || echo 'not set')"
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=1 || true
+          unshare -Ur true && echo "user namespaces: allowed" || echo "user namespaces: blocked (the AppImage launcher then adds --no-sandbox itself)"
           Xvfb :99 -screen 0 1280x800x24 & sleep 2
           export DISPLAY=:99
           (timeout 40 ./new/*.AppImage --remote-debugging-port=9222 > sandbox.log 2>&1; echo "exit $?" >> sandbox.log) &
           node tools/linux-smoke.js "" quick && echo "RESULT: started without --no-sandbox" || echo "RESULT: did not start without --no-sandbox"
+          echo "the app was started as: $(pgrep -af "/netherflow( |$)" | head -1)"
           sleep 2; import -window root shot-nosandbox.png || true
           pkill -f NetherFlow || true; sleep 3
           grep -iE "sandbox|namespace|FATAL" sandbox.log | head -5 || true
