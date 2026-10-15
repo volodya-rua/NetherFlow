@@ -1,0 +1,64 @@
+# NetherFlow - Copyright (C) 2026 Volodya.rua - GNU GPL v3 only, with additional terms (credit, name and logo): see LICENSE and NOTICE.
+# Two facts about the Linux AppImage, checked on GitHub's Ubuntu by hand (Run workflow): (1) whether it starts without
+# --no-sandbox when Ubuntu 24.04's desktop default (AppArmor restricting unprivileged user namespaces) is on, and
+# (2) whether an older AppImage finds and downloads the newest release by itself. Screenshots and logs kept with the run.
+name: Linux checks
+
+on:
+  workflow_dispatch:
+    inputs:
+      old:
+        description: The older version whose AppImage looks for the update
+        default: 1.4.0
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Get the AppImages (the newest and the older one)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq xvfb imagemagick libfuse2t64
+          gh release download --repo "$GITHUB_REPOSITORY" --pattern 'NetherFlow-*-x86_64.AppImage' --dir new
+          gh release download "v${{ inputs.old }}" --repo "$GITHUB_REPOSITORY" --pattern 'NetherFlow-*-x86_64.AppImage' --dir old
+          chmod +x new/*.AppImage old/*.AppImage
+          ls -la new old
+
+      - name: (1) The newest, without --no-sandbox, with Ubuntu's desktop default on
+        run: |
+          echo "before: $(sysctl -n kernel.apparmor_restrict_unprivileged_userns 2>/dev/null || echo 'not set')"
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=1 || true
+          Xvfb :99 -screen 0 1280x800x24 & sleep 2
+          export DISPLAY=:99
+          (timeout 40 ./new/*.AppImage --remote-debugging-port=9222 > sandbox.log 2>&1; echo "exit $?" >> sandbox.log) &
+          node tools/linux-smoke.js "" quick && echo "RESULT: started without --no-sandbox" || echo "RESULT: did not start without --no-sandbox"
+          sleep 2; import -window root shot-nosandbox.png || true
+          pkill -f NetherFlow || true; sleep 3
+          grep -iE "sandbox|namespace|FATAL" sandbox.log | head -5 || true
+
+      - name: (2) The older one finds and downloads the newest
+        run: |
+          export DISPLAY=:99
+          ./old/*.AppImage --no-sandbox --remote-debugging-port=9222 > update.log 2>&1 &
+          node tools/linux-update-check.js
+          ls -la ~/.cache/*updater* 2>/dev/null || true
+          pkill -f NetherFlow || true
+
+      - name: Keep the logs and screenshots with the run
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: linux-checks
+          path: |
+            *.log
+            shot-*.png
