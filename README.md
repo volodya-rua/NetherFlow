@@ -52,6 +52,15 @@ card anyway), about 18 MB smaller, and it updates to Lite.
 
 ## 🔥 What's new
 
+### 🛠️ 1.3.1: playlists of any length, and a ton of fixes
+
+- **Import as big as you want.** That 10,000-song Spotify playlist? All of it. Short links too. Import the same one again
+  later and it just adds what's new, no second copy
+- **Taking a song out of the queue doesn't touch your playlist anymore** (it used to quietly delete it from there 😬)
+- A song that won't load gets retried, then skipped, and **Autoplay keeps the music going** even when YouTube hiccups
+- Search in **Hindi, Arabic, Korean or Chinese** and you get the original, not the covers
+- Fits **small laptops**, **phones sideways** and **big text sizes**, and works with just a **keyboard** (Tab, Space, Enter)
+
 ### 📲 1.3: share playlists with a QR code
 
 <img src="docs/media/share.webp" width="300" align="right" alt="Sharing a playlist: its QR code, Copy link and Save QR">
