@@ -53,6 +53,14 @@ card anyway), about 18 MB smaller, and it updates to Lite.
 
 ## 🔥 What's new
 
+### 🔐 1.4.2: Listen together and sync, locked down tighter
+
+- **Codes nobody can work out.** Listen together codes are 9 characters now and phone ↔ PC sync codes 12 numbers, made so
+  that someone watching the relay or your Wi-Fi would need years to guess them
+- **Listen together finds your friends more reliably**: if a relay is flaky for one of you, NetherFlow tries the others,
+  and nobody gets stuck paused on the first song
+- Heads-up: 1.4.1 and 1.4.2 can't Listen together or sync with each other, so update both sides
+
 ### 🎯 1.4.1: Tactical got its own crew
 
 - **Six agents of its own** in the Tactical theme: Vanta, Onyx, Kestrel, Solstice, Halcyon and Tempest, drawn by the app

@@ -1,0 +1,1 @@
+Listen together codes are 9 characters and phone to PC sync codes 12 numbers now, much harder to guess. Listen together tries the other relays when one is flaky, and guests no longer get stuck paused on the first song. 1.4.1 and 1.4.2 cannot Listen together or sync with each other: update both.
