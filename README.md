@@ -50,7 +50,23 @@ card anyway), about 18 MB smaller, and it updates to Lite.
 
 <a id="whats-new"></a>
 
-## 🔥 What's new in 1.2
+## 🔥 What's new
+
+### 📲 1.3: share playlists with a QR code
+
+<img src="docs/media/share.webp" width="300" align="right" alt="Sharing a playlist: its QR code, Copy link and Save QR">
+
+Open any playlist, hit **Share**, and boom, there's a QR code. Your friend points their phone camera at it and sees the
+whole playlist. Then they paste the link in NetherFlow's search and it's theirs. Or just send the link.
+
+- **Nothing gets uploaded.** The songs ride inside the link itself, no server, no account
+- **Save QR** makes a card with the code on it, ready for your story or the group chat
+- Works for **Liked songs** too
+- Go on, scan the one on the right 👉 it's a real one
+
+<br clear="right">
+
+### 🏁 1.2: Redline's 3D races
 
 <p align="center">
   <img src="docs/media/race.webp" width="100%" alt="Redline: a 3D night race on a real circuit, filmed like a broadcast">
@@ -151,6 +167,8 @@ wants a workout. On a slower phone it steps down by itself, so it never lags.
 ### 🤝 With your people
 - **Listen together**: up to 10 people hear the same song at the same moment, each on their own phone or PC. Anyone can
   add songs, skip and react. End-to-end encrypted, no account
+- **Share playlists with a QR code**: hit Share on any playlist and your friend points their phone camera at it. Or send
+  the link, and they paste it in NetherFlow's search. The songs ride inside the link itself, nothing gets uploaded
 - **Phone ↔ PC sync**: liked songs, playlists, history and stats over your own Wi-Fi with a 6-number code
 - **Discord status** (Windows): your song on your Discord profile, cover and progress and all
 
@@ -183,12 +201,12 @@ Okay so how does it actually stack up against the big ones? I scored all four on
 And no cap, NetherFlow doesn't win everything. I'm not gonna pretend it does.
 
 <p align="center">
-  <img src="docs/media/score.png" width="100%" alt="The real score, out of 100: NetherFlow 81.5, Apple Music 78.5, Spotify 78.0, YouTube Music 66.5">
+  <img src="docs/media/score.png" width="100%" alt="The real score, out of 100: NetherFlow 82.0, Apple Music 78.5, Spotify 78.0, YouTube Music 66.5">
 </p>
 
 | | App | Score | Wins at |
 |:-:|:--|:-:|:--|
-| 🥇 | **NetherFlow** | **81.5** | price, lyrics, the look, privacy, offline |
+| 🥇 | **NetherFlow** | **82.0** | price, lyrics, the look, privacy, offline |
 | 🥈 | **Apple Music** | **78.5** | sound quality, offline, catalog |
 | 🥉 | **Spotify** | **78.0** | discovery, devices, listening together, catalog |
 | 4 | **YouTube Music** | **66.5** | catalog (covers, live versions, remixes) |
@@ -292,9 +310,10 @@ catalog, sound, discovery and devices. Here's the deep version 👇
 |:--|:--|:--|:--|:--|
 | Download songs | ✅ free, whole playlists at once (⚠️ YouTube's terms don't allow it) | ✅ Premium, 10,000 a device | ✅ up to 100,000 in your library | ✅ Premium |
 | Listen together, live | ✅ up to 10 people, any phone or PC, no account, end-to-end encrypted | ✅ Jam | ✅ SharePlay (Apple devices) | ❌ not built in |
-| Shared playlists | ❌ | ✅ | ✅ | ✅ |
+| Share a playlist | ✅ a QR code or a link (the songs show up even without the app) | ✅ a link, or a Spotify Code to scan | ✅ a link | ✅ a link |
+| Playlists you edit together | ❌ | ✅ | ✅ | ✅ |
 | **Offline score** | **10** | 9 | **10** | 9 |
-| **Together score** | 7 | **9** | 7 | 5 |
+| **Together score** | 8 | **9** | 7 | 5 |
 </details>
 
 ### 😤 Where NetherFlow loses (real talk)
@@ -395,7 +414,8 @@ they come out unsigned (as F-Droid wants them). Add `-PnfEmulator` to include x8
 NetherFlow has no accounts and no analytics, and sends nothing to its developer. Your settings, library and saved songs
 stay on your device. When you use it, it talks directly to the services above (GitHub too: to look for a newer
 NetherFlow, and to update yt-dlp, on Android only if you turn on "Update the downloader"; and valorant-api.com, only with
-the Tactical theme), which see your IP address. The full [Privacy Policy](legal.html#privacy) is in the app.
+the Tactical theme), which see your IP address. A playlist you share lives only inside its link (the page it opens, on
+GitHub Pages, never gets the songs part). The full [Privacy Policy](legal.html#privacy) is in the app.
 
 ## ⚖️ Legal
 

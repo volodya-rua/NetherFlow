@@ -701,6 +701,8 @@ kbd { font: inherit; border: 1px solid currentColor; border-radius: 3px; padding
 .mi-note { padding: 2px 10px 8px 40px; opacity: .5; text-transform: none; letter-spacing: .02em; }
 /* naming a playlist: a small box near the top of the screen, so a phone's keyboard never covers it */
 .name-prompt { margin: max(14px, 8vh) auto auto; }
+.qr-share h2 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.qr-share canvas { display: block; width: min(440px, 100%, 58vh); aspect-ratio: 1; margin: 4px auto 18px; border-radius: 18px; box-shadow: 0 0 0 1px var(--hair), 0 18px 60px color-mix(in srgb, var(--a) 22%, transparent); }
 .name-in { width: 100%; min-width: 0; margin: 14px 0 4px; padding: 4px 0 8px; background: none; border: 0; border-bottom: 1px solid var(--a); outline: none;
   color: var(--ink); caret-color: var(--a); font: italic 400 clamp(28px, 6vw, 40px)/1.15 var(--serif); letter-spacing: 0; }
 .name-in::placeholder { color: color-mix(in srgb, var(--ink) 30%, transparent); }
@@ -1465,6 +1467,14 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
     <input id="npInput" class="name-in" maxlength="80" required placeholder="Name it" aria-label="Playlist name" enterkeyhint="done" autocomplete="off" spellcheck="false">
     <div class="acts lbl"><button type="button" id="npCancel" class="link">Cancel</button><button id="npOk" class="pill" value="ok">Create</button></div>
   </form>
+</dialog>
+
+<dialog id="qrShare" class="consent qr-share" aria-labelledby="qrTitle">
+  <div class="kicker lbl">Share playlist</div>
+  <h2 id="qrTitle" tabindex="-1"></h2>
+  <canvas id="qrCode" role="img" aria-label="The playlist's QR code"></canvas>
+  <p id="qrNote"></p>
+  <div class="acts lbl"><button type="button" id="qrClose" class="link">Close</button><button type="button" id="qrSave" class="link">Save QR</button><button type="button" id="qrCopy" class="pill">Copy link</button></div>
 </dialog>
 
 <dialog id="library" class="search apage lib" aria-label="Library">
@@ -4276,6 +4286,7 @@ const ICONS = {
   heart: '<path d="M12 20.5s-7.5-4.6-9.3-9.2C1.5 8.1 3.6 4.5 7.2 4.5c2.1 0 3.6 1.2 4.8 2.9 1.2-1.7 2.7-2.9 4.8-2.9 3.6 0 5.7 3.6 4.5 6.8-1.8 4.6-9.3 9.2-9.3 9.2z"/>',
   unheart: '<path d="M12 20.5s-7.5-4.6-9.3-9.2C1.5 8.1 3.6 4.5 7.2 4.5c2.1 0 3.6 1.2 4.8 2.9 1.2-1.7 2.7-2.9 4.8-2.9 3.6 0 5.7 3.6 4.5 6.8-1.8 4.6-9.3 9.2-9.3 9.2z"/><path d="M4 4l16 16"/>',
   down: '<path d="M12 3.5v11M7 10l5 5 5-5M4.5 20h15"/>',
+  qr: '<path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h2.5v2.5H14zM17.5 17.5H20V20h-2.5zM14 20h1M20 14v1"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
   minus: '<path d="M5 12h14"/>',
   check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
@@ -5007,10 +5018,12 @@ const cutText = (g, s, w) => { if (g.measureText(s).width <= w) return s; while 
 const PLAYLIST_LINK = /^https?:\/\/(music\.youtube\.com|(www\.|m\.)?youtube\.com|youtu\.be|open\.spotify\.com|music\.apple\.com)\S*(list=|\/playlist\/|\/album\/|\/browse\/VL)/i;
 const ytmToTrack = v => ({ kind: 'song', trackId: 'yt:' + v.id, ytId: v.id, ytTitle: v.title, trackName: v.title, artistName: v.artist, collectionName: v.album || 'YouTube Music', artworkUrl100: v.art, trackTimeMillis: v.dur * 1000 });
 async function importPlaylist(link) {
-  if (!PLAYLIST_LINK.test(link)) return toast('That isn\'t a Spotify, Apple Music or YouTube playlist link');
+  const ours = SHARE_LINK.test(link);
+  if (!ours && !PLAYLIST_LINK.test(link)) return toast('That isn\'t a Spotify, Apple Music, YouTube or NetherFlow playlist link');
   toast('Reading the playlist…');
   let pl;
-  try { pl = await api.playlist(link); } catch (e) { return toast('Couldn\'t read that playlist: ' + (e.message || 'it may be private')); }
+  try { pl = ours ? await readShareLink(link) : await api.playlist(link); }
+  catch (e) { return toast(ours ? 'That playlist link is cut short or broken' : 'Couldn\'t read that playlist: ' + (e.message || 'it may be private')); }
   if (!pl?.tracks?.length) return toast('That playlist looks empty (or private)');
   const out = new Array(pl.tracks.length).fill(null);
   let done = 0;
@@ -5018,7 +5031,7 @@ async function importPlaylist(link) {
   // Apple's: by their ids, in batches (the store's own entries: cover, album, genre, preview)
   const apple = pl.tracks.map((s, i) => [s, i]).filter(([s]) => s.apple);
   for (let k = 0; k < apple.length; k += 150) {
-    const part = apple.slice(k, k + 150), found = await itunes('lookup', { id: part.map(([s]) => s.apple).join(',') }).catch(() => []);
+    const part = apple.slice(k, k + 150), found = await itunes('lookup', { id: part.map(([s]) => s.apple).join(','), country: pl.store || STORE }).catch(() => []);
     for (const [s, i] of part) { const t = found.find(x => String(x.trackId) === String(s.apple) && x.wrapperType === 'track'); if (t) { out[i] = t; done++; } }
     progress();
   }
@@ -5044,6 +5057,76 @@ async function importPlaylist(link) {
   toast(`Imported ${pl.name}: ${tracks.length} songs` + (missed ? ` (${missed} not found)` : ''));
   openLibrary({ kind: 'playlist', id: p.id });
 }
+// ---------- share a playlist: a link, and its QR code, that carry the songs themselves ----------
+// The part of the link after # holds them, deflated: Apple's songs by their catalog ids (looked up in the sharer's store),
+// YouTube's by their video ids with their names and lengths. Nothing is uploaded anywhere: the page the link opens
+// (docs/p on GitHub Pages, for whoever scans it without NetherFlow) reads them from the link, and browsers don't send
+// that part to GitHub. Pasted in the search, or in Library › Import playlist, the link makes the playlist here.
+const SHARE_URL = 'https://volodya-rua.github.io/NetherFlow/p/#', SHARE_LINK = /^https:\/\/volodya-rua\.github\.io\/NetherFlow\/p\/?#[\w-]+$/i;
+const QR_MAX = 2000; // (characters of link a code holds: about version 33, still easy for a phone camera to read off a screen)
+const pipe = (data, stream) => new Response(new Blob([data]).stream().pipeThrough(stream)).arrayBuffer();
+async function shareLink(name, tracks) {
+  const t = tracks.map(x => String(x.trackId).startsWith('yt:') ? [x.ytId || String(x.trackId).slice(3), x.trackName, x.artistName, Math.round((x.trackTimeMillis || 0) / 1000)] : +x.trackId).filter(x => x);
+  const z = new Uint8Array(await pipe(new TextEncoder().encode(JSON.stringify({ n: name, s: STORE, t })), new CompressionStream('deflate-raw')));
+  let s = ''; for (const b of z) s += String.fromCharCode(b);
+  return SHARE_URL + btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+async function readShareLink(link) { // (anyone can make a link: what's in it is checked, and its unpacking capped)
+  const z = Uint8Array.from(atob(link.split('#')[1].replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
+  const r = new Blob([z]).stream().pipeThrough(new DecompressionStream('deflate-raw')).getReader(), parts = [];
+  for (let size = 0; ;) { const { done, value } = await r.read(); if (done) break; if ((size += value.length) > 4e6) { r.cancel(); throw new Error('too big'); } parts.push(value); }
+  const { n, s, t } = JSON.parse(await new Blob(parts).text());
+  return { name: String(n || 'Shared playlist').slice(0, 80), store: /^[A-Z]{2}$/.test(s) ? s : '',
+    tracks: (Array.isArray(t) ? t : []).map(x => Array.isArray(x) ? /^[\w-]{11}$/.test(x[0]) && { yt: x[0], title: String(x[1] || '').slice(0, 300), artist: String(x[2] || '').slice(0, 300), dur: +x[3] || 0 }
+      : Number.isSafeInteger(x) && x > 0 && { apple: x }).filter(Boolean) };
+}
+// the QR code, drawn on a canvas: dark on white with its quiet zone, at whole pixels per module
+function drawQr(canvas, modules, px) {
+  const n = modules.length, q = 4, g = canvas.getContext('2d');
+  canvas.width = canvas.height = (n + 2 * q) * px;
+  g.fillStyle = '#fff'; g.fillRect(0, 0, canvas.width, canvas.height); g.fillStyle = '#0b0b0d';
+  modules.forEach((row, y) => row.forEach((dark, x) => dark && g.fillRect((x + q) * px, (y + q) * px, px, px)));
+}
+let qrShared = null;
+async function sharePlaylist(name, tracks) {
+  const link = await shareLink(name, tracks);
+  let n = tracks.length, qrLink = link;
+  if (link.length > QR_MAX) { // (too many songs for one code: the most that fit, the link keeps them all)
+    let lo = 1, hi = n - 1;
+    while (lo < hi) { const mid = Math.ceil((lo + hi) / 2); if ((await shareLink(name, tracks.slice(0, mid))).length <= QR_MAX) lo = mid; else hi = mid - 1; }
+    n = lo; qrLink = await shareLink(name, tracks.slice(0, n));
+  }
+  const modules = netherflowLib.qr(qrLink);
+  qrShared = { name, link, modules, n, total: tracks.length };
+  drawQr($('qrCode'), modules, 8);
+  $('qrTitle').textContent = name;
+  $('qrNote').textContent = n < tracks.length ? `The code holds the first ${n} of its ${tracks.length} songs (a QR code only fits so much). The link has them all.`
+    : `${tracks.length} songs. Point a phone camera at it, or send the link: in NetherFlow, paste it in the search.`;
+  $('qrShare').showModal(); placeWinctl();
+}
+$('qrClose').onclick = () => $('qrShare').close();
+$('qrCopy').onclick = () => qrShared && navigator.clipboard.writeText(qrShared.link).then(() => toast('Link copied'), () => toast('Couldn\'t copy it'));
+$('qrSave').textContent = native ? 'Share QR' : 'Save QR';
+$('qrSave').onclick = () => { // a card to post or send: the name, the code, how to use it
+  if (!qrShared) return;
+  const W = 1080, H = 1350, c = document.createElement('canvas'), g = c.getContext('2d'), [a, b2] = [rgb(pal.a), rgb(pal.b)].map(v => `rgb(${v.map(x => Math.round(x * 255)).join(',')})`);
+  c.width = W; c.height = H;
+  g.fillStyle = '#08060c'; g.fillRect(0, 0, W, H);
+  for (const [x, y, r, col] of [[160, 140, 620, a], [960, 1260, 680, b2]]) { const gl = g.createRadialGradient(x, y, 0, x, y, r); gl.addColorStop(0, col); gl.addColorStop(1, 'transparent'); g.globalAlpha = .35; g.fillStyle = gl; g.fillRect(0, 0, W, H); }
+  g.globalAlpha = 1; g.fillStyle = '#fff';
+  const poster = getComputedStyle(body).getPropertyValue('--poster') || 'Impact, sans-serif';
+  g.font = `600 30px 'Martian Mono', monospace`; g.globalAlpha = .7; g.fillText('NETHERFLOW · A PLAYLIST FOR YOU', 80, 120); g.globalAlpha = 1;
+  g.font = `400 96px ${poster}`; g.fillText(cutText(g, qrShared.name, 920), 76, 236);
+  g.font = `600 32px 'Martian Mono', monospace`; g.globalAlpha = .75; g.fillText(`${qrShared.total} SONGS`, 82, 296); g.globalAlpha = 1;
+  const code = document.createElement('canvas'), m = qrShared.modules, px = Math.floor(760 / (m.length + 8));
+  drawQr(code, m, px);
+  const s = code.width, x0 = (W - s) / 2, y0 = 360 + (800 - s) / 2;
+  g.save(); g.beginPath(); g.roundRect(x0 - 20, y0 - 20, s + 40, s + 40, 36); g.fillStyle = '#fff'; g.fill(); g.restore();
+  g.drawImage(code, x0, y0);
+  g.font = `500 28px 'Martian Mono', monospace`; g.globalAlpha = .7; g.textAlign = 'center';
+  g.fillText('SCAN IT WITH YOUR PHONE CAMERA', W / 2, 1250); g.globalAlpha = 1;
+  c.toBlob(blob => blob && shareStory(blob, `netherflow-playlist.png`), 'image/png');
+};
 // ---------- Listen together: up to 10 people hearing the same song at the same moment, each on their own device ----------
 // One starts a session and shares its code; the others join with it. Each plays the song themselves (from YouTube, as
 // ever); the one who started it keeps everyone on the same song at the same moment, playing or paused. Anyone can add a
@@ -5445,8 +5528,8 @@ function renderLibrary() {
       libCard(tile('down', 'Saved offline', saved.size), 'Downloads', `${saved.size} songs${saved.size ? ' · ' + mb(savedSize) : ''}`, () => openLibrary({ kind: 'saved' })),
       ...library.playlists.map(p => libCard(mosaic(p.tracks, listTile(p)), p.name, `${p.tracks.length} songs`, () => openLibrary({ kind: 'playlist', id: p.id }))),
       fresh,
-      libCard(tile('import', 'Import playlist', null, true), 'Import playlist', 'From Spotify, Apple Music or YouTube', async () => {
-        const link = await askName('Import a playlist', '', 'Import', 400, 'Paste its link (Spotify, Apple Music, YouTube)');
+      libCard(tile('import', 'Import playlist', null, true), 'Import playlist', 'From Spotify, Apple Music, YouTube or a friend', async () => {
+        const link = await askName('Import a playlist', '', 'Import', 20000, 'Paste its link (Spotify, Apple Music, YouTube, NetherFlow)');
         if (link) importPlaylist(link);
       }),
       libCard(tile('chart', 'Your stats', fmtMins(statsFor('month').secs)), 'Your stats', `${fmtMins(statsFor('month').secs)} min this month`, () => openLibrary({ kind: 'stats' })));
@@ -5465,6 +5548,12 @@ function renderLibrary() {
       const play = el('button', 'pill', 'Play all');
       play.onclick = () => { queue = tracks.slice(); playTrack(queue[0]); };
       acts.push(play);
+      if (v.kind !== 'saved') {
+        const share = el('button', 'pill ghost');
+        share.append(ico('qr'), 'Share');
+        share.onclick = () => sharePlaylist(p ? p.name : 'Liked songs', tracks);
+        acts.push(share);
+      }
       if (v.kind !== 'saved' && fullSongs) {
         // Download all: whatever of the list isn't on this device yet (with the lyrics or without), how far it's got on the button
         const done = tracks.filter(t => saved.has(t.trackId)).length, going = tracks.filter(t => dlJob(t.trackId)).length, left = tracks.length - done - going;
@@ -5681,11 +5770,12 @@ function openAlbumPage(a) { apData = null; if (!$('artistPage').open) { $('artis
 async function runSearch(term) {
   searchCtl?.abort();
   if (!term.trim()) return showHistory();
-  if (PLAYLIST_LINK.test(term.trim())) {
+  if (PLAYLIST_LINK.test(term.trim()) || SHARE_LINK.test(term.trim())) {
     const b = el('button', 'pill', 'Import this playlist');
     b.onclick = () => { dlg.close(); importPlaylist(term.trim()); };
     $('sstat').textContent = 'A playlist link';
-    return $('results').replaceChildren(el('p', 'empty', 'Spotify, Apple Music or YouTube: its songs, made into a playlist in your Library.'), b);
+    return $('results').replaceChildren(el('p', 'empty', SHARE_LINK.test(term.trim()) ? 'Shared from NetherFlow: its songs, made into a playlist in your Library.'
+      : 'Spotify, Apple Music or YouTube: its songs, made into a playlist in your Library.'), b);
   }
   const ctl = searchCtl = new AbortController();
   $('sstat').textContent = '● searching';
@@ -5915,7 +6005,7 @@ $('closeAbout').onclick = () => $('about').close();
 // Links inside legal.html open in the real browser (legal.html calls this through window.parent).
 window.openExternal = url => native ? (location.href = url) : window.open(url, '_blank', 'noopener');
 
-const TERMS = 'netherflow.terms', TERMS_VERSION = '2026-10-14.7'; // bump when the terms change: everyone is asked again
+const TERMS = 'netherflow.terms', TERMS_VERSION = '2026-10-15.1'; // bump when the terms change: everyone is asked again
 if (store.get(TERMS) !== TERMS_VERSION) { $('consent').showModal(); placeWinctl(); }
 else if (fullSongs) setTimeout(() => loadYT().catch(() => {}), 2500); // (the first song then starts sooner)
 $('consent').addEventListener('cancel', e => e.preventDefault()); // Esc doesn't count as agreeing

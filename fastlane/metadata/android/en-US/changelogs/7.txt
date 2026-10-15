@@ -1,0 +1,1 @@
+Share a playlist with a QR code or a link: open a playlist and tap Share. A friend points their phone camera at the code (or opens the link), then pastes the link into NetherFlow's search to import it. Nothing is uploaded: the songs are in the link itself. The privacy policy explains it.

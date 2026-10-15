@@ -256,4 +256,115 @@
     }).filter(Boolean).join('\n');
   }
   lib.krcToYrc = krcToYrc; // for the self-check
+
+  // A QR code for a text (a shared playlist's link): its modules, row by row, true = dark; null if it's too long for one.
+  // Byte mode, versions 1–40: the smallest version it fits at error correction L, then the strongest level (M, Q, H)
+  // that still fits that version; the mask that scores best. (After Project Nayuki's QR Code generator.)
+  lib.qr = text => {
+    const ECC = [ // per level (L, M, Q, H): error-correction codewords per block, and blocks, for versions 1–40
+      [[7, 10, 15, 20, 26, 18, 20, 24, 30, 18, 20, 24, 26, 30, 22, 24, 28, 30, 28, 28, 28, 28, 30, 30, 26, 28, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30],
+        [1, 1, 1, 1, 1, 2, 2, 2, 2, 4, 4, 4, 4, 4, 6, 6, 6, 6, 7, 8, 8, 9, 9, 10, 12, 12, 12, 13, 14, 15, 16, 17, 18, 19, 19, 20, 21, 22, 24, 25], 1],
+      [[10, 16, 26, 18, 24, 16, 18, 22, 22, 26, 30, 22, 22, 24, 24, 28, 28, 26, 26, 26, 26, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28],
+        [1, 1, 1, 2, 2, 4, 4, 4, 5, 5, 5, 8, 9, 9, 10, 10, 11, 13, 14, 16, 17, 17, 18, 20, 21, 23, 25, 26, 28, 29, 31, 33, 35, 37, 38, 40, 43, 45, 47, 49], 0],
+      [[13, 22, 18, 26, 18, 24, 18, 22, 20, 24, 28, 26, 24, 20, 30, 24, 28, 28, 26, 30, 28, 30, 30, 30, 30, 28, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30],
+        [1, 1, 2, 2, 4, 4, 6, 6, 8, 8, 8, 10, 12, 16, 12, 17, 16, 18, 21, 20, 23, 23, 25, 27, 29, 34, 34, 35, 38, 40, 43, 45, 48, 51, 53, 56, 59, 62, 65, 68], 3],
+      [[17, 28, 22, 16, 22, 28, 26, 26, 24, 28, 24, 28, 22, 24, 24, 30, 28, 28, 26, 28, 30, 24, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30],
+        [1, 1, 2, 4, 4, 4, 5, 6, 8, 8, 11, 11, 16, 16, 18, 16, 19, 21, 25, 25, 25, 34, 30, 32, 35, 37, 40, 42, 45, 48, 51, 54, 57, 60, 63, 66, 70, 74, 77, 81], 2]];
+    const bytes = new TextEncoder().encode(text);
+    const raw = v => { let n = (16 * v + 128) * v + 64; if (v >= 2) { const a = Math.floor(v / 7) + 2; n -= (25 * a - 10) * a - 55; if (v >= 7) n -= 36; } return n; };
+    const room = (v, e) => (Math.floor(raw(v) / 8) - ECC[e][0][v - 1] * ECC[e][1][v - 1]) * 8;
+    const need = v => 4 + (v < 10 ? 8 : 16) + bytes.length * 8;
+    let ver = 1;
+    while (ver <= 40 && need(ver) > room(ver, 0)) ver++;
+    if (ver > 40) return null;
+    let ecl = 0;
+    while (ecl < 3 && need(ver) <= room(ver, ecl + 1)) ecl++;
+    // the data: mode, count, bytes, terminator, then padding to fill
+    const bits = [], put = (val, n) => { for (let i = n - 1; i >= 0; i--) bits.push(val >>> i & 1); };
+    put(4, 4); put(bytes.length, ver < 10 ? 8 : 16); bytes.forEach(b => put(b, 8));
+    const cap = room(ver, ecl);
+    put(0, Math.min(4, cap - bits.length)); put(0, (8 - bits.length % 8) % 8);
+    for (let pad = 0xEC; bits.length < cap; pad ^= 0xEC ^ 0x11) put(pad, 8);
+    const data = []; for (let i = 0; i < bits.length; i += 8) data.push(bits.slice(i, i + 8).reduce((a, b) => a << 1 | b, 0));
+    // Reed–Solomon over GF(256), split into blocks and interleaved
+    const mul = (x, y) => { let z = 0; for (let i = 7; i >= 0; i--) { z = (z << 1) ^ ((z >>> 7) * 0x11D); z ^= ((y >>> i) & 1) * x; } return z; };
+    const blocks = ECC[ecl][1][ver - 1], eccLen = ECC[ecl][0][ver - 1], total = Math.floor(raw(ver) / 8);
+    const div = new Array(eccLen).fill(0); div[eccLen - 1] = 1;
+    for (let i = 0, root = 1; i < eccLen; i++, root = mul(root, 2)) for (let j = 0; j < eccLen; j++) { div[j] = mul(div[j], root); if (j + 1 < eccLen) div[j] ^= div[j + 1]; }
+    const short = blocks - total % blocks, shortLen = Math.floor(total / blocks), parts = [];
+    for (let i = 0, k = 0; i < blocks; i++) {
+      const dat = data.slice(k, k + shortLen - eccLen + (i < short ? 0 : 1)); k += dat.length;
+      const rem = new Array(eccLen).fill(0);
+      for (const b of dat) { const f = b ^ rem.shift(); rem.push(0); div.forEach((c, j) => { rem[j] ^= mul(c, f); }); }
+      if (i < short) dat.push(0);
+      parts.push(dat.concat(rem));
+    }
+    const words = [];
+    for (let i = 0; i < parts[0].length; i++) parts.forEach((p, j) => { if (i !== shortLen - eccLen || j >= short) words.push(p[i]); });
+    // the patterns: finders, timing, alignment, format and version areas (fixed: the mask leaves them be)
+    const size = ver * 4 + 17, m = [], fixed = [];
+    for (let y = 0; y < size; y++) { m.push(new Array(size).fill(false)); fixed.push(new Array(size).fill(false)); }
+    const set = (x, y, dark) => { m[y][x] = dark; fixed[y][x] = true; };
+    for (let i = 0; i < size; i++) { set(6, i, i % 2 === 0); set(i, 6, i % 2 === 0); }
+    for (const [cx, cy] of [[3, 3], [size - 4, 3], [3, size - 4]])
+      for (let dy = -4; dy <= 4; dy++) for (let dx = -4; dx <= 4; dx++) {
+        const x = cx + dx, y = cy + dy, d = Math.max(Math.abs(dx), Math.abs(dy));
+        if (x >= 0 && x < size && y >= 0 && y < size) set(x, y, d !== 2 && d !== 4);
+      }
+    if (ver > 1) {
+      const n = Math.floor(ver / 7) + 2, step = Math.floor((ver * 8 + n * 3 + 5) / (n * 4 - 4)) * 2, at = [6];
+      for (let p = size - 7; at.length < n; p -= step) at.splice(1, 0, p);
+      at.forEach((y, i) => at.forEach((x, j) => {
+        if (i === 0 && j === 0 || i === 0 && j === n - 1 || i === n - 1 && j === 0) return;
+        for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) set(x + dx, y + dy, Math.max(Math.abs(dx), Math.abs(dy)) !== 1);
+      }));
+    }
+    const format = mask => {
+      const d = ECC[ecl][2] << 3 | mask; let r = d;
+      for (let i = 0; i < 10; i++) r = (r << 1) ^ ((r >>> 9) * 0x537);
+      const b = (d << 10 | r) ^ 0x5412, bit = i => (b >>> i & 1) === 1;
+      for (let i = 0; i <= 5; i++) set(8, i, bit(i));
+      set(8, 7, bit(6)); set(8, 8, bit(7)); set(7, 8, bit(8));
+      for (let i = 9; i < 15; i++) set(14 - i, 8, bit(i));
+      for (let i = 0; i < 8; i++) set(size - 1 - i, 8, bit(i));
+      for (let i = 8; i < 15; i++) set(8, size - 15 + i, bit(i));
+      set(8, size - 8, true);
+    };
+    format(0);
+    if (ver >= 7) {
+      let r = ver; for (let i = 0; i < 12; i++) r = (r << 1) ^ ((r >>> 11) * 0x1F25);
+      const b = ver << 12 | r;
+      for (let i = 0; i < 18; i++) { const dark = (b >>> i & 1) === 1, a = size - 11 + i % 3, c = Math.floor(i / 3); set(a, c, dark); set(c, a, dark); }
+    }
+    // the codewords, in two-column zigzags from the bottom right
+    for (let right = size - 1, i = 0; right >= 1; right -= 2) {
+      if (right === 6) right = 5;
+      for (let v = 0; v < size; v++) for (let j = 0; j < 2; j++) {
+        const x = right - j, y = (right + 1) & 2 ? v : size - 1 - v;
+        if (!fixed[y][x] && i < words.length * 8) { m[y][x] = (words[i >>> 3] >>> (7 - (i & 7)) & 1) === 1; i++; }
+      }
+    }
+    // the mask: each of the eight tried, the one with the fewest look-alike runs, blocks and finder shapes kept
+    const MASKS = [(x, y) => (x + y) % 2, (x, y) => y % 2, x => x % 3, (x, y) => (x + y) % 3, (x, y) => (Math.floor(x / 3) + Math.floor(y / 2)) % 2,
+      (x, y) => x * y % 2 + x * y % 3, (x, y) => (x * y % 2 + x * y % 3) % 2, (x, y) => ((x + y) % 2 + x * y % 3) % 2];
+    const flip = k => { for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) if (!fixed[y][x] && MASKS[k](x, y) === 0) m[y][x] = !m[y][x]; };
+    const score = () => {
+      let s = 0, dark = 0;
+      const lines = [];
+      for (let y = 0; y < size; y++) { lines.push(m[y].map(Number).join('')); lines.push(m.map(r => +r[y]).join('')); }
+      for (const l of lines) {
+        for (const run of l.match(/0{5,}|1{5,}/g) || []) s += run.length - 2;
+        s += 40 * ((l.match(/(?=10111010000|00001011101)/g) || []).length);
+      }
+      for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
+        if (m[y][x]) dark++;
+        if (x && y && m[y][x] === m[y - 1][x] && m[y][x] === m[y][x - 1] && m[y][x] === m[y - 1][x - 1]) s += 3;
+      }
+      return s + 10 * Math.floor(Math.abs(dark * 20 - size * size * 10) / (size * size));
+    };
+    let best = 0, low = Infinity;
+    for (let k = 0; k < 8; k++) { flip(k); format(k); const s = score(); if (s < low) { low = s; best = k; } flip(k); }
+    flip(best); format(best);
+    return m;
+  };
 })(typeof module === 'object' && module.exports ? module.exports : (window.netherflowLib = {}));
