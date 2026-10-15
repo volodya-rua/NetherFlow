@@ -54,6 +54,10 @@ em { font: italic 400 1.06em/1 var(--serif); letter-spacing: -.02em; text-transf
 #gl { position: fixed; inset: 0; width: 100%; height: 100%; z-index: -1; display: block; }
 .srcs { position: fixed; left: 0; bottom: 0; z-index: -2; width: 40px; overflow: hidden; } /* the animated pictures play here, behind the world, and are copied into it */
 .srcs img { width: 40px; }
+.grain { position: fixed; inset: -50px; z-index: 50; pointer-events: none; opacity: .045;
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 1.5 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  animation: grain .6s steps(3) infinite; }
+@keyframes grain { 33% { transform: translate(-20px, 12px); } 66% { transform: translate(16px, -22px); } }
 
 /* loading: the silence before the song */
 .loader { position: fixed; inset: 0; z-index: 70; background: #000; display: grid; place-items: center; transition: opacity 1.1s var(--ease), visibility 1.1s; }
@@ -91,10 +95,7 @@ main { height: 1500vh; }
 .ch { position: fixed; inset: 0; z-index: 10; padding: 108px calc(var(--m) * 2.4) 60px var(--m); color: var(--ui); opacity: 0; pointer-events: none; text-shadow: 0 2px 30px var(--shade), 0 0 2px var(--shade); transition: color .6s; }
 .ch:not(.vis) * { pointer-events: none !important; }
 .ch a, .ch button { pointer-events: auto; }
-.h2 { font: 750 clamp(38px, 5vw, 86px)/.98 var(--sans); letter-spacing: -.045em; max-width: 15ch; text-wrap: balance; }
-.p, .small, .tnote { text-wrap: pretty; }
-body { font-optical-sizing: auto; font-kerning: normal; }
-.focus { will-change: opacity, filter; }
+.h2 { font: 750 clamp(38px, 5vw, 86px)/.98 var(--sans); letter-spacing: -.045em; max-width: 15ch; }
 .p { font-size: clamp(16px, 1.2vw, 19px); line-height: 1.5; max-width: 46ch; opacity: .86; }
 .p + .p { margin-top: 14px; }
 .small { font-size: 14px; line-height: 1.5; opacity: .72; }
@@ -124,6 +125,7 @@ body { font-optical-sizing: auto; font-kerning: normal; }
 /* the app */
 .ap, .pk { display: grid; grid-template-rows: auto 1fr auto; }
 .ap .p, .pk .p { grid-row: 3; }
+.pk { justify-items: end; text-align: right; }
 
 /* lyrics */
 .ly { display: grid; grid-template-rows: 1fr auto; }
@@ -204,7 +206,7 @@ body { font-optical-sizing: auto; font-kerning: normal; }
   .pl .h2 { font-size: 18vw; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .ch-i { animation: none; }
+  .grain, .ch-i { animation: none; }
   .wm .l, .say, .hero .foot { transition: none; opacity: 1; transform: none; filter: none; }
 }
 </style>
@@ -217,6 +219,7 @@ body { font-optical-sizing: auto; font-kerning: normal; }
   <img id="i-stickman" src="media/themes/stickman.webp" alt=""><img id="i-spider" src="media/themes/spider.webp" alt=""><img id="i-blocks" src="media/themes/blocks.webp" alt="">
   <img id="i-tactical" src="media/themes/tactical.webp" alt=""><img id="i-ops" src="media/themes/ops.webp" alt=""><img id="i-redline" src="media/themes/redline.webp" alt="">
 </div>
+<div class="grain" aria-hidden="true"></div>
 <div class="loader" id="loader" aria-hidden="true"><i id="ldBar"></i></div>
 
 <header class="top">
@@ -232,7 +235,7 @@ body { font-optical-sizing: auto; font-kerning: normal; }
 <nav class="rail" id="rail" aria-label="Chapters"></nav>
 
 <main>
-  <section class="ch hero" id="silence" data-s="0-0" aria-label="NetherFlow">
+  <section class="ch hero" id="silence" data-a="0" data-b=".05" aria-label="NetherFlow">
     <h1 class="sr">NetherFlow: turn silence into song</h1>
     <div class="wm" id="wm" aria-hidden="true">NetherFlow</div>
     <p class="say" aria-hidden="true">turn silence into song.</p>
@@ -242,31 +245,31 @@ body { font-optical-sizing: auto; font-kerning: normal; }
     </div>
   </section>
 
-  <section class="ch tun" id="search" data-s="1-1" aria-label="Search">
+  <section class="ch tun" id="search" data-a=".075" data-b=".19" aria-label="Search">
     <h2 class="h2">Search any song and it plays the whole thing.</h2>
     <p class="p">Songs, artists, albums, typos and all. When your list runs out it keeps going with songs like the one playing, in the same language and era, and it learns from what you skip.</p>
   </section>
 
-  <section class="ch lv" id="live" data-s="2-6" aria-label="Backgrounds">
+  <section class="ch lv" id="live" data-a=".205" data-b=".39" aria-label="Backgrounds">
     <p class="small">These are running live in your browser right now, the same shader code the app uses. There are 27 of them, and in the app they take their colours from the album cover.</p>
     <div style="grid-row:3">
-      <span class="mood focus" id="sMood">Ember mood</span><h2 class="scene focus" id="sName">Fractal</h2><p class="p focus" id="sText">A kaleidoscopic fractal, six-fold mirrored, folding in on itself forever.</p>
+      <span class="mood" id="sMood">Ember mood</span><h2 class="scene" id="sName">Fractal</h2><p class="p" id="sText">A kaleidoscopic fractal, six-fold mirrored, folding in on itself forever.</p>
     </div>
   </section>
 
-  <section class="ch ap" id="app" data-s="7-7" aria-label="On Windows">
+  <section class="ch ap" id="app" data-a=".398" data-b=".452" aria-label="On Windows">
     <h2 class="h2">This is it on a PC.</h2>
     <p class="p">Home over Black Hole, Settings over Aurora, the equalizer over Liquid, and the theme picker. YouTube turns loud songs down, so NetherFlow plays everything at its original loudness, and there's an equalizer and a booster if you want more.</p>
     <img class="fb" src="media/pc.webp" alt="NetherFlow on Windows: the home screen on Black Hole, Settings over Aurora, the equalizer over Liquid, and the themes and moods" width="1368" height="992" loading="lazy">
   </section>
 
-  <section class="ch pk" id="pocket" data-s="8-8" aria-label="On Android">
+  <section class="ch pk" id="pocket" data-a=".46" data-b=".515" aria-label="On Android">
     <h2 class="h2">And on your phone.</h2>
     <p class="p">Android 7.0 and up. There's a home-screen widget, the lyrics show up on your lock screen and your car's display, and your liked songs save themselves for offline when you're on Wi-Fi.</p>
     <img class="fb" src="media/phones.webp" alt="NetherFlow on Android: the home screen on Smoke, the Spider theme, Settings, and the Blocks theme" width="1268" height="664" loading="lazy">
   </section>
 
-  <section class="ch ly" id="lyrics" data-s="9-10" aria-label="Lyrics">
+  <section class="ch ly" id="lyrics" data-a=".528" data-b=".612" aria-label="Lyrics">
     <p class="sr">Every word lands right on the beat. You don't read it, you feel it. Turn silence into song.</p>
     <div class="bot">
       <p class="p">The lyrics are synced to the exact recording that's playing, word by word. There are 19 ways for them to come in, and Spiral, Helix and Shatter are my favourites. Karaoke mode turns the voice down, and on Windows, Extreme lyrics cut like a music video.</p>
@@ -274,17 +277,17 @@ body { font-optical-sizing: auto; font-kerning: normal; }
     </div>
   </section>
 
-  <section class="ch th" id="themes" data-s="11-16" aria-label="Themes">
+  <section class="ch th" id="themes" data-a=".622" data-b=".897" aria-label="Themes">
     <div class="top-l"><h2 class="h3">Six themes</h2><p class="small">One tap and the whole app changes: every button, the colours, the fonts, the cursor, even how the lyrics come in.</p></div>
     <div class="bot">
-      <div class="tname focus" id="tName">Stickman</div>
-      <p class="tnote focus" id="tNote">Notebook paper and ink, stick figures dancing to the beat, everything drawn by hand.</p>
+      <div class="tname" id="tName">Stickman</div>
+      <p class="tnote" id="tNote">Notebook paper and ink, stick figures dancing to the beat, everything drawn by hand.</p>
       <span class="small tplat" id="tPlat">Windows and Android</span>
       <div class="tabs" id="tTabs" role="tablist" aria-label="Themes"></div>
     </div>
   </section>
 
-  <section class="ch nw" id="new" data-s="17-17" aria-label="New in 1.3">
+  <section class="ch nw" id="new" data-a=".905" data-b=".948" aria-label="New in 1.3">
     <div>
       <h2 class="h2">New in 1.3: send someone a playlist as a QR code.</h2>
       <p class="p">Open any playlist, hit Share, and boom, there's a QR code. Your friend points their phone camera at it and sees the whole playlist, even without the app. Nothing gets uploaded, the songs ride inside the link itself.</p>
@@ -293,7 +296,7 @@ body { font-optical-sizing: auto; font-kerning: normal; }
     <figure><img src="media/share.webp" alt="Sharing the playlist Late night drive: its QR code, Save QR and Copy link" width="560" height="679" loading="lazy"><figcaption>Go on, scan it. It's a real playlist.</figcaption></figure>
   </section>
 
-  <section class="ch pl" id="play" data-s="18-18" aria-label="Download">
+  <section class="ch pl" id="play" data-a=".958" data-b="1.1" aria-label="Download">
     <div class="mid">
       <h2 class="h2">Press play.</h2>
       <p class="p">I came up with what NetherFlow should be, picked every theme and every background, tested every build on my PC and my phone, and kept saying "nah, make it crazier" until it was right. It's free, with no account, no ads and no tracking.</p>
@@ -318,7 +321,6 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
-import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 
 const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
 const still = matchMedia('(prefers-reduced-motion: reduce)').matches, coarse = matchMedia('(pointer: coarse)').matches;
@@ -338,25 +340,18 @@ function scramble(el, text, dur = 600) {
 }
 
 // ============ chapters ============
-// The flight is 19 framed shots. Scrolling moves between them; the camera holds at each one and eases to the next.
-// SHOT_U: where the camera stands on the path for each shot (the object it frames sits 14–16 m ahead of it).
-const W0 = .622, WS = .0458;
-const SHOT_U = [0, .112, .216, .252, .288, .324, .363, .418, .474, .548, .59, ...[0, 1, 2, 3, 4, 5].map(i => W0 + i * WS + .01), .925, .99];
-const NS = SHOT_U.length, HOLD = .16;
-const smoother = t => t * t * t * (t * (t * 6 - 15) + 10);
-const shotU = q => { const i = Math.min(NS - 2, Math.max(0, Math.floor(q))), f = clamp01((q - i - HOLD) / (1 - 2 * HOLD)); return SHOT_U[i] + (SHOT_U[i + 1] - SHOT_U[i]) * smoother(f); };
-const RAIL = [['Start', 0], ['Search', 1], ['Backgrounds', 2], ['The app', 7], ['Lyrics', 9], ['Themes', 11], ["What's new", 17], ['Download', 18]];
+const RAIL = [['Start', 0], ['Search', .1], ['Backgrounds', .214], ['The app', .41], ['Lyrics', .54], ['Themes', .632], ["What's new", .918], ['Download', .985]];
 const rail = $('#rail');
-RAIL.forEach(([n, q], i) => { const b = document.createElement('button'); b.type = 'button'; b.innerHTML = `<span>${n}</span><i></i>`; b.setAttribute('aria-label', n); b.onclick = () => goShot(q); rail.append(b); });
-const railBtns = [...rail.children], chs = $$('.ch').map(el => { const [a, b] = el.dataset.s.split('-').map(Number); return { el, a, b, v: -1 }; });
+RAIL.forEach(([n, u], i) => { const b = document.createElement('button'); b.type = 'button'; b.innerHTML = `<span>${n}</span><i></i>`; b.setAttribute('aria-label', n); b.onclick = () => goU(u); rail.append(b); });
+const railBtns = [...rail.children], chs = $$('.ch').map(el => ({ el, a: +el.dataset.a, b: +el.dataset.b, v: -1 }));
 
 // ============ scrolling ============
 const lenis = !still && window.Lenis ? new Lenis({ lerp: .075, wheelMultiplier: .9 }) : null;
 const maxY = () => document.documentElement.scrollHeight - innerHeight;
-const goShot = (q, now) => { const y = q / (NS - 1) * maxY(), far = Math.abs(y - scrollY) / innerHeight;
-  if (lenis) lenis.scrollTo(y, { duration: now ? 0 : Math.min(3.2, 1.1 + far * .12), immediate: !!now }); else scrollTo({ top: y, behavior: now || still ? 'auto' : 'smooth' }); };
-document.addEventListener('click', e => { const a = e.target.closest('a[href^="#"]'); if (!a) return; const c = chs.find(c => c.el.id === a.hash.slice(1)); if (!c) return; e.preventDefault(); goShot(c.a); });
-for (const c of chs) c.el.addEventListener('focusin', () => { if (c.v < .5) goShot(c.a); });
+const goU = (u, now) => { const y = clamp01(u) * maxY(); if (lenis) lenis.scrollTo(y, { duration: now ? 0 : 2.2, immediate: !!now }); else scrollTo({ top: y, behavior: now || still ? 'auto' : 'smooth' }); };
+const ANCHORS = { silence: 0, play: .985 };
+document.addEventListener('click', e => { const a = e.target.closest('a[href^="#"]'); if (!a) return; const id = a.hash.slice(1); const c = ANCHORS[id] ?? chs.find(c => c.el.id === id)?.a; if (c == null) return; e.preventDefault(); goU(c + (c ? .004 : 0)); });
+for (const c of chs) c.el.addEventListener('focusin', () => { if (c.v < .5) goU(c.a + .006); });
 
 // ============ the page's music: three CC0 songs by HoliznaCC0, played in order ============
 // g: each song's gain, so they all sit at about -14 dB RMS (measured: -13.2, -7.8 and -13.1 dB)
@@ -436,7 +431,6 @@ else world();
 
 function world() {
 const LEN = 1000, UP = new THREE.Vector3(0, 1, 0);
-const VS = 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }';
 const pathAt = (u, o = new THREE.Vector3()) => o.set(Math.sin(u * 9.4) * 7 + (Math.sin(u * 3.1 + 1) - Math.sin(1)) * 5, Math.sin(u * 6.3) * 2.4, -u * LEN);
 function frameAt(u) { const p = pathAt(u), fwd = pathAt(u + .003).sub(p).normalize(), right = new THREE.Vector3().crossVectors(fwd, UP).normalize(), up = new THREE.Vector3().crossVectors(right, fwd); return { p, fwd, right, up }; }
 function place(o, u, x = 0, y = 0) { const f = frameAt(u); o.position.copy(f.p).addScaledVector(f.right, x).addScaledVector(f.up, y); o.lookAt(o.position.clone().sub(f.fwd)); o.userData.u = u; return o; }
@@ -446,33 +440,15 @@ renderer.setPixelRatio(pr); renderer.setSize(innerWidth, innerHeight); renderer.
 const scene = new THREE.Scene(), BG = new THREE.Color('#050403');
 scene.background = BG.clone(); scene.fog = new THREE.FogExp2(BG.clone(), .011);
 const camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, .1, 500);
-const composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(innerWidth * pr, innerHeight * pr, { type: THREE.HalfFloatType, samples: coarse ? 0 : 4 }));
-composer.setPixelRatio(pr); composer.setSize(innerWidth, innerHeight);
+const composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(innerWidth * pr, innerHeight * pr, { type: THREE.HalfFloatType, samples: coarse ? 0 : 4 })); composer.setPixelRatio(pr); composer.setSize(innerWidth, innerHeight);
 composer.addPass(new RenderPass(scene, camera));
 const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), .9, .55, .1); composer.addPass(bloom);
-// only what writes alpha blooms: the pictures of the app write 0, so they stay pictures
-bloom.materialHighPassFilter.fragmentShader = bloom.materialHighPassFilter.fragmentShader.replace('mix( outputColor, texel, alpha )', 'mix( outputColor, texel, alpha * clamp( texel.a, 0.0, 1.0 ) )');
-bloom.materialHighPassFilter.needsUpdate = true;
-// the finish: highlights roll off instead of clipping, a slight split-tone, vignette, a little edge fringing, grain behind the words
-const finish = new ShaderPass({ uniforms: { tDiffuse: { value: null }, uT: { value: 0 }, uV: { value: .3 }, uCA: { value: .0035 }, uG: { value: .012 }, uR: { value: new THREE.Vector2(1, 1) } },
-  vertexShader: VS, fragmentShader: `uniform sampler2D tDiffuse; uniform float uT, uV, uCA, uG; uniform vec2 uR; varying vec2 vUv;
-  float h(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
-  void main(){
-    vec2 d = vUv - .5; float r2 = dot(d, d); vec2 o = d * uCA * r2 * 3.;
-    vec3 c = vec3(texture2D(tDiffuse, vUv + o).r, texture2D(tDiffuse, vUv).g, texture2D(tDiffuse, vUv - o).b);
-    float m = max(c.r, max(c.g, c.b)), k = .78;
-    if (m > k) c *= (k + (1. - k) * (1. - exp(-(m - k) / (1. - k)))) / m;
-    float l = dot(c, vec3(.2126, .7152, .0722));
-    c *= mix(vec3(.965, .99, 1.05), vec3(1.035, 1., .955), smoothstep(0., .5, l));
-    c *= 1. - uV * smoothstep(.08, .55, r2);
-    c += (h(floor(vUv * uR) + fract(uT * 7.13) * 91.) - .5) * uG * (1. - l * .6);
-    gl_FragColor = vec4(max(c, 0.), 1.); }` });
-composer.addPass(finish); composer.addPass(new OutputPass());
-const sizeFinish = () => finish.uniforms.uR.value.set(innerWidth * pr, innerHeight * pr); sizeFinish();
+composer.addPass(new OutputPass());
 scene.add(new THREE.HemisphereLight('#ffd9bf', '#2a1a24', 1.2));
 const sun = new THREE.DirectionalLight('#ffb27a', 2.4); sun.position.set(-30, 40, 25); scene.add(sun);
 
 // ---- shared shader pieces ----
+const VS = 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }';
 const HELP = `float h(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float n(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3. - 2. * f); return mix(mix(h(i), h(i + vec2(1, 0)), f.x), mix(h(i + vec2(0, 1)), h(i + vec2(1, 1)), f.x), f.y); }
 float fbm(vec2 p){ float v = 0., a = .5; mat2 m = mat2(1.6, 1.2, -1.2, 1.6); for (int i = 0; i < 5; i++) { v += a * n(p); p = m * p; a *= .5; } return v; }`;
@@ -548,8 +524,7 @@ function animPlane(img, w, scale, glowCol) {
   x.drawImage(img, 0, 0, c.width, c.height);
   const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.minFilter = THREE.LinearFilter; tex.generateMipmaps = false;
   const h = w * img.naturalHeight / img.naturalWidth, g = new THREE.Group();
-  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: tex, transparent: true, alphaTest: .02, fog: false, blending: THREE.CustomBlending,
-    blendSrc: THREE.SrcAlphaFactor, blendDst: THREE.OneMinusSrcAlphaFactor, blendSrcAlpha: THREE.ZeroFactor, blendDstAlpha: THREE.OneMinusSrcAlphaFactor }));
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: tex, transparent: true, alphaTest: .02 }));
   const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: dot, color: glowCol, blending: THREE.AdditiveBlending, depthWrite: false, opacity: .55 })); glow.scale.set(w * 1.7, h * 1.7, 1); glow.position.z = -.6;
   g.add(glow, m);
   anims.push({ g, img, x, c, tex, k: 0, m, glow });
@@ -595,13 +570,12 @@ for (let i = 0; i < 30; i++) {
 }
 
 // ---- 03 backgrounds: the app's real shaders, as portals ----
-// each portal 16 m ahead of its shot, on the right (above the words on a phone), turned a little toward the camera
-const PORTALS = [2, 3, 4, 5, 6].map(i => [SHOT_U[i] + .016, 4.1, .3, -.3]);
+const PORTALS = [[.232, -7.4, .6, .5], [.268, 7.4, -.4, -.5], [.304, -7.4, .4, .5], [.34, 7.4, -.3, -.5], [.379, 0, .2, 0]];
 const portals = PORTALS.map(([u, x, y, ry], i) => {
   const s = SCENES[i], g = new THREE.Group(), w = 12.8, hh = 8;
   const m = new THREE.Mesh(new THREE.PlaneGeometry(w, hh), sceneMat(s, w / hh));
   const fr = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.PlaneGeometry(w + .5, hh + .5)), new THREE.LineBasicMaterial({ color: '#f3ece4', transparent: true, opacity: .35 }));
-  g.add(m, fr); place(g, u, narrow ? 0 : x, narrow ? 2 : y); g.rotateY(narrow ? 0 : ry); g.scale.setScalar(narrow ? .62 : .84); scene.add(g); g.userData.m = m; g.userData.fr = fr; return g;
+  g.add(m, fr); place(g, u, narrow ? x * .3 : x, y); g.rotateY(narrow ? ry * .5 : ry); if (narrow) g.scale.setScalar(.62); scene.add(g); g.userData.m = m; return g;
 });
 
 // ---- 04 the app, floating ----
@@ -623,6 +597,7 @@ const WORLDS = [
   { name: 'Ops', font: "'Black Ops One'", s: 1, bg: '#3b2b1b', ink: '#f6ecdc', a: '#f0a830', fog: .028, bl: [.3, .6], img: 'ops', plat: 'Windows and Android', note: 'A desert bomb site in the afternoon: smoke and tracers on the kick, the lyrics as a kill feed.' },
   { name: 'Redline', font: 'Unbounded', s: .68, bg: '#060708', ink: '#f5f6f7', a: '#ff1e2d', fog: .024, bl: [.5, .42], img: 'redline', plat: 'Windows, on Extreme+', note: 'Real cars on real circuits in 3D, filmed like a broadcast, a rev counter round the play button.' },
 ];
+const W0 = .622, WS = .0458;
 WORLDS.forEach((w, i) => { w.u0 = W0 + i * WS; w.u1 = w.u0 + WS; w.g = new THREE.Group(); w.tick = () => {}; scene.add(w.g); });
 const at = (u, x, y, z = 0) => { const p = pathAt(u); return new THREE.Vector3(p.x + x, p.y + y, p.z + z); };
 const ru = w => lerp(w.u0 + .004, w.u1 - .003, rand());
@@ -658,7 +633,7 @@ const glowColor = (hex, k) => new THREE.Color(hex).multiplyScalar(k);
   const im = new THREE.InstancedMesh(bg, new THREE.MeshBasicMaterial({ map: win, color: '#a090d0' }), n);
   for (let i = 0; i < n; i++) { const side = i % 2 ? 1 : -1, u = ru(w), p = at(u, side * ((side > 0 ? 10 : 6) + rand() * 20), -22, (rand() - .5) * 3), wd = 1.8 + rand() * 3.4, ht = 12 + rand() * 30; M4.compose(p, Q.identity(), S3.set(wd, ht, wd)); im.setMatrixAt(i, M4); }
   w.g.add(im);
-  const moon = new THREE.Mesh(new THREE.CircleGeometry(7, 64), new THREE.MeshBasicMaterial({ color: glowColor('#ffd23f', 1.12), fog: false })); place(moon, w.u1 + .02, 9, 9); w.g.add(moon);
+  const moon = new THREE.Mesh(new THREE.CircleGeometry(7, 64), new THREE.MeshBasicMaterial({ color: glowColor('#ffd23f', 1.5), fog: false })); place(moon, w.u0 + .036, 9, 9); w.g.add(moon);
   const wp = [], cx = new THREE.Vector3(); const wu = w.u0 + .014, f0 = frameAt(wu); cx.copy(f0.p).addScaledVector(f0.right, -10).addScaledVector(f0.up, 5);
   const ptA = (r, a) => cx.clone().addScaledVector(f0.right, Math.cos(a) * r).addScaledVector(f0.up, Math.sin(a) * r);
   for (let s = 0; s < 12; s++) { const a = s / 12 * 6.283; const A = ptA(0, a), B = ptA(8, a); wp.push(A.x, A.y, A.z, B.x, B.y, B.z); }
@@ -691,7 +666,7 @@ const glowColor = (hex, k) => new THREE.Color(hex).multiplyScalar(k);
   const n = coarse ? 30 : 46, im = new THREE.InstancedMesh(new THREE.BoxGeometry(1.8, 1.8, 1.8), new THREE.MeshLambertMaterial({ color: '#7b5a33' }), n);
   for (let i = 0; i < n; i++) { const st = rand() < .3 ? 1 : 0, p = at(ru(w), (i % 2 ? 1 : -1) * (3 + rand() * 13), 0); p.y = gp.y + .9 + st * 1.8; M4.compose(p, Q.setFromEuler(E.set(0, rand() * 1.5, 0)), S3.set(1, 1, 1)); im.setMatrixAt(i, M4); }
   w.g.add(im);
-  for (let i = 0; i < 10; i++) { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: dot, color: '#e8d7bb', transparent: true, opacity: .13, depthWrite: false })); s.position.copy(at(ru(w), (rand() - .5) * 26, 0)); s.position.y = gp.y + 2 + rand() * 3; s.scale.setScalar(10 + rand() * 12); w.g.add(s); }
+  for (let i = 0; i < 10; i++) { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: dot, color: '#e8d7bb', transparent: true, opacity: .22, depthWrite: false })); s.position.copy(at(ru(w), (rand() - .5) * 26, 0)); s.position.y = gp.y + 2 + rand() * 3; s.scale.setScalar(10 + rand() * 12); w.g.add(s); }
   const tn = 16, tr = new THREE.InstancedMesh(new THREE.BoxGeometry(.05, .05, 5), new THREE.MeshBasicMaterial({ color: glowColor('#ffd08a', 1.6), blending: THREE.AdditiveBlending, transparent: true, depthWrite: false }), tn), td = [];
   for (let i = 0; i < tn; i++) td.push({ u: ru(w), y: 4 + rand() * 5, x: (rand() - .5) * 60, v: (rand() < .5 ? -1 : 1) * (40 + rand() * 40) });
   w.g.add(tr);
@@ -715,7 +690,7 @@ const last = new THREE.Mesh(new THREE.PlaneGeometry(30, 30), mat({ add: true, u:
 place(last, 1.03); scene.add(last);
 
 // ============ keyframes over the flight ============
-const D = '#050403', KEYS = [[0, D, .011, .62, .2, null], [.066, D, .011, .62, .2, null], [.08, D, .011, .62, .2, null], [.19, D, .011, .62, .2, null],
+const D = '#050403', KEYS = [[0, D, .011, .8, .14, null], [.066, D, .011, .8, .14, null], [.08, D, .011, .62, .2, null], [.19, D, .011, .62, .2, null],
   [.205, D, .009, .36, .55, null], [.39, D, .009, .36, .55, null], [.4, D, .01, .3, .7, null], [.515, D, .01, .3, .7, null],
   [.528, D, .011, .85, .2, null], [.606, D, .011, .85, .2, null]];
 WORLDS.forEach(w => { KEYS.push([w.u0 + .008, w.bg, w.fog, w.bl[0], w.bl[1], w], [w.u1 - .006, w.bg, w.fog, w.bl[0], w.bl[1], w]); });
@@ -728,17 +703,17 @@ const K = { col: new THREE.Color() };
 // ============ overlay pieces ============
 const sName = $('#sName'), sMood = $('#sMood'), sText = $('#sText');
 function showScene(i) { const s = SCENES[i], rgb = c => `rgb(${c.map(v => v * 255 | 0)})`;
-  sName.textContent = s.name.toUpperCase(); sName.style.fontSize = innerWidth < 900 ? `min(15vw, ${(86 / (s.name.length * .7)).toFixed(2)}vw)` : `min(11vw, ${(62 / (s.name.length * .66)).toFixed(2)}vw)`;
+  scramble(sName, s.name.toUpperCase()); sName.style.fontSize = innerWidth < 900 ? `min(15vw, ${(86 / (s.name.length * .7)).toFixed(2)}vw)` : `min(11vw, ${(62 / (s.name.length * .66)).toFixed(2)}vw)`;
   sMood.innerHTML = `${s.mood} mood<span class="sw"><i style="color:${rgb(s.c[0])}"></i><i style="color:${rgb(s.c[1])}"></i></span>`; sText.textContent = s.text; }
 const tName = $('#tName'), tNote = $('#tNote'), tPlat = $('#tPlat'), tTabs = $('#tTabs'), themesEl = $('#themes');
-WORLDS.forEach((w, i) => { const b = document.createElement('button'); b.type = 'button'; b.setAttribute('role', 'tab'); b.textContent = w.name; b.onclick = () => goShot(11 + i); tTabs.append(b); });
+WORLDS.forEach((w, i) => { const b = document.createElement('button'); b.type = 'button'; b.setAttribute('role', 'tab'); b.textContent = w.name; b.onclick = () => goU(w.u0 + .016); tTabs.append(b); });
 function showWorld(i) { const w = WORLDS[i];
   tName.style.fontFamily = w.font; tName.style.fontWeight = w.font === 'Unbounded' ? 900 : 400; tName.style.setProperty('--s', w.s); tName.style.paddingBottom = (w.pb || .3) + 'em';
-  tName.style.transform = i < 2 ? 'rotate(-2deg)' : 'none'; tName.textContent = w.name;
+  tName.style.transform = i < 2 ? 'rotate(-2deg)' : 'none'; tName.innerHTML = [...w.name].map((c, j) => `<span class="ch-i" style="--i:${j}">${c}</span>`).join('');
   tNote.textContent = w.note; tPlat.textContent = w.plat;
   themesEl.style.setProperty('--ta', w.a); themesEl.style.setProperty('--tbg', w.bg); [...tTabs.children].forEach((b, j) => b.setAttribute('aria-selected', j === i)); }
 const wmEl = $('#wm'); wmEl.innerHTML = [...'NetherFlow'].map((c, i) => `<span class="l" style="--i:${i}">${c}</span>`).join('');
-const tlB = $('#tlB'), tlC = $('#tlC'), root = document.documentElement.style, focusEls = $$('.focus');
+const tlB = $('#tlB'), tlC = $('#tlC'), root = document.documentElement.style;
 
 // ============ loading: fonts and pictures, then build what needs them ============
 const ldBar = $('#ldBar'); let done = 0; const total = 9;
@@ -748,10 +723,10 @@ const IMG = ['pc', 'phones', 'stickman', 'spider', 'blocks', 'tactical', 'ops', 
 const imgsP = IMG.map(im => (im.decode ? im.decode() : Promise.resolve()).catch(() => {}).then(tick));
 Promise.race([Promise.all([fontsP, ...imgsP]), new Promise(r => setTimeout(r, 7000))]).then(() => {
   // the app, floating
-  if (IMG[0].naturalWidth) { const g = animPlane(IMG[0], 13.5, coarse ? .5 : .8, '#ff4a1c'); place(g, SHOT_U[7] + .014, narrow ? 0 : 3.6, narrow ? 1.9 : .2); g.scale.setScalar(narrow ? .62 : .82); scene.add(g); screens.push(g); }
-  if (IMG[1].naturalWidth) { const g = animPlane(IMG[1], 16, coarse ? .5 : .8, '#ff2d8a'); place(g, SHOT_U[8] + .016, narrow ? 0 : 4.2, narrow ? 1.8 : 0); g.scale.setScalar(narrow ? .56 : .78); scene.add(g); screens.push(g); }
+  if (IMG[0].naturalWidth) { const g = animPlane(IMG[0], 13.5, coarse ? .5 : .8, '#ff4a1c'); place(g, .449, narrow ? 0 : -1.2, .4); if (narrow) g.scale.setScalar(.6); scene.add(g); screens.push(g); }
+  if (IMG[1].naturalWidth) { const g = animPlane(IMG[1], 16, coarse ? .5 : .8, '#ff2d8a'); place(g, .512, narrow ? 0 : 1.4, 0); if (narrow) g.scale.setScalar(.6); scene.add(g); screens.push(g); }
   // each world's screenshot
-  WORLDS.forEach((w, i) => { const im = IMG[2 + i]; if (!im.naturalWidth) return; const g = animPlane(im, 8.6, 1, w.a); place(g, w.u0 + .024, narrow ? 0 : 4.6, narrow ? 1.6 : .9); if (narrow) g.scale.setScalar(.7); w.g.add(g);
+  WORLDS.forEach((w, i) => { const im = IMG[2 + i]; if (!im.naturalWidth) return; const g = animPlane(im, 8.6, 1, w.a); place(g, w.u0 + .024, narrow ? 0 : 4.6, narrow ? 1.6 : .9); if (narrow) g.scale.setScalar(.55); w.g.add(g);
     const fr = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.PlaneGeometry(8.9, 8.9 * 309 / 480)), new THREE.LineBasicMaterial({ color: w.ink, transparent: true, opacity: .5 })); fr.position.z = .01; g.add(fr); });
   // lyric words
   WORDS.forEach((wd, i) => { const tt = textTex(wd, 'italic 400 $px Instrument, serif', 120); const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tt.tex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, color: '#2a2622' }));
@@ -763,21 +738,19 @@ Promise.race([Promise.all([fontsP, ...imgsP]), new Promise(r => setTimeout(r, 70
 });
 
 // ============ one clock ============
-let camQ = 0, camU = 0, prevU = 0, vel = 0, mx = .5, my = .5, px = .5, py = .5, last0 = performance.now(), T = 0, f2 = 0, fpsA = 60, fpsAt = 0;
+let camU = 0, prevU = 0, vel = 0, mx = .5, my = .5, px = .5, py = .5, last0 = performance.now(), T = 0, f2 = 0, fpsA = 60, fpsAt = 0;
 let portalI = -1, worldI = -1, uiW = undefined, railI = -1, lastWordLit = -2;
 addEventListener('pointermove', e => { if (e.pointerType === 'mouse') { px = e.clientX / innerWidth; py = e.clientY / innerHeight; } });
-addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); composer.setSize(innerWidth, innerHeight); sizeFinish(); });
-window.__nf = { sound: Sound, shot(q) { goShot(q, true); camQ = q; camU = prevU = shotU(q); }, get q() { return camQ; }, get u() { return camU; },
+addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); composer.setSize(innerWidth, innerHeight); });
+window.__nf = { sound: Sound, jump(u) { goU(u, true); camU = prevU = u; }, get u() { return camU; },
   bench(n = 20) { const g = renderer.getContext(), px = new Uint8Array(4); composer.render(); g.readPixels(0, 0, 1, 1, g.RGBA, g.UNSIGNED_BYTE, px); const t = performance.now(); for (let i = 0; i < n; i++) { composer.render(); g.readPixels(0, 0, 1, 1, g.RGBA, g.UNSIGNED_BYTE, px); } return +((performance.now() - t) / n).toFixed(2); } };
 
 function frame(ts) {
   lenis?.raf(ts);
   const dt = Math.min(.05, (ts - last0) / 1000); last0 = ts; if (!still) T += dt; f2++;
   fpsA += (1 / Math.max(dt, .001) - fpsA) * .05;
-  const max = maxY(), want = clamp01((lenis ? lenis.animatedScroll : scrollY) / max) * (NS - 1);
-  camQ += (want - camQ) * (1 - Math.exp(-dt * 5)); if (Math.abs(want - camQ) < 1e-5) camQ = want;
-  camU = shotU(camQ);
-  const atShot = Math.round(camQ), focus = 1 - smooth(.12, .4, Math.abs(camQ - atShot));
+  const max = maxY(), want = clamp01((lenis ? lenis.animatedScroll : scrollY) / max);
+  camU += (want - camU) * (1 - Math.exp(-dt * 6)); if (Math.abs(want - camU) < 1e-6) camU = want;
   vel += (Math.abs(camU - prevU) / Math.max(dt, .001) * LEN - vel) * .1; prevU = camU;
   const k = Sound.kick();
 
@@ -797,11 +770,11 @@ function frame(ts) {
   for (const m of shaderMats) { m.uniforms.uT.value = T * .22 + 3; m.uniforms.uK.value = k; }
   line.material.uniforms.uE.value = smooth(0, .055, camU); line.material.uniforms.uT.value = T; line.visible = camU < .075;
   for (const r of rings) { const d = r.position.distanceTo(camera.position); r.material.uniforms.uA.value = smooth(110, 30, d) * smooth(.5, 4, d); r.material.uniforms.uT.value = T; r.visible = camU > .02 && camU < .24; }
-  portals.forEach(g => { const d = g.position.distanceTo(camera.position), a = smooth(44, 24, d) * smooth(3, 8, d); g.visible = a > .002; g.userData.m.material.uniforms.uA.value = a; g.userData.fr.material.opacity = .3 * a; });
+  portals.forEach(g => { const d = g.position.distanceTo(camera.position); g.visible = camU > .16 && camU < .41; g.userData.m.material.uniforms.uA.value = smooth(95, 30, d) * smooth(0, 5, d); });
   last.visible = camU > .85; back.visible = camU > .945; { const d = last.position.distanceTo(camera.position); last.material.uniforms.uA.value = smooth(160, 30, d); back.material.uniforms.uA.value = smooth(.95, 1, camU) * .42; }
 
   // the floating pictures play: copy their current frame now and then
-  for (const a of anims) { const dd = a.g.getWorldPosition(P3).distanceTo(camera.position), fa = smooth(3, 9, dd) * smooth(64, 34, dd); a.m.material.opacity = fa; a.glow.material.opacity = .4 * fa;
+  for (const a of anims) { const fa = smooth(3, 9, a.g.getWorldPosition(P3).distanceTo(camera.position)); a.m.material.opacity = fa; a.glow.material.opacity = .55 * fa;
     const near = a.g.visible !== false && (a.g.parent?.visible ?? true) && a.g.getWorldPosition(P3).distanceTo(camera.position) < 70;
     if (near && (f2 + a.k++) % 2 === 0) { a.x.clearRect(0, 0, a.c.width, a.c.height); a.x.drawImage(a.img, 0, 0, a.c.width, a.c.height); a.tex.needsUpdate = true; } }
 
@@ -812,31 +785,27 @@ function frame(ts) {
 
   // worlds
   WORLDS.forEach(w => { w.g.visible = camU > w.u0 - .014 && camU < w.u1 + .004; if (w.g.visible && !still) w.tick(T, k, dt); });
-  const wi = Math.max(0, Math.min(WORLDS.length - 1, atShot - 11));
+  const wi = Math.max(0, Math.min(WORLDS.length - 1, Math.floor((camU - W0) / WS)));
   if (wi !== worldI) { worldI = wi; showWorld(wi); }
   if (K.w !== uiW) { uiW = K.w; if (uiW) { root.setProperty('--ui', uiW.ink); root.setProperty('--shade', uiW.bg + 'cc'); } else { root.removeProperty('--ui'); root.removeProperty('--shade'); } }
 
   // portals' names
-  const pi = Math.max(0, Math.min(PORTALS.length - 1, atShot - 2));
+  let pi = PORTALS.findIndex(([u]) => u > camU + .002); if (pi < 0) pi = PORTALS.length - 1;
   if (pi !== portalI) { portalI = pi; showScene(pi); }
   if (ts - fpsAt > 500) { fpsAt = ts; const e = $('#fps'); if (e) e.textContent = Math.min(60, Math.round(fpsA));
     // ponytail: steps resolution down (never back up) when a slow GPU drops below ~48 fps; a smarter governor if it ever hunts
-    if (ts > 6000 && fpsA < 48 && pr > .6 && !document.hidden) { pr = Math.max(.6, pr * .85); renderer.setPixelRatio(pr); composer.setPixelRatio(pr); composer.setSize(innerWidth, innerHeight); sizeFinish(); fpsA = 60; } }
+    if (ts > 6000 && fpsA < 48 && pr > .6 && !document.hidden) { pr = Math.max(.6, pr * .85); renderer.setPixelRatio(pr); composer.setPixelRatio(pr); composer.setSize(innerWidth, innerHeight); fpsA = 60; } }
 
   // chapters fade in and out as you fly through them
-  // a chapter shows only near its shots, so two never overlap; inside one, the name pulls into focus as the camera arrives
-  const fz = still ? 1 : focus, blur = ((1 - fz) * 14).toFixed(1) + 'px';
-  for (const el of focusEls) { el.style.opacity = fz.toFixed(3); el.style.filter = fz > .995 ? '' : `blur(${blur})`; }
-  for (const c of chs) { const v = smooth(c.a - .42, c.a - .16, camQ) * (1 - smooth(c.b + .16, c.b + .42, camQ));
+  for (const c of chs) { const v = smooth(c.a - .008, c.a + .004, camU) * (1 - smooth(c.b - .008, c.b, camU));
     if (Math.abs(v - c.v) > .002) { c.v = v; c.el.style.opacity = v.toFixed(3); c.el.classList.toggle('vis', v > .5); } }
 
   // instruments
-  let ri = 0; RAIL.forEach(([, q], i) => { if (camQ >= q - .5) ri = i; });
-  rail.style.opacity = camQ < .5 ? 0 : 1;
+  let ri = 0; RAIL.forEach(([, u], i) => { if (camU >= u - .012) ri = i; });
+  rail.style.opacity = camU < .03 ? 0 : 1;
   if (ri !== railI) { railI = ri; railBtns.forEach((b, i) => b.toggleAttribute('aria-current', i === ri)); }
   const m = Sound.meter(4); eqs.forEach((b, i) => b.style.setProperty('--h', m ? m[i].toFixed(2) : .1));
 
-  finish.uniforms.uT.value = T; finish.uniforms.uV.value = .32 * (1 - K.col.r * .75);
   composer.render();
   requestAnimationFrame(frame);
 }
