@@ -39,7 +39,7 @@ th { color: var(--ink); font: 500 10.5px/1.4 "Martian Mono", ui-monospace, monos
 <main>
   <div class="kicker">NetherFlow · by Volodya.rua</div>
   <h1>Terms, privacy &amp; licenses</h1>
-  <p class="meta">Effective 15 October 2026 · Applies to the NetherFlow desktop app (Windows) and the NetherFlow Android app.</p>
+  <p class="meta">Effective 15 October 2026 · Applies to the NetherFlow desktop app (Windows), the NetherFlow Android app and NetherFlow's website.</p>
   <nav><a href="#terms">Terms of Use</a><a href="#privacy">Privacy Policy</a><a href="#licenses">Licenses &amp; credits</a></nav>
 
   <div class="box"><p><strong>In short:</strong> NetherFlow is a free, open-source music player made by Volodya.rua (MIT License). It doesn't host any music, videos or lyrics: it finds them on other services (YouTube and YouTube Music, Audius, Apple's iTunes catalog, LRCLIB, NetEase Cloud Music and Kugou) and shows them to you directly from those services. If you choose to save a song for offline listening, the app downloads it from YouTube and keeps it inside the app, on your device only. NetherFlow has no accounts, no ads of its own and no analytics, and the developer receives none of your data.</p></div>
@@ -133,7 +133,7 @@ th { color: var(--ink); font: 500 10.5px/1.4 "Martian Mono", ui-monospace, monos
     <tr><td>Kugou</td><td>To fetch word-by-word lyric timing</td><td>The song's title, first artist and length, and your IP address. <a href="https://www.kugou.com">kugou.com</a></td></tr>
     <tr><td>GitHub (Microsoft)</td><td>To look for a newer NetherFlow (at most once a day, and when you open Settings) and, when you choose to update, to download it (the Windows installer and NetherFlow's own Android app; not an app store's). And now and then, to look for and download updates to yt-dlp, the download tool: on the desktop when saving a song fails; on Android only if you turn on "Update the downloader" (then about once a day, and when saving a song fails)</td><td>Your IP address and basic device information. <a href="https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement">GitHub Privacy Statement</a></td></tr>
     <tr><td>Spotify, Apple Music</td><td>Only when you import a playlist from its link: to read that playlist's public page and, for a long one, the rest of its songs from the service's own web player (a Spotify short link, spotify.link, first goes through Branch, the link service Spotify uses for them)</td><td>The link you pasted, and your IP address. <a href="https://www.spotify.com/legal/privacy-policy/">Spotify's privacy policy</a>, <a href="https://www.apple.com/legal/privacy/">Apple's</a>, <a href="https://branch.io/policies/privacy-policy/">Branch's</a></td></tr>
-    <tr><td>Public MQTT relays (EMQX, HiveMQ, Eclipse Mosquitto)</td><td>Only during Listen together: to pass the session's messages between the people in it</td><td>Messages encrypted on your device with a key made from the session code (the song, where it's at, names, reactions): the relay can't read them. It sees your IP address. <a href="https://www.emqx.com/en/mqtt/public-mqtt5-broker">EMQX</a>, <a href="https://www.hivemq.com/mqtt/public-mqtt-broker/">HiveMQ</a>, <a href="https://test.mosquitto.org">Mosquitto</a></td></tr>
+    <tr><td>Public MQTT relays (EMQX, HiveMQ, Eclipse Mosquitto)</td><td>Only during Listen together: to pass the session's messages between the people in it</td><td>Messages encrypted on your device with a key made from the session code (the song, where it's at, names, reactions), so the relay passes them on scrambled. These relays are public test servers that anyone can connect to, and the code is short, so don't treat what you send in a session as secret. The relay sees your IP address. <a href="https://www.emqx.com/en/mqtt/public-mqtt5-broker">EMQX</a>, <a href="https://www.hivemq.com/mqtt/public-mqtt-broker/">HiveMQ</a>, <a href="https://test.mosquitto.org">Mosquitto</a></td></tr>
     <tr><td>valorant-api.com (a community site, not Riot Games)</td><td>Only with the Tactical theme: to fetch the list of VALORANT's agents and show their art (Riot Games' own, which the site serves)</td><td>Your IP address and basic device information. <a href="https://valorant-api.com">valorant-api.com</a></td></tr>
     <tr><td>Discord (its app on your computer)</td><td>Only with Discord status on: to show the song you're playing on your Discord profile</td><td>The song's title, artist, album, cover link and progress, sent to the Discord app on your computer, which shows them to your friends there. <a href="https://discord.com/privacy">Discord's privacy policy</a></td></tr>
   </table>
@@ -143,9 +143,13 @@ th { color: var(--ink); font: 500 10.5px/1.4 "Martian Mono", ui-monospace, monos
     <li><strong>Internet</strong>: to search and play music.</li>
     <li><strong>Notifications</strong> (optional): to show what's playing while the app is in the background. Music still plays if you say no.</li>
     <li><strong>Foreground service (media playback)</strong>: to keep playing when you switch apps or turn the screen off.</li>
+    <li><strong>Network state</strong>: to tell whether you're on Wi-Fi, so liked songs save themselves for offline only then.</li>
     <li><strong>Install apps</strong> (NetherFlow's own app from GitHub only, and only once you allow it): to install an update you chose to download.</li>
   </ul>
   <p>NetherFlow does not access your location, contacts, camera, microphone, photos or files.</p>
+
+  <h3>The website</h3>
+  <p>NetherFlow's website (volodya-rua.github.io/NetherFlow) has no cookies, no analytics and no forms. It is hosted by GitHub Pages, which receives visitors' IP addresses (<a href="https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement">GitHub Privacy Statement</a>). Its home page loads two code libraries, three.js and Lenis, from the jsDelivr network, which also sees the visitor's IP address (<a href="https://www.jsdelivr.com/terms/privacy-policy">jsDelivr's privacy policy</a>). A shared playlist's page works as described above.</p>
 
   <h3>Children</h3>
   <p>NetherFlow is not directed at children under 13 (or under 16 where local law requires). YouTube and other services used by the app have their own minimum-age rules.</p>
@@ -176,7 +180,7 @@ th { color: var(--ink); font: 500 10.5px/1.4 "Martian Mono", ui-monospace, monos
     <tr><td>three.js © three.js authors</td><td>Desktop app (Redline's 3D races)</td><td>MIT · <a href="licenses/three.js-MIT.txt">license text</a> · <a href="https://github.com/mrdoob/three.js">source</a></td></tr>
     <tr><td>Fluent Emoji © Microsoft Corporation (the 3D emoji in Extreme lyrics)</td><td>Desktop app</td><td>MIT · <a href="licenses/FluentEmoji-MIT.txt">license text</a> · <a href="https://github.com/microsoft/fluentui-emoji">source</a></td></tr>
     <tr><td>Android Jetpack (AndroidX) © The Android Open Source Project</td><td>Android app</td><td>Apache 2.0 · <a href="licenses/Apache-2.0.txt">license text</a></td></tr>
-    <tr><td>Apache Cordova (Android framework) © The Apache Software Foundation</td><td>Android app</td><td>Apache 2.0 · <a href="licenses/Apache-2.0.txt">license text</a></td></tr>
+    <tr><td>Apache Cordova (Android framework) © The Apache Software Foundation. This product includes software developed at The Apache Software Foundation (http://www.apache.org/).</td><td>Android app</td><td>Apache 2.0 · <a href="licenses/Apache-2.0.txt">license text</a></td></tr>
   </table>
 
   <h3>Typefaces</h3>

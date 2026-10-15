@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NetherFlow · Terms, Privacy &amp; Licenses</title>
+<style>@font-face { font-family: "Instrument Serif"; src: url(fonts/InstrumentSerif-400i-latin.woff2) format("woff2"); font-style: italic; font-display: swap; }@font-face { font-family: "Martian Mono"; src: url(fonts/MartianMono-latin.woff2) format("woff2"); font-weight: 100 800; font-display: swap; }</style> <!-- the typefaces, bundled: no request to Google, and they work offline -->
+<style>
+:root { --bg: #0b0503; --ink: #f6ede4; --dim: rgba(246,237,228,.62); --a: #ff4a1c; --hair: rgba(246,237,228,.14); color-scheme: dark; }
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 400 15px/1.7 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+/* nothing can be selected or dragged (as in the app) */
+* { -webkit-user-select: none; user-select: none; -webkit-user-drag: none; -webkit-touch-callout: none; }
+main { max-width: 760px; margin: 0 auto; padding: 32px 20px 80px; }
+.kicker { font: 500 10.5px/1 "Martian Mono", ui-monospace, monospace; letter-spacing: .14em; text-transform: uppercase; color: var(--a); }
+h1 { font: italic 400 clamp(38px, 7vw, 60px)/1 "Instrument Serif", Georgia, serif; margin: 12px 0 8px; }
+h2 { font: italic 400 34px/1.1 "Instrument Serif", Georgia, serif; margin: 64px 0 6px; padding-top: 12px; border-top: 1px solid var(--hair); }
+h3 { font: 500 11px/1.4 "Martian Mono", ui-monospace, monospace; letter-spacing: .12em; text-transform: uppercase; color: var(--a); margin: 30px 0 6px; }
+p, li { color: var(--dim); }
+strong { color: var(--ink); font-weight: 600; }
+a { color: var(--a); }
+nav { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 18px 0 0; font: 500 11px/1 "Martian Mono", ui-monospace, monospace; letter-spacing: .1em; text-transform: uppercase; }
+nav a { color: var(--ink); text-decoration: none; border-bottom: 1px solid var(--a); padding-bottom: 4px; }
+.meta { font: 300 11px/1.6 "Martian Mono", ui-monospace, monospace; color: var(--dim); }
+.box { border: 1px solid var(--hair); border-radius: 12px; padding: 14px 18px; margin: 18px 0; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { text-align: left; padding: 9px 8px; border-bottom: 1px solid var(--hair); vertical-align: top; color: var(--dim); }
+th { color: var(--ink); font: 500 10.5px/1.4 "Martian Mono", ui-monospace, monospace; letter-spacing: .1em; text-transform: uppercase; }
+/* the app's scrollbar: thin, rounded, accent-colored, no arrow buttons */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track, ::-webkit-scrollbar-corner { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,74,28,.45); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--a); }
+::-webkit-scrollbar-button { display: none; }
+</style>
+</head>
+<body>
+<main>
+  <div class="kicker">NetherFlow · by Volodya.rua</div>
+  <h1>Terms, privacy &amp; licenses</h1>
+  <p class="meta">Effective 15 October 2026 · Applies to the NetherFlow desktop app (Windows), the NetherFlow Android app and NetherFlow's website.</p>
+  <nav><a href="#terms">Terms of Use</a><a href="#privacy">Privacy Policy</a><a href="#licenses">Licenses &amp; credits</a></nav>
+
+  <div class="box"><p><strong>In short:</strong> NetherFlow is a free, open-source music player made by Volodya.rua (MIT License). It doesn't host any music, videos or lyrics: it finds them on other services (YouTube and YouTube Music, Audius, Apple's iTunes catalog, LRCLIB, NetEase Cloud Music and Kugou) and shows them to you directly from those services. If you choose to save a song for offline listening, the app downloads it from YouTube and keeps it inside the app, on your device only. NetherFlow has no accounts, no ads of its own and no analytics, and the developer receives none of your data.</p></div>
+
+  <!-- ===================================================== TERMS ===================================================== -->
+  <h2 id="terms">Terms of Use</h2>
+
+  <h3>1. Who we are</h3>
+  <p>NetherFlow ("the app") is developed and published by <strong>Volodya.rua</strong> ("the developer", "we", "us"). By installing, opening or using the app, you agree to these Terms of Use and to the Privacy Policy below. If you don't agree, don't use the app and uninstall it.</p>
+  <p>NetherFlow is free and open-source software: its source code is public and licensed under the MIT License (see section 10). These terms are about using the app and the services it connects to; they don't limit what the MIT License lets you do with the code.</p>
+
+  <h3>2. What NetherFlow does</h3>
+  <p>NetherFlow is a player interface. It searches public catalogs, plays songs through YouTube's embedded player, and shows lyrics published by third-party lyrics services. NetherFlow does not host, upload, sell or distribute any music, video or lyrics. Content is streamed directly from those third parties to your device; the only copies the app keeps are the songs you choose to save for offline listening (section 6), which stay on your device. All content belongs to its respective owners (artists, labels, publishers and the services themselves).</p>
+
+  <h3>3. Content is for personal, non-commercial use only</h3>
+  <p>The music, videos, lyrics and artwork you reach through NetherFlow belong to their owners, not to the developer: use them only for your own personal, non-commercial listening. Apart from saving songs for your own offline listening inside the app and making story clips (both in section 6), you must not use NetherFlow to download, record, copy, redistribute, broadcast, publicly perform, or commercially exploit any content, or to break any law that applies to you.</p>
+
+  <h3>4. Third-party services and their terms</h3>
+  <p>NetherFlow relies on independent services that have their own terms, which also apply to you when the app uses them, including <a href="https://www.youtube.com/t/terms">YouTube's Terms of Service</a>, Google's <a href="https://policies.google.com/terms">Terms of Service</a>, Apple's <a href="https://www.apple.com/legal/internet-services/itunes/">Media Services terms</a>, <a href="https://audius.co/legal/terms-of-use">Audius's Terms of Use</a>, <a href="https://lrclib.net">LRCLIB</a>, NetEase Cloud Music, Kugou and LyricFind (whose lyrics YouTube Music shows). You are responsible for using NetherFlow in a way that respects those terms and the laws of your country.</p>
+  <p>The developer doesn't control these services. They may change, limit or stop working at any time, and NetherFlow may stop working with them as a result. Songs, videos, lyrics and timing may be missing, inaccurate or out of sync.</p>
+
+  <h3>5. Advertising from third-party players</h3>
+  <p>To give an uninterrupted listening experience, NetherFlow may block requests to advertising servers and skip advertisements shown inside third-party players. The video player itself is kept out of view while the lyrics are shown. These features may not be permitted by the terms of the services involved. By using NetherFlow you accept that you use these features at your own discretion and risk.</p>
+
+  <h3>6. Saving songs for offline listening, and story clips</h3>
+  <p>NetherFlow can save a song you choose, with its cover and, if you choose, its lyrics, so you can listen without an internet connection. To do this it downloads the song's audio from its YouTube upload with yt-dlp, an open-source download tool included with the app, just as YouTube serves it (nothing is re-recorded or re-encoded); or, when the artist's own upload of the song is on Audius, the file Audius serves for it. Saved songs stay inside the app on your device, for your own personal listening only: you must not extract, copy, share, sell or distribute them.</p>
+  <p><strong>YouTube's Terms of Service don't allow downloading content unless YouTube itself shows a download button for it, so saving songs this way breaks YouTube's terms. It may also not be permitted by the rights holders or by copyright law where you live.</strong> Whether to use it is your decision and your responsibility. Only save content you are allowed to keep a copy of, and delete saved songs if you are asked to or are no longer allowed to keep them. The developer provides no content and never receives the songs you save.</p>
+  <p>"Make a story" creates a short video (about 15 seconds of the song, with its cover and lyrics) for you to share. Whether to post it is your decision and your responsibility: the song, cover and lyrics belong to their owners, and the platform you post to (for example Instagram) applies its own music and copyright rules and may mute or remove it.</p>
+
+  <h3>7. No affiliation; trademarks</h3>
+  <p>NetherFlow is an independent project. It is <strong>not affiliated with, endorsed by or sponsored by</strong> YouTube, Google, Apple, Audius, LRCLIB, NetEase, Kugou, LyricFind, or any artist, label or publisher. YouTube is a trademark of Google LLC; iTunes and Apple Music are trademarks of Apple Inc.; all other names, logos, album artwork and trademarks belong to their respective owners and are shown only to identify the content you chose to play.</p>
+
+  <h3>8. Copyright concerns</h3>
+  <p>If you own rights in content and believe its appearance in NetherFlow infringes them, contact the developer (see Contact) with the content concerned, your contact details and a statement that you are the rights owner or authorized to act for them. We will review every notice in good faith and, where appropriate, remove or block access to that content or source in the app.</p>
+
+  <h3>9. Acceptable use</h3>
+  <p>You must not use the app for anything unlawful, or to send automated or excessive requests to any service. If you publish a changed version of NetherFlow, the MIT License requires you to keep its copyright and license notice; please also give it a different name and icon, so nobody mistakes it for the original, and remember that you, not the developer, are responsible for what your version does.</p>
+
+  <h3>10. Open source and intellectual property</h3>
+  <p>NetherFlow's source code, design and artwork are © 2026 Volodya.rua and licensed under the <a href="https://github.com/volodya-rua/NetherFlow/blob/main/licenses/NetherFlow-MIT.txt">MIT License</a>: anyone may use, copy, change and share them, including in other projects, as long as the copyright and license notice stay with them. The license covers NetherFlow itself only: it gives no rights to the music, videos, lyrics or artwork of others, or to anyone's trademarks. The open-source components NetherFlow includes keep their own licenses (see Licenses &amp; credits).</p>
+
+  <h3>11. No warranty</h3>
+  <p>The app is provided <strong>"as is" and "as available"</strong>, without warranties of any kind, express or implied, including fitness for a particular purpose, accuracy, availability and non-infringement, to the maximum extent permitted by law.</p>
+
+  <h3>12. Limitation of liability</h3>
+  <p>To the maximum extent permitted by law, the developer is not liable for any indirect, incidental, special, consequential or punitive damages, or for any loss of data, profits, or use, arising from or related to your use of (or inability to use) the app or any third-party service or content. Because the app is free, the developer's total liability for any claim is limited to zero (0) euros/dollars, or the lowest amount permitted by law where you live.</p>
+
+  <h3>13. Your responsibility</h3>
+  <p>To the extent permitted by law, you agree to indemnify and hold harmless the developer from claims, damages and costs arising from your use of the app in breach of these terms, of third-party terms, or of the law.</p>
+
+  <h3>14. Changes and ending</h3>
+  <p>We may update these terms; the app will show the new version and ask you to accept it again. We may change, suspend or discontinue the app at any time. You can stop using it at any time by uninstalling it.</p>
+  <p>Official releases are published by the developer on NetherFlow's GitHub page and through F-Droid. Copies from anywhere else may have been changed by someone else: the developer isn't responsible for them.</p>
+
+  <h3>15. Governing law</h3>
+  <p>These terms are governed by the laws of the developer's country of residence, without regard to conflict-of-law rules. Nothing in these terms limits rights you have under mandatory consumer-protection laws of the country where you live. If any part of these terms is found unenforceable, the rest stays in effect.</p>
+
+  <h3>16. Contact</h3>
+  <p>Questions, copyright notices or privacy requests: <strong>Volodya.rua</strong>, the developer of NetherFlow. Email <a href="mailto:volodya.rua@gmail.com">volodya.rua@gmail.com</a>, or message <a href="https://www.instagram.com/volodya.rua/">@volodya.rua</a> on Instagram.</p>
+
+  <!-- ===================================================== PRIVACY ===================================================== -->
+  <h2 id="privacy">Privacy Policy</h2>
+
+  <h3>Summary</h3>
+  <p>NetherFlow has <strong>no accounts, no analytics, no tracking and no ads of its own</strong>, and since its source code is public, anyone can check that. The developer does not collect, receive, store or sell any personal data. To work, the app talks directly from your device to the third-party services listed below, which receive the information described there under their own privacy policies.</p>
+
+  <h3>Stored only on your device</h3>
+  <ul>
+    <li>Your settings: mood, background and its quality (or the quality the app picked for your device), lyric animation (and Extreme lyrics, their look, emoji and music video), font, size and alignment, timeline and beat styles, the island and its glow, volume, repeat, equalizer and loudness.</li>
+    <li>Lyric-sync adjustments you made for individual songs.</li>
+    <li>Your search history: recent searches and recently played songs (you can clear it in the search screen).</li>
+    <li>Your library: liked songs and playlists (and playlists you import).</li>
+    <li>Your listening stats: time listened by day, hour, song, artist and genre (Library › Your stats).</li>
+    <li>Autoplay's memory: the songs you've heard lately (so they aren't picked again soon) and how much you like each artist it picks, from what you skip, play through or like.</li>
+    <li>Songs you saved for offline listening, with their covers and, if you chose, their lyrics (you can remove them in the Library).</li>
+    <li>That you accepted these terms, and which version.</li>
+    <li>Phone ↔ PC sync copies your library, history and stats directly between your own devices on your local network, encrypted with a key made from the code shown: it never goes through anyone else's server. Listen together sends only what the session needs (the song, where it's at, names, reactions), encrypted, through a public relay.</li>
+    <li>Sharing a playlist (Library › Share) makes a link and a QR code that carry the playlist's name and its songs. Nothing is uploaded: the playlist is inside the link itself, and anyone you give it to can see what's in it. Opening the link shows a page on GitHub Pages (github.io), which, like any website, receives the opener's IP address; the part of the link holding the songs is not sent to it. That page looks the songs up at Apple and shows their covers from Apple and YouTube.</li>
+  </ul>
+  <p>This stays on your device and is never sent to the developer. Uninstalling the app (or clearing its data) deletes it.</p>
+
+  <h3>Shared with third-party services when you use the app</h3>
+  <table>
+    <tr><th>Service</th><th>When</th><th>What it receives</th></tr>
+    <tr><td>Apple iTunes Search API &amp; Apple image servers</td><td>When you search, and to show album artwork and 30-second previews</td><td>Your search text, your IP address and basic device/browser information. <a href="https://www.apple.com/legal/privacy/">Apple Privacy Policy</a></td></tr>
+    <tr><td>YouTube (Google)</td><td>To find and play the songs you choose, to save the ones you choose for offline listening, and (desktop, with Extreme lyrics' music video on) to find and play the song's official music video behind the lyrics, muted</td><td>The song's title and artist, your IP address and device information. YouTube's embedded player may set cookies and collect usage data. <a href="https://policies.google.com/privacy">Google Privacy Policy</a></td></tr>
+    <tr><td>YouTube Music (Google)</td><td>As you type a search (suggestions), when you search, and to fetch the lyrics of the song playing (provided by LyricFind)</td><td>What you type in the search, the ID of the video playing, your IP address and basic device information. <a href="https://policies.google.com/privacy">Google Privacy Policy</a></td></tr>
+    <tr><td>Audius</td><td>When a song plays or is saved, to look for the artist's own upload of it there, and to play or save that upload</td><td>The song's title and artist, and your IP address. <a href="https://audius.co/legal/privacy-policy">Audius Privacy Policy</a></td></tr>
+    <tr><td>LRCLIB</td><td>To fetch lyrics</td><td>The song's title, artist and length, and your IP address. <a href="https://lrclib.net">lrclib.net</a></td></tr>
+    <tr><td>NetEase Cloud Music</td><td>To fetch word-by-word lyric timing</td><td>The song's title, artist and length, and your IP address. <a href="https://music.163.com">music.163.com</a></td></tr>
+    <tr><td>Kugou</td><td>To fetch word-by-word lyric timing</td><td>The song's title, first artist and length, and your IP address. <a href="https://www.kugou.com">kugou.com</a></td></tr>
+    <tr><td>GitHub (Microsoft)</td><td>To look for a newer NetherFlow (at most once a day, and when you open Settings) and, when you choose to update, to download it (the Windows installer and NetherFlow's own Android app; not an app store's). And now and then, to look for and download updates to yt-dlp, the download tool: on the desktop when saving a song fails; on Android only if you turn on "Update the downloader" (then about once a day, and when saving a song fails)</td><td>Your IP address and basic device information. <a href="https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement">GitHub Privacy Statement</a></td></tr>
+    <tr><td>Spotify, Apple Music</td><td>Only when you import a playlist from its link: to read that playlist's public page and, for a long one, the rest of its songs from the service's own web player (a Spotify short link, spotify.link, first goes through Branch, the link service Spotify uses for them)</td><td>The link you pasted, and your IP address. <a href="https://www.spotify.com/legal/privacy-policy/">Spotify's privacy policy</a>, <a href="https://www.apple.com/legal/privacy/">Apple's</a>, <a href="https://branch.io/policies/privacy-policy/">Branch's</a></td></tr>
+    <tr><td>Public MQTT relays (EMQX, HiveMQ, Eclipse Mosquitto)</td><td>Only during Listen together: to pass the session's messages between the people in it</td><td>Messages encrypted on your device with a key made from the session code (the song, where it's at, names, reactions), so the relay passes them on scrambled. These relays are public test servers that anyone can connect to, and the code is short, so don't treat what you send in a session as secret. The relay sees your IP address. <a href="https://www.emqx.com/en/mqtt/public-mqtt5-broker">EMQX</a>, <a href="https://www.hivemq.com/mqtt/public-mqtt-broker/">HiveMQ</a>, <a href="https://test.mosquitto.org">Mosquitto</a></td></tr>
+    <tr><td>valorant-api.com (a community site, not Riot Games)</td><td>Only with the Tactical theme: to fetch the list of VALORANT's agents and show their art (Riot Games' own, which the site serves)</td><td>Your IP address and basic device information. <a href="https://valorant-api.com">valorant-api.com</a></td></tr>
+    <tr><td>Discord (its app on your computer)</td><td>Only with Discord status on: to show the song you're playing on your Discord profile</td><td>The song's title, artist, album, cover link and progress, sent to the Discord app on your computer, which shows them to your friends there. <a href="https://discord.com/privacy">Discord's privacy policy</a></td></tr>
+  </table>
+
+  <h3>Android permissions</h3>
+  <ul>
+    <li><strong>Internet</strong>: to search and play music.</li>
+    <li><strong>Notifications</strong> (optional): to show what's playing while the app is in the background. Music still plays if you say no.</li>
+    <li><strong>Foreground service (media playback)</strong>: to keep playing when you switch apps or turn the screen off.</li>
+    <li><strong>Network state</strong>: to tell whether you're on Wi-Fi, so liked songs save themselves for offline only then.</li>
+    <li><strong>Install apps</strong> (NetherFlow's own app from GitHub only, and only once you allow it): to install an update you chose to download.</li>
+  </ul>
+  <p>NetherFlow does not access your location, contacts, camera, microphone, photos or files.</p>
+
+  <h3>The website</h3>
+  <p>NetherFlow's website (volodya-rua.github.io/NetherFlow) has no cookies, no analytics and no forms. It is hosted by GitHub Pages, which receives visitors' IP addresses (<a href="https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement">GitHub Privacy Statement</a>). Its home page loads two code libraries, three.js and Lenis, from the jsDelivr network, which also sees the visitor's IP address (<a href="https://www.jsdelivr.com/terms/privacy-policy">jsDelivr's privacy policy</a>). A shared playlist's page works as described above.</p>
+
+  <h3>Children</h3>
+  <p>NetherFlow is not directed at children under 13 (or under 16 where local law requires). YouTube and other services used by the app have their own minimum-age rules.</p>
+
+  <h3>Your rights</h3>
+  <p>Depending on where you live (for example under the GDPR or the CCPA), you may have rights to access or delete personal data. Because the developer holds no personal data about you, there is nothing for us to access or delete; for data held by the services above, contact them using the links in the table. You can contact the developer with any privacy question.</p>
+
+  <h3>Changes</h3>
+  <p>If this policy changes, the app will show the updated version and ask you to accept it again. Effective date: 15 October 2026.</p>
+
+  <!-- ===================================================== LICENSES ===================================================== -->
+  <h2 id="licenses">Licenses &amp; credits</h2>
+  <p><strong>NetherFlow</strong> © 2026 Volodya.rua · free and open-source software under the <a href="https://github.com/volodya-rua/NetherFlow/blob/main/licenses/NetherFlow-MIT.txt">MIT License</a>. A HuCla build (human × Claude): its idea, vision and direction are Volodya.rua's, who tests and publishes it; most of its code is written by <a href="https://www.anthropic.com/claude">Claude</a>, Anthropic's AI.</p>
+
+  <h3>Open-source software</h3>
+  <table>
+    <tr><th>Component</th><th>Used in</th><th>License</th></tr>
+    <tr><td>Electron © Electron contributors, GitHub Inc.</td><td>Desktop app</td><td>MIT · <a href="https://github.com/volodya-rua/NetherFlow/blob/main/licenses/Electron-MIT.txt">license text</a></td></tr>
+    <tr><td>Chromium and Node.js (bundled with Electron)</td><td>Desktop app</td><td>BSD-style and others · full list in <code>LICENSES.chromium.html</code>, shipped inside the desktop app</td></tr>
+    <tr><td>FFmpeg © the FFmpeg developers (bundled with Electron, as its own library, <code>ffmpeg.dll</code>)</td><td>Desktop app (playing audio and video)</td><td>GNU LGPL 2.1 or later · <a href="https://github.com/volodya-rua/NetherFlow/blob/main/licenses/LGPL-2.1.txt">license text</a> · <a href="https://chromium.googlesource.com/chromium/third_party/ffmpeg">source</a> (the version Electron's Chromium uses)</td></tr>
+    <tr><td>yt-dlp © yt-dlp contributors</td><td>Desktop and Android apps (saving songs)</td><td>The Unlicense (public domain) · <a href="https://github.com/volodya-rua/NetherFlow/blob/main/licenses/yt-dlp-LICENSE.txt">license text</a> · <a href="https://github.com/yt-dlp/yt-dlp">source</a></td></tr>
+    <tr><td>Components bundled in yt-dlp.exe: Python, OpenSSL, certifi, mutagen and others</td><td>Desktop app</td><td>Each under its own license (PSF 2.0, Apache 2.0, MIT, MPL 2.0, GPL 2.0 or later for mutagen, and others) · <a href="https://github.com/volodya-rua/NetherFlow/blob/main/licenses/yt-dlp-THIRD_PARTY_LICENSES.txt">all license texts</a> · source code: <a href="https://github.com/yt-dlp/yt-dlp/releases/tag/2026.08.19">yt-dlp 2026.08.19</a>, <a href="https://pypi.org/project/mutagen/#files">mutagen</a></td></tr>
+    <tr><td>Chaquopy © Chaquo Ltd and contributors</td><td>Android app (runs yt-dlp)</td><td>MIT · <a href="https://github.com/volodya-rua/NetherFlow/blob/main/licenses/Chaquopy-MIT.txt">license text</a></td></tr>
+    <tr><td>Python © Python Software Foundation, with the libraries it includes: OpenSSL, SQLite, libffi, bzip2, XZ and zlib</td><td>Android app (runs yt-dlp)</td><td>PSF License 2.0; Apache 2.0 (OpenSSL), public domain (SQLite, XZ), MIT (libffi), bzip2 and zlib licenses · <a href="https://github.com/volodya-rua/NetherFlow/blob/main/licenses/yt-dlp-THIRD_PARTY_LICENSES.txt">all license texts</a> (Python's first in that file)</td></tr>
+    <tr><td>certifi © Kenneth Reitz</td><td>Android app (secure connections for yt-dlp)</td><td>MPL 2.0 · <a href="https://github.com/volodya-rua/NetherFlow/blob/main/licenses/certifi-MPL-2.0.txt">license text</a> · <a href="https://github.com/certifi/python-certifi">source</a></td></tr>
+    <tr><td>Capacitor © Drifty Co. (Ionic)</td><td>Android app</td><td>MIT · <a href="https://github.com/volodya-rua/NetherFlow/blob/main/licenses/Capacitor-MIT.txt">license text</a></td></tr>
+    <tr><td>electron-updater © Loopline Systems, electron-builder contributors, with the libraries it uses (builder-util-runtime, fs-extra, js-yaml, semver, sax, argparse and others)</td><td>Desktop app (updates)</td><td>MIT; ISC, Blue Oak 1.0.0 and Python-2.0 for some of its libraries · <a href="https://github.com/volodya-rua/NetherFlow/blob/main/licenses/electron-updater-LICENSES.txt">all license texts</a></td></tr>
+    <tr><td>three.js © three.js authors</td><td>Desktop app (Redline's 3D races)</td><td>MIT · <a href="https://github.com/volodya-rua/NetherFlow/blob/main/licenses/three.js-MIT.txt">license text</a> · <a href="https://github.com/mrdoob/three.js">source</a></td></tr>
+    <tr><td>Fluent Emoji © Microsoft Corporation (the 3D emoji in Extreme lyrics)</td><td>Desktop app</td><td>MIT · <a href="https://github.com/volodya-rua/NetherFlow/blob/main/licenses/FluentEmoji-MIT.txt">license text</a> · <a href="https://github.com/microsoft/fluentui-emoji">source</a></td></tr>
+    <tr><td>Android Jetpack (AndroidX) © The Android Open Source Project</td><td>Android app</td><td>Apache 2.0 · <a href="https://github.com/volodya-rua/NetherFlow/blob/main/licenses/Apache-2.0.txt">license text</a></td></tr>
+    <tr><td>Apache Cordova (Android framework) © The Apache Software Foundation. This product includes software developed at The Apache Software Foundation (http://www.apache.org/).</td><td>Android app</td><td>Apache 2.0 · <a href="https://github.com/volodya-rua/NetherFlow/blob/main/licenses/Apache-2.0.txt">license text</a></td></tr>
+  </table>
+
+  <h3>Typefaces</h3>
+  <p>Anton (Vernon Adams), Instrument Serif (Instrument) and Martian Mono (Evil Martians), all under the SIL Open Font License 1.1, included with the app (<a href="https://github.com/volodya-rua/NetherFlow/blob/main/licenses/Anton-OFL.txt">Anton</a>, <a href="https://github.com/volodya-rua/NetherFlow/blob/main/licenses/InstrumentSerif-OFL.txt">Instrument Serif</a>, <a href="https://github.com/volodya-rua/NetherFlow/blob/main/licenses/MartianMono-OFL.txt">Martian Mono</a> license texts).</p>
+  <p>The lyric font pairs (Settings › Lyrics font), from Google Fonts, included with the app; each under the SIL Open Font License 1.1 unless marked Apache License 2.0, with its license text: <a href="https://github.com/volodya-rua/NetherFlow/blob/main/licenses/AbrilFatface-OFL.txt">Abril Fatface</a>, <a href="https://github.com/volodya-rua/NetherFlow/blob/main/licenses/PlayfairDisplay-OFL.txt">Playfair Display</a>, <a href="https://github.com/volodya-rua/NetherFlow/blob/main/licenses/TiltNeon-OFL.txt">Tilt Neon</a>, <a href="https://github.com/volodya-rua/NetherFlow/blob/main/licenses/Yellowtail-Apache-2.0.txt">Yellowtail</a> (Apache 2.0), <a href="https://github.com/volodya-rua/NetherFlow/blob/main/licenses/PressStart2P-OFL.txt">Press Start 2P</a>, <a href="https://github.com/volodya-rua/NetherFlow/blob/main/licenses/VT323-OFL.txt">VT323</a>, <a href="https://github.com/volodya-rua/NetherFlow/blob/main/licenses/RubikVinyl-OFL.txt">Rubik Vinyl</a>, <a href="https://github.com/volodya-rua/NetherFlow/blob/main/licenses/DMSerifDisplay-OFL.txt">DM Serif Display</a>, <a href="https://github.com/volodya-rua/NetherFlow/blob/main/licenses/RubikGlitch-OFL.txt">Rubik Glitch</a>, <a href="https://github.com/volodya-rua/NetherFlow/blob/main/licenses/SpaceMono-OFL.txt">Space Mono</a>, <a href="https://github.com/volodya-rua/NetherFlow/blob/main/licenses/SedgwickAveDisplay-OFL.txt">Sedgwick Ave Display</a>, <a href="https://github.com/volodya-rua/NetherFlow/blob/main/licenses/PermanentMarker-Apache-2.0.txt">Permanent Marker</a> (Apache 2.0), <a href="https://github.com/volodya-rua/NetherFlow/blob/main/licenses/Orbitron-OFL.txt">Orbitron</a>, <a href="https://github.com/volodya-rua/NetherFlow/blob/main/licenses/ChakraPetch-OFL.txt">Chakra Petch</a>, <a href="https://github.com/volodya-rua/NetherFlow/blob/main/licenses/Unbounded-OFL.txt">Unbounded</a>, <a href="https://github.com/volodya-rua/NetherFlow/blob/main/licenses/CormorantGaramond-OFL.txt">Cormorant Garamond</a>, <a href="https://github.com/volodya-rua/NetherFlow/blob/main/licenses/BlackOpsOne-OFL.txt">Black Ops One</a>, <a href="https://github.com/volodya-rua/NetherFlow/blob/main/licenses/SpecialElite-Apache-2.0.txt">Special Elite</a> (Apache 2.0), <a href="https://github.com/volodya-rua/NetherFlow/blob/main/licenses/BagelFatOne-OFL.txt">Bagel Fat One</a>, <a href="https://github.com/volodya-rua/NetherFlow/blob/main/licenses/Pacifico-OFL.txt">Pacifico</a>, <a href="https://github.com/volodya-rua/NetherFlow/blob/main/licenses/ClimateCrisis-OFL.txt">Climate Crisis</a>, <a href="https://github.com/volodya-rua/NetherFlow/blob/main/licenses/LibreBodoni-OFL.txt">Libre Bodoni</a>, <a href="https://github.com/volodya-rua/NetherFlow/blob/main/licenses/PirataOne-OFL.txt">Pirata One</a>, <a href="https://github.com/volodya-rua/NetherFlow/blob/main/licenses/IMFellEnglish-OFL.txt">IM Fell English</a>.</p>
+
+  <h3>Redline's 3D races</h3>
+  <p>The circuits and what's round them (the ground's cover, forests, buildings, grandstands, barriers, roads) are built from <a href="https://www.openstreetmap.org/copyright">© OpenStreetMap contributors</a>' map data, available under the <a href="https://opendatacommons.org/licenses/odbl/1-0/">Open Database License 1.0</a>: so are the files NetherFlow makes from it, <code>race/tracks.json</code> and <code>race/maps/</code> (<code>tools/race-tracks.js</code> makes them again). The heights are NASA's Shuttle Radar Topography Mission data (SRTM, public domain), through <a href="https://www.opentopodata.org">OpenTopoData</a>.</p>
+  <p id="race-cars">The cars are 3D models by the people named below, under <a href="https://creativecommons.org/licenses/by/4.0/">Creative Commons Attribution 4.0</a>, made smaller for NetherFlow (their textures and meshes compressed, the largest simplified, badges, labels and stickers taken off). The cars' makers' names and designs are their trademarks; they don't endorse or sponsor NetherFlow.</p>
+  <ul id="race-car-list">
+    <li><a href="https://sketchfab.com/3d-models/de1ffd344c41481892511f7fd332c136">Porsche 911 (930) Turbo 1975</a> by Lexyc16</li>
+    <li><a href="https://sketchfab.com/3d-models/099b60042519463ead19ce054d479724">Lamborghini Revuelto</a> by Anatolian Studios</li>
+    <li><a href="https://sketchfab.com/3d-models/e645466636304e5c86e91103608aed38">Hoonicorn - A tribute to Ken Block (Updated)</a> by Chaser-fan</li>
+    <li><a href="https://sketchfab.com/3d-models/4b848fdaca2d44c29d961428e40d0ca2">Lamborghini Temerario</a> by Anatolian Studios</li>
+    <li><a href="https://sketchfab.com/3d-models/b53782a00cc240a191d5d7d005af1423">BMW M4csl</a> by Mpgs Studios</li>
+  </ul>
+
+  <h3>Riot Games</h3>
+  <p>The Tactical theme shows VALORANT's agents. NetherFlow was created under Riot Games' "Legal Jibber Jabber" policy using assets owned by Riot Games. Riot Games does not endorse or sponsor this project. The art isn't part of NetherFlow or its MIT license: the app fetches it while the theme is on, from valorant-api.com. VALORANT and its agents are Riot Games' trademarks and property.</p>
+
+  <h3>Content and data sources</h3>
+  <p>Song search, artwork and previews: Apple iTunes Search API and YouTube Music. Playback: YouTube (and, behind Extreme lyrics, the song's official music video there), and Audius (artists' own uploads there). Lyrics: LRCLIB, NetEase Cloud Music, Kugou, and YouTube Music (lyrics by LyricFind). Album artwork, songs, videos and lyrics are the property of their respective owners. NetherFlow is not affiliated with any of these services.</p>
+</main>
+<script>
+for (const ev of ['selectstart', 'dragstart', 'contextmenu']) addEventListener(ev, e => e.preventDefault(), true);
+// Jump to the requested section again once the fonts have loaded (they change the page height).
+document.fonts.ready.then(() => { if (location.hash) document.getElementById(location.hash.slice(1))?.scrollIntoView(); });
+// Inside the app, web and email links open in the real browser / email app instead of inside this panel.
+document.addEventListener('click', e => {
+  const a = e.target.closest('a[href^="http"], a[href^="mailto:"]');
+  if (!a) return;
+  e.preventDefault();
+  try { if (window.parent !== window && window.parent.openExternal) return window.parent.openExternal(a.href); } catch {}
+  window.open(a.href, '_blank', 'noopener');
+});
+</script>
+</body>
+</html>

@@ -425,7 +425,7 @@ NetherFlow has no accounts and no analytics, and sends nothing to its developer.
 stay on your device. When you use it, it talks directly to the services above (GitHub too: to look for a newer
 NetherFlow, and to update yt-dlp, on Android only if you turn on "Update the downloader"; and valorant-api.com, only with
 the Tactical theme), which see your IP address. A playlist you share lives only inside its link (the page it opens, on
-GitHub Pages, never gets the songs part). The full [Privacy Policy](legal.html#privacy) is in the app.
+GitHub Pages, never gets the songs part). The full [Privacy Policy](https://volodya-rua.github.io/NetherFlow/legal.html#privacy) is in the app and on the website.
 
 ## ⚖️ Legal
 
@@ -437,7 +437,7 @@ GitHub Pages, never gets the songs part). The full [Privacy Policy](legal.html#p
   you live may not allow it either. Whether to use it is your choice and your responsibility: only save what you're
   allowed to keep, for your own personal listening.
 - NetherFlow also skips and blocks ads inside YouTube's player, which YouTube's terms may not allow.
-- The [Terms of Use](legal.html#terms) apply to using the app. If you hold rights in something and have a concern,
+- The [Terms of Use](https://volodya-rua.github.io/NetherFlow/legal.html#terms) apply to using the app. If you hold rights in something and have a concern,
   contact the developer (below): every notice is reviewed in good faith.
 - The Tactical theme shows VALORANT's agents: NetherFlow was created under Riot Games' "Legal Jibber Jabber" policy using
   assets owned by Riot Games. Riot Games does not endorse or sponsor this project. The art isn't in this repository or

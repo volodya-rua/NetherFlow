@@ -22,13 +22,26 @@ SOFTWARE.
 
 ---------------------------------------------------------------------------------
 
-This license covers NetherFlow's own code, design and artwork. Third-party code
-included in this repository keeps its own license:
+This license covers NetherFlow's own code, design and artwork. Third-party material
+in this repository keeps its own license and is not covered by the MIT License above:
 
-  android/app/src/main/python/yt_dlp/    yt-dlp, The Unlicense (public domain)
-  android/app/src/main/python/certifi/   certifi, Mozilla Public License 2.0
-  fonts/                                 Anton, Instrument Serif, Martian Mono:
-                                         SIL Open Font License 1.1
+  android/app/src/main/python/yt_dlp/    yt-dlp: The Unlicense (public domain)
+  android/app/src/main/python/certifi/   certifi: Mozilla Public License 2.0
+  fonts/ and docs/fonts/                 the typefaces: SIL Open Font License 1.1,
+                                         except Permanent Marker, Special Elite and
+                                         Yellowtail: Apache License 2.0
+  emoji/                                 Microsoft's Fluent Emoji: MIT
+  race/three/                            three.js: MIT
+  race/tracks.json and race/maps/        made from map data © OpenStreetMap
+                                         contributors: Open Database License 1.0
+  race/cars/                             the 3D car models: Creative Commons
+                                         Attribution 4.0, by the authors named in
+                                         race/cars.json
+  docs/media/music/                      songs by HoliznaCC0: public domain (CC0 1.0)
 
 Their license texts are in licenses/. The full list of components and licenses is
-in the app (About › Licenses), or in legal.html.
+in the app (About › Licenses), in legal.html, and on the website:
+https://volodya-rua.github.io/NetherFlow/legal.html#licenses
+
+This license gives no rights to anyone else's trademarks, music, videos, lyrics or
+artwork, including the names and designs of the cars in race/cars/.
