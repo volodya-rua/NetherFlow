@@ -8,7 +8,7 @@
   <img alt="Free, no ads of its own, no account" src="https://img.shields.io/badge/free%20%C2%B7%20no%20ads%20of%20its%20own%20%C2%B7%20no%20account-ffb21e?style=for-the-badge&labelColor=160a06">
   <a href="LICENSE"><img alt="GPL v3 License" src="https://img.shields.io/badge/license-GPL%20v3-f6ede4?style=for-the-badge&labelColor=160a06"></a>
   <br>
-  <a href="#hucla"><img alt="A HuCla build: Human × Claude" src="https://img.shields.io/badge/HuCla-Human%20%C3%97%20Claude-d97757?style=for-the-badge&logo=claude&logoColor=white&labelColor=160a06"></a>
+  <a href="#hucla"><img alt="A HuCla build: Human × Claude" src="https://img.shields.io/badge/HuCla-Human%20%C3%97%20Claude-d97757?style=for-the-badge&labelColor=160a06"></a>
   <a href="https://www.instagram.com/volodya.rua/"><img alt="Instagram @volodya.rua" src="https://img.shields.io/badge/Instagram-@volodya.rua-e1306c?style=for-the-badge&logo=instagram&logoColor=white&labelColor=160a06"></a>
 </p>
 
@@ -52,6 +52,15 @@ card anyway), about 18 MB smaller, and it updates to Lite.
 <a id="whats-new"></a>
 
 ## 🔥 What's new
+
+### 📺 1.4.3: the whole app on your TV's remote
+
+- **Every screen works with the remote.** Move songs in the queue (OK on a song's handle, then up and down), read the
+  terms, and use the QR code, Rename and artist pages over the Library. Back always closes the screen on top
+- **The TV home's title** no longer runs into the header
+- **Easier on the eyes:** the lyric looks that flash do it at most twice a second, never when your system asks for less
+  motion, and NetherFlow tells you the first time
+- The terms changed a little (which country's law applies, and a note on flashing light), so you're asked to accept them again
 
 ### 🔐 1.4.2: Listen together and sync, locked down tighter
 
@@ -534,7 +543,7 @@ Wanna talk, found a bug, got an idea for a theme? Hit me up.
 
 <p align="center">
   <a href="https://www.instagram.com/volodya.rua/"><img alt="Follow @volodya.rua on Instagram" src="https://img.shields.io/badge/Follow-@volodya.rua-e1306c?style=for-the-badge&logo=instagram&logoColor=white&labelColor=160a06"></a>
-  <a href="mailto:volodya.rua@gmail.com"><img alt="Email volodya.rua@gmail.com" src="https://img.shields.io/badge/Email-volodya.rua@gmail.com-ff4a1c?style=for-the-badge&logo=gmail&logoColor=white&labelColor=160a06"></a>
+  <a href="mailto:volodya.rua@gmail.com"><img alt="Email volodya.rua@gmail.com" src="https://img.shields.io/badge/Email-volodya.rua@gmail.com-ff4a1c?style=for-the-badge&labelColor=160a06"></a>
   <br><br>
   <sub>made by <b>Volodya.rua</b> · a <b>HuCla</b> build</sub>
 </p>
