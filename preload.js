@@ -2,6 +2,8 @@
 const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('netherflowApp', {
   lite: process.argv.includes('--nf-lite'), // NetherFlow Lite: no Extreme+ (see main.js)
+  portMoved: process.argv.includes('--nf-port-moved'), // its usual port was taken: the library and settings kept there aren't here (see main.js)
+  country: (process.argv.find(a => a.startsWith('--nf-country=')) || '').slice(13), // Windows' own region (its language often has none, or another country's)
   win: action => ipcRenderer.send('win', action), // 'min' | 'max' | 'close'
   onMaximized: cb => ipcRenderer.on('maximized', (_, on) => cb(on)),
   awake: on => ipcRenderer.send('awake', !!on), // keep the screen on (while a song plays)

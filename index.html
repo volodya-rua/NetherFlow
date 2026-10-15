@@ -32,6 +32,7 @@ body { background: var(--bg); color: var(--ink); overflow: hidden; transition: b
 input, textarea { user-select: text; -webkit-user-select: text; }
 ::selection { background: var(--a); color: var(--bg); }
 :focus { outline: none; }
+.kb :focus-visible:not(input:not([type=range]), textarea) { outline: 2px solid var(--a); outline-offset: 3px; } /* (going round by Tab: see tabbing; text fields have their own line and caret) */
 button { font: inherit; color: inherit; background: none; border: 0; padding: 0; letter-spacing: inherit; cursor: var(--cur-hand, pointer); }
 /* scrollbars: a thin rounded thumb in the mood's color, no track, no arrow buttons (not Windows' grey ones) */
 /* scrollbars: a thin bar, inset from the edge and clear of rounded corners, so it never runs over a box's border */
@@ -936,7 +937,7 @@ body.home .home-now { display: flex; }
 .theme-cover .cover-bg { display: block; opacity: 1; @starting-style { opacity: 0; } } /* the canvas stays under it, plain: it keeps the hidden players out of sight */
 .theme-cover:not(.grain-still) .cover-bg { animation: drift 40s ease-in-out infinite alternate; } /* (only when it's seen) */
 
-@media (max-width: 720px) {
+@media (max-width: 900px) and (min-height: 521px) { /* (and a narrow window, a tablet upright: in one row, the bar's parts ran into each other) */
   /* phones: the song's name gets the first row, the controls the second (spread across), the time and sync the third */
   .bar { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "now vol" "tr tr" "time time"; gap: 4px 14px; }
   .transport { justify-content: space-between; }
@@ -970,6 +971,31 @@ body.home .home-now { display: flex; }
   .row { grid-template-columns: 48px minmax(0, 1fr) auto; gap: 12px; padding: 8px 4px; }
   .row img { width: 48px; height: 48px; }
   .row .idx { display: none; }
+}
+@media (max-width: 900px) and (max-height: 520px) { /* narrow and short — a phone sideways, a small laptop at 200 %: two rows, the song's
+  name and the volume, then the controls and the time (three, as above, left the lyrics no room) */
+  .bar { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "now vol" "tr time"; gap: 0 14px; }
+  .now { grid-area: now; }
+  .volume { grid-area: vol; }
+  .transport { grid-area: tr; }
+  .time { grid-area: time; }
+  .play { width: 64px; height: 64px; }
+  .core { width: 36px; height: 36px; }
+  .now-cover { width: 40px; height: 40px; margin-right: 8px; }
+  .title { font-size: 22px; }
+  .sub { margin-top: 4px; }
+}
+@media (max-width: 1100px) { .bar .vol { display: none; } } /* (the volume button keeps its own slider: room for the song's name) */
+@media (max-height: 400px) { /* very short — a small phone sideways: the header in one row, no section map, the sung line alone (see
+  fitDeck), a smaller play button; else the lyrics had a strip a line high */
+  .top { flex-wrap: nowrap; gap: 12px; }
+  .brand { font-size: 20px; gap: 8px; }
+  .brand-mark { width: 24px; height: 24px; }
+  .mood span { display: none; }
+  .files { flex-wrap: nowrap; gap: 4px; }
+  .map, .prev, .next { display: none; }
+  .play { width: 56px; height: 56px; }
+  .core { width: 32px; height: 32px; }
 }
 
 /* ---------- cursor: a normal arrow in NetherFlow's colors — dark, edged in light; over anything clickable, filled with
@@ -1506,6 +1532,13 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
   <div id="results" class="results"></div>
 </dialog>
 
+<script>/* (kept to old JavaScript) a phone whose Android System WebView is years old: the page needs a newer one (popovers:
+  Chrome 114 and later); said so, not a blank screen */
+if (!('showPopover' in HTMLElement.prototype)) document.addEventListener('DOMContentLoaded', function () {
+  document.body.innerHTML = '<div style="padding:12vh 8vw;font:18px/1.5 sans-serif;color:#eee;background:#0b0503;min-height:100vh;box-sizing:border-box">'
+    + '<b style="font-size:24px">NetherFlow needs a newer Android System WebView</b><p>Update <b>Android System WebView</b> (and Chrome) from your app store, then open NetherFlow again.</p></div>';
+});
+</script>
 <script src="lib.js"></script>
 <script>
 const $ = id => document.getElementById(id);
@@ -1606,9 +1639,12 @@ function makeSing(c) {
   return { inp, out, set: a => { const t = c.currentTime; keep.gain.setTargetAtTime(1 - a, t, .05); lowG.gain.setTargetAtTime(a, t, .05); highG.gain.setTargetAtTime(a * .7, t, .05); } };
 }
 
-// The app is played with the mouse, touch and its shortcut keys: Tab doesn't walk the focus round the controls, and a
-// button clicked doesn't keep the focus (so Space or Enter never click it again).
-addEventListener('keydown', e => { if (e.key === 'Tab') e.preventDefault(); }, true);
+// Played with the mouse, touch and the shortcut keys; or by keyboard alone: Tab goes round the controls (each shown with a
+// ring) and Space / Enter press the one it's on. A click or a touch and it's the mouse again: no rings, Space plays / pauses,
+// and a button clicked doesn't keep the focus (so Space or Enter never click it again).
+let tabbing = false;
+addEventListener('keydown', e => { if (e.key === 'Tab' && !tabbing) { tabbing = true; document.body.classList.add('kb'); } }, true);
+addEventListener('pointerdown', () => { if (tabbing) { tabbing = false; document.body.classList.remove('kb'); } }, true);
 addEventListener('click', e => { if (e.detail) e.target.closest?.('button, summary')?.blur(); }); // (detail: a real click, not a key)
 // Nothing can be selected, dragged, dropped in or long-pressed for a menu; text fields still work as usual.
 const inField = e => (e.target.nodeType === 1 ? e.target : e.target.parentElement)?.closest('input, textarea');
@@ -1913,6 +1949,8 @@ const Upd = native ? Capacitor.Plugins.Updater : null, RELEASES = 'https://githu
 // state: '' not asked yet · checking · none (the latest) · ready (one to get) · getting · got (Windows: restart to finish) ·
 // store (an app store's build) · portable · error
 const upd = { state: '', version: '', next: '', kind: '', size: 0, frac: 0, err: '', u: null };
+// (no connection, in whatever words the system had for it: said plainly)
+const updErr = m => !navigator.onLine || /internet|resolve host|ENOTFOUND|ERR_NAME|ECONN|timed? ?out|network|connect/i.test(m || '') ? 'GitHub couldn\'t be reached (check the connection)' : m || 'GitHub couldn\'t be reached';
 const newer = (a, b) => { const x = String(a).split('.').map(Number), y = String(b).split('.').map(Number); for (let i = 0; i < 4; i++) if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0); return false; };
 async function updCheck(quiet) {
   if (upd.state === 'checking' || upd.state === 'getting' || upd.state === 'got') return;
@@ -1921,19 +1959,20 @@ async function updCheck(quiet) {
     if (window.netherflowApp?.updateCheck) {
       const r = await netherflowApp.updateCheck();
       upd.version = r?.version || '';
-      Object.assign(upd, !r?.can ? { state: r?.portable ? 'portable' : 'none' } : r.error ? { state: 'error', err: r.error } : r.next ? { state: 'ready', next: r.next, kind: 'app' } : { state: 'none' });
+      Object.assign(upd, !r?.can ? { state: r?.portable ? 'portable' : 'none' } : r.error ? { state: 'error', err: updErr(r.error) } : r.next ? { state: 'ready', next: r.next, kind: 'app' } : { state: 'none' });
     } else if (Upd) {
       const i = await Upd.info();
       upd.version = i.web;
       if (!i.ours) upd.state = 'store';
       else {
+        const body = await nativeGet(RELEASES + '/download/update.json'); // (no connection: an error, not "the latest")
         let u = null;
-        try { u = JSON.parse(await nativeGet(RELEASES + '/download/update.json')); } catch {} // (none in the latest release: nothing for Android in it)
+        try { u = JSON.parse(body); } catch {} // (none in the latest release, GitHub's "Not Found": nothing for Android in it)
         const web = u?.min <= i.code;
         Object.assign(upd, { u }, u?.version && newer(u.version, i.web) ? { state: 'ready', next: u.version, kind: web ? 'web' : 'apk', size: web ? 0 : u.apk.size } : { state: 'none' });
       }
     } else upd.state = 'none'; // (in a browser: always the latest)
-  } catch (e) { Object.assign(upd, { state: 'error', err: e.message || 'GitHub couldn\'t be reached' }); }
+  } catch (e) { Object.assign(upd, { state: 'error', err: updErr(e.message) }); }
   store.set('netherflow.updchecked', String(Date.now()));
   updShow();
   if (quiet && upd.state === 'ready' && store.get('netherflow.updtold') !== upd.next) { store.set('netherflow.updtold', upd.next); toast(`NetherFlow ${upd.next} is out · Settings › Update`); }
@@ -2067,7 +2106,7 @@ function fitDeck() {
   const deck = stage.querySelector('.deck:not(.leaving)');
   if (!deck) return;
   const phone = innerWidth <= 720, ls = LSIZE[lsize], h = stage.clientHeight, cur = deck.querySelector('.cur'), title = deck.querySelector('.it-title');
-  if (cur && !SELF_LAID.has(lanim)) fitText(cur, Math.min(innerHeight * (phone ? .095 : .15), phone ? 80 : 150) * ls, h * .58);
+  if (cur && !SELF_LAID.has(lanim)) fitText(cur, Math.min(innerHeight * (phone ? .095 : .15), phone ? 80 : 150) * ls, h * (innerHeight <= 400 ? .92 : .58)); // (very short: alone on the stage)
   if (title) fitText(title, Math.min(innerHeight * .13, phone ? 64 : 140), h * .42);
 }
 // the Cover view's title and lyric line: their CSS size is the most they get; at most two rows each
@@ -2539,7 +2578,19 @@ function nextTrack() {
 }
 // (from a song added by hand, back is the list's song that played before it)
 function prevTrack() { const at = fromUpNext ? qi : qi - 1; if (P.t > 3 || !queue[at]) P.seek(0); else playTrack(queue[at], '', false, true); }
-function songEnded() { if (tg.role === 'guest') return; if (repeat === 'one') { P.seek(0); P.play(); } else if (!hasNext() && auto.pending) auto.pending.then(() => hasNext() && nextTrack()); else nextTrack(); }
+function songEnded() {
+  if (tg.role === 'guest') return;
+  if (repeat === 'one') { P.seek(0); P.play(); }
+  else if (hasNext()) nextTrack();
+  // the list's end, Autoplay on: the song it looked up as this one started; if that came to nothing (no connection just
+  // then, YouTube slow to answer), looked up again now, else one of the next few it showed in the queue (the music
+  // stopped there for good before)
+  else (auto.pending || autoFill(current))?.then(() => {
+    const spare = !hasNext() && auto.more.find(s => !queue.some(q => q.trackId === s.trackId));
+    if (spare) { queue = [...queue, spare]; auto.more = auto.more.filter(s => s !== spare); queueChanged(); }
+    if (hasNext()) nextTrack();
+  });
+}
 // ---------- Autoplay: when the list runs out, songs like the one playing carry on (Settings, and the queue) ----------
 // As on YouTube Music: its radio for the song playing — YouTube Music's own "more like this", from what listeners play
 // together (genre, mood, era, language) — then ranked here, for this listening:
@@ -2613,7 +2664,8 @@ function autoFill(t) {
     const seed = await seedFor(t);
     if (!seed || current !== t) return;
     auto.seeds = [seed, ...auto.seeds.filter(s => s !== seed)].slice(0, 3);
-    const lists = await Promise.all(auto.seeds.map(radioFor));
+    let lists = await Promise.all(auto.seeds.map(radioFor));
+    if (!lists[0].length) lists = [await api.ytm(t.artistName || t.trackName).catch(() => []), ...lists.slice(1)]; // (YouTube's radio not answering: the artist's own songs, not silence)
     if (current !== t || hasNext() || !autoOn) return;
     const ranked = autoRank(t, lists);
     if (!ranked.length) return;
@@ -2658,10 +2710,29 @@ $('repeatBtn').onclick = () => setRepeat(REPEATS[(REPEATS.indexOf(repeat) + 1) %
 // takes over
 function ytState(e) {
   if (e.target !== yt) return mixState(e);
+  if (engine === 'yt') stallWatch(e.data === -1 || e.data === 3);
   if (engine !== 'yt' || e.data === 3) return; // 3 = buffering: keep the current state
   setPlaying(e.data === 1);
   if (e.data === 1) { ytPost({ nfEq: eqMsg() }); ytPost({ nfMeta: songMeta }); ytPost({ nfViz: vizWanted() }); holdVolume(); } // a new video: equalizer, song, spectrum please; our volume
   if (e.data === 0) songEnded();
+}
+// a song that doesn't start, or stops to load and never carries on (the connection, YouTube not sending it — it waited
+// forever before, looking loaded): after 20 s it's loaded again where it was, then YouTube's next match for it, then said
+let stall = { timer: 0, tries: 0, load: -1 };
+function stallWatch(on) {
+  clearTimeout(stall.timer);
+  if (!on) return;
+  if (stall.load !== loadId) stall = { timer: 0, tries: 0, load: loadId };
+  stall.timer = setTimeout(() => {
+    let s; try { s = yt.getPlayerState(); } catch { return; }
+    if (engine !== 'yt' || stall.load !== loadId || (s !== -1 && s !== 3)) return;
+    const at = Math.max(0, P.t - 1), vid = yt.getVideoData?.()?.video_id;
+    if (stall.tries++ === 0 && vid) { status('● loading it again'); yt.loadVideoById(vid, at); }
+    else if (ytQueue.length && stall.tries <= 2) { status('● another upload of it'); yt.loadVideoById(ytQueue.shift().id, at); }
+    else if (navigator.onLine && hasNext()) { toast(`Couldn't load ${current.trackName}: on to the next`); return nextTrack(); } // (as other players skip one that won't play)
+    else { yt.stopVideo(); setPlaying(false); status('◇ couldn\'t load it'); return message('Couldn\'t load it', navigator.onLine ? 'YouTube isn\'t sending this song right now: try again, or another' : 'you\'re offline: songs saved on this device still play'); }
+    stallWatch(true);
+  }, 20000);
 }
 // not embeddable / removed: try the next match, then fall back to the preview (not once another song, saved or a
 // preview, has taken over: the next match would play over it)
@@ -2812,7 +2883,11 @@ function audiusFor(t) {
   return audiusCache.get(t.trackId);
 }
 // Audius's stream failing (gone, or the network): the same song from YouTube instead
-audio.onerror = () => { const t = current; if (engine === 'audio' && t && audio.src.includes('audius.co')) { audiusBad.add(t.trackId); playTrack(t, '', fromUpNext, true); } };
+audio.onerror = () => {
+  const t = current; if (engine !== 'audio' || !t || !audio.getAttribute('src')) return;
+  if (audio.src.includes('audius.co')) { audiusBad.add(t.trackId); playTrack(t, '', fromUpNext, true); }
+  else if (!audio.src.startsWith('blob:')) { audio.pause(); setPlaying(false); status("◇ couldn't load it"); message("Couldn't play it", navigator.onLine ? "the preview didn't load: try again" : "you're offline: songs saved on this device still play"); }
+};
 // While a song plays, the next one's upload and lyrics are looked up, so skipping to it (or its turn) starts at once.
 function prefetchNext() {
   const n = upNext[0] || queue[qi + 1];
@@ -4114,7 +4189,7 @@ async function playTrack(t, term = '', queued = false, stay = false, mixed = nul
         await loadYT();
         if (id !== loadId) return;
         [vid, ...ytQueue] = vids;
-        yt.loadVideoById(vid.id);
+        yt.loadVideoById(vid.id); stallWatch(true);
         source = '◆ full song';
       } catch (e) { why = e.message; vid = null; }
     }
@@ -4123,7 +4198,10 @@ async function playTrack(t, term = '', queued = false, stay = false, mixed = nul
   if (!vid) {
     useEngine('audio');
     const src = au ? au.url : t.previewUrl;
-    if (!src) return message('No source', 'nothing playable for this one');
+    if (!src) { // (the song before mustn't keep playing under this one's name)
+      audio.pause(); audio.removeAttribute('src'); audio.load(); setPlaying(false); status('◇ nothing playable');
+      return message('No source', 'nothing playable for this one');
+    }
     audio.src = src;
     P.play();
   }
@@ -4269,7 +4347,7 @@ function updateLikeBtn() {
   $('likeBtn').setAttribute('aria-label', on ? 'Remove from Liked songs' : 'Add to Liked songs');
 }
 function newPlaylist(name) {
-  const p = { id: 'p' + Date.now().toString(36), name: name.trim().slice(0, 80) || `Playlist ${library.playlists.length + 1}`, tracks: [] };
+  const p = { id: 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7), name: name.trim().slice(0, 80) || `Playlist ${library.playlists.length + 1}`, tracks: [] };
   library.playlists.push(p);
   saveLib();
   return p;
@@ -5037,16 +5115,29 @@ const cutText = (g, s, w) => { if (g.measureText(s).width <= w) return s; while 
 // fails is tried again, slower, never counted as not found; if YouTube stops answering for minutes, or the app closes
 // first, what's left is kept with the playlist, and importing the same link again finishes it (just those songs).
 const PLAYLIST_LINK = /^https?:\/\/((music\.youtube\.com|(www\.|m\.)?youtube\.com|youtu\.be|open\.spotify\.com|music\.apple\.com)\S*(list=|\/playlist\/|\/album\/|\/browse\/VL)|spotify\.(app\.)?link\/\w+)/i;
+// the link in what was pasted: a message's words around it ("Listen on Spotify: https://…"), a full stop after it
+const linkIn = s => (String(s).match(/https?:\/\/[^\s<>"']+/) || [String(s).trim()])[0].replace(/[).,!?\]]+$/, '');
+// the same playlist's link, however it was shared: without Spotify's ?si=… (new at every share) and other trackers
+const linkKey = l => { try { const u = new URL(l), list = u.searchParams.get('list'); return u.hostname.replace(/^(www|m)\./, '') + u.pathname.replace(/\/+$/, '') + (list ? '?list=' + list : '') + u.hash; } catch { return l; } };
 const ytmToTrack = v => ({ kind: 'song', trackId: 'yt:' + v.id, ytId: v.id, ytTitle: v.title, trackName: v.title, artistName: v.artist, collectionName: v.album || 'YouTube Music', artworkUrl100: v.art, trackTimeMillis: v.dur * 1000 });
 async function importPlaylist(link) {
+  link = linkIn(link);
   const ours = SHARE_LINK.test(link);
   if (!ours && !PLAYLIST_LINK.test(link)) return toast('That isn\'t a Spotify, Apple Music, YouTube or NetherFlow playlist link');
-  let p = library.playlists.find(x => x.src === link && x.left?.length) || null, pl; // (one cut short before: its songs left)
-  if (p) pl = { name: p.name, tracks: p.left, store: p.store };
+  // imported from this link before: into that one again (one cut short: just its songs left; else the songs it lacks —
+  // new in the list since, or cut off by the service last time — not a second copy)
+  let p = library.playlists.find(x => x.src && linkKey(x.src) === linkKey(link)) || null, pl;
+  const again = !!p && !p.left?.length;
+  if (p && !again) pl = { name: p.name, tracks: p.left, store: p.store };
   else {
     toast('Reading the playlist…');
     try { pl = ours ? await readShareLink(link) : await api.playlist(link); }
-    catch (e) { return toast(ours ? 'That playlist link is cut short or broken' : 'Couldn\'t read that playlist: ' + (e.message || 'it may be private')); }
+    catch (e) { // (said so a person can do something about it)
+      const m = String(e.message || '');
+      return toast(ours ? 'That playlist link is cut short or broken'
+        : /fetch failed|failed to fetch|timeout|network|ENOTFOUND|ECONN|EAI_AGAIN/i.test(m) ? "Couldn't reach it: check the connection and try again"
+        : /page changed|unreadable|^not a playlist link$|^$/i.test(m) ? "Couldn't read that playlist: it may be private, or the link may be wrong" : "Couldn't read that playlist: " + m);
+    }
     if (!pl?.tracks?.length) return toast('That playlist looks empty (or private)');
   }
   const base = p ? p.tracks.slice() : [], out = new Array(pl.tracks.length).fill(null), total = pl.tracks.length;
@@ -5058,8 +5149,8 @@ async function importPlaylist(link) {
     for (const x of out) if (x && !ids.has(x.trackId)) { ids.add(x.trackId); t.push(slim(x)); }
     if (!t.length) return;
     p ||= newPlaylist(pl.name);
-    p.tracks = t;
-    if (left.length) Object.assign(p, { src: link, left: left.map(([s]) => s), store: pl.store }); else { delete p.src; delete p.left; delete p.store; }
+    Object.assign(p, { tracks: t, src: link, store: pl.store }); // (its link kept: imported again, it's this one that's filled)
+    if (left.length) p.left = left.map(([s]) => s); else delete p.left;
     saveLib();
   };
   // Apple's: by their ids, in batches (the store's own entries: cover, album, genre, preview)
@@ -5073,8 +5164,11 @@ async function importPlaylist(link) {
   pl.tracks.forEach((s, i) => { if (s.yt && !out[i]) { out[i] = ytmToTrack({ id: s.yt, title: s.title, artist: s.artist, album: s.album, dur: s.dur, art: `https://i.ytimg.com/vi/${s.yt}/hqdefault.jpg` }); done++; } });
   // the rest: YouTube Music's song search, its best match (only those with a name to search: a shared link's Apple
   // song that Apple no longer has is just an id)
-  const rest = pl.tracks.map((s, i) => Object.assign([s, i], { tries: 0 })).filter(([s, i]) => !out[i] && s.title);
-  notFound = pl.tracks.filter((s, i) => !out[i] && !s.title).length; done += notFound;
+  // (imported again: a song the playlist has already, by its name and first artist, isn't looked for again)
+  const songKey = (title, artist) => words(clean(title)).join(' ') + '|' + words((artist || '').split(/,|&| and | feat\.? | x /i)[0]).join(' ');
+  const known = new Set(again ? p.tracks.map(t => songKey(t.trackName, t.artistName)) : []);
+  const rest = pl.tracks.map((s, i) => Object.assign([s, i], { tries: 0 })).filter(([s, i]) => !out[i] && s.title && !known.has(songKey(s.title, s.artist)));
+  notFound = pl.tracks.filter((s, i) => !out[i] && !s.title).length; done = total - rest.length;
   keep(rest);
   const fits = (v, s) => { const a = words(clean(v.title)).join(' '), b = words(clean(s.title)).join(' '), who = words((s.artist || '').split(/,|&| and | feat\.? | x /i)[0]).join(' '); // ("and" or "&": the same band)
     return !!a && (a === b || a.startsWith(b + ' ') || b.startsWith(a + ' ')) && (!who || words(v.artist).join(' ').includes(who)) && (!s.dur || !v.dur || Math.abs(v.dur - s.dur) <= 8); };
@@ -5103,7 +5197,7 @@ async function importPlaylist(link) {
   keep(rest);
   if (!p) return toast(rest.length ? 'YouTube isn\'t answering right now: import it again in a while' : 'None of its songs could be found here');
   if (rest.length) toast(`YouTube stopped answering for now: ${p.tracks.length} songs in. Import the same link again later for the other ${rest.length}`);
-  else toast(`Imported ${pl.name}: ${p.tracks.length} songs` + (notFound ? ` (${notFound} not found)` : '') + (pl.partial ? `. ${pl.from || 'The service'} stopped sending the rest: import it again later for all of it` : ''));
+  else toast((again ? `${p.name}: ` + (p.tracks.length > base.length ? `${p.tracks.length - base.length} new song${p.tracks.length - base.length > 1 ? 's' : ''} added` : 'nothing new in it') : `Imported ${pl.name}: ${p.tracks.length} songs`) + (notFound ? ` (${notFound} not found)` : '') + (pl.partial ? `. ${pl.from || 'The service'} stopped sending the rest: import it again later for all of it` : ''));
   openLibrary({ kind: 'playlist', id: p.id });
 }
 // ---------- share a playlist: a link, and its QR code, that carry the songs themselves ----------
@@ -5661,7 +5755,9 @@ $('nowMore').onclick = () => current && songMenu(current, $('nowMore'));
 // ---------- catalog: Apple's iTunes Search API ----------
 // It only returns exact matches, so search tries the user's own store and the US store, retries with
 // fewer words when a long name finds nothing, and ranks songs by how many of the typed words they match.
-const STORE = (navigator.language.split('-')[1] || 'US').toUpperCase();
+// (the store of the person's own country: Windows says where (its language often names no country, or another's,
+// as "en-US" in India); a phone's language does)
+const STORE = (/^[A-Za-z]{2}$/.test(window.netherflowApp?.country || '') ? netherflowApp.country : navigator.language.split('-')[1] || 'US').toUpperCase();
 const STORES = STORE === 'US' ? ['US'] : [STORE, 'US'];
 // (answers kept for the session: typing a letter more and back again, or the same search later, is instant)
 const itCache = new Map();
@@ -5674,7 +5770,8 @@ async function itunes(path, params, signal) {
   itCache.set(url, out);
   return out;
 }
-const quiet = e => { if (e.name === 'AbortError') throw e; return []; };
+let searchFailed = false; // (a source didn't answer: no results then means no connection, not a spelling)
+const quiet = e => { if (e.name === 'AbortError') throw e; searchFailed = true; return []; };
 const words = s => (s || '').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^\p{L}\p{N}]+/gu, ' ').trim().split(' ').filter(Boolean);
 const sameWords = (a, b) => words(a).join(' ') === words(b).join(' ');
 const contains = (big, small) => { const w = words(big); return words(small).every(x => w.includes(x)); };
@@ -5712,7 +5809,7 @@ const ytmFind = memo(q => api.ytm(q), () => true);
 async function searchYtm(term) {
   if (!fullSongs) return [];
   // (given up on after 3 s: Apple's results don't wait longer for it)
-  const found = await Promise.race([ytmFind(term).catch(() => []), new Promise(r => setTimeout(r, 3000, []))]);
+  const found = await Promise.race([ytmFind(term).catch(() => { searchFailed = true; return []; }), new Promise(r => setTimeout(r, 3000, []))]);
   return Object.assign(found.map(v => ({ kind: 'song', trackId: 'yt:' + v.id, ytId: v.id, ytTitle: v.title, trackName: v.title,
     artistName: v.artist, collectionName: v.album || 'YouTube Music', artworkUrl100: v.art, trackTimeMillis: v.dur * 1000 })), { corrected: found.corrected || '' });
 }
@@ -5831,15 +5928,17 @@ function openAlbumPage(a) { apData = null; if (!$('artistPage').open) { $('artis
 async function runSearch(term) {
   searchCtl?.abort();
   if (!term.trim()) return showHistory();
-  if (PLAYLIST_LINK.test(term.trim()) || SHARE_LINK.test(term.trim())) {
+  const lk = linkIn(term);
+  if (PLAYLIST_LINK.test(lk) || SHARE_LINK.test(lk)) {
     const b = el('button', 'pill', 'Import this playlist');
-    b.onclick = () => { dlg.close(); importPlaylist(term.trim()); };
+    b.onclick = () => { dlg.close(); importPlaylist(lk); };
     $('sstat').textContent = 'A playlist link';
-    return $('results').replaceChildren(el('p', 'empty', SHARE_LINK.test(term.trim()) ? 'Shared from NetherFlow: its songs, made into a playlist in your Library.'
+    return $('results').replaceChildren(el('p', 'empty', SHARE_LINK.test(lk) ? 'Shared from NetherFlow: its songs, made into a playlist in your Library.'
       : 'Spotify, Apple Music or YouTube: its songs, made into a playlist in your Library.'), b);
   }
   const ctl = searchCtl = new AbortController();
   $('sstat').textContent = '● searching';
+  searchFailed = false;
   try {
     let [songs, artists, ytm, albums] = await Promise.all([searchSongs(term, ctl.signal), searchArtists(term, ctl.signal), searchYtm(term), searchAlbums(term, ctl.signal)]);
     if (ctl.signal.aborted) return;
@@ -5904,7 +6003,7 @@ async function runSearch(term) {
     $('results').replaceChildren(...out);
     $('results').scrollTop = 0;
     const note = fixed ? ` · showing results for “${fixed}”` : '';
-    $('sstat').textContent = n ? `${n} songs${note} · ${fullSongs ? 'full songs' : FILE_NOTE}` : `Nothing${note}. Try another spelling.`;
+    $('sstat').textContent = n ? `${n} songs${note} · ${fullSongs ? 'full songs' : FILE_NOTE}` : searchFailed ? "Couldn't reach the music catalog: check the connection." : `Nothing${note}. Try another spelling.`;
   } catch (e) { if (e.name !== 'AbortError') $('sstat').textContent = 'Search is offline. Songs you saved are in your Library.'; }
 }
 function artistCards(artists, songs) {
@@ -6068,6 +6167,8 @@ window.openExternal = url => native ? (location.href = url) : window.open(url, '
 
 const TERMS = 'netherflow.terms', TERMS_VERSION = '2026-10-15.2'; // bump when the terms change: everyone is asked again
 if (store.get(TERMS) !== TERMS_VERSION) { $('consent').showModal(); placeWinctl(); }
+// its usual port taken (see main.js): the library and settings are kept under that one, so here all looks new; said so
+if (window.netherflowApp?.portMoved) setTimeout(() => { toast('Something else is using NetherFlow\'s port, so your library and settings aren\'t shown. Close it (or another NetherFlow) and open NetherFlow again.'); clearTimeout(toastTimer); toastTimer = setTimeout(() => $('toast').hidePopover(), 15000); }, 1500);
 else if (fullSongs) setTimeout(() => loadYT().catch(() => {}), 2500); // (the first song then starts sooner)
 $('consent').addEventListener('cancel', e => e.preventDefault()); // Esc doesn't count as agreeing
 $('agree').onclick = () => { store.set(TERMS, TERMS_VERSION); $('consent').close(); };
@@ -6101,8 +6202,13 @@ function showSuggest(v) {
     }));
   }, 120);
 }
-$('q').oninput = e => { clearTimeout(qTimer); qTimer = setTimeout(() => runSearch(e.target.value), 280); showSuggest(e.target.value); };
+// a computer's input method (Chinese, Japanese, Korean) mid-word: its own Enter and arrows choose, and the word's searched
+// once chosen (a phone's keyboard composes every word, English too: there it searches as usual)
+const composing = e => !native && (e.isComposing || e.keyCode === 229);
+$('q').oninput = e => { if (composing(e)) return; clearTimeout(qTimer); qTimer = setTimeout(() => runSearch(e.target.value), 280); showSuggest(e.target.value); };
+$('q').addEventListener('compositionend', e => { if (!native) $('q').oninput({ target: e.target }); });
 $('q').onkeydown = e => {
+  if (composing(e)) return;
   if (e.key === 'Enter') { clearTimeout(qTimer); clearTimeout(sTimer); $('sugg').replaceChildren(); runSearch(e.target.value); }
   if (e.key === 'ArrowDown') { e.preventDefault(); $('results').firstElementChild?.focus(); }
 };
@@ -6303,6 +6409,7 @@ if ('mediaSession' in navigator)
 
 addEventListener('keydown', e => {
   wake();
+  if (tabbing && (e.code === 'Space' || e.key === 'Enter') && e.target.closest?.('button, summary, a[href], [role=button], select')) return; // (by keyboard: it presses the control)
   if (topDialog() === $('drive')) { // Drive mode: space plays / pauses, the arrows change the song
     if (e.code === 'Space') { e.preventDefault(); toggle(); } else if (e.code === 'ArrowRight') nextTrack(); else if (e.code === 'ArrowLeft') prevTrack();
     return;
@@ -10172,6 +10279,9 @@ console.assert(JSON.stringify(parseLyrics('[00:01.50]hi\n[01:00]yo\nplain')) ===
   const got = [0, 2, 4, 6, 8, 10, 12].map(i => (ls[i].sec.name + ' ' + ls[i].sec.tag).trim()).join(', ');
   console.assert(got === 'Verse 1, Chorus, Verse 2, Chorus ×2, Bridge, Chorus ×3, Outro', 'labelSections broken: ' + got); }
 console.assert(clean('Song (feat. X) [Live] - Remastered 2011') === 'Song', 'clean broken');
+console.assert(linkIn('Listen on Spotify: https://open.spotify.com/playlist/x?si=1.') === 'https://open.spotify.com/playlist/x?si=1' && linkIn(' hi ') === 'hi', 'linkIn broken');
+console.assert(linkKey('https://open.spotify.com/playlist/x?si=1') === linkKey('https://open.spotify.com/playlist/x/') && linkKey('https://www.youtube.com/playlist?list=A&si=2') === 'youtube.com/playlist?list=A'
+  && linkKey('https://youtube.com/playlist?list=A') !== linkKey('https://youtube.com/playlist?list=B'), 'linkKey broken');
 { const y = parseYrc(netherflowLib.krcToYrc('[ti:x]\n[0,900]<0,300,0>Song <300,300,0>- <600,300,0>Artist\n[1000,900]<0,200,0>Hel<200,100,0>lo <500,400,0>there'));
   console.assert(y.length === 1 && y[0].text === 'Hello there' && y[0].words[0].t === 1 && y[0].words[0].e === 1.3 && y[0].words[1].t === 1.5, 'krcToYrc broken'); }
 { const y = parseYrc("[1000,900](1000,200,0)I'm(1200,300,0)going (1500,400,0)with(1900,300,0)drawals (2200,100,0)look (2300,50,0), (2350,300,0)around",

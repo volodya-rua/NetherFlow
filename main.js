@@ -3,11 +3,15 @@
 const { app, BrowserWindow, session, webFrameMain, shell, ipcMain, powerSaveBlocker, screen, powerMonitor } = require('electron');
 const path = require('path');
 const fs = require('fs');
-const { spawn } = require('child_process');
+const { spawn, execFileSync } = require('child_process');
 const { start } = require('./server');
 
 const PORT = 41739; // fixed, so settings saved by the page (lyric sync per song) survive restarts
 const LITE = !!require('./package.json').lite; // (NetherFlow Lite: built by tools/lite-build.js, without Extreme+)
+// The person's country, for the music store the page searches: Windows' "Country or region" (Settings › Time & language
+// › Region). The language's own region is often another (English (United States) in India), and Electron reads that one.
+let COUNTRY = '';
+try { if (process.platform === 'win32') COUNTRY = execFileSync('reg', ['query', String.raw`HKCU\Control Panel\International\Geo`, '/v', 'Name'], { encoding: 'utf8', timeout: 2000, windowsHide: true }).match(/Name\s+REG_SZ\s+([A-Z]{2})\b/)?.[1] || ''; } catch {}
 
 // Ad servers the YouTube player calls. Blocking them stops many ads from loading at all.
 const AD_URLS = [
@@ -315,17 +319,24 @@ ipcMain.on('island-shape', (e, r) => {
 
 app.whenReady().then(async () => {
   if (!first) return;
-  const port = await start(PORT).catch(() => start(0)); // fixed port taken by something else: any free one
+  // The fixed port: the page's library and settings belong to its address, port and all. Taken (a NetherFlow still
+  // closing, another build of it, another program): waited for a few seconds, then any free one, and the page says why
+  // everything there looks new (see preload.js: portMoved).
+  let port = 0;
+  for (let i = 0; i < 12 && !port; i++) port = await start(PORT).catch(() => new Promise(r => setTimeout(r, 250, 0)));
+  if (!port) port = await start(0);
   session.defaultSession.webRequest.onBeforeRequest({ urls: AD_URLS }, (_, done) => done({ cancel: true }));
 
+  // 1280×820, or as much as the screen has free (a 1366×768 laptop: else the player sat under the taskbar)
+  const free = screen.getPrimaryDisplay().workAreaSize;
   win = new BrowserWindow({
-    width: 1280, height: 820, minWidth: 420, minHeight: 620, show: false,
+    width: Math.min(1280, free.width), height: Math.min(820, free.height), minWidth: Math.min(420, free.width), minHeight: Math.min(620, free.height), show: false,
     title: 'NetherFlow', icon: path.join(__dirname, 'icon.png'), backgroundColor: '#0b0503',
     titleBarStyle: 'hidden', // no native title bar or buttons: the page draws its own (see preload.js)
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       backgroundThrottling: false, // keep timers at full speed when minimized, so ads are still skipped instantly
-      additionalArguments: LITE ? ['--nf-lite'] : [], // (see preload.js: lite)
+      additionalArguments: [...(LITE ? ['--nf-lite'] : []), ...(port !== PORT ? ['--nf-port-moved'] : []), '--nf-country=' + (COUNTRY || app.getLocaleCountryCode() || '')], // (see preload.js: lite, portMoved, country)
     },
   });
   win.removeMenu();

@@ -32,6 +32,8 @@ public class MainActivity extends BridgeActivity {
         super.onCreate(savedInstanceState);
 
         WebView web = getBridge().getWebView();
+        // The phone's text size, up to 1.3×: larger than that, the page's big type and its player bar run into each other.
+        web.getSettings().setTextZoom(Math.min(130, Math.round(getResources().getConfiguration().fontScale * 100)));
         if (WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) {
             // Injected into YouTube's player frame: skips ads and applies the equalizer (frame-helper.js,
             // shared with the desktop app).
