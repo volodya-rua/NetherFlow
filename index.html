@@ -940,6 +940,7 @@ body.home .home-now { display: flex; }
 .qrow.dragging { position: relative; z-index: 1; transition: none; background: color-mix(in srgb, var(--bg) 85%, var(--a)); box-shadow: 0 10px 30px rgba(0,0,0,.5); }
 .qgrip { cursor: grab; touch-action: none; opacity: .55; }
 .qgrip:hover, .dragging .qgrip { opacity: 1; }
+.qgrip.tv-edit { opacity: 1; color: var(--a); } /* (being moved with the keys: up and down) */
 .dragging .qgrip { cursor: grabbing; }
 .qgrip svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
 .qplay { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 6px 8px; text-align: left; }
@@ -1517,7 +1518,7 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
 </dialog>
 
 <dialog id="about" class="about" aria-label="About NetherFlow: terms, privacy and licenses">
-  <div class="s-top lbl"><button id="closeAbout" class="link">← Back<kbd>esc</kbd></button><span tabindex="-1" autofocus>NetherFlow 1.0 · by Volodya.rua</span></div>
+  <div class="s-top lbl"><button id="closeAbout" class="link">← Back<kbd>esc</kbd></button><span tabindex="-1" autofocus>NetherFlow · by Volodya.rua</span></div>
   <nav class="legal-tabs lbl"><button data-legal="terms">Terms of Use</button><button data-legal="privacy">Privacy</button><button data-legal="licenses">Licenses</button></nav>
   <iframe id="legalFrame" title="Terms, privacy and licenses"></iframe>
 </dialog>
@@ -1756,7 +1757,10 @@ const KIN_NAMES = { slam: 'Slam', echo: 'Echo', sketch: 'Sketch', marker: 'Marke
   shatter: 'Shatter', dust: 'Particles', fontmix: 'Font mix', cinema: 'Cinematic', slot: 'Slot machine', texts: 'Texts', label: 'Label maker', holo: 'Holographic',
   liquid: 'Liquid', swirl: 'Swirl', story: 'Story text', acid: 'Acid green', doodle: 'Doodle', comic: 'Comic', blocks: 'Blocks', tactical: 'Tactical', killfeed: 'Kill feed', speed: 'Speed' };
 let kinLook = KIN_NAMES[store.get('netherflow.kinlook')] ? store.get('netherflow.kinlook') : 'Mixed';
-function setKinLook(v) { kinLook = KIN_NAMES[v] ? v : 'Mixed'; store.set('netherflow.kinlook', kinLook === 'Mixed' ? '' : kinLook); kin.shot = null; renderMoodMenu(); }
+// (the first time Extreme lyrics show, or the Strobe look is picked: a word about the flashing, once)
+let flashNoted = !!store.get('netherflow.flashnote');
+function flashNote() { if (flashNoted) return; flashNoted = true; store.set('netherflow.flashnote', '1'); toast('Some looks flash quickly. If you\'re sensitive to flashing light, keep Extreme lyrics off or pick a calmer look.', 9000); }
+function setKinLook(v) { if (v === 'strobe') flashNote(); kinLook = KIN_NAMES[v] ? v : 'Mixed'; store.set('netherflow.kinlook', kinLook === 'Mixed' ? '' : kinLook); kin.shot = null; renderMoodMenu(); }
 // and its emoji, on or off
 let kinEmojiOn = store.get('netherflow.kinemoji') !== 'Off';
 // and the song's music video under them, cut like an edit (see "the music video, cut like an edit")
@@ -2026,16 +2030,18 @@ function applySkin() {
   fitHome();
 }
 // The welcome's headline on a short screen (a TV, a phone sideways, a laptop at 200 %): as large as its theme makes it,
-// but smaller till the welcome fits between the header and the player (it ran up over the header). Again whenever the
-// welcome's room changes.
+// but smaller till the welcome fits between the header and the player, with a little room to spare (it ran up over the
+// header; filling it exactly, its letters touched the header). Again whenever the welcome's room, or what's in it (the
+// song playing shown), changes, and once its font has come.
 function fitHome() {
-  const st = $('home'), deck = st.querySelector('.deck'), msg = st.querySelector('.msg');
+  const st = $('home'), deck = st.querySelector('.deck'), msg = st.querySelector('.msg'), room = st.clientHeight - 24;
   if (!deck || !msg) return;
   msg.style.fontSize = '';
-  for (let i = 0; i < 3 && st.clientHeight && deck.offsetHeight > st.clientHeight + 1; i++)
-    msg.style.fontSize = Math.max(28, parseFloat(getComputedStyle(msg).fontSize) * Math.max(.3, 1 - (deck.offsetHeight - st.clientHeight) / msg.offsetHeight)) + 'px';
+  for (let i = 0; i < 3 && st.clientHeight && deck.offsetHeight > room + 1; i++)
+    msg.style.fontSize = Math.max(28, parseFloat(getComputedStyle(msg).fontSize) * Math.max(.3, 1 - (deck.offsetHeight - room) / msg.offsetHeight)) + 'px';
 }
-new ResizeObserver(() => fitHome()).observe($('home'));
+{ const ro = new ResizeObserver(() => fitHome()); ro.observe($('home')); ro.observe($('home').querySelector('.home-now')); } // (not the headline's own box: fitting it, it'd ask again)
+document.fonts?.ready.then(() => fitHome());
 function setSkin(name) {
   const need = SKINS[name]?.needs;
   if (need && bgq !== need && SKIN_LIST.includes(name)) { bgq = need; store.set('netherflow.bg', need); resize(); applyKin(); } // (a theme for one quality: that quality on)
@@ -4711,13 +4717,13 @@ function removeFromPlaylist(p, t) {
 
 // a short note at the bottom of the screen; shown again each time so it sits above whatever opened since
 let toastTimer;
-function toast(text) {
+function toast(text, ms = 2800) {
   const t = $('toast');
   t.textContent = text;
   if (t.matches(':popover-open')) t.hidePopover();
   t.showPopover();
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.hidePopover(), 2800);
+  toastTimer = setTimeout(() => t.hidePopover(), ms);
 }
 
 // ---------- song options (⋯): like, add to a playlist, save for offline, remove, go to the artist ----------
@@ -4824,12 +4830,22 @@ function qrow(t, play, remove, list, at) {
   b.append(img, txt);
   b.onclick = play;
   r.append(b);
-  r.list = list; // (which list the row is in, for dragging)
-  if (list) { // a handle to drag it up or down
+  r.list = list; r.at = at; // (which list the row is in, and where, for moving it)
+  if (list) { // a handle to drag it up or down; or, with a keyboard or a TV's remote, Enter (OK) on it, then up and down
     const grip = el('button', 'icon-btn qgrip');
     grip.innerHTML = '<svg viewBox="0 0 24 24"><path d="M5 8h14M5 12h14M5 16h14"/></svg>';
-    grip.setAttribute('aria-label', `Drag to move ${t.trackName}`);
+    grip.setAttribute('aria-label', `Move ${t.trackName}: drag it, or choose it and then up and down`);
     grip.onpointerdown = e => dragRow(e, r, list, at);
+    grip.onclick = e => { if (!e.detail) grip.classList.toggle('tv-edit'); }; // (Enter: a drag's click has a count)
+    grip.onkeydown = e => {
+      if (!grip.classList.contains('tv-edit') || !/^Arrow(Up|Down)$/.test(e.key)) return;
+      e.preventDefault(); e.stopPropagation();
+      const by = e.key === 'ArrowUp' ? r.previousElementSibling : r.nextElementSibling; // (within its section, as a drag)
+      if (!by?.classList.contains('qrow') || by.list !== list) return;
+      list.splice(by.at, 0, ...list.splice(at, 1)); queueChanged(); renderQueue();
+      const again = [...$('queuePanel').querySelectorAll('.qgrip')].find(g => g.parentElement.list === list && g.getAttribute('aria-label') === grip.getAttribute('aria-label'));
+      again?.classList.add('tv-edit'); again?.focus({ preventScroll: true }); again?.scrollIntoView({ block: 'nearest' });
+    };
     r.append(grip);
   }
   if (remove) {
@@ -7133,8 +7149,14 @@ function row(s, i, list, from = {}) {
   wrap.append(b, more);
   return wrap;
 }
-// Full-screen dialogs sit above everything, so the window buttons move into whichever one is on top.
-const topDialog = () => [...document.querySelectorAll('dialog[open]')].pop();
+// Full-screen dialogs sit above everything, so the window buttons move into whichever one is on top: the last opened
+// that's still open (the page's own order isn't it: a QR code opened over the Library comes before it in the page).
+const opened = [];
+for (const k of ['show', 'showModal']) {
+  const f = HTMLDialogElement.prototype[k];
+  HTMLDialogElement.prototype[k] = function () { f.call(this); const i = opened.indexOf(this); if (i >= 0) opened.splice(i, 1); opened.push(this); };
+}
+const topDialog = () => opened.findLast(d => d.open) || [...document.querySelectorAll('dialog[open]')].pop();
 const placeWinctl = () => (topDialog() || body).append($('winctl'));
 const openSearch = () => {
   if (!dlg.open) { dlg.showModal(); placeWinctl(); }
@@ -7160,7 +7182,7 @@ $('closeAbout').onclick = () => $('about').close();
 // Links inside legal.html open in the real browser (legal.html calls this through window.parent).
 window.openExternal = url => native ? (location.href = url) : window.open(url, '_blank', 'noopener');
 
-const TERMS = 'netherflow.terms', TERMS_VERSION = '2026-10-16.2'; // bump when the terms change: everyone is asked again (and run npm run site:legal for the website's copy)
+const TERMS = 'netherflow.terms', TERMS_VERSION = '2026-10-16.3'; // bump when the terms change: everyone is asked again (and run npm run site:legal for the website's copy)
 if (store.get(TERMS) !== TERMS_VERSION) { $('consent').showModal(); placeWinctl(); }
 // its usual port taken (see main.js): the library and settings are kept under that one, so here all looks new; said so
 if (window.netherflowApp?.portMoved) setTimeout(() => { toast('Something else is using NetherFlow\'s port, so your library and settings aren\'t shown. Close it (or another NetherFlow) and open NetherFlow again.'); clearTimeout(toastTimer); toastTimer = setTimeout(() => $('toast').hidePopover(), 15000); }, 1500);
@@ -7443,14 +7465,13 @@ function toggleFull() {
 if (native) Capacitor.Plugins.App.addListener('backButton', () => {
   const pop = document.querySelector(':popover-open:not(.toast)');
   if (pop) pop.hidePopover();
-  else if ($('drive').open) $('drive').close();
-  else if ($('namePrompt').open) $('namePrompt').close();
-  else if ($('about').open) $('about').close();
-  else if ($('story').open) $('story').close();
-  else if ($('consent').open) Capacitor.Plugins.App.minimizeApp(); // not agreed yet: nothing behind it to go back to
-  else if ($('artistPage').open) apBack();
-  else if ($('library').open) libBack();
-  else if (dlg.open) dlg.close();
+  else if (topDialog()) { // the one on top
+    const d = topDialog();
+    if (d === $('consent')) Capacitor.Plugins.App.minimizeApp(); // not agreed yet: nothing behind it to go back to
+    else if (d === $('artistPage')) apBack();
+    else if (d === $('library')) libBack();
+    else d.close();
+  }
   else if (body.classList.contains('fs')) toggleFull();
   else if (body.classList.contains('has-song') && !body.classList.contains('home')) goHome(true);
   else Capacitor.Plugins.App.minimizeApp();
@@ -7471,6 +7492,11 @@ const FOCUSABLE = 'button, a[href], input, select, textarea, summary, [tabindex]
 function tvMove(dir) {
   const pops = [...document.querySelectorAll(':popover-open:not(.toast)')];
   const scope = pops.at(-1) || topDialog() || document, cur = document.activeElement;
+  if (scope === $('about') && (dir === 'up' || dir === 'down')) { // (the terms, privacy, licenses: up and down read them; past either end, on to the buttons)
+    const w = $('legalFrame').contentWindow, y = w?.scrollY;
+    w?.scrollBy({ top: (dir === 'down' ? 1 : -1) * innerHeight * .6, behavior: 'instant' }); // (instant: whether it moved, known now)
+    if (w && w.scrollY !== y) return;
+  }
   const from = cur && cur !== body && scope.contains(cur) ? cur : null;
   const all = [...scope.querySelectorAll(FOCUSABLE)].filter(e => !e.disabled && !e.closest('[inert]') && e.getClientRects().length
     && (!e.checkVisibility || e.checkVisibility({ checkVisibilityCSS: true })));
@@ -9737,6 +9763,11 @@ const KC = { WHITE: [.93, .9, .85], RED: [.8, .12, .1], YEL: [.96, .8, .24], ORG
 const pickR = (r, l) => l[Math.floor(r() * l.length)];
 // the words sung so far, each card at its place (o: what's added to each)
 const kinEach = (S, K, fn) => K.ws.forEach((s, k) => { if (s.sung) fn(s, S.lay.words[k], k); });
+// Flashes, for people with photosensitive epilepsy (WCAG 2.3.1: three a second at most): a look asks, once a word, before
+// it flashes — the screen inverted, a burst of light, the ground from black to white — and it may every half second at
+// most (each of those is a flash or two). None at all when the system asks for less motion (see the renderer).
+let kinLit = -1e9, kinDark = false;
+const kinFlash = (S, k) => { const m = S.lits ||= new Map(); if (!m.has(k)) { const t = performance.now(), ok = motion && t - kinLit >= 500; if (ok) kinLit = t; m.set(k, ok); } return m.get(k); };
 const KIN_LOOKS = {
   // grunge block letters, a word a row, each punched in on its beat with a shake
   slam: { pool: 'loud', rows: 'stack', caps: true, cap: .55, wide: .88, tilt: .08, wear: .55,
@@ -9899,7 +9930,7 @@ const KIN_LOOKS = {
         K.card(w.e, w.x - Math.max(0, dist), w.y, { crop: [0, 0, 1, .5], a: c01(s.age / .05), g: 't' + k });
         K.card(w.e, w.x + Math.max(0, dist), w.y, { crop: [0, .5, 1, 1], a: c01(s.age / .05), g: 'b' + k });
         const lock = s.age - .32;
-        if (lock > 0 && lock < .3) { K.card(w.seam, w.x, w.y, { fill: [1, 1, 1], a: 1 - lock / .3, wear: 0, g: 's' + k }); K.flash = Math.max(K.flash, .6 * (1 - lock / .15)); }
+        if (lock > 0 && lock < .3) { K.card(w.seam, w.x, w.y, { fill: [1, 1, 1], a: 1 - lock / .3, wear: 0, g: 's' + k }); if (kinFlash(S, 's' + k)) K.flash = Math.max(K.flash, .6 * (1 - lock / .15)); }
       });
     } },
   // glossy Y2K chrome, popping in with a wobble, glints twinkling on it
@@ -9987,10 +10018,12 @@ const KIN_LOOKS = {
       const k = K.nk, s = K.ws[k];
       if (!s) return;
       const w = S.lay.words[k], [dx, dy] = jig(K.now, w.fs * .08 * (1 - c01(s.age / .3)));
-      K.ground = k % 2 ? 'ink' : 'white';
-      K.card(w.e, w.x + dx, w.y + dy, { s: 1.15 - .15 * eOut(s.age / .12), fill: k % 2 ? KC.WHITE : KC.INK, g: k });
-      if (s.age < .05) K.invert = 1;
-      K.flash = Math.max(K.flash, .5 * (1 - c01(s.age / .1)));
+      const lit = kinFlash(S, k); // (black and white swap with a flash: on the words that may)
+      if (lit && S.flipped !== k) { S.flipped = k; kinDark = !kinDark; }
+      K.ground = kinDark ? 'ink' : 'white';
+      K.card(w.e, w.x + dx, w.y + dy, { s: 1.15 - .15 * eOut(s.age / .12), fill: kinDark ? KC.WHITE : KC.INK, g: k });
+      if (lit && s.age < .05) K.invert = 1;
+      if (lit) K.flash = Math.max(K.flash, .5 * (1 - c01(s.age / .1)));
     } },
   // each word on a face of a cube, which turns to the next face as the next word's sung
   cube: { pool: 'loud', rows: 'one', caps: true, cap: .32, wide: .5, wear: .15, fx: { glow: 1.1 },
@@ -10326,7 +10359,7 @@ const KIN_LOOKS = {
       const x = w.x + dir * w.fs * 1.4 * (1 - e) + jx;
       for (let i = 6; i >= 1; i--) if (s.age < .3) K.card(w.e, x - dir * w.fs * i * .22 * (1 - c01(s.age / .3)), w.y + jy, { fill: S.col.echo, line: S.col.echo, a: .35 / i, g: 'v' + i });
       K.card(w.e, x, w.y + jy, { s: 1.25 - .25 * eOut(s.age / .2), a: c01(s.age / .03), g: 'w' });
-      K.flash = Math.max(K.flash, .55 * (1 - c01(s.age / .08)));
+      if (kinFlash(S, k)) K.flash = Math.max(K.flash, .55 * (1 - c01(s.age / .08)));
     } },
   // a punch in, then shattering: as the next word's sung, the one before breaks into pieces tumbling off toward the lens
   shatter: { pool: 'loud', rows: 'one', caps: true, cap: .5, wide: .86, wear: .15, fx: { ca: 1.3, glow: 1, halo: .25 },
@@ -10347,7 +10380,7 @@ const KIN_LOOKS = {
         const next = K.ws[k + 1], b = next?.sung ? next.age : -1;
         if (b < 0) { const [jx, jy] = jig(K.now, w.fs * .05 * (1 - c01(s.age / .25))); K.card(w.e, w.x + jx, w.y + jy, { s: 1.3 - .3 * eOut(s.age / .18), a: c01(s.age / .03), g: k }); return; }
         if (b > .6) return;
-        if (b < .05) K.flash = Math.max(K.flash, .35);
+        if (b < .05 && kinFlash(S, k)) K.flash = Math.max(K.flash, .35);
         const f = eOut(b / .6), z = K.F * (1 - .35 * f);
         w.P.forEach((p, i) => { // (each piece turning round its own middle: the card's middle moved to keep it there)
           const rz = p.sp * f, c = Math.cos(rz), sn = Math.sin(rz);
@@ -10876,6 +10909,8 @@ function kinShot(now) {
   let pool = own ? base.filter(l => own.includes(l)) : base.filter(l => !KIN_LOOKS[l].skin);
   if (!pool.length) pool = own || base;
   if (ved.shown && pool.some(l => !KIN_PAPER.has(l))) pool = pool.filter(l => !KIN_PAPER.has(l)); // (paper would hide the video)
+  if (!motion && pool.length > 1) pool = pool.filter(l => l !== 'strobe'); // (less motion asked for: no strobe)
+  flashNote();
   const fresh = pool.filter(l => !recent.includes(l)), look = KIN_LOOKS[kinLook] ? kinLook : pickR(r, fresh.length ? fresh : pool), L = KIN_LOOKS[look];
   const A = rgb(pal.a).map(v => v / Math.max(.01, ...rgb(pal.a)));
   kin.recent = [look, ...recent].slice(0, 6);
