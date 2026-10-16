@@ -49,6 +49,7 @@ h1 { margin: 14px 0 6px; font: 400 clamp(44px, 11vw, 92px)/.95 Anton, Impact, sa
 .list strong { font-weight: 600; }
 .list small { color: var(--mute); font-size: 13px; }
 .foot { margin-top: 34px; font: 400 12px/1.8 var(--mono); color: var(--mute); }
+.foot.fine { margin-top: 14px; font-size: 11px; opacity: .75; }
 .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); padding: 10px 18px; border-radius: 999px; background: var(--ink); color: var(--bg);
   font: 600 12px/1 var(--mono); letter-spacing: .1em; opacity: 0; transition: opacity .25s; pointer-events: none; }
 .toast.on { opacity: 1; }
@@ -69,7 +70,8 @@ h1 { margin: 14px 0 6px; font: 400 clamp(44px, 11vw, 92px)/.95 Anton, Impact, sa
   </div>
   <ul class="list" id="list"></ul>
   <p class="foot" id="foot">NetherFlow is a free, open-source music player. No account, no ads, no tracking.<br>
-    This playlist lives only in its link: nothing about it is stored anywhere.</p>
+    <span id="where">This playlist lives only in its link: nothing about it is stored anywhere.</span></p>
+  <p class="foot fine">Shared through NetherFlow, a free, independent music player. NetherFlow hosts no music and isn't affiliated with Apple, YouTube or any service; covers, songs and names belong to their owners.</p>
 </main>
 <div class="toast" id="toast"></div>
 <script>
@@ -147,7 +149,7 @@ async function readTogether(code) {
   const together = location.hash.match(/^#e\.([A-Z0-9]{16})$/i);
   if (together) {
     $('kick').textContent = 'A PLAYLIST WE EDIT TOGETHER'; $('tap').textContent = 'Join this playlist';
-    $('foot').firstChild.textContent = 'NetherFlow is a free, open-source music player. No account, no ads, no tracking. This playlist lives on a public relay, end-to-end encrypted: only those with the link can read it.';
+    $('where').textContent = 'This playlist lives on a public relay, end-to-end encrypted: only those with the link can read it.';
     const pl = await readTogether(together[1].toUpperCase()).catch(() => null);
     if (!pl) { $('name').textContent = 'Not here right now'; $('meta').textContent = 'Someone in it needs to open NetherFlow: the relay only keeps it a while'; return; }
     $('name').textContent = pl.name; document.title = pl.name + ' · NetherFlow';

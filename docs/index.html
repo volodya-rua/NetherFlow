@@ -196,8 +196,8 @@ main { height: 1500vh; }
 .nw figcaption { font: italic 400 22px/1.2 var(--serif); color: var(--gold); text-align: center; }
 
 /* press play */
-.pl { display: grid; grid-template-rows: 1fr auto auto; justify-items: center; text-align: center; padding-bottom: 40px; }
-.pl .mid { align-self: center; display: grid; justify-items: center; gap: 18px; max-width: 640px; }
+.pl { display: flex; flex-direction: column; align-items: center; text-align: center; padding-bottom: 40px; }
+.pl .mid { margin-block: auto; display: grid; justify-items: center; gap: 18px; }
 .pl .h2 { font-size: clamp(64px, 8.6vw, 150px); max-width: none; }
 .sig { font: 400 30px/1 'Permanent Marker', cursive; color: var(--gold); transform: rotate(-4deg); }
 .ver { margin-bottom: 12px; }
@@ -213,6 +213,8 @@ main { height: 1500vh; }
 .credit { margin-top: 18px; display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 24px; font-size: 14px; opacity: .75; }
 .credit b { font-weight: 600; }
 .credit a:hover { color: var(--gold); }
+.fine { margin: 12px auto 0; max-width: 980px; text-align: center; font-size: 12px; line-height: 1.6; opacity: .5; }
+.fine a:hover { color: var(--gold); }
 
 /* no WebGL: the same words as a plain page */
 .fb { display: none; }
@@ -242,7 +244,20 @@ main { height: 1500vh; }
   .pl .mid .p { display: none; }
   .dl { grid-template-columns: minmax(0, 1fr) auto; padding: 13px 16px; }
   .dl code, .dl small { display: none; }
-  .pl .h2 { font-size: 18vw; }
+  .pl .h2 { font-size: 17vw; }
+}
+@media (max-width: 900px) and (max-height: 760px) {
+  .pl .sig { display: none; }
+  .credit { margin-top: 12px; gap: 4px 14px; font-size: 12px; }
+  .fine { font-size: 11px; }
+}
+/* short laptop screens: the downloads and the small print still fit */
+@media (min-width: 901px) and (max-height: 1000px) {
+  .dl small { display: none; }
+}
+@media (min-width: 901px) and (max-height: 820px) {
+  .pl { padding-bottom: 24px; }
+  .pl .mid .p { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   .grain, .ch-i { animation: none; }
@@ -351,6 +366,7 @@ main { height: 1500vh; }
       </div>
     </div>
     <p class="credit"><span>made by <b>Volodya.rua</b> · a <a class="u" href="https://github.com/volodya-rua/NetherFlow#hucla">HuCla</a> build · GPL v3</span><a href="https://github.com/volodya-rua/NetherFlow/releases/latest">Portable builds, the AppImage and checksums</a><span>Music on this page: Retro Synths, Saturn and City In The Rearview by <a class="u" href="https://freemusicarchive.org/music/holiznacc0/">HoliznaCC0</a>, public domain (CC0)</span><a href="https://www.instagram.com/volodya.rua/">Instagram</a><a href="mailto:volodya.rua@gmail.com">Email</a><a href="legal.html#privacy">Privacy</a></p>
+    <p class="fine">NetherFlow is an independent project, not affiliated with or endorsed by YouTube, Google, Apple, Spotify or any service it uses. Music, videos, lyrics, artwork and trademarks belong to their respective owners. Full terms: <a class="u" href="legal.html">legal.html</a>.</p>
   </section>
 </main>
 
