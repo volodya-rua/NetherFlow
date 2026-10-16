@@ -31,6 +31,8 @@
 
   class FlowError extends Error { constructor(code, message) { super(message); this.name = 'FlowStream.Error'; this.code = code; } }
   const sleep = ms => new Promise(r => setTimeout(r, ms));
+  // Google's "Sorry… unusual traffic" page: YouTube limiting this connection (too many requests from it, lately)
+  const LIMITED = /<title>Sorry\.\.\.<\/title>|unusual traffic from your computer network/i;
 
   class Engine {
     // post: the platform's request; visitor/saveVisitor: the visitor id kept between runs (asked for once, otherwise);
@@ -40,7 +42,8 @@
       Object.assign(this, { post, visitorData: visitor, saveVisitor, hl, gl, gap, cache: new Map(), queue: Promise.resolve(), asked: 0 });
     }
 
-    // a request and its JSON answer; a failed one asked once more, half a second later (a stray error page, a blip)
+    // a request and its JSON answer; a failed one asked once more, half a second later (a stray error page, a blip) — not
+    // YouTube limiting the connection: that's 'limited', for two minutes from the last time it's said (see limited)
     async json(url, body, headers = {}, again = true) {
       let text;
       this.asked++;
@@ -48,6 +51,7 @@
         text = await this.post(url + '?prettyPrint=false', JSON.stringify(body), { 'Content-Type': 'application/json', 'User-Agent': UA, ...headers });
         return JSON.parse(text);
       } catch (e) {
+        if (text !== undefined ? LIMITED.test(text) : e?.code === 'limited') { this.limitedUntil = Date.now() + 120e3; throw new FlowError('limited', 'YouTube is limiting this connection for now'); } // (or the app's guard said so)
         if (again) { await sleep(500); return this.json(url, body, headers, false); }
         throw text === undefined ? new FlowError('network', String(e?.message || e)) : new FlowError('shape', 'the answer wasn\'t JSON: ' + String(text).replace(/\s+/g, ' ').slice(0, 120));
       }
@@ -65,12 +69,17 @@
         }).finally(() => { this.visitorAsk = null; });
     }
 
+    // YouTube limiting this connection (in the last two minutes): requests kept to the songs someone's waiting for
+    get limited() { return Date.now() < (this.limitedUntil || 0); }
+
     // the player's answer for a video: once while its addresses are good (asked again 5 minutes before they expire).
     // ahead: one looked up before it's needed, in line behind the others, a gap apart; asked for now, it goes first.
+    // (YouTube limiting the connection: nothing looked up ahead)
     player(id, { ahead = false } = {}) {
       if (!/^[\w-]{11}$/.test(String(id))) return Promise.reject(new FlowError('id', 'not a video id: ' + id));
       const had = this.cache.get(id);
       if (had && had.until > Date.now()) return had.p;
+      if (ahead && this.limited) return Promise.reject(new FlowError('limited', 'YouTube is limiting this connection for now: nothing looked up ahead'));
       const p = ahead ? this.queue.then(() => sleep(this.gap)).then(() => this.ask(id)) : this.ask(id);
       if (ahead) this.queue = p.catch(() => {}); // (the line goes on, a gap apart, whatever this one's answer)
       const entry = { p, until: Infinity };
@@ -137,5 +146,5 @@
 
   out.create = opts => new Engine(opts);
   out.Error = FlowError;
-  out.version = '0.3.0';
+  out.version = '0.3.1';
 })(typeof module === 'object' && module.exports ? module.exports : (globalThis.FlowStream = {}));

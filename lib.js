@@ -10,7 +10,7 @@
   // If YouTube reshapes that page, the parsing below is the one spot to fix.
   lib.ytSearch = async (get, q) => {
     const html = await get('https://www.youtube.com/results?sp=EgIQAQ%253D%253D&search_query=' + encodeURIComponent(q),
-      { 'User-Agent': UA, 'Accept-Language': 'en-US,en;q=0.9', Cookie: 'SOCS=CAI; CONSENT=YES+1' }); // cookie skips the EU consent page
+      { 'User-Agent': UA, 'Accept-Language': 'en-US,en;q=0.9', Cookie: 'SOCS=CAI; CONSENT=YES+1' }).then(t => lib.limited(t)); // cookie skips the EU consent page
     // YouTube serves the results in one of two shapes (it A/B tests them): a JSON data block, or a script variable.
     const json = html.match(/<script[^>]*id="yt-initial-data"[^>]*>([\s\S]*?)<\/script>/)?.[1]
               || html.match(/var ytInitialData = (\{.*?\});<\/script>/s)?.[1];
@@ -37,8 +37,43 @@
   // Each: { id, title, channel, artist, album, dur, art (its cover, 544 px) }; the list's .corrected: the search YouTube
   // Music ran instead, when it read the words as a misspelling ("levitatng" → "levitating").
   const WEB_MUSIC = { client: { clientName: 'WEB_REMIX', clientVersion: '1.20250101.01.00', hl: 'en', gl: 'US' } };
+  // (Google's "unusual traffic" page, YouTube limiting this connection: said as 'limited', not as a page that changed)
+  const LIMITED = /<title>Sorry\.\.\.<\/title>|unusual traffic from your computer network/i;
+  const limited = t => { if (LIMITED.test(t)) throw Object.assign(new Error('limited: YouTube is limiting this connection for now'), { code: 'limited' }); return t; };
+  lib.limited = limited;
+  // FlowGuard: NetherFlow's requests to YouTube (its pages and API; not the streams, not the pictures) at a listener's
+  // pace — so many a minute at most, a burst allowed, a few at once — so a connection is never taken for a bot's. And if
+  // YouTube limits it anyway (its "unusual traffic" page): seen on the first, and from then on only a request now and
+  // then, to see if it's over — the rest refused at once, as 'limited', none kept waiting seconds for the same page.
+  // Over when one's answered, or after two quiet minutes.
+  //   const guard = lib.guard()   ·   guard.wrap(request) → that request (get or post), guarded   ·   guard.limited
+  lib.guard = ({ perMinute = 40, burst = 12, together = 3, probe = 8000, rest = 120e3 } = {}) => {
+    let tokens = burst, at = Date.now(), live = 0, until = 0, lastProbe = 0, timer = 0;
+    const waiting = [], refused = () => Object.assign(new Error('limited: YouTube is limiting this connection for now'), { code: 'limited' });
+    const pump = () => {
+      const now = Date.now(); tokens = Math.min(burst, tokens + (now - at) * perMinute / 60000); at = now;
+      while (waiting.length && live < together && tokens >= 1) { tokens--; live++; waiting.shift()(); }
+      if (waiting.length && !timer && live < together) timer = setTimeout(() => { timer = 0; pump(); }, Math.max(50, (1 - tokens) * 60000 / perMinute));
+    };
+    const youtube = u => { try { return /(^|\.)youtube\.com$/.test(new URL(u).hostname); } catch { return false; } };
+    const guard = {
+      get limited() { return Date.now() < until; },
+      wrap: request => async (url, ...rest_) => {
+        if (!youtube(url)) return request(url, ...rest_);
+        if (guard.limited) { if (Date.now() - lastProbe < probe) throw refused(); lastProbe = Date.now(); } // (a check now and then)
+        await new Promise(r => { waiting.push(r); pump(); });
+        try {
+          const t = await request(url, ...rest_);
+          if (typeof t === 'string' && LIMITED.test(t.slice(0, 3000))) { until = Date.now() + rest; lastProbe = Date.now(); throw refused(); }
+          until = 0; // (answered: it's over)
+          return t;
+        } finally { live--; pump(); }
+      },
+    };
+    return guard;
+  };
   const ytmPost = (post, path, body, headers = {}) => post('https://music.youtube.com/youtubei/v1/' + path + '?prettyPrint=false', JSON.stringify(body),
-    { 'Content-Type': 'application/json', 'User-Agent': UA, Origin: 'https://music.youtube.com', Referer: 'https://music.youtube.com/', ...headers }).then(JSON.parse);
+    { 'Content-Type': 'application/json', 'User-Agent': UA, Origin: 'https://music.youtube.com', Referer: 'https://music.youtube.com/', ...headers }).then(limited).then(JSON.parse);
   lib.ytMusic = async (post, q) => {
     const json = await ytmPost(post, 'search', { context: WEB_MUSIC, query: q, params: 'EgWKAQIIAWoKEAkQBRAKEAMQBA==' }); // (the "Songs" filter)
     const out = [];

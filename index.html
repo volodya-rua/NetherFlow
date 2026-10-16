@@ -1640,10 +1640,12 @@ const fullSongs = location.protocol.startsWith('http');
 // Android app (Capacitor): no server there, so the page runs the YouTube search and word-timing lookups
 // itself (lib.js) over native HTTP, which isn't bound by the browser's cross-site rules.
 const native = !!window.Capacitor?.isNativePlatform?.();
-const nativeGet = (url, headers) => Capacitor.Plugins.CapacitorHttp.get({ url, headers, responseType: 'text', connectTimeout: 8000, readTimeout: 8000 })
-  .then(r => typeof r.data === 'string' ? r.data : JSON.stringify(r.data));
-const nativePost = (url, body, headers) => Capacitor.Plugins.CapacitorHttp.post({ url, headers, data: JSON.parse(body), responseType: 'text', connectTimeout: 8000, readTimeout: 8000 })
-  .then(r => typeof r.data === 'string' ? r.data : JSON.stringify(r.data));
+// (to YouTube, on Android: at a listener's pace, through FlowGuard — see lib.js; the same guard round every request)
+const ytGuard = native ? netherflowLib.guard() : null, guarded = request => ytGuard ? ytGuard.wrap(request) : request;
+const nativeGet = guarded((url, headers) => Capacitor.Plugins.CapacitorHttp.get({ url, headers, responseType: 'text', connectTimeout: 8000, readTimeout: 8000 })
+  .then(r => typeof r.data === 'string' ? r.data : JSON.stringify(r.data)));
+const nativePost = guarded((url, body, headers) => Capacitor.Plugins.CapacitorHttp.post({ url, headers, data: JSON.parse(body), responseType: 'text', connectTimeout: 8000, readTimeout: 8000 })
+  .then(r => typeof r.data === 'string' ? r.data : JSON.stringify(r.data)));
 // EndVerse (endverse.js, NetherFlow's lyrics finder) and BridgeTheMusic (bridgethemusic.js, its playlist importer): on
 // Android, asked from here over the phone's own HTTP; on a computer, through the app's server (the open lyrics database,
 // which lets a page ask, from here on both: pageVerse)
@@ -1660,7 +1662,7 @@ const nativePacked = async (method, url, headers = {}, body) => {
   return method === 'POST' ? nativePost(url, body, headers) : nativeGet(url, headers);
 };
 const nativeVerse = native && EndVerse.create({ get: nativeGet, post: nativePost }),
-  nativeImport = native && BridgeTheMusic.create({ get: (url, headers) => nativePacked('GET', url, headers), post: (url, body, headers) => nativePacked('POST', url, headers, body),
+  nativeImport = native && BridgeTheMusic.create({ get: guarded((url, headers) => nativePacked('GET', url, headers)), post: guarded((url, body, headers) => nativePacked('POST', url, headers, body)),
     keep: { get: k => store.get('netherflow.bridge.' + k), set: (k, v) => store.set('netherflow.bridge.' + k, v) } }); // (Spotify's query id: its 4 MB player not read again each start)
 const pageVerse = EndVerse.create({ get: (url, headers) => fetch(url, { headers }).then(r => r.text()) });
 const api = {
@@ -2787,8 +2789,8 @@ const fsLevel = () => loud === 'Levelled' && fsVid && fsLoud > 0 ? 10 ** (-fsLou
 // Android: FlowStream runs here in the page (its requests through the phone, a short wait each), the stream through the
 // app itself (/_fs/media, see MainActivity)
 const flowPage = native && window.FlowStream ? FlowStream.create({ visitor: store.get('netherflow.fsvisitor') || '', saveVisitor: v => store.set('netherflow.fsvisitor', v),
-  post: (url, body, headers) => Capacitor.Plugins.CapacitorHttp.post({ url, headers, data: JSON.parse(body), responseType: 'text', connectTimeout: 6000, readTimeout: 6000 })
-    .then(r => typeof r.data === 'string' ? r.data : JSON.stringify(r.data)) }) : null;
+  post: guarded((url, body, headers) => Capacitor.Plugins.CapacitorHttp.post({ url, headers, data: JSON.parse(body), responseType: 'text', connectTimeout: 6000, readTimeout: 6000 })
+    .then(r => typeof r.data === 'string' ? r.data : JSON.stringify(r.data))) }) : null;
 // Android: the songs whose start the app keeps on this phone (MainActivity: the last 100 played; Android may clear them)
 // and what the page needs to play one at once, before its address is found: its type, loudness and length. (One whose
 // start is gone after all is simply fetched as usual.)
@@ -2815,6 +2817,17 @@ function forgetKept() {
   fsKept.clear(); store.set('netherflow.kept', '');
   fetch((native ? '/_fs/clear?' : '/api/fs/kept?') + new URLSearchParams({ g: keptEra }), { method: native ? 'GET' : 'DELETE' }).catch(() => {});
 }
+// YouTube limiting this connection (Google's "unusual traffic" page, to a song's stream or a search: too many requests
+// from it lately — it passes by itself): said once in a while, in plain words; for two minutes from the last time, the
+// song picked is tried again rather than another, and nothing's looked up in the background (the next songs, matches)
+let ytLimitedUntil = 0, ytLimitedSaid = 0;
+const ytLimited = () => Date.now() < ytLimitedUntil;
+function noteLimited(e) {
+  if (!e || !/\blimited\b|unusual traffic|Sorry\.\.\./i.test((e.code || '') + ' ' + (e.message || ''))) return false;
+  ytLimitedUntil = Date.now() + 120e3;
+  if (Date.now() - ytLimitedSaid > 10 * 60e3) { ytLimitedSaid = Date.now(); toast('YouTube is limiting your internet connection right now, so songs can take a while to start. It passes by itself.', 9000); }
+  return true;
+}
 async function fsStream(vid) { // → { src (for a player, or a download), loudnessDb, dur }
   if (native) {
     const k = instantOn && fsKept.get(vid);
@@ -2827,7 +2840,7 @@ async function fsStream(vid) { // → { src (for a player, or a download), loudn
     fsKeep(vid, s); // (the app keeps its start as it plays)
     return { src: '/_fs/media?' + new URLSearchParams({ u: s.url, m: s.mime.split(';')[0], id: vid, g: keptG() }), loudnessDb: s.loudnessDb || 0, dur: s.duration || 0, fmt: { itag: s.itag, mime: s.mime } };
   }
-  const s = await fetch('/api/fs/audio?' + new URLSearchParams({ id: vid })).then(r => r.ok ? r.json() : Promise.reject(new Error('no stream')));
+  const s = await fetch('/api/fs/audio?' + new URLSearchParams({ id: vid })).then(async r => r.ok ? r.json() : Promise.reject(Object.assign(new Error('no stream'), { code: (await r.json().catch(() => ({}))).error })));
   return { src: '/api/fs/media?' + new URLSearchParams({ id: vid, g: keptG() }), loudnessDb: s.loudnessDb || 0, dur: s.duration || 0, fmt: { itag: s.itag, mime: s.mime || '' } };
 }
 async function fsPlay(v, id) {
@@ -3379,12 +3392,42 @@ function videoMatch(v, artist, title, lang = '') {
 // caller then plays the 30s preview instead).
 // A song's uploads, kept for the session: a replay, or the next song looked up ahead, starts at once.
 const vidCache = new Map();
+// a song's uploads as found, kept on this device (the last 1,000 songs): one played again isn't searched for again — a
+// request saved, and a quicker start (cleared with the history; uploads that won't play any more: forgotten, found anew)
+const VIDS = 'netherflow.vids';
+const vidKept = (() => { try { return new Map(JSON.parse(store.get(VIDS) || '[]')); } catch { return new Map(); } })();
+let vidSave = 0;
+function keepVids(id, v) {
+  vidKept.delete(String(id)); vidKept.set(String(id), v.slice(0, 3).map(x => ({ id: x.id, dur: x.dur, title: x.title, channel: x.channel })));
+  while (vidKept.size > 1000) vidKept.delete(vidKept.keys().next().value);
+  clearTimeout(vidSave); vidSave = setTimeout(() => store.set(VIDS, JSON.stringify([...vidKept])), 2000);
+}
+function forgetVids(t) { vidCache.delete(t.trackId); if (vidKept.delete(String(t.trackId))) store.set(VIDS, JSON.stringify([...vidKept])); }
 function videosFor(t) {
   const dur = (t.trackTimeMillis || 0) / 1000;
   if (t.ytId) return Promise.resolve([{ id: t.ytId, dur }]); // (found on YouTube: that very video)
-  if (!vidCache.has(t.trackId)) vidCache.set(t.trackId, findVideos(t.artistName, t.trackName, dur, t.collectionName || '', songLang(t))
-    .then(v => { if (!v.length) vidCache.delete(t.trackId); return v; }, e => { vidCache.delete(t.trackId); throw e; }));
+  const kept = vidKept.get(String(t.trackId));
+  if (!vidCache.has(t.trackId)) vidCache.set(t.trackId, kept ? Promise.resolve(kept) : findVideos(t.artistName, t.trackName, dur, t.collectionName || '', songLang(t))
+    .then(v => { if (!v.length) vidCache.delete(t.trackId); else keepVids(t.trackId, v); return v; }, e => { vidCache.delete(t.trackId); throw e; }));
   return vidCache.get(t.trackId);
+}
+// YouTube limiting this connection, a song picked: its preview at once, and its full song looked for meanwhile — every
+// 9 seconds (FlowGuard lets a check through every 8), for a minute and a half; found, it takes over from the start
+function fullLater(t, id, term, queued) {
+  (async () => {
+    for (let i = 0; i < 10; i++) {
+      await new Promise(r => setTimeout(r, 9000));
+      if (id !== loadId) return;
+      try {
+        const v = (await videosFor(t))[0];
+        if (!v || id !== loadId) continue;
+        await fsStream(v.id); // (its stream there now: FlowStream keeps it for the play)
+        if (id !== loadId) return;
+        toast(`${t.trackName}: the full song now`);
+        return playTrack(t, term, queued, true);
+      } catch (e) { if (!noteLimited(e)) return; }
+    }
+  })();
 }
 // Audius (an open music platform): the artist's own upload of the song there, at 320 kbps — only theirs (their verified
 // account, by their very name), by the song's very name, at the album recording's length (within 2 s), not a remix or a
@@ -3431,6 +3474,7 @@ setInterval(() => {
 }, 5000);
 // While a song plays, the next one's upload and lyrics are looked up, so skipping to it (or its turn) starts at once.
 function prefetchNext() {
+  if (ytLimited()) return; // (YouTube limiting this connection: only the song playing)
   const n = upNext[0] || queue[qi + 1];
   if (!n || !fullSongs || saved.has(n.trackId)) return;
   videosFor(n).then(v => { if (!v[0]) return; ytmLyricsFor(v[0].id); native ? flowPage?.audio(v[0].id).then(s => { fsKeep(v[0].id, s); return fetch('/_fs/ahead?' + new URLSearchParams({ u: s.url, id: v[0].id, g: keptG() })); }).catch(() => {}) : fetch('/api/fs/ahead?' + new URLSearchParams({ ids: v[0].id, g: keptG() })).catch(() => {}); }).catch(() => {}); // (FlowStream: its stream looked up ahead too)
@@ -4687,17 +4731,22 @@ async function playTrack(t, term = '', queued = false, stay = false, mixed = nul
   if (mixed) { [vid, ...ytQueue] = vids = mixed; fsVid = vid.id; fsLoud = mix.loud; source = '◆ full song · smooth mix'; } // (already playing: see Smooth mix)
   else if (fullSongs) {
     // the artist's own upload on Audius (320 kbps) when it's there, else YouTube's best — both looked for at once
-    [au, vids] = await Promise.all([audiusFor(t), videosFor(t).catch(e => { why = e.message; return []; })]); // (found on YouTube: that video)
+    [au, vids] = await Promise.all([audiusFor(t), videosFor(t).catch(e => { if (!noteLimited(e)) why = e.message; return []; })]); // (found on YouTube: that video)
     if (id !== loadId) return;
     if (au) source = '◆ full song · Audius 320 kbps';
     else if (vids.length) {
       [vid, ...ytQueue] = vids;
-      for (let v = vid, n = 0; v && !fsVid && id === loadId && n < 3; v = ytQueue.shift(), n++) { await fsPlay(v, id).catch(() => {}); if (fsVid) vid = v; } // (one that won't play: the next upload found; three at most)
+      // (one that won't play: the next upload found, three at most — YouTube limiting this connection: none, another
+      // would be refused the same way)
+      for (let v = vid, n = 0; v && !fsVid && id === loadId && n < 3; v = ytQueue.shift(), n++) { const e = await fsPlay(v, id).then(() => null, e => e); if (fsVid) { vid = v; break; } if (noteLimited(e)) break; }
       if (id !== loadId) return;
       if (fsVid) source = '◆ full song';
-      else if (navigator.onLine && hasNext() && !stay) { toast(`Couldn't load ${t.trackName}: on to the next`); return nextTrack(); } // (as other players skip one that won't play)
-      else { why = 'couldn\'t load it'; vid = null; }
+      else if (ytLimited()) vid = null; // (not on to the next: it'd be refused the same way — see below)
+      else if (navigator.onLine && hasNext() && !stay) { forgetVids(t); toast(`Couldn't load ${t.trackName}: on to the next`); return nextTrack(); } // (as other players skip one that won't play)
+      else { forgetVids(t); why = 'couldn\'t load it'; vid = null; }
     }
+    // YouTube limiting this connection: the preview now, and the full song when it comes (see fullLater)
+    if (!au && !fsVid && ytLimited()) { why = 'YouTube is limiting your connection: a preview, till the full song comes'; source = '◇ 30s preview · YouTube is limiting your connection, the full song when it comes'; fullLater(t, id, term, queued); }
   }
   loadOffset(au ? 'netherflow.off.au' + au.id : vid ? 'netherflow.off.' + vid.id : '');
   if (!vid) {
@@ -4785,7 +4834,7 @@ function showHistory() {
       clearTimeout(b.disarm); b.disarm = setTimeout(() => { b.classList.remove('armed'); b.textContent = 'Clear history'; }, 3500);
       return;
     }
-    hist = { tracks: [], terms: [] }; store.set(HIST, ''); showHistory(); $('q').focus();
+    hist = { tracks: [], terms: [] }; store.set(HIST, ''); vidKept.clear(); store.set(VIDS, ''); showHistory(); $('q').focus();
   });
   if (hist.terms.length) {
     const chips = el('div', 'chips');
@@ -5730,7 +5779,7 @@ const fitsSong = (v, s) => { const a = words(clean(v.title)).join(' '), b = word
   return !!a && (a === b || a.startsWith(b + ' ') || b.startsWith(a + ' ')) && (!who || words(v.artist).join(' ').includes(who)) && (!dur || !v.dur || Math.abs(v.dur - dur) <= 8); };
 const pendingOf = id => { for (const l of [library.liked, ...library.playlists.map(p => p.tracks)]) { const t = l.find(x => x.trackId === id); if (t) return t; } return null; };
 function matchPump() {
-  const until = Math.max(matchWait, importYield);
+  const until = Math.max(matchWait, importYield, ytLimitedUntil); // (YouTube limiting this connection: no matching meanwhile)
   if (Date.now() < until) { clearTimeout(matchLater); matchLater = setTimeout(matchPump, until - Date.now() + 50); return; }
   while (matchLive < 2) {
     const id = importWant.length ? importWant.pop() : importBulk.shift();
@@ -5740,7 +5789,7 @@ function matchPump() {
     matchTried.add(id); matchLive++;
     api.ytm(`${s.artistName} ${clean(s.trackName)}`.trim())
       .then(list => { matchMiss = 0; const v = list.find(x => fitsSong(x, s)); if (v) placeMatch(id, ytmToTrack(v)); },
-        () => { matchTried.delete(id); importBulk.push(id); if (++matchMiss >= 3) matchWait = Date.now() + Math.min(600, 15 * 2 ** (matchMiss - 3)) * 1000; })
+        e => { noteLimited(e); matchTried.delete(id); importBulk.push(id); if (++matchMiss >= 3) matchWait = Date.now() + Math.min(600, 15 * 2 ** (matchMiss - 3)) * 1000; })
       .finally(() => { matchLive--; matchPump(); });
   }
 }
