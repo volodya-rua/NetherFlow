@@ -23,18 +23,42 @@
   const words = s => (s || '').toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/[^\p{L}\p{N}]+/gu, ' ').trim().split(' ').filter(Boolean);
   const TRANSLATED = /translat|traducci|tradu[cç][aã]o|übersetz|traduzione|terjemahan|перевод|翻[译譯]|english version|versi[oó]n en ingl/i;
 
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const KEEP = 200; // (answers remembered, at most: the oldest go first)
+
   class Engine {
     constructor({ get, post, hl = 'en', gl = 'US' } = {}) {
       if (typeof get !== 'function') throw new TypeError('EndVerse: get(url, headers) is required');
-      Object.assign(this, { get, post, hl, gl });
+      Object.assign(this, { get, post, hl, gl, kept: new Map() });
+    }
+
+    // an answer remembered (and one on its way shared): the same song asked again, at once. Only one with lyrics in it is
+    // kept: none (it may come back later, or have been a blip), a failure or 'lyrics offline' is asked again next time
+    remember(key, ask) {
+      if (this.kept.has(key)) return this.kept.get(key);
+      const p = ask();
+      this.kept.set(key, p);
+      while (this.kept.size > KEEP) this.kept.delete(this.kept.keys().next().value);
+      p.then(v => { if (!(v?.raw || v?.yrc || v?.lrc || v?.lines || v?.plain || v?.instrumental)) this.kept.delete(key); }, () => this.kept.delete(key));
+      return p;
     }
 
     // The open lyrics database, by the song's name: synced lyrics at the song's length if it has them, else its words.
     // alts: other ways its name may be written (tried when it isn't found by its own). A network failure: kind 'lyrics offline'.
-    async byName(artist, title, dur = 0, alts = []) {
-      const api = (path, params) => this.get('https://lrclib.net/api/' + path + '?' + new URLSearchParams(params))
-        .then(t => { try { return JSON.parse(t); } catch { return null; } })
-        .then(j => path === 'get' ? (j && typeof j.id === 'number' ? j : null) : Array.isArray(j) ? j : null); // (not found: null)
+    byName(artist, title, dur = 0, alts = []) { return this.remember(JSON.stringify(['n', artist, title, Math.round(dur), alts]), () => this.byNameNow(artist, title, dur, alts)); }
+    async byNameNow(artist, title, dur, alts) {
+      // the database's answer: a find, or null (not found). Busy (it says so now and then) or an error page: asked again,
+      // twice, a little later each time; still busy: thrown, and the lyrics count as offline (asked again next time)
+      const api = async (path, params) => {
+        for (let wait = 0; ; wait += 700) {
+          if (wait) await sleep(wait);
+          let j = null;
+          try { j = JSON.parse(await this.get('https://lrclib.net/api/' + path + '?' + new URLSearchParams(params))); } catch (e) { if (e instanceof TypeError || e?.name === 'AbortError' || e?.name === 'TimeoutError') throw e; } // (no network: offline at once)
+          if (path === 'search' ? Array.isArray(j) : j && typeof j.id === 'number') return j;
+          if (path === 'get' && (j?.statusCode === 404 || j?.name === 'TrackNotFound')) return null;
+          if (wait >= 1400) throw new Error('the lyrics database is busy');
+        }
+      };
       const who = artist.split(/,|&| feat\.? | x /i)[0].trim();
       // Is a find this song? Only if it has the song's name (bracketed bits, "- Remastered…" tails, "feat." credits,
       // apostrophes and "&"/"and" aside) and one of its artists' names — or, under some other name, its very length. Never
@@ -81,15 +105,27 @@
     // Word-by-word timing from two public lyric services ("yrc", and "krc" turned into it). Each must be the same artist at
     // the same length (±3 s), so the timing matches the recording being played; both are asked, the one closest in length
     // wins. Neither with word timing: line-timed lyrics if one has them ({ lrc }), for songs the database doesn't have.
-    async words(artist, title, dur) {
-      const found = (await Promise.all([wordsA, wordsB].map(f => f(this.get, artist, title, dur).catch(() => null)))).filter(Boolean);
+    // (both asked at once, 6 s each at most; once one has answered word-timed at the song's very length, the other gets
+    // half a second more, not the rest of its time)
+    words(artist, title, dur) { return this.remember(JSON.stringify(['w', artist, title, Math.round(dur)]), () => this.wordsNow(artist, title, dur)); }
+    async wordsNow(artist, title, dur) {
+      const found = [];
+      await new Promise(done => {
+        let left = 2, soon = 0;
+        for (const f of [wordsA, wordsB]) Promise.race([f(this.get, artist, title, dur), sleep(6000)]).catch(() => null).then(x => {
+          if (x) found.push(x);
+          if (!--left) return done();
+          if (x?.yrc && (!dur || Math.abs(x.dur - dur) < 1) && !soon) soon = setTimeout(done, 500);
+        });
+      });
       const fit = (a, b) => Math.abs(a.dur - dur) - Math.abs(b.dur - dur);
       return found.filter(x => x.yrc).sort(fit)[0] || found.filter(x => x.lrc).sort(fit)[0] || {};
     }
 
     // The lyrics a music video's page lists: the lyrics tab's id from the video's "next" page, then the lyrics, asked as the
     // music app that's given their timing. Who provides them (the page shows it): source. Not found: {}.
-    async forVideo(id) {
+    forVideo(id) { return this.remember('v' + id, () => this.forVideoNow(id)); }
+    async forVideoNow(id) {
       if (!/^[\w-]{11}$/.test(String(id))) throw new TypeError('EndVerse: not a video id: ' + id);
       if (typeof this.post !== 'function') throw new TypeError('EndVerse: post(url, body, headers) is required for forVideo');
       const music = { 'Content-Type': 'application/json', 'User-Agent': UA, Origin: 'https://music.youtube.com', Referer: 'https://music.youtube.com/' };
@@ -171,5 +207,5 @@
 
   out.create = opts => new Engine(opts);
   out.krcToYrc = krcToYrc;
-  out.version = '0.1.0';
+  out.version = '0.2.0';
 })(typeof module === 'object' && module.exports ? module.exports : (globalThis.EndVerse = {}));
