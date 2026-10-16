@@ -1,5 +1,4 @@
 apply plugin: 'com.android.application'
-apply plugin: 'com.chaquo.python'
 
 android {
     namespace = "io.github.volodya_rua.netherflow"
@@ -11,10 +10,6 @@ android {
         versionCode 12
         versionName "1.4.3"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
-        // Python (Chaquopy) is native: built for 64-bit ARM phones, and 32-bit ARM for the many TV boxes and TVs whose
-        // Android is 32-bit (Chromecast with Google TV, Fire TV sticks…); for x86 emulators too with -PnfEmulator (on Arm
-        // translation, Python crashes). (Python 3.12+ is 64-bit only: so 3.11, which yt-dlp supports.)
-        ndk { abiFilters(*(['arm64-v8a', 'armeabi-v7a'] + (project.hasProperty('nfEmulator') ? ['x86_64', 'x86'] : []))) }
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
              // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
@@ -45,15 +40,6 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
             if (keyProps.exists()) signingConfig signingConfigs.release
         }
-    }
-}
-
-// Python for yt-dlp (src/main/python): saving songs for offline. No pip packages: yt_dlp and certifi are in the source
-// directory, so the build needs no Python of its own (its code is compiled on the phone, the first time it's used).
-chaquopy {
-    defaultConfig {
-        version = '3.11' // (see abiFilters)
-        pyc { src = false }
     }
 }
 

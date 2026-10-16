@@ -2341,7 +2341,6 @@ function renderTextPanel() {
       'Your liked songs, playlists, history and stats, swapped between your phone and computer over your Wi-Fi: no account.')] : []),
     ...(native ? [settingRow('Lyrics on the lock screen', ['Off', 'On'], lockLyrics ? 'On' : 'Off', setLockLyrics, 'The line being sung under the song\'s name on the lock screen, in the notification, on the widget and on a car\'s display.')] : []),
     settingRow('Liked songs offline', ['Off', 'On Wi-Fi'], likedOffline ? 'On Wi-Fi' : 'Off', setLikedOffline, 'Songs you like are saved on this device by themselves, a few at a time, only on Wi-Fi: they play with no connection.'),
-    ...(native ? [settingRow('Update the downloader', ['Off', 'On'], ytdlUpdates ? 'On' : 'Off', setYtdlUpdates, 'Saving songs uses yt-dlp, which comes with the app. YouTube changes often, and in time an old yt-dlp can stop saving songs (the next NetherFlow update brings a newer one). On: NetherFlow downloads yt-dlp\'s newest release from GitHub (it looks about once a day, and when saving fails) and runs it. That code didn\'t come with the app, so it skips the checks the app store you got NetherFlow from made on it. Off: the one that came with the app.')] : []),
     settingRow('Folders on the home screen', ['Off', 'On'], folders ? 'On' : 'Off', setFolders, 'Liked songs, downloads and your playlists, under the buttons at the top of the home screen. Hidden while a song plays.'),
     ...(window.netherflowApp?.presence ? [settingRow('Discord status', ['Off', 'On'], discordOn ? 'On' : 'Off', setDiscord, 'The song you\'re playing on your Discord profile ("Listening to…", with its cover and a link to it), while the Discord app is open. Your friends there see it.')] : []),
     ...(window.netherflowApp?.island ? [settingRow('Island', ['On', 'Off'], islandOn ? 'On' : 'Off', setIsland, 'The song playing, in a small black island at the top middle of the screen, over every other app (hidden while NetherFlow itself is in front). Click it for the cover, the timeline, the volume and the controls.'),
@@ -2654,12 +2653,11 @@ if (native) Capacitor.Plugins.Playback.addListener('action', ({ action, position
 let engine = 'audio', ytQueue = []; // (ytQueue: the song's other uploads found, tried in turn if one won't play)
 // FlowStream (flowstream.js, NetherFlow's playback engine): a song's best public stream (Opus) played by this page's own
 // player, straight to this device, the equalizer, Sing and the visuals on it as on a saved song. Desktop: through the
-// app's own server (/api/fs/…), which asks the bundled yt-dlp when FlowStream can't. An upload neither can play: the
-// next one found, then the 30 s preview. Levelled loudness: YouTube's level for it, from FlowStream (fsLoud, dB).
+// app's own server (/api/fs/…). An upload it can't play: the next one found, then the 30 s preview. Levelled loudness: YouTube's level for it, from FlowStream (fsLoud, dB).
 let fsVid = null, fsLoud = 0, fsAgain = 0, fsTries = 0;
 const fsLevel = () => loud === 'Levelled' && fsVid && fsLoud > 0 ? 10 ** (-fsLoud / 20) : 1;
 // Android: FlowStream runs here in the page (its requests through the phone, a short wait each), the stream through the
-// app itself (/_fs/media, see MainActivity), and yt-dlp (YtDl.stream) when FlowStream can't find it
+// app itself (/_fs/media, see MainActivity)
 const flowPage = native && window.FlowStream ? FlowStream.create({ visitor: store.get('netherflow.fsvisitor') || '', saveVisitor: v => store.set('netherflow.fsvisitor', v),
   post: (url, body, headers) => Capacitor.Plugins.CapacitorHttp.post({ url, headers, data: JSON.parse(body), responseType: 'text', connectTimeout: 6000, readTimeout: 6000 })
     .then(r => typeof r.data === 'string' ? r.data : JSON.stringify(r.data)) }) : null;
@@ -2691,10 +2689,10 @@ async function fsStream(vid) { // → { src (for a player, or a download), loudn
     const k = instantOn && fsKept.get(vid);
     if (k) { // its start kept here: played from there at once, its address found meanwhile and handed to the app
       const t = Math.random().toString(36).slice(2);
-      flowPage.audio(vid).catch(() => Capacitor.Plugins.YtDl.stream({ id: vid })).then(s => s.url, () => '').then(u => fetch('/_fs/url?' + new URLSearchParams({ t, u })));
+      flowPage.audio(vid).then(s => s.url, () => '').then(u => fetch('/_fs/url?' + new URLSearchParams({ t, u })));
       return { src: '/_fs/media?' + new URLSearchParams({ id: vid, m: k[0], t, g: keptG() }), loudnessDb: k[1], dur: k[2] };
     }
-    const s = await flowPage.audio(vid).catch(() => Capacitor.Plugins.YtDl.stream({ id: vid }));
+    const s = await flowPage.audio(vid);
     fsKeep(vid, s); // (the app keeps its start as it plays)
     return { src: '/_fs/media?' + new URLSearchParams({ u: s.url, m: s.mime.split(';')[0], id: vid, g: keptG() }), loudnessDb: s.loudnessDb || 0, dur: s.duration || 0 };
   }
@@ -2736,7 +2734,6 @@ let place = 2;
 let islandOn = store.get('netherflow.island') !== 'Off', islandGlow = store.get('netherflow.islandglow') !== 'Off';
 let discordOn = store.get('netherflow.discord') === 'On'; // (Discord status: see setDiscord)
 let lockLyrics = store.get('netherflow.locklyrics') === 'On', likedOffline = store.get('netherflow.likedoff') === 'On'; // (Android extras: see setLockLyrics)
-let ytdlUpdates = store.get('netherflow.ytdlup') === 'On'; // (see setYtdlUpdates)
 const vizWanted = () => place > 0 || (islandOn && !!window.netherflowApp?.island);
 function keepAwake() {
   const on = (body.classList.contains('playing') || $('drive').open) && place > 0; // (Drive mode: the screen stays on, paused too)
@@ -5265,8 +5262,8 @@ function offlineItems(t, anchor, back) {
 }
 
 // ---------- offline: songs saved on this device (IndexedDB), with their cover and, if chosen, their lyrics ----------
-// A song's audio is downloaded from its YouTube upload by yt-dlp, as YouTube serves it (see downloadSong), while the user
-// keeps listening to anything else. Saved songs then play from this device.
+// A song's audio is downloaded from its YouTube upload by FlowStream, as YouTube serves it (see downloadSong), while the
+// user keeps listening to anything else. Saved songs then play from this device.
 const idb = (() => {
   let open;
   const db = () => open ||= new Promise((res, rej) => {
@@ -5302,8 +5299,7 @@ async function removeSaved(id) {
 }
 
 // Saving for offline: the song's own audio file, downloaded from its YouTube upload just as YouTube has it (usually
-// Opus in WebM): nothing recorded, nothing re-encoded. FlowStream's stream, the one it plays; yt-dlp as a backup
-// (desktop: run by main.js; Android: the YtDl plugin). Songs saved the old way (recorded) offer "Save again, better quality".
+// Opus in WebM): nothing recorded, nothing re-encoded: FlowStream's stream, the one it plays. Songs saved the old way (recorded) offer "Save again, better quality".
 const METHOD = 'file';
 // Three at once (as Musify does: a playlist comes in about three times as fast; many more and YouTube starts to slow
 // them down). A batch says how it went once, at the end.
@@ -5354,7 +5350,7 @@ async function saveOne(job) {
   dlChanged();
   try {
     // the artist's own upload on Audius (320 kbps, straight from there) when it's there; else YouTube's best, by
-    // FlowStream (yt-dlp as a backup)
+    // FlowStream
     const ep = job.t.kind === 'episode'; // (a podcast episode or audiobook chapter: its own file, no lyrics)
     const [au, vids] = ep ? [null, []] : await Promise.all([audiusFor(job.t), videosFor(job.t).catch(() => [])]);
     if (!ep && !au && !vids.length) throw new Error('it isn\'t on YouTube');
@@ -5386,52 +5382,33 @@ async function saveOne(job) {
 }
 // A song's audio, from the first of its uploads that downloads → { vid, blob, dur }; onFrac(0…1) as it comes in.
 // job.cancel() stops it.
-const AUDIO_TYPES = { webm: 'audio/webm', weba: 'audio/webm', m4a: 'audio/mp4', mp4: 'audio/mp4', ogg: 'audio/ogg', opus: 'audio/ogg', mp3: 'audio/mpeg' };
-const YtDl = native ? Capacitor.Plugins.YtDl : null;
+// (Android: podcasts' files, downloaded by the phone: the Files plugin, its progress here)
+const Files = native ? Capacitor.Plugins.Files : null;
 const dlFrac = new Map(); // download key → its progress callback
-window.netherflowApp?.onYtdlProgress?.(m => dlFrac.get(m.key)?.(m.frac));
-YtDl?.addListener('progress', m => dlFrac.get(m.key)?.(m.frac));
-// Android: yt-dlp updates itself from GitHub only if the user turns it on (off, the plugin uses the one in the app)
-function setYtdlUpdates(v) { ytdlUpdates = v === 'On'; store.set('netherflow.ytdlup', ytdlUpdates ? 'On' : ''); YtDl?.setUpdates({ on: ytdlUpdates }).catch(() => {}); renderTextPanel(); }
-YtDl?.setUpdates({ on: ytdlUpdates }).catch(() => {});
+Files?.addListener('progress', m => dlFrac.get(m.key)?.(m.frac));
 async function downloadSong(job, vids, onFrac) {
-  const key = Math.random().toString(36).slice(2);
   let cancelled = false, last;
-  const ytCancel = () => { cancelled = true; window.netherflowApp?.ytdlCancel ? netherflowApp.ytdlCancel(key) : YtDl?.cancel({ key }).catch(() => {}); };
-  dlFrac.set(key, onFrac);
+  job.cancel = () => { cancelled = true; };
   try {
     for (const vid of vids.slice(0, 3)) { // (an upload that won't download: the next)
-      // FlowStream's stream, the one it plays (the best there is: Opus), saved as it comes; yt-dlp if that fails
+      // FlowStream's stream, the one it plays (the best there is: Opus), saved as it comes
       try {
-        job.cancel = () => { cancelled = true; };
         const s = await fsStream(vid.id);
         if (cancelled) throw new Error('cancelled');
         return { vid: vid.id, blob: await fetchWhole(job, s.src, onFrac, 'it didn\'t download', 10 << 20), dur: s.dur || vid.dur || job.dur || 0 };
-      } catch (e) { if (cancelled || e.message === 'cancelled') throw new Error('cancelled'); }
-      job.cancel = ytCancel;
-      try {
-        let r;
-        if (window.netherflowApp?.ytdl) r = await netherflowApp.ytdl(vid.id, key);
-        else if (YtDl) {
-          const f = await YtDl.download({ id: vid.id, key });
-          r = { data: await (await fetch(Capacitor.convertFileSrc(f.path))).blob(), ext: f.ext, dur: f.dur };
-          YtDl.remove({ path: f.path }).catch(() => {});
-        } else throw new Error('saving needs the NetherFlow app');
-        return { vid: vid.id, blob: new Blob([r.data], { type: AUDIO_TYPES[r.ext] || 'audio/' + r.ext }), dur: r.dur || vid.dur || job.dur || 0 };
       } catch (e) {
-        if (cancelled) throw new Error('cancelled');
-        last = new Error(String(e.message || e).replace(/^Error invoking remote method '\w+': (Error: )?/, ''));
+        if (cancelled || e.message === 'cancelled') throw new Error('cancelled');
+        last = e; job.cancel = () => { cancelled = true; };
       }
     }
-    if (YtDl && !ytdlUpdates) last.message += ' (turning on "Update the downloader" in Settings may help)';
-    throw last;
-  } finally { dlFrac.delete(key); job.cancel = null; }
+    throw last || new Error('it didn\'t download');
+  } finally { job.cancel = null; }
 }
 // An Audius upload's file, straight from there (its own MP3, 320 kbps) → { vid: '', blob, dur }; onFrac(0…1) as it
 // comes in. job.cancel() stops it.
 const fetchAudius = async (job, au, onFrac) => ({ vid: '', blob: new Blob([await fetchWhole(job, au.url, onFrac, 'Audius didn\'t send it')], { type: 'audio/mpeg' }), dur: au.dur });
 // a file, as it comes in → a Blob of its own type. Nothing for 30 s: given up on (the Internet Archive stops now and then).
-// piece (bytes): asked for that much at a time, as yt-dlp does for YouTube's streams (a big one in one go can come slowly).
+// piece (bytes): asked for that much at a time, as other downloaders do for YouTube's streams (a big one in one go can come slowly).
 async function fetchWhole(job, url, onFrac, why, piece = 0) {
   const ctl = new AbortController();
   let idle = 0, stalled = false;
@@ -5456,17 +5433,17 @@ async function fetchWhole(job, url, onFrac, why, piece = 0) {
   finally { clearTimeout(idle); job.cancel = null; }
 }
 // A podcast episode's or audiobook chapter's own file → { vid: '', blob, dur }. Their hosts don't let a page read them:
-// desktop, through this app's server; Android, the phone's own download (YtDl.file).
+// desktop, through this app's server; Android, the phone's own download (the Files plugin).
 async function fetchEpisode(job, onFrac) {
   const t = job.t, once = async () => {
-    if (!YtDl) return fetchWhole(job, '/api/media?url=' + encodeURIComponent(t.epUrl), onFrac, 'its host didn\'t send it');
+    if (!Files) return fetchWhole(job, '/api/media?url=' + encodeURIComponent(t.epUrl), onFrac, 'its host didn\'t send it');
     const key = Math.random().toString(36).slice(2);
-    job.cancel = () => YtDl.cancel({ key }).catch(() => {});
+    job.cancel = () => Files.cancel({ key }).catch(() => {});
     dlFrac.set(key, onFrac);
     try {
-      const f = await YtDl.file({ url: t.epUrl, key });
+      const f = await Files.file({ url: t.epUrl, key });
       const b = new Blob([await (await fetch(Capacitor.convertFileSrc(f.path))).blob()], { type: f.type });
-      YtDl.remove({ path: f.path }).catch(() => {});
+      Files.remove({ path: f.path }).catch(() => {});
       return b;
     } catch (e) { throw new Error(String(e.message || e)); }
     finally { dlFrac.delete(key); job.cancel = null; }

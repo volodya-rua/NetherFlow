@@ -4,7 +4,7 @@
 const { app, BrowserWindow, shell, ipcMain, powerSaveBlocker, screen, powerMonitor } = require('electron');
 const path = require('path');
 const fs = require('fs');
-const { spawn, execFileSync } = require('child_process');
+const { execFileSync } = require('child_process');
 const srvMod = require('./server'), { start } = srvMod;
 
 const PORT = 41739; // fixed, so settings saved by the page (lyric sync per song) survive restarts
@@ -40,77 +40,7 @@ ipcMain.on('awake', (e, on) => {
   else if (!on && awake !== null) { powerSaveBlocker.stop(awake); awake = null; }
 });
 
-// Saving for offline: yt-dlp downloads the song's own audio from its YouTube upload, as it is (no re-recording), with
-// this app's own Node (ELECTRON_RUN_AS_NODE) as the JavaScript runtime YouTube's player code needs. It runs from a copy
-// in the app's data folder, so it can update itself when a change at YouTube makes saving fail.
-const YTDLP_NAME = process.platform === 'win32' ? 'yt-dlp.exe' : 'yt-dlp'; // (Linux: yt-dlp's own yt-dlp_linux, as yt-dlp)
-const BUNDLED_YTDLP = app.isPackaged ? path.join(process.resourcesPath, YTDLP_NAME) : path.join(__dirname, 'vendor', 'yt-dlp', YTDLP_NAME);
-let ytdlpExe = null, ytdlpUpdated = 0;
-const ytdlKids = new Map(); // the page's job key → its yt-dlp process
-srvMod.ytdlp = () => ytdlp(); // (FlowStream's fallback, in server.js)
 srvMod.heads = path.join(app.getPath('userData'), 'heads'); // (the starts of the last songs played, so they start at once: server.js)
-function ytdlp() {
-  if (ytdlpExe) return ytdlpExe;
-  const dir = path.join(app.getPath('userData'), 'yt-dlp'), exe = path.join(dir, YTDLP_NAME), mark = path.join(dir, 'bundled.txt');
-  const tag = String(fs.statSync(BUNDLED_YTDLP).size); // (a new one with an app update: copied over the old)
-  if (!fs.existsSync(exe) || (fs.existsSync(mark) && fs.readFileSync(mark, 'utf8')) !== tag) {
-    fs.mkdirSync(dir, { recursive: true }); fs.copyFileSync(BUNDLED_YTDLP, exe); fs.writeFileSync(mark, tag);
-  }
-  if (process.platform !== 'win32') fs.chmodSync(exe, 0o755); // (a program)
-  return ytdlpExe = exe;
-}
-// One download: the best audio-only stream, as YouTube serves it (usually Opus in WebM). Progress goes to the page.
-function ytdlOnce(e, id, key) {
-  const exe = ytdlp(), out = path.join(app.getPath('temp'), 'netherflow-dl');
-  fs.mkdirSync(out, { recursive: true });
-  return new Promise((resolve, reject) => {
-    const kid = spawn(exe, ['--no-config', '--no-playlist', '--no-part', '--no-mtime', '--newline', '--progress', '-N', '4',
-      '--cache-dir', path.join(app.getPath('userData'), 'yt-dlp', 'cache'), '--js-runtimes', 'node:' + process.execPath,
-      '-f', 'bestaudio', '-o', path.join(out, key + '.%(ext)s'),
-      '--progress-template', 'download:nfp %(progress.downloaded_bytes)s %(progress.total_bytes,progress.total_bytes_estimate)s',
-      '--print', 'after_move:nfdone %(filepath)s\t%(duration)s', 'https://www.youtube.com/watch?v=' + id],
-      { env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' }, windowsHide: true });
-    ytdlKids.set(key, kid);
-    let done = null, err = '';
-    const timer = setTimeout(() => stopKid(kid), 180000);
-    const read = chunk => {
-      for (const line of String(chunk).split(/\r?\n/)) {
-        const m = /^nfp (\d+) (\d+)/.exec(line);
-        if (m && !e.sender.isDestroyed()) e.sender.send('ytdl-progress', { key, frac: Math.min(1, m[1] / m[2]) });
-        else if (line.startsWith('nfdone ')) done = line.slice(7).split('\t');
-        else if (/ERROR/.test(line)) err = line.replace(/^.*?ERROR:\s*(\[[^\]]*\]\s*)?/, '');
-      }
-    };
-    kid.stdout.on('data', read); kid.stderr.on('data', read);
-    kid.on('error', er => { err = er.message; });
-    kid.on('close', code => {
-      clearTimeout(timer); ytdlKids.delete(key);
-      if (kid.cancelled || code !== 0 || !done) { // (nothing kept of a download that didn't finish)
-        for (const f of fs.readdirSync(out)) if (f.startsWith(key + '.')) fs.rm(path.join(out, f), { force: true }, () => {});
-        return reject(new Error(kid.cancelled ? 'cancelled' : err || 'the download failed'));
-      }
-      const [file, dur] = done;
-      try { resolve({ data: fs.readFileSync(file), ext: path.extname(file).slice(1), dur: +dur || 0 }); }
-      catch (er) { reject(er); }
-      finally { fs.rm(file, { force: true }, () => {}); }
-    });
-  });
-}
-ipcMain.handle('ytdl', async (e, { id, key }) => {
-  if (!win || e.sender !== win.webContents || !/^[\w-]{11}$/.test(id) || !/^\w+$/.test(key)) throw new Error('bad request');
-  try { return await ytdlOnce(e, id, key); }
-  catch (er) {
-    // Failing: maybe YouTube changed something — update yt-dlp (at most every 6 hours, and not while other downloads
-    // run it: a running program can't be replaced) and try once more.
-    if (er.message === 'cancelled' || Date.now() - ytdlpUpdated < 6 * 3600e3 || ytdlKids.size) throw er;
-    ytdlpUpdated = Date.now();
-    await new Promise(r => { const u = spawn(ytdlp(), ['-U'], { windowsHide: true }); u.on('close', r); u.on('error', r); });
-    return ytdlOnce(e, id, key);
-  }
-});
-// yt-dlp.exe unpacks and starts a second process of its own: stop both (Linux: its starter passes the signal on)
-const stopKid = kid => process.platform === 'win32' ? spawn('taskkill', ['/pid', String(kid.pid), '/T', '/F'], { windowsHide: true }).on('error', () => kid.kill()) : kid.kill();
-ipcMain.on('ytdl-cancel', (e, key) => { if (!win || e.sender !== win.webContents) return; const kid = ytdlKids.get(key); if (kid) { kid.cancelled = true; stopKid(kid); } });
 
 // ---------- the island: what's playing, in a small black island at the top middle of the screen, over every other app
 // (always on top, at the screen-saver level, on every desktop, never taking the focus). The page (preload.js) sends

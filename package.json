@@ -9,14 +9,13 @@
   "scripts": {
     "start": "electron .",
     "test": "electron selftest.js",
-    "dist": "node tools/fetch-yt-dlp.js && electron-builder --win --publish never",
+    "dist": "electron-builder --win --publish never",
     "android:web": "node -e \"const fs=require('fs');for(const to of ['www','android/app/src/main/assets/public']){fs.mkdirSync(to,{recursive:true});for(const f of ['index.html','lib.js','flowstream.js','legal.html','logo.png'])fs.copyFileSync(f,to+'/'+f);for(const d of ['licenses','fonts']){fs.rmSync(to+'/'+d,{recursive:true,force:true});fs.cpSync(d,to+'/'+d,{recursive:true})}}\"",
     "android:sync": "npm run android:web && cap sync android",
     "android": "android-build.cmd",
-    "fetch-yt-dlp": "node tools/fetch-yt-dlp.js",
     "site:legal": "node tools/site-legal.js",
     "race:three": "node -e \"const fs=require('fs'),s='node_modules/three/',d='race/three/';for(const f of ['build/three.module.js','build/three.core.js'])fs.cpSync(s+f,d+f.split('/').pop());fs.cpSync(s+'LICENSE','licenses/three.js-MIT.txt');for(const f of ['loaders/GLTFLoader.js','utils/BufferGeometryUtils.js','utils/SkeletonUtils.js','libs/meshopt_decoder.module.js','postprocessing/EffectComposer.js','postprocessing/RenderPass.js','postprocessing/ShaderPass.js','postprocessing/MaskPass.js','postprocessing/Pass.js','postprocessing/UnrealBloomPass.js','postprocessing/OutputPass.js','shaders/CopyShader.js','shaders/LuminosityHighPassShader.js','shaders/OutputShader.js'])fs.cpSync(s+'examples/jsm/'+f,d+'addons/'+f)\"",
-    "dist:linux": "node tools/fetch-yt-dlp.js linux && electron-builder --linux --publish never"
+    "dist:linux": "electron-builder --linux --publish never"
   },
   "private": true,
   "devDependencies": {
@@ -55,13 +54,7 @@
         "nsis",
         "portable"
       ],
-      "icon": "icon.png",
-      "extraResources": [
-        {
-          "from": "vendor/yt-dlp/yt-dlp.exe",
-          "to": "yt-dlp.exe"
-        }
-      ]
+      "icon": "icon.png"
     },
     "nsis": {
       "oneClick": false,
@@ -87,13 +80,7 @@
       "executableName": "netherflow",
       "synopsis": "Search any song, hear it in full, read the lyrics in sync",
       "maintainer": "Volodya.rua <341986736+volodya-rua@users.noreply.github.com>",
-      "artifactName": "NetherFlow-${version}-${arch}.${ext}",
-      "extraResources": [
-        {
-          "from": "vendor/yt-dlp/yt-dlp",
-          "to": "yt-dlp"
-        }
-      ]
+      "artifactName": "NetherFlow-${version}-${arch}.${ext}"
     },
     "copyright": "Copyright © 2026 Volodya.rua",
     "publish": [

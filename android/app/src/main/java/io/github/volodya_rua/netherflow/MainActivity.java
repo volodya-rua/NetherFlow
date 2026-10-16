@@ -19,7 +19,7 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(PlaybackPlugin.class);
         registerPlugin(SharingPlugin.class);
         registerPlugin(SystemVolumePlugin.class);
-        registerPlugin(YtDlPlugin.class);
+        registerPlugin(FilesPlugin.class);
         registerPlugin(UpdatePlugin.class);
         super.onCreate(savedInstanceState);
 

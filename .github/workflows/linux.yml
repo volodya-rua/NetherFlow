@@ -36,7 +36,7 @@ jobs:
           export DISPLAY=:99
           sleep 2
           netherflow --remote-debugging-port=9222 > deb.log 2>&1 &
-          node tools/linux-smoke.js /opt/NetherFlow
+          node tools/linux-smoke.js
           import -window root shot-deb.png
           pkill -f /opt/NetherFlow/netherflow || true
           sleep 3
@@ -48,7 +48,7 @@ jobs:
           # (Ubuntu 24.04 doesn't let an AppImage set up Chromium's sandbox: people there start it with --no-sandbox,
           # or use the .deb)
           ./dist/NetherFlow-*-x86_64.AppImage --appimage-extract-and-run --no-sandbox --remote-debugging-port=9222 > appimage.log 2>&1 &
-          node tools/linux-smoke.js "" quick
+          node tools/linux-smoke.js quick
           import -window root shot-appimage.png
           pkill -f NetherFlow || true
 

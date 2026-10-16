@@ -58,30 +58,10 @@ async function fetchOut(href, headers, signal) {
 
 // FlowStream (NetherFlow's playback engine, flowstream.js): a song's best public stream, played by the page's own player
 // through here (same origin, so the equalizer and visuals work on it as on a saved song). Straight from its source to
-// this computer: nothing passes through any other server. If FlowStream can't find it, the bundled yt-dlp is asked (its
-// path from main.js: module.exports.ytdlp).
+// this computer: nothing passes through any other server.
 // (its own, shorter wait: an answer takes ~0.15 s, so one that hasn't come in 3.5 s is asked again, see flowstream.js)
 const flow = FlowStream.create({ post: (url, body, headers) => fetch(url, { method: 'POST', body, headers, signal: AbortSignal.timeout(url.includes('music.youtube.com') ? 8000 : 3500) }).then(r => r.text()) }); // (lyrics: no hurry)
-const flowKept = new Map(); // a video → the address yt-dlp found (when FlowStream couldn't), till it expires
-function viaYtdlp(id) {
-  const had = flowKept.get(id);
-  if (had && had.until > Date.now()) return Promise.resolve(had.s);
-  const exe = module.exports.ytdlp?.();
-  if (!exe || !/^[\w-]{11}$/.test(id)) return Promise.reject(new Error('no yt-dlp'));
-  return new Promise((ok, no) => {
-    const kid = require('child_process').spawn(exe, ['--no-config', '--no-playlist', '--no-warnings', '-f', '251/140/bestaudio', '--print', '%(url)s\n%(format_id)s\n%(ext)s', '--', id], { windowsHide: true });
-    let out = ''; kid.stdout.on('data', d => out += d); kid.on('error', no);
-    kid.on('close', code => {
-      const [url, itag, ext] = out.trim().split('\n');
-      if (code || !/^https:\/\//.test(url || '')) return no(new Error('yt-dlp found nothing'));
-      const s = { url, itag: +itag, mime: ext === 'webm' ? 'audio/webm' : 'audio/mp4', loudnessDb: null };
-      flowKept.set(id, { s, until: (+(new URL(url).searchParams.get('expire')) || 0) * 1000 - 5 * 60e3 });
-      ok(s);
-    });
-  });
-}
-let flowWhy = ''; // (why FlowStream last handed a song to yt-dlp: its error code)
-const flowAudio = id => flow.audio(id).then(s => ({ ...s, via: 'FlowStream' }), e => { flowWhy = e.code || e.message; return viaYtdlp(id).then(s => ({ ...s, via: 'yt-dlp', why: flowWhy })); });
+const flowAudio = id => flow.audio(id);
 // The next song's first 256 KB (about 15 s), fetched ahead into memory, so it starts the moment it's asked for (the
 // rest follows from its source as it plays). Two songs' at most.
 const HEAD = 262144, flowHeads = new Map();
@@ -146,7 +126,7 @@ async function flowMedia(req, res, url) {
       const late = setTimeout(() => stop.abort(), 15000); // (no answer in 15 s: given up on, and the page moves on)
       r = await fetch(s.url, { headers: req.headers.range ? { Range: req.headers.range } : {}, signal: stop.signal }).finally(() => clearTimeout(late));
       if (r.status !== 403 || tries) break;
-      flow.forget(id); flowKept.delete(id); s = await pick(); // (expired, or tied to another address: a fresh one)
+      flow.forget(id); s = await pick(); // (expired, or tied to another address: a fresh one)
     }
     if (!r.ok) return send(res, 502, JSON.stringify({ error: 'the stream answered ' + r.status }));
     const total = +(r.headers.get('content-range') || '').split('/')[1] || +r.headers.get('content-length') || 0, had = !video && keptMeta(id);
@@ -277,5 +257,5 @@ const start = port => new Promise((resolve, reject) => {
   srv.listen(port, '127.0.0.1', () => resolve(srv.address().port));
 });
 
-module.exports = { start, ytdlp: null, heads: null }; // (ytdlp: main.js's, for FlowStream's fallback; heads: its folder for songs' starts)
+module.exports = { start, heads: null }; // (heads: main.js's folder for songs' starts)
 if (require.main === module) start(+process.env.PORT || 5173).then(p => console.log(`NetherFlow is up: http://localhost:${p}`));

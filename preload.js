@@ -9,10 +9,6 @@ contextBridge.exposeInMainWorld('netherflowApp', {
   onMaximized: cb => ipcRenderer.on('maximized', (_, on) => cb(on)),
   awake: on => ipcRenderer.send('awake', !!on), // keep the screen on (while a song plays)
   onShown: cb => ipcRenderer.on('shown', (_, on) => cb(on)), // where the window is: 2 in front, 1 behind another app, 0 minimized / hidden
-  // saving a song for offline: its audio downloaded from YouTube (see main.js) → { data, ext, dur }
-  ytdl: (id, key) => ipcRenderer.invoke('ytdl', { id, key }),
-  ytdlCancel: key => ipcRenderer.send('ytdl-cancel', key),
-  onYtdlProgress: cb => ipcRenderer.on('ytdl-progress', (_, m) => cb(m)), // { key, frac }
   // the island (see main.js): what's playing, ~30 times a second (null: nothing), and what's pressed on it. Windows only:
   // with neither, the page shows no island settings
   ...(process.platform === 'win32' ? {

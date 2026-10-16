@@ -13,7 +13,7 @@
 //   fs.prefetch([id, id, id]) the next songs, looked up ahead;  fs.forget(id) after its address stopped working
 //
 // Only public, unprotected streams: a format with DRM is never chosen, and nothing is signed in. A failure is a
-// FlowStream.Error with a code (id, network, blocked, unplayable, drm, shape): NetherFlow then asks its bundled yt-dlp.
+// FlowStream.Error with a code (id, network, blocked, unplayable, drm, shape): NetherFlow then tries the song's next upload.
 (function (out) {
   'use strict';
   const API = 'https://www.youtube.com/youtubei/v1/', MUSIC = 'https://music.youtube.com/youtubei/v1/';

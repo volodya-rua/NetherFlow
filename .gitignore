@@ -8,9 +8,8 @@ www/
 *.keystore
 keystore.properties
 
-# The desktop app's yt-dlp (yt-dlp.exe; Linux: yt-dlp) is downloaded by `npm run fetch-yt-dlp` (checked against its published SHA-256)
-vendor/yt-dlp/yt-dlp.exe
-vendor/yt-dlp/yt-dlp
+# Left-over local copies of yt-dlp from before 1.5 (no longer used): kept out of the repository
+vendor/yt-dlp/
 
 # Local editor / tool settings
 .claude/

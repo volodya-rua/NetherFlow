@@ -47,7 +47,7 @@ jobs:
           Xvfb :99 -screen 0 1280x800x24 & sleep 2
           export DISPLAY=:99
           (timeout 40 ./new/*.AppImage --remote-debugging-port=9222 > sandbox.log 2>&1; echo "exit $?" >> sandbox.log) &
-          node tools/linux-smoke.js "" quick && echo "RESULT: started without --no-sandbox" || echo "RESULT: did not start without --no-sandbox"
+          node tools/linux-smoke.js quick && echo "RESULT: started without --no-sandbox" || echo "RESULT: did not start without --no-sandbox"
           echo "the app was started as: $(pgrep -af "/netherflow( |$)" | head -1)"
           sleep 2; import -window root shot-nosandbox.png || true
           pkill -f NetherFlow || true; sleep 3

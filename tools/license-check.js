@@ -34,18 +34,11 @@ same('LICENSE', 'licenses/NetherFlow-GPL-3.0.txt');
 
 // 4. Every NetherFlow source file starts with the GPL notice (the section 7 terms need it there)
 const NOTICE_LINE = 'GNU GPL v3 only, with additional terms';
-const THIRD_PARTY = /^(android\/app\/src\/main\/python\/(yt_dlp|certifi)\/|race\/three\/|docs\/vendor\/|android\/app\/src\/(test|androidTest)\/|docs\/google)/;
+const THIRD_PARTY = /^(race\/three\/|docs\/vendor\/|android\/app\/src\/(test|androidTest)\/|docs\/google)/;
 for (const f of execFileSync('git', ['ls-files', '*.js', '*.html', '*.java', '*.py']).toString().split('\n').filter(Boolean))
   if (!THIRD_PARTY.test(f) && !read(f).split('\n').slice(0, 3).join('\n').includes(NOTICE_LINE)) problems.push(`${f} has no GPL notice at the top`);
 
-// 5. yt-dlp: the desktop download, the Android copy and the legal page name the same version
-const ver = {
-  desktop: (read('tools/fetch-yt-dlp.js').match(/VERSION = '([^']+)'/) || [])[1],
-  android: (read('android/app/src/main/python/yt_dlp/version.py').match(/__version__ = '([^']+)'/) || [])[1],
-};
-for (const [k, v] of Object.entries(ver)) if (!v || !legal.includes('yt-dlp ' + v)) problems.push(`yt-dlp ${v} (${k}) isn't the version legal.html names`);
-
-// 6. Each car model's author is credited (CC BY 4.0)
+// 5. Each car model's author is credited (CC BY 4.0)
 for (const c of JSON.parse(read('race/cars.json'))) if (!legal.includes(c.by)) problems.push(`race/cars.json: ${c.by} (${c.name}) isn't credited on legal.html`);
 
 // 7. Every npm package the apps ship has a row on the legal page (build-only tools don't ship)
