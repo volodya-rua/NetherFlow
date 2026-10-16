@@ -5164,7 +5164,7 @@ function offlineItems(t, anchor, back) {
   if (saved.has(t.trackId)) return [...(saved.get(t.trackId).old ? [mi('down', 'Save again, better quality', () => { hideMenu(); saveOffline([t], saved.get(t.trackId).lyrics, true); toast(`Saving ${t.trackName} again`); })] : []),
     mi('x', 'Remove download', () => { hideMenu(); removeSaved(t.trackId); })];
   const job = dlJob(t.trackId);
-  if (job) return [mi('down', dl.cur.includes(job) ? 'Downloading…' : 'Waiting to download', null, dl.cur.includes(job) ? pct(job) : ''),
+  if (job) return [mi('down', dl.cur.includes(job) ? 'Downloading…' : dl.waiting.includes(job) ? 'Waiting for the internet' : 'Waiting to download', null, dl.cur.includes(job) ? pct(job) : ''),
                    mi('x', 'Cancel saving', () => { hideMenu(); cancelSave(t.trackId); })];
   return [mi('down', 'Save for offline', () => saveChoice([t], anchor, back), '›')];
 }
@@ -5192,6 +5192,7 @@ const savedInfo = r => ({ track: r.track, size: r.size, lyrics: !!r.lyrics, save
   ytId: r.ytId, old: r.method !== METHOD });
 idb.all().then(list => {
   for (const r of list) saved.set(r.trackId, savedInfo(r));
+  dlLoaded = true; resumeDownloads();
   renderFolders();
   if ($('library').open) renderLibrary();
 }).catch(() => {});
@@ -5212,8 +5213,22 @@ const METHOD = 'file';
 // Three at once (as Musify does: a playlist comes in about three times as fast; many more and YouTube starts to slow
 // them down). A batch says how it went once, at the end.
 const DL_AT_ONCE = 3;
-const dl = { queue: [], cur: [], done: [], failed: [] }; // cur: downloading now · done, failed: since it was last idle
-const dlJob = id => [...dl.cur, ...dl.queue].find(j => j.t.trackId === id);
+const dl = { queue: [], cur: [], done: [], failed: [], waiting: [] }; // cur: downloading now · done, failed: since it was last idle · waiting: for the internet
+const dlJob = id => [...dl.cur, ...dl.queue, ...dl.waiting].find(j => j.t.trackId === id);
+// Downloads left unfinished when the app closed (the list kept on this device only, never synced): carried on once the
+// saved songs are known and the terms agreed to, the ones saved meanwhile skipped. The internet gone mid-way: they wait,
+// and carry on when it's back.
+const DL_PENDING = 'netherflow.dlpending';
+let dlLoaded = false, dlResumed = false;
+function resumeDownloads() {
+  if (!dlLoaded || dlResumed || store.get(TERMS) !== TERMS_VERSION) return;
+  dlResumed = true;
+  let left = [];
+  try { left = JSON.parse(store.get(DL_PENDING) || '[]'); } catch {}
+  for (const j of left) if (j?.t?.trackId && (j.upgrade || !saved.has(j.t.trackId)) && !dlJob(j.t.trackId)) dl.queue.push({ ...j, at: 0, dur: (j.t.trackTimeMillis || 0) / 1000 });
+  dlChanged(); pumpDl();
+}
+addEventListener('online', () => { if (dl.waiting.length) { dl.queue.push(...dl.waiting.splice(0)); dlChanged(); pumpDl(); } });
 const pct = j => j.dur ? Math.min(99, Math.round(j.at / j.dur * 100)) + '%' : '';
 function saveOffline(tracks, withLyrics, upgrade = false) {
   const fresh = tracks.filter(t => (upgrade || !saved.has(t.trackId)) && !dlJob(t.trackId));
@@ -5224,12 +5239,14 @@ function saveOffline(tracks, withLyrics, upgrade = false) {
 }
 function cancelSave(id) {
   dl.queue = dl.queue.filter(j => j.t.trackId !== id);
+  dl.waiting = dl.waiting.filter(j => j.t.trackId !== id);
   dl.cur.find(j => j.t.trackId === id)?.cancel?.();
   dlChanged();
 }
 function dlChanged() { // the count by "Library", the library screen, and the folders
   renderFolders();
-  const n = dl.queue.length + dl.cur.length;
+  const n = dl.queue.length + dl.cur.length + dl.waiting.length;
+  if (dlResumed) store.set(DL_PENDING, n ? JSON.stringify([...dl.cur, ...dl.queue, ...dl.waiting].map(({ t, withLyrics, upgrade }) => ({ t, withLyrics, upgrade }))) : '');
   $('dlCount').hidden = !n;
   $('dlCount').textContent = n;
   if ($('library').open) renderLibrary();
@@ -5259,7 +5276,8 @@ async function saveOne(job) {
     saved.set(entry.trackId, savedInfo(entry));
     if (!job.upgrade) dl.done.push(job.t.trackName);
   } catch (e) {
-    if (e.message !== 'cancelled' && !job.upgrade) dl.failed.push([job.t.trackName, e.name === 'QuotaExceededError' ? 'the device is full' : e.message]);
+    if (e.message !== 'cancelled' && !navigator.onLine) dl.waiting.push(Object.assign(job, { at: 0 })); // (the internet went: when it's back)
+    else if (e.message !== 'cancelled' && !job.upgrade) dl.failed.push([job.t.trackName, e.name === 'QuotaExceededError' ? 'the device is full' : e.message]);
   }
   dl.cur = dl.cur.filter(j => j !== job);
   if (!dl.cur.length && !dl.queue.length) { // all done: how it went
@@ -5267,6 +5285,7 @@ async function saveOne(job) {
     dl.done = []; dl.failed = [];
     if (done.length + failed.length === 1) toast(done.length ? `Saved for offline: ${done[0]}` : `Couldn't save ${failed[0][0]}: ${failed[0][1]}`);
     else if (done.length || failed.length) toast([done.length && `Saved ${done.length} songs for offline`, failed.length && `${failed.length} couldn't be saved (${failed[0][1]})`].filter(Boolean).join(' · '));
+    if (dl.waiting.length) toast(`No internet: ${dl.waiting.length > 1 ? dl.waiting.length + ' downloads carry' : 'the download carries'} on when it's back`);
   }
   dlChanged(); pumpDl();
 }
@@ -6247,12 +6266,12 @@ function libCard(art, name, sub, onclick, cls = '') {
   return b;
 }
 function dlRows() {
-  return [...dl.cur, ...dl.queue].map(j => {
+  return [...dl.cur, ...dl.queue, ...dl.waiting].map(j => {
     const r = el('div', 'dlrow'), img = el('img'), txt = el('span'), bar = el('div', 'dlbar'), x = el('button', 'icon-btn');
     x.append(ico('x'));
     img.alt = ''; img.src = artUrl(j.t, 120);
     bar.append(el('i'));
-    txt.append(el('b', '', j.t.trackName), el('small', 'lbl', dl.cur.includes(j) ? `Downloading · ${pct(j) || 'starting'}` : j.upgrade ? 'Waiting · downloading again in better quality' : 'Waiting'), bar);
+    txt.append(el('b', '', j.t.trackName), el('small', 'lbl', dl.cur.includes(j) ? `Downloading · ${pct(j) || 'starting'}` : dl.waiting.includes(j) ? 'Waiting for the internet' : j.upgrade ? 'Waiting · downloading again in better quality' : 'Waiting'), bar);
     x.setAttribute('aria-label', `Cancel saving ${j.t.trackName}`);
     x.onclick = () => cancelSave(j.t.trackId);
     r.dataset.dl = j.t.trackId;
@@ -7167,7 +7186,7 @@ if (store.get(TERMS) !== TERMS_VERSION) { $('consent').showModal(); placeWinctl(
 // its usual port taken (see main.js): the library and settings are kept under that one, so here all looks new; said so
 if (window.netherflowApp?.portMoved) setTimeout(() => { toast('Something else is using NetherFlow\'s port, so your library and settings aren\'t shown. Close it (or another NetherFlow) and open NetherFlow again.'); clearTimeout(toastTimer); toastTimer = setTimeout(() => $('toast').hidePopover(), 15000); }, 1500);
 $('consent').addEventListener('cancel', e => e.preventDefault()); // Esc doesn't count as agreeing
-$('agree').onclick = () => { store.set(TERMS, TERMS_VERSION); $('consent').close(); };
+$('agree').onclick = () => { store.set(TERMS, TERMS_VERSION); $('consent').close(); resumeDownloads(); };
 $('decline').onclick = () => {
   if (window.netherflowApp) netherflowApp.win('close');
   else if (native) Capacitor.Plugins.App.exitApp();
