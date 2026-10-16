@@ -55,6 +55,17 @@ card anyway), about 18 MB smaller, and it updates to Lite.
 
 ### 📺 1.4.3: the whole app on your TV's remote
 
+- **Sound tools** in the Equalizer panel: Crossfeed for headphones, Clarity, Loudness at low volume and Night mode, plus
+  360 sound (Around and Orbit). A "Playing now" line says the format and quality of what's playing
+- **Gapless albums:** the next track of the same album starts the moment this one ends
+- **Radio** from any song or artist: songs like it, without end
+- **A mix for the time of day** in Explore (Morning, Afternoon, Evening, Late night), from what you play at that time
+- **Follow artists:** their new releases first in Explore, and a note when they're out
+- **Mix with a friend:** your taste as a link. A friend's opens as a mix of you both, the songs you both love first
+- **Android Auto:** liked songs, recent plays and playlists on the car's screen, and voice search. NetherFlow has to be
+  open on the phone, and Android Auto lists apps from outside the Play Store only with its Unknown sources developer
+  setting on
+
 - **Songs start right away, and the next one's already there when you skip.** NetherFlow plays through its own player
   now, FlowStream, in place of a hidden YouTube player: every song in the best sound YouTube has (Opus), and no hidden
   video running down your battery
@@ -286,12 +297,12 @@ Okay so how does it actually stack up against the big ones? I scored all four on
 And no cap, NetherFlow doesn't win everything. I'm not gonna pretend it does.
 
 <p align="center">
-  <img src="docs/media/score.png" width="100%" alt="The real score, out of 100: NetherFlow 88.0, Apple Music 78.5, Spotify 78.0, YouTube Music 66.5">
+  <img src="docs/media/score.png" width="100%" alt="The real score, out of 100: NetherFlow 89.0, Apple Music 78.5, Spotify 78.0, YouTube Music 66.5">
 </p>
 
 | | App | Score | Wins at |
 |:-:|:--|:-:|:--|
-| 🥇 | **NetherFlow** | **88.0** | price, lyrics, the look, privacy, offline, together |
+| 🥇 | **NetherFlow** | **89.0** | price, lyrics, the look, privacy, offline, together |
 | 🥈 | **Apple Music** | **78.5** | sound quality, offline, catalog |
 | 🥉 | **Spotify** | **78.0** | discovery, devices, together, catalog |
 | 4 | **YouTube Music** | **66.5** | catalog (covers, live versions, remixes) |
@@ -318,7 +329,7 @@ the big ones beat it on catalog, sound, discovery and devices. Here's the deep v
 |:--|:--|:--|:--|:--|
 | Songs | everything on YouTube, found through Apple's catalog | 100M+ | 100M+ | 100M+, plus YouTube's covers, live versions and remixes |
 | Officially licensed | ❌ it plays the songs from YouTube | ✅ | ✅ | ✅ |
-| Podcasts | ✅ every show in Apple's directory, saved for offline too | ✅ | ⚠️ in a separate app | ✅ |
+| Podcasts | ✅ podcasts from Apple's directory, saved for offline too | ✅ | ⚠️ in a separate app | ✅ |
 | Audiobooks | ⚠️ free classics only (LibriVox, public domain in the US) | ✅ the bestsellers | ⚠️ in Apple Books | ❌ |
 | Can break when YouTube changes stuff | ⚠️ yes, until an update fixes it | ✅ no | ✅ no | ✅ no |
 | **Score** | 7 | **10** | **10** | **10** |
@@ -330,7 +341,7 @@ the big ones beat it on catalog, sound, discovery and devices. Here's the deep v
 | | NetherFlow | Spotify | Apple Music | YouTube Music |
 |:--|:--|:--|:--|:--|
 | Best quality | ~160 kbps Opus (320 kbps from Audius when the artist uploaded it there) | Lossless, up to 24-bit/44.1 kHz | Hi-Res Lossless up to 24-bit/192 kHz, plus Dolby Atmos | 256 kbps |
-| Equalizer | ✅ built in, presets and a volume booster | ⚠️ on phones | ✅ presets | ⚠️ the phone's own (Android) |
+| Equalizer & sound tools | ✅ built in, presets and a volume booster, plus Crossfeed, Clarity, Loudness at low volume, Night mode and 360 sound | ⚠️ on phones | ✅ presets | ⚠️ the phone's own (Android) |
 | Headphone correction | ✅ 6,000+ headphones (AutoEQ) | ❌ | ⚠️ Apple's own headphones | ❌ |
 | **Score** | 8 | 8 | **10** | 6 |
 </details>
@@ -363,10 +374,10 @@ the big ones beat it on catalog, sound, discovery and devices. Here's the deep v
 
 | | NetherFlow | Spotify | Apple Music | YouTube Music |
 |:--|:--|:--|:--|:--|
-| Recommendations | ✅ Your mix and Discover, from what you play, and Autoplay that learns from what you skip and like | ✅ Discover Weekly, AI DJ, daylist | ✅ stations, personal mixes | ✅ Supermix, strong recommendations |
-| Curated playlists, charts, new releases | ✅ YouTube Music's charts, moods & genres, and new music from your artists | ✅ | ✅ | ✅ |
+| Recommendations | ✅ Your mix, Discover, Radio from any song or artist, a mix for the time of day, Mix with a friend, and Autoplay that learns from what you skip and like | ✅ Discover Weekly, AI DJ, daylist | ✅ stations, personal mixes | ✅ Supermix, strong recommendations |
+| Curated playlists, charts, new releases | ✅ YouTube Music's charts, moods & genres, and new releases from the artists you follow, with an alert when they're out | ✅ | ✅ | ✅ |
 | Your year in music | ✅ your stats, any time | ✅ Wrapped | ✅ Replay | ✅ Recap |
-| **Score** | 8 | **10** | 8 | 9 |
+| **Score** | 9 | **10** | 8 | 9 |
 </details>
 
 <details open>
@@ -386,7 +397,7 @@ the big ones beat it on catalog, sound, discovery and devices. Here's the deep v
 |:--|:--|:--|:--|:--|
 | Phone | Android | Android, iPhone | iPhone, Android | Android, iPhone |
 | Computer | Windows, Linux | Windows, Mac, Linux, web | Mac, Windows, web | ⚠️ web only |
-| TV, speakers, car, watch | ⚠️ Android TV and Google TV, and lyrics on your car's display (Android) | ✅ basically everything | ✅ Apple's devices, and plenty more | ✅ lots |
+| TV, speakers, car, watch | ⚠️ Android TV and Google TV, Android Auto (NetherFlow has to be open on the phone, and Android Auto lists apps from outside the Play Store only with its Unknown sources developer setting on), and lyrics on your car's display (Android) | ✅ basically everything | ✅ Apple's devices, and plenty more | ✅ lots |
 | **Score** | 7 | **10** | 8 | 8 |
 </details>
 
