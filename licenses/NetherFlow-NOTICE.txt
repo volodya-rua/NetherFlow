@@ -51,8 +51,6 @@ Third-party material
 The license above covers NetherFlow's own code, design and artwork. Third-party
 material in this repository keeps its own license and is not covered by it:
 
-  android/app/src/main/python/yt_dlp/    yt-dlp: The Unlicense (public domain)
-  android/app/src/main/python/certifi/   certifi: Mozilla Public License 2.0
   fonts/ and docs/fonts/                 the typefaces: SIL Open Font License 1.1,
                                          except Permanent Marker, Special Elite and
                                          Yellowtail: Apache License 2.0

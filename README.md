@@ -504,7 +504,7 @@ they come out unsigned (as F-Droid wants them). Add `-PnfEmulator` to include x8
 
 NetherFlow has no accounts and no analytics, and nothing it sends reaches its developer in a form anyone there can read. Your settings, library and saved songs
 stay on your device. When you use it, it talks directly to the services above (GitHub too: to look for a newer
-NetherFlow, and to update yt-dlp, on Android only if you turn on "Update the downloader"; podcast hosts and the Internet Archive for podcasts and audiobooks), which see your IP address. A
+NetherFlow; podcast hosts and the Internet Archive for podcasts and audiobooks), which see your IP address. A
 playlist you share lives only inside its link (the page it opens, on GitHub Pages, never gets the songs part); one you
 edit together is kept on NetherFlow's own relay (on Cloudflare; for now public relays too, as a backup), encrypted with a key from its link, so anyone with the link can read and change it. The full [Privacy Policy](https://volodya-rua.github.io/NetherFlow/legal.html#privacy) is in the app and on the website.
 
@@ -518,7 +518,7 @@ edit together is kept on NetherFlow's own relay (on Cloudflare; for now public r
 - **Saving for offline downloads from YouTube, which YouTube's Terms of Service don't allow**, and copyright law where
   you live may not allow it either. Whether to use it is your choice and your responsibility: only save what you're
   allowed to keep, for your own personal listening.
-- NetherFlow also skips and blocks ads inside YouTube's player, which YouTube's terms may not allow.
+- NetherFlow plays songs straight from YouTube, so no ads play; it doesn't block or skip anything.
 - The [Terms of Use](https://volodya-rua.github.io/NetherFlow/legal.html#terms) apply to using the app. If you hold rights in something and have a concern,
   contact the developer (below): every notice is reviewed in good faith.
 - Redline's 3D races are built from [© OpenStreetMap contributors](https://www.openstreetmap.org/copyright)' map data:
@@ -543,12 +543,10 @@ terms in [NOTICE](NOTICE):
 
 NetherFlow 1.3.1 and earlier came out under the MIT License, and copies of those keep it.
 
-Third-party code in this repository keeps its own license: yt-dlp (The Unlicense) and certifi (MPL 2.0) in
-`android/app/src/main/python/`, the 27 typefaces in `fonts/` (SIL Open Font License 1.1; Permanent Marker, Special
+Third-party code in this repository keeps its own license: the 27 typefaces in `fonts/` (SIL Open Font License 1.1; Permanent Marker, Special
 Elite and Yellowtail under the Apache License 2.0), Microsoft's Fluent Emoji in `emoji/` (MIT), and three.js in
 `race/three/` (MIT). The three songs on the website in `docs/media/music/` are by HoliznaCC0, in the public domain
-(CC0 1.0). The builds also include Electron (with Chromium, Node.js and FFmpeg), Capacitor, Chaquopy (with
-Python), electron-updater and, on Windows and Linux, yt-dlp's own build of itself, each under its own license. All
+(CC0 1.0). The builds also include Electron (with Chromium, Node.js and FFmpeg), Capacitor and electron-updater, each under its own license. All
 license texts are in [`licenses/`](licenses); the full list of components is in the app under About › Licenses.
 
 <a id="hit-me-up"></a>
