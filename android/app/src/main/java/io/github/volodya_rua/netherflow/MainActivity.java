@@ -121,7 +121,7 @@ public class MainActivity extends BridgeActivity {
     // The page's era: a new one at each Clear history, given with every song it asks for; only a start asked for in the
     // latest is kept (a song that began before the clear isn't kept after it). null: any, till the first clear in this run.
     private static volatile String keptEra;
-    private static boolean keptNow(String era) { String e = keptEra; return e == null || e.equals(era); }
+    private static boolean keptNow(String era) { String e = keptEra; return !"off".equals(era) && (e == null || e.equals(era)); } // (off: Settings, Instant start)
     private static WebResourceResponse forgetKept(String era) {
         keptEra = era == null ? "" : era; HEADS.clear();
         java.io.File[] all = keptDir == null ? null : keptDir.listFiles();

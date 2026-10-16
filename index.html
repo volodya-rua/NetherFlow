@@ -2282,6 +2282,8 @@ function renderTextPanel() {
     settingRow('Lyrics alignment', ALIGNS, lalign, setAlign),
     stepperRow('Skip back / forward', 1, 60, jump, setJump, ' s', 'The ⟲ ⟳ buttons by the player, and the ← → keys. Hold − or + to count faster.'),
     settingRow('Autoplay', ['On', 'Off'], autoOn ? 'On' : 'Off', setAutoplay, 'When the list runs out, songs like the one playing carry on, as on YouTube Music: from its radio for the song, ranked to what you\'re listening to — the same language and era, songs that fit the last few, more of the artists you play through or like and less of those you skip, never one you just heard.'),
+    settingRow('Instant start', ['On', 'Off'], instantOn ? 'On' : 'Off', setInstant, 'The first few seconds of the last 100 songs you played are kept on this device (about 25 MB, never synced), so they start the moment you press play. Off: they\'re deleted, and nothing more is kept.'),
+    ...(instantOn ? [settingRow('Kept song starts', ['Clear'], '', () => { forgetKept(); toast('Cleared: songs start as usual till you play them again'); }, 'Deletes them now (they\'re kept again as you play). Clear history clears them too.')] : []),
     settingRow('Smooth mix', ['Off', 'On'], smoothMix ? 'On' : 'Off', setSmoothMix, 'Songs blend into each other like a DJ mix: the next one starts on a beat and fades in over the last 8 seconds, and a quiet or silent ending is skipped.'),
     ...(native || window.netherflowApp?.syncOpen ? [settingRow(native ? 'Sync with computer' : 'Sync with phone', ['Start'], '', () => { $('textPanel').hidePopover(); $('syncPanel').showPopover(); },
       'Your liked songs, playlists, history and stats, swapped between your phone and computer over your Wi-Fi: no account.')] : []),
@@ -2612,6 +2614,7 @@ const flowPage = native && window.FlowStream ? FlowStream.create({ visitor: stor
 // start is gone after all is simply fetched as usual.)
 const fsKept = (() => { try { return new Map(JSON.parse(store.get('netherflow.kept') || '[]')); } catch { return new Map(); } })();
 function fsKeep(vid, s) {
+  if (!instantOn) return;
   fsKept.delete(vid); fsKept.set(vid, [s.mime.split(';')[0], s.loudnessDb || 0, s.duration || 0]);
   while (fsKept.size > 100) fsKept.delete(fsKept.keys().next().value);
   store.set('netherflow.kept', JSON.stringify([...fsKept]));
@@ -2620,6 +2623,10 @@ function fsKeep(vid, s) {
 // the app's data clears them too: they're in its own folder.)
 // (each clear begins a new era, given with every song asked for after it: a song that began before the clear isn't kept)
 let keptEra = store.get('netherflow.keptera');
+// Settings: Instant start. Off: the kept starts deleted, and every song asked for with the era "off" (none kept)
+let instantOn = store.get('netherflow.instant') !== 'Off';
+function setInstant(v) { instantOn = v === 'On'; store.set('netherflow.instant', instantOn ? '' : 'Off'); if (!instantOn) forgetKept(); renderTextPanel(); }
+const keptG = () => instantOn ? keptEra : 'off';
 function forgetKept() {
   keptEra = Math.random().toString(36).slice(2); store.set('netherflow.keptera', keptEra);
   fsKept.clear(); store.set('netherflow.kept', '');
@@ -2627,18 +2634,18 @@ function forgetKept() {
 }
 async function fsStream(vid) { // → { src (for a player, or a download), loudnessDb, dur }
   if (native) {
-    const k = fsKept.get(vid);
+    const k = instantOn && fsKept.get(vid);
     if (k) { // its start kept here: played from there at once, its address found meanwhile and handed to the app
       const t = Math.random().toString(36).slice(2);
       flowPage.audio(vid).catch(() => Capacitor.Plugins.YtDl.stream({ id: vid })).then(s => s.url, () => '').then(u => fetch('/_fs/url?' + new URLSearchParams({ t, u })));
-      return { src: '/_fs/media?' + new URLSearchParams({ id: vid, m: k[0], t, g: keptEra }), loudnessDb: k[1], dur: k[2] };
+      return { src: '/_fs/media?' + new URLSearchParams({ id: vid, m: k[0], t, g: keptG() }), loudnessDb: k[1], dur: k[2] };
     }
     const s = await flowPage.audio(vid).catch(() => Capacitor.Plugins.YtDl.stream({ id: vid }));
     fsKeep(vid, s); // (the app keeps its start as it plays)
-    return { src: '/_fs/media?' + new URLSearchParams({ u: s.url, m: s.mime.split(';')[0], id: vid, g: keptEra }), loudnessDb: s.loudnessDb || 0, dur: s.duration || 0 };
+    return { src: '/_fs/media?' + new URLSearchParams({ u: s.url, m: s.mime.split(';')[0], id: vid, g: keptG() }), loudnessDb: s.loudnessDb || 0, dur: s.duration || 0 };
   }
   const s = await fetch('/api/fs/audio?' + new URLSearchParams({ id: vid })).then(r => r.ok ? r.json() : Promise.reject(new Error('no stream')));
-  return { src: '/api/fs/media?' + new URLSearchParams({ id: vid, g: keptEra }), loudnessDb: s.loudnessDb || 0, dur: s.duration || 0 };
+  return { src: '/api/fs/media?' + new URLSearchParams({ id: vid, g: keptG() }), loudnessDb: s.loudnessDb || 0, dur: s.duration || 0 };
 }
 async function fsPlay(v, id) {
   const s = await fsStream(v.id);
@@ -3223,7 +3230,7 @@ setInterval(() => {
 function prefetchNext() {
   const n = upNext[0] || queue[qi + 1];
   if (!n || !fullSongs || saved.has(n.trackId)) return;
-  videosFor(n).then(v => { if (!v[0]) return; ytmLyricsFor(v[0].id); native ? flowPage?.audio(v[0].id).then(s => { fsKeep(v[0].id, s); return fetch('/_fs/ahead?' + new URLSearchParams({ u: s.url, id: v[0].id, g: keptEra })); }).catch(() => {}) : fetch('/api/fs/ahead?' + new URLSearchParams({ ids: v[0].id, g: keptEra })).catch(() => {}); }).catch(() => {}); // (FlowStream: its stream looked up ahead too)
+  videosFor(n).then(v => { if (!v[0]) return; ytmLyricsFor(v[0].id); native ? flowPage?.audio(v[0].id).then(s => { fsKeep(v[0].id, s); return fetch('/_fs/ahead?' + new URLSearchParams({ u: s.url, id: v[0].id, g: keptG() })); }).catch(() => {}) : fetch('/api/fs/ahead?' + new URLSearchParams({ ids: v[0].id, g: keptG() })).catch(() => {}); }).catch(() => {}); // (FlowStream: its stream looked up ahead too)
   audiusFor(n);
   lyricsFor(n);
 }

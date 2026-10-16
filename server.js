@@ -113,7 +113,7 @@ function keptMeta(id) { try { return JSON.parse(fs.readFileSync(keptFile(id, '.j
 const dropKept = id => { for (const ext of ['.json', '.head']) if (keptFile(id, ext)) try { fs.rmSync(keptFile(id, ext), { force: true }); } catch {} }; // (at once: the page asks again straight after)
 async function keepHead(id, buf, s, total, era) {
   const dir = module.exports.heads;
-  if (!keptFile(id, '') || buf.length < HEAD || !total || keptEra !== null && era !== keptEra) return;
+  if (!keptFile(id, '') || buf.length < HEAD || !total || era === 'off' || keptEra !== null && era !== keptEra) return; // (off: Settings, Instant start)
   try {
     await fs.promises.mkdir(dir, { recursive: true });
     await fs.promises.writeFile(keptFile(id, '.head'), buf.subarray(0, HEAD)); // (then its description: there only once the start is whole)
