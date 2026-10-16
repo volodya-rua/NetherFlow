@@ -5681,7 +5681,7 @@ $('qrSave').onclick = () => { // a card to post or send: the name, the code, how
 // song (it plays next), skip, and send a reaction. The messages go through NetherFlow's own relay (relay/worker.js, on
 // Cloudflare: it keeps no logs) or, if it can't be reached, a public MQTT relay, end-to-end encrypted with a key made from
 // the code (AES-GCM), so the relay passes on only noise, under a topic that doesn't give the code away. (A guest's pause is their own: Play catches up again.)
-const NF_RELAY = 'wss://netherflow-relay.SUBDOMAIN.workers.dev/mqtt'; // (NetherFlow's own: see relay/worker.js)
+const NF_RELAY = 'wss://netherflow-relay.netherflow.workers.dev/mqtt'; // (NetherFlow's own: see relay/worker.js)
 const TG_BROKERS = ['wss://broker.emqx.io:8084/mqtt', 'wss://broker.hivemq.com:8884/mqtt', 'wss://test.mosquitto.org:8081/mqtt'];
 // the relays in the order to try: NetherFlow's own, then the public ones (a backup for now) in an order the code picks,
 // the order older NetherFlows try them in (ponytail: the public ones go once every NetherFlow out there knows ours)

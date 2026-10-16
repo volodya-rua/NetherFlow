@@ -60,6 +60,10 @@ card anyway), about 18 MB smaller, and it updates to Lite.
 - **The TV home's title** no longer runs into the header
 - **Easier on the eyes:** the lyric looks that flash do it at most twice a second, never when your system asks for less
   motion, and NetherFlow tells you the first time
+- **Listen together and shared playlists go through NetherFlow's own relay now**: it keeps no logs and, as before, can't
+  read anything (it's all end-to-end encrypted). The public relays stay as a backup for a while
+- Heads-up: someone on 1.4.2 or older can't join a Listen together session started on 1.4.3, so update both sides.
+  Shared playlists keep working with older versions
 - The terms changed a little (which country's law applies, and a note on flashing light), so you're asked to accept them again
 
 ### 🔐 1.4.2: Listen together and sync, locked down tighter
