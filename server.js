@@ -2,23 +2,26 @@
 // NetherFlow's built-in server, started by the desktop app (main.js). `node server.js` also runs it alone.
 //  1. Serves the page on localhost (FlowStream's streams play as the page's own: /api/fs/…; a file:// page can't).
 //  2. /api/yt?q=… searches YouTube with no API key; /api/ytm?q=… searches YouTube Music's songs (the album recordings).
-//  3. /api/words?artist=&title=&dur= fetches word-by-word lyric timing; /api/fs/… FlowStream (flowstream.js): a song's
-//     stream, YouTube Music's own lyrics for it, the next songs ahead; /api/suggest?q=… what YouTube Music suggests
+//  3. /api/words?artist=&title=&dur= word-by-word lyric timing, /api/videolyrics?id=… a music video's own lyrics (EndVerse,
+//     endverse.js); /api/fs/… FlowStream (flowstream.js): a song's stream, the next songs ahead; /api/suggest?q=… what YouTube Music suggests
 //     while a search is typed;
 //     /api/audius?q=… Audius's tracks (an artist's own uploads there play at 320 kbps); /api/radio?id=… YouTube Music's radio
-//     for a song (what Autoplay picks from); /api/playlist?url=… a Spotify, Apple Music or YouTube playlist's songs;
+//     for a song (what Autoplay picks from); /api/playlist?url=… a Spotify, Apple Music or YouTube playlist's songs
+//     (BridgeTheMusic, bridgethemusic.js);
 //     /api/explore, /api/charts, /api/mood, /api/album: YouTube Music's explore page, charts, a mood's playlists, an album;
 //     /api/toppods Apple's top podcasts; /api/feed?url=… a podcast's feed, /api/media?url=… an episode's audio (saving it).
-// (2 and 3 live in lib.js, which the Android app runs inside the page instead.)
+// (2 and 3 live in lib.js, EndVerse and BridgeTheMusic, which the Android app runs inside the page instead.)
 const http = require('http'), fs = require('fs'), path = require('path');
 const lib = require('./lib');
-const FlowStream = require('./flowstream');
+const FlowStream = require('./flowstream'), EndVerse = require('./endverse'), BridgeTheMusic = require('./bridgethemusic');
 
 // Only the page's own files are served, never anything else in this folder (like the Android signing key).
 const FILES = {
   '/': ['index.html', 'text/html; charset=utf-8'],
   '/lib.js': ['lib.js', 'text/javascript'],
   '/flowstream.js': ['flowstream.js', 'text/javascript'],
+  '/endverse.js': ['endverse.js', 'text/javascript'],
+  '/bridgethemusic.js': ['bridgethemusic.js', 'text/javascript'],
   '/legal.html': ['legal.html', 'text/html; charset=utf-8'],
   '/island.html': ['island.html', 'text/html; charset=utf-8'], // (the desktop app's island: see main.js)
   '/logo.png': ['logo.png', 'image/png'],
@@ -39,6 +42,7 @@ const get = (url, headers) => fetch(url, { headers, signal: AbortSignal.timeout(
 // which answers; 8 s in all, as before)
 const post = (url, body, headers) => fetch(url, { method: 'POST', body, headers, signal: AbortSignal.timeout(4000) }).then(r => r.text())
   .catch(e => e.name === 'TimeoutError' ? fetch(url, { method: 'POST', body, headers, signal: AbortSignal.timeout(4000) }).then(r => r.text()) : Promise.reject(e));
+const verse = EndVerse.create({ get, post }), bridge = BridgeTheMusic.create({ get, post }); // (lyrics; playlists pasted in)
 const send = (res, code, body, type = 'application/json') => { res.writeHead(code, { 'Content-Type': type }); res.end(body); };
 // A podcast's addresses (its feed's, its episodes') are anyone's to write: only http(s), and never this computer or its
 // network, checked at each redirect too. (ponytail: names only, not where they resolve; a name pointed at 127.0.0.1
@@ -163,9 +167,9 @@ async function handle(req, res) {
     return send(res, 204, '');
   }
   if (url.pathname === '/api/fs/ahead') { flowAhead((url.searchParams.get('ids') || '').split(','), url.searchParams.get('g')); return send(res, 204, ''); } // (the next songs, looked up ahead)
-  if (url.pathname === '/api/fs/lyrics') {
-    try { return send(res, 200, JSON.stringify(await flow.lyrics(url.searchParams.get('id') || ''))); }
-    catch (e) { return send(res, 502, JSON.stringify({ error: e.code || e.message })); }
+  if (url.pathname === '/api/videolyrics') {
+    try { return send(res, 200, JSON.stringify(await verse.forVideo(url.searchParams.get('id') || ''))); }
+    catch (e) { return send(res, 502, JSON.stringify({ error: e.message })); }
   }
   if (url.pathname === '/api/yt') {
     const q = (url.searchParams.get('q') || '').slice(0, 200);
@@ -191,7 +195,7 @@ async function handle(req, res) {
     const link = (url.searchParams.get('url') || '').slice(0, 500);
     let host = ''; try { host = new URL(link).hostname; } catch {}
     if (!/^(music\.youtube\.com|(www\.|m\.)?youtube\.com|youtu\.be|open\.spotify\.com|spotify\.(app\.)?link|music\.apple\.com)$/.test(host)) return send(res, 400, JSON.stringify({ error: 'not a playlist link' }));
-    try { return send(res, 200, JSON.stringify(await lib.playlist(get, post, link))); }
+    try { return send(res, 200, JSON.stringify(await bridge.read(link))); }
     catch (e) { return send(res, 502, JSON.stringify({ error: e.message })); }
   }
   // Explore (see lib.ytmExplore…): gl, the country; p, a mood's page; id, an album
@@ -243,7 +247,7 @@ async function handle(req, res) {
   }
   if (url.pathname === '/api/words') {
     const p = url.searchParams, artist = (p.get('artist') || '').slice(0, 200), title = (p.get('title') || '').slice(0, 200);
-    try { return send(res, 200, JSON.stringify(artist && title ? await lib.words(get, artist, title, +p.get('dur') || 0) : {})); }
+    try { return send(res, 200, JSON.stringify(artist && title ? await verse.words(artist, title, +p.get('dur') || 0) : {})); }
     catch { return send(res, 200, JSON.stringify({})); } // no word timing is fine: line timing still works
   }
   const f = FILES[url.pathname];

@@ -1,6 +1,6 @@
 // FlowStream for NetherFlow - Copyright (C) 2026 Volodya.rua - GNU GPL v3 only, with additional terms (credit, name and logo): see LICENSE and NOTICE.
 // FlowStream, NetherFlow's playback engine. For a public video it finds the best public audio stream (Opus, format 251),
-// a video stream sized to the screen, and the song's lyrics (synced where they're published), as plain stream addresses
+// and a video stream sized to the screen, as plain stream addresses
 // the device then plays itself: nothing passes through any server of ours. One small request per song; each answer kept
 // for as long as its addresses are good; the next songs looked up ahead, a little apart. The platform hands it its own
 // way to make a request — post(url, body, headers) → Promise<string> — so the same code runs in Node (NetherFlow's
@@ -9,14 +9,13 @@
 //   const fs = FlowStream.create({ post })
 //   await fs.audio(id)        { url, itag, mime, size, bitrate, loudnessDb, duration, expires, client (the one given it) }
 //   await fs.video(id, { height: 1080, fps: 60, codecs: ['av01', 'vp9', 'avc1'] })   { url, itag, mime, width, height, fps, expires }
-//   await fs.lyrics(id)       { lines: [{ t, end, text }] } or { plain }, with { source } (who provides them), or {}
 //   fs.prefetch([id, id, id]) the next songs, looked up ahead;  fs.forget(id) after its address stopped working
 //
 // Only public, unprotected streams: a format with DRM is never chosen, and nothing is signed in. A failure is a
 // FlowStream.Error with a code (id, network, blocked, unplayable, drm, shape): NetherFlow then tries the song's next upload.
 (function (out) {
   'use strict';
-  const API = 'https://www.youtube.com/youtubei/v1/', MUSIC = 'https://music.youtube.com/youtubei/v1/';
+  const API = 'https://www.youtube.com/youtubei/v1/';
   // The clients this asks as, in turn, until one is given the video: the ones yt-dlp asks as that are given plain stream
   // addresses (its "visionos", its default when it has no JavaScript runtime; then its "android_vr", a spare for when
   // YouTube changes the first). See NOTICE.
@@ -27,14 +26,11 @@
       userAgent: 'com.google.android.apps.youtube.vr.oculus/1.65.10 (Linux; U; Android 12L; eureka-user Build/SQ3A.220605.009.A1) gzip' } },
   ];
   const WEB_VERSION = '2.20261001.00.00';
-  const WEB_MUSIC = { clientName: 'WEB_REMIX', clientVersion: '1.20250101.01.00' };
-  const ANDROID_MUSIC = { clientName: 'ANDROID_MUSIC', clientVersion: '7.21.50', androidSdkVersion: 30 }; // (the client given the lyrics' timing)
   const AUDIO = [251, 140, 250, 249, 139]; // the best first: Opus (~130–160 kbps), then AAC, then the smaller ones
   const KEEP = 100; // answers kept, at most (the oldest go first)
 
   class FlowError extends Error { constructor(code, message) { super(message); this.name = 'FlowStream.Error'; this.code = code; } }
   const sleep = ms => new Promise(r => setTimeout(r, ms));
-  const find = (o, test) => { if (!o || typeof o !== 'object') return null; for (const k in o) { const v = o[k]; if (test(k, v)) return v; const r = find(v, test); if (r) return r; } return null; };
 
   class Engine {
     // post: the platform's request; visitor/saveVisitor: the visitor id kept between runs (asked for once, otherwise);
@@ -137,30 +133,9 @@
     prefetch(ids) { for (const id of (ids || []).slice(0, 3)) this.player(id, { ahead: true }).catch(() => {}); }
     // an address that stopped working (a 403, say): asked again next time
     forget(id) { this.cache.delete(id); }
-
-    // The song's lyrics from YouTube Music: the lyrics tab's id from the song's page, then the lyrics, asked as the
-    // Android app (only that client is given their timing). Who provides them (YouTube shows it): source.
-    async lyrics(id) {
-      if (!/^[\w-]{11}$/.test(String(id))) throw new FlowError('id', 'not a video id: ' + id);
-      const music = { Origin: 'https://music.youtube.com', Referer: 'https://music.youtube.com/' };
-      const next = await this.json(MUSIC + 'next', { context: { client: { ...WEB_MUSIC, hl: this.hl, gl: this.gl } }, videoId: id, isAudioOnly: true }, music);
-      const browseId = find(next, (k, v) => k === 'browseId' && typeof v === 'string' && v.startsWith('MPLY'));
-      if (!browseId) return {};
-      const j = await this.json(MUSIC + 'browse', { context: { client: { ...ANDROID_MUSIC, hl: this.hl, gl: this.gl } }, browseId },
-        { ...music, 'User-Agent': `com.google.android.apps.youtube.music/${ANDROID_MUSIC.clientVersion} (Linux; U; Android 11) gzip` });
-      const source = (find(j, (k, v) => typeof v === 'string' && /^Source: ./.test(v)) || '').replace(/^Source: /, '');
-      const timed = find(j, k => k === 'timedLyricsData');
-      if (timed?.length) {
-        const lines = timed.filter(l => l.cueRange).map(l => ({ t: +l.cueRange.startTimeMilliseconds / 1000, end: +l.cueRange.endTimeMilliseconds / 1000, text: String(l.lyricLine || '').replace(/\s+/g, ' ').trim() }))
-          .filter(l => l.text && l.text !== '♪');
-        if (lines.length) return { lines, source };
-      }
-      const plain = (find(j, k => k === 'musicDescriptionShelfRenderer')?.description?.runs || []).map(r => r.text).join('');
-      return plain ? { plain, source } : {};
-    }
   }
 
   out.create = opts => new Engine(opts);
   out.Error = FlowError;
-  out.version = '0.2.0';
+  out.version = '0.3.0';
 })(typeof module === 'object' && module.exports ? module.exports : (globalThis.FlowStream = {}));

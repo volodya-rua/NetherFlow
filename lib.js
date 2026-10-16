@@ -1,6 +1,6 @@
 // NetherFlow - Copyright (C) 2026 Volodya.rua - GNU GPL v3 only, with additional terms (credit, name and logo): see LICENSE and NOTICE.
 // Shared by the desktop app's server (Node) and the Android app (inside the page): keyless YouTube
-// search and word-by-word lyric timing. Each takes get(url, headers) → Promise<string>, so each side
+// search, YouTube Music's explore, charts and radio, Audius, podcasts' charts and QR codes. Each takes get(url, headers) → Promise<string>, so each side
 // brings its own HTTP (Node's fetch on desktop, native HTTP on Android — a browser page can't do it).
 (function (lib) {
   const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36';
@@ -168,121 +168,6 @@
     return out;
   };
 
-  // A playlist (or album) from its link — YouTube / YouTube Music, Spotify, Apple Music — as { name, from, tracks:
-  // [{ title, artist, album, dur, yt (its YouTube video, when it's from there), apple (its iTunes id, from Apple) }] }.
-  // ponytail: each service's public page or its web app's own API, read as they are now; if one reshapes, its branch is
-  // the one spot to fix. Spotify's embed and Apple's page show a list's first 100 songs; the rest come from each one's
-  // web player's own API, with the pass that player uses. (Spotify's: the query its web player lists a playlist with,
-  // its id read from the player's script, so a new version of it is picked up by itself. Editorial lists too.)
-  const retry = async f => { for (let tries = 0; tries < 3; tries++) { if (tries) await new Promise(r => setTimeout(r, 2000 * tries)); const v = await f().catch(() => null); if (v) return v; } return null; };
-  let spotifyQuery = '';
-  const spotifyContents = async (get, post, id, pass) => {
-    if (!spotifyQuery) {
-      const page = await get('https://open.spotify.com/', { 'User-Agent': UA });
-      for (const src of page.match(/https:\/\/open\.spotifycdn\.com\/cdn\/build\/web-player\/web-player\.[\w]+\.js/g) || []) {
-        spotifyQuery = (await get(src, { 'User-Agent': UA })).match(/"fetchPlaylistContents","query","([0-9a-f]{64})"/)?.[1] || '';
-        if (spotifyQuery) break;
-      }
-      if (!spotifyQuery) throw new Error('Spotify web player changed');
-    }
-    const tracks = [];
-    let total = Infinity, partial = false;
-    for (let at = 0; at < total && at < 20000; at += 100) {
-      const body = JSON.stringify({ variables: { uri: 'spotify:playlist:' + id, offset: at, limit: 100 }, operationName: 'fetchPlaylistContents',
-        extensions: { persistedQuery: { version: 1, sha256Hash: spotifyQuery } } });
-      const c = await retry(() => post('https://api-partner.spotify.com/pathfinder/v2/query', body,
-        { Authorization: 'Bearer ' + pass, 'Content-Type': 'application/json;charset=UTF-8', 'User-Agent': UA }).then(t => JSON.parse(t).data?.playlistV2?.content).then(c => c?.items && c));
-      if (!c) { if (!tracks.length) throw new Error('Spotify playlist unreadable'); partial = true; break; } // (what came before is kept)
-      total = c.totalCount ?? 0;
-      for (const it of c.items) {
-        const t = it.itemV2?.data;
-        if (t?.__typename === 'Track' && t.name) tracks.push({ title: t.name, artist: t.artists?.items?.[0]?.profile?.name || '', album: t.albumOfTrack?.name || '', dur: Math.round((t.trackDuration?.totalMilliseconds || 0) / 1000) });
-      }
-      if (!c.items.length) break;
-    }
-    return { tracks, partial };
-  };
-  lib.playlist = async (get, post, link) => {
-    const u = new URL(link), find = (o, key) => { if (!o || typeof o !== 'object') return null; if (o[key]) return o[key]; for (const k in o) { const r = find(o[k], key); if (r) return r; } return null; };
-    if (/^spotify\.(app\.)?link$/.test(u.hostname)) { // (the Spotify app's short link: its page names the playlist)
-      const m = (await get(link, { 'User-Agent': UA })).match(/open\.spotify\.com\/(playlist|album|track)\/([A-Za-z0-9]{22})/);
-      if (!m || m[1] === 'track') throw new Error(m ? 'that\'s a song, not a playlist' : 'not a playlist link');
-      return lib.playlist(get, post, `https://open.spotify.com/${m[1]}/${m[2]}`);
-    }
-    if (/(^|\.)youtube\.com$|^youtu\.be$/.test(u.hostname)) {
-      const id = u.searchParams.get('list') || (u.pathname.match(/\/browse\/VL([\w-]+)/) || [])[1];
-      if (!id) throw new Error('not a playlist link');
-      let json = await retry(() => ytmPost(post, 'browse', { context: WEB_MUSIC, browseId: 'VL' + id })); // (its first page too: YouTube Music is slow to answer now and then)
-      if (!json) throw new Error("YouTube didn't answer: try again in a moment");
-      const head = find(json, 'musicResponsiveHeaderRenderer') || find(json, 'musicDetailHeaderRenderer') || find(json, 'musicEditablePlaylistDetailHeaderRenderer');
-      const name = (find(head, 'title')?.runs || []).map(x => x.text).join('') || 'YouTube playlist', tracks = [], seen = new Set();
-      let partial = false;
-      for (let page = 0; page < 200 && json; page++) { // (every page of it: 200 at most, ~20,000 songs)
-        (function walk(o) {
-          if (!o || typeof o !== 'object') return;
-          const r = o.musicResponsiveListItemRenderer, vid = r?.playlistItemData?.videoId;
-          if (vid) {
-            const col = i => (r.flexColumns?.[i]?.musicResponsiveListItemFlexColumnRenderer?.text?.runs || []).map(x => x.text).join('');
-            const len = (r.fixedColumns?.[0]?.musicResponsiveListItemFixedColumnRenderer?.text?.runs || []).map(x => x.text).join('');
-            if (!seen.has(vid)) { seen.add(vid); tracks.push({ title: col(0), artist: col(1).split(' • ')[0], album: col(2), dur: secs(len), yt: vid }); }
-            return;
-          }
-          for (const k in o) walk(o[k]);
-        })(json);
-        const token = find(json, 'continuationCommand')?.token || find(json, 'nextContinuationData')?.continuation;
-        json = token ? await retry(() => ytmPost(post, 'browse', { context: WEB_MUSIC, continuation: token })) : null;
-        if (token && !json) partial = true;
-      }
-      return { name, from: 'YouTube', tracks, partial };
-    }
-    if (/(^|\.)spotify\.com$/.test(u.hostname)) {
-      const m = u.pathname.match(/\/(playlist|album)\/([A-Za-z0-9]+)/);
-      if (!m) throw new Error('not a playlist link');
-      const html = await get(`https://open.spotify.com/embed/${m[1]}/${m[2]}`, { 'User-Agent': UA });
-      const st = JSON.parse(html.match(/<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/)?.[1] || '{}').props?.pageProps?.state, e = st?.data?.entity;
-      if (!e?.trackList) throw new Error('Spotify page changed');
-      let tracks = e.trackList.map(t => ({ title: t.title, artist: (t.subtitle || '').split(',')[0].trim(), album: m[1] === 'album' ? e.name : '', dur: Math.round((t.duration || 0) / 1000) })), partial = false;
-      const pass = st.settings?.session?.accessToken;
-      if (m[1] === 'playlist' && tracks.length >= 100 && pass) { // (past the embed's 100: the whole list, or the 100 if that fails)
-        const all = await spotifyContents(get, post, m[2], pass).catch(() => { spotifyQuery = ''; return null; });
-        if (!all) partial = true; // (Spotify not answering just now: the 100, and the importer says to try again later)
-        else if (all.tracks.length > tracks.length) ({ tracks, partial } = all);
-      }
-      return { name: e.name || 'Spotify playlist', from: 'Spotify', tracks, partial };
-    }
-    if (/(^|\.)apple\.com$/.test(u.hostname)) {
-      const html = await get(link, { 'User-Agent': UA });
-      const j = JSON.parse(html.match(/<script type="application\/json" id="serialized-server-data">([\s\S]*?)<\/script>/)?.[1] || 'null');
-      if (!j) throw new Error('Apple Music page changed');
-      const tracks = [], seen = new Set();
-      (function walk(o) {
-        if (!o || typeof o !== 'object') return;
-        const id = o.contentDescriptor?.kind === 'song' && o.contentDescriptor.identifiers?.storeAdamID;
-        if (id && typeof o.title === 'string') { if (!seen.has(id)) { seen.add(id); tracks.push({ title: o.title, artist: o.artistName || o.subtitleLinks?.[0]?.title || '', dur: Math.round((o.duration || 0) / 1000), apple: id }); } return; }
-        for (const k in o) walk(o[k]);
-      })(j);
-      // (its own clean name, apple:title; the page title's is "… by its curator - Apple Music")
-      const name = (html.match(/<meta name="apple:title" content="([^"]*)"/)?.[1] || (html.match(/<title>([^<]*)<\/title>/)?.[1] || '').replace(/^‎/, '').replace(/\s+-\s+(Playlist|Album|Single|EP).*$/, ''))
-        .replace(/&amp;/g, '&').replace(/&#39;/g, "'").replace(/&quot;/g, '"') || 'Apple Music playlist';
-      const pl = u.pathname.match(/^\/([a-z]{2})\/playlist\/(?:[^/]+\/)?(pl\.[\w.-]+)/);
-      let partial = false;
-      if (pl && tracks.length >= 100) { // (past the page's 100: Apple Music's web API, with its web player's own pass — in its script)
-        const js = html.match(/\/assets\/index[^"']*\.js/)?.[0], pass = js && (await get('https://music.apple.com' + js, { 'User-Agent': UA }).catch(() => '')).match(/eyJ[\w-]+\.[\w-]+\.[\w-]+/)?.[0];
-        if (!pass) partial = true; // (its script reshaped: the page's 100, and the importer says so)
-        for (let at = 100; pass && at < 20000; at += 100) {
-          const r = await retry(() => get(`https://amp-api.music.apple.com/v1/catalog/${pl[1]}/playlists/${pl[2]}/tracks?offset=${at}&limit=100`,
-            { Authorization: 'Bearer ' + pass, Origin: 'https://music.apple.com', 'User-Agent': UA }).then(JSON.parse)
-            .then(r => r?.errors?.some(e => e.status === '404') ? { data: [] } : r?.data && r)); // (404: past its end, no more)
-          if (!r) { partial = true; break; }
-          for (const t of r.data || []) if (t.attributes?.name && !seen.has(t.id)) { seen.add(t.id); tracks.push({ title: t.attributes.name, artist: t.attributes.artistName || '', dur: Math.round((t.attributes.durationInMillis || 0) / 1000), apple: t.id }); }
-          if (!r.next) break;
-        }
-      }
-      return { name, from: 'Apple Music', tracks, partial };
-    }
-    throw new Error('not a YouTube, Spotify or Apple Music link');
-  };
-
   // Audius (an open music platform with a public API for apps): its tracks for a search, each { id, title, artist,
   // verified (the artist's own, checked account), dur, url (its full stream: 320 kbps MP3) }.
   lib.audius = async (get, q) => {
@@ -290,67 +175,6 @@
     return (j.data || []).filter(t => t.is_streamable !== false && !t.is_stream_gated).map(t => ({ id: t.id, title: t.title || '', artist: t.user?.name || '',
       verified: !!t.user?.is_verified, dur: t.duration || 0, url: `https://api.audius.co/v1/tracks/${t.id}/stream?app_name=NetherFlow` }));
   };
-
-  // Word-by-word lyric timing from two music services' public lyric endpoints: NetEase Cloud Music ("yrc") and
-  // Kugou ("krc"). Each must be the same artist at the same length (±3s), so the timing matches the recording
-  // being played. Both are asked; the one closest in length wins. Returned in NetEase's yrc format. Neither with word
-  // timing: NetEase's line-timed lyrics if it has them ({ lrc }), for songs the other lyrics sources don't have.
-  const norm = s => (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
-    .replace(/\s*[([].*?[)\]]/g, '').replace(/[^\p{L}\p{N}]/gu, '');
-  const sameSong = (a, b) => { a = norm(a); b = norm(b); return !!a && !!b && (a.startsWith(b) || b.startsWith(a)); };
-  lib.words = async (get, artist, title, dur) => {
-    const found = (await Promise.all([netease, kugou].map(f => f(get, artist, title, dur).catch(() => null)))).filter(Boolean);
-    const fit = (a, b) => Math.abs(a.dur - dur) - Math.abs(b.dur - dur);
-    return found.filter(x => x.yrc).sort(fit)[0] || found.filter(x => x.lrc).sort(fit)[0] || {};
-  };
-
-  async function netease(get, artist, title, dur) {
-    const json = async url => JSON.parse(await get(url, { 'User-Agent': UA, Referer: 'https://music.163.com/' }));
-    const found = await json('https://music.163.com/api/cloudsearch/pc?' + new URLSearchParams({ s: `${title} ${artist}`, type: 1, limit: 10 }));
-    const who = artist.toLowerCase();
-    const hit = (found.result?.songs || []).find(x =>
-      (x.ar || []).some(a => a.name?.length > 1 && (who.includes(a.name.toLowerCase()) || a.name.toLowerCase().includes(who))) &&
-      sameSong(x.name, title) && (!dur || Math.abs(x.dt / 1000 - dur) < 3));
-    if (!hit) return null;
-    const l = await json(`https://music.163.com/api/song/lyric/v1?id=${hit.id}&lv=0&yv=0`);
-    const src = (hit.ar || []).map(a => a.name).join(', ') + ' — ' + hit.name + ' (NetEase)'; // (what it matched)
-    if (l.yrc?.lyric) return { yrc: l.yrc.lyric, dur: hit.dt / 1000, src };
-    // no word timing: its line-timed lyrics, without the credit lines at the top (and none for an instrumental)
-    const credit = /^\s*(\[[^\]]*\])*\s*(作词|作曲|编曲|制作人?|混音|母带|和声|吉他|贝斯|鼓|弦乐|lyricist|composer|producer|arranger|mix(ing)?|master(ing)?|lyrics|music|written by)\s*[:：]/i;
-    const lrc = (l.lrc?.lyric || '').split('\n').filter(x => !credit.test(x)).join('\n');
-    return /\[\d+:\d+/.test(lrc) && !/纯音乐/.test(lrc) ? { lrc, dur: hit.dt / 1000, src } : null;
-  }
-
-  // Kugou's lyric files are XOR-scrambled with a fixed key, then zlib-compressed.
-  const KRC_KEY = [64, 71, 97, 119, 94, 50, 116, 71, 81, 54, 49, 45, 206, 210, 110, 105];
-  async function kugou(get, artist, title, dur) {
-    const json = async url => JSON.parse(await get(url, { 'User-Agent': UA }));
-    const first = artist.split(/,|&| feat\.? | x /i)[0].trim(); // its search only finds "Artist - Title" with one artist
-    const name = title.replace(/\s*[([].*?[)\]]/g, '').replace(/\s+-\s+.*$/, '').trim();
-    const s = await json('https://lyrics.kugou.com/search?' + new URLSearchParams({ ver: 1, man: 'yes', client: 'pc', keyword: `${first} - ${name}`, duration: Math.round(dur * 1000), hash: '' }));
-    const hit = (s.candidates || []).find(x => sameSong(x.song, name) && norm(x.singer).includes(norm(first)) && (!dur || Math.abs(x.duration / 1000 - dur) < 3));
-    if (!hit) return null;
-    const d = await json('https://lyrics.kugou.com/download?' + new URLSearchParams({ ver: 1, client: 'pc', id: hit.id, accesskey: hit.accesskey, fmt: 'krc', charset: 'utf8' }));
-    if (!d.content) return null;
-    const bytes = Uint8Array.from(atob(d.content), c => c.charCodeAt(0)).subarray(4).map((b, i) => b ^ KRC_KEY[i % 16]);
-    const krc = await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate'))).text();
-    const yrc = krcToYrc(krc);
-    return yrc ? { yrc, dur: hit.duration / 1000, src: hit.singer + ' — ' + hit.song + ' (Kugou)' } : null;
-  }
-  // krc "[lineMs,durMs]<fromLineStartMs,durMs,0>word…" → yrc "[lineMs,durMs](songMs,durMs,0)word…"
-  function krcToYrc(krc) {
-    let opening = true;
-    return krc.split(/\r?\n/).map(row => {
-      const m = /^\[(\d+),(\d+)\](.*)$/.exec(row);
-      if (!m) return '';
-      const words = [...m[3].matchAll(/<(\d+),(\d+),\d+>([^<]*)/g)], text = words.map(w => w[3]).join('');
-      // the top has lines that aren't sung: "Title - Artist", "Lyrics by：…", or filler timing (every word the same length)
-      if (opening && (/ - |[:：]/.test(text) || words.length > 1 && words.every(w => w[2] === words[0][2]))) return '';
-      opening = false;
-      return `[${m[1]},${m[2]}]` + words.map(([, at, len, text]) => `(${+m[1] + +at},${len},0)${text}`).join('');
-    }).filter(Boolean).join('\n');
-  }
-  lib.krcToYrc = krcToYrc; // for the self-check
 
   // A QR code for a text (a shared playlist's link): its modules, row by row, true = dark; null if it's too long for one.
   // Byte mode, versions 1–40: the smallest version it fits at error correction L, then the strongest level (M, Q, H)

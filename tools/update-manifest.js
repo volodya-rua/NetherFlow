@@ -13,10 +13,10 @@ const [apkPath, outPath = path.join(root, 'dist', 'update.json')] = process.argv
 if (!apkPath || !fs.existsSync(apkPath)) throw new Error('usage: node tools/update-manifest.js <the release APK> [out]');
 const keyFile = path.join(process.env.NETHERFLOW_SIGNING || path.join(require('os').homedir(), '.netherflow-signing'), 'update-key.pem');
 const version = JSON.parse(blob('package.json')).version, gradle = f => +f.match(/versionCode\s+(\d+)/)[1], code = gradle(blob('android/app/build.gradle').toString());
-if (git('status', '--porcelain', '--', 'index.html', 'lib.js', 'flowstream.js', 'legal.html', 'fonts', 'licenses')) throw new Error('the page has changes not committed: commit them (and tag) first');
+if (git('status', '--porcelain', '--', 'index.html', 'lib.js', 'flowstream.js', 'endverse.js', 'bridgethemusic.js', 'legal.html', 'fonts', 'licenses')) throw new Error('the page has changes not committed: commit them (and tag) first');
 
 // the page's files (as `npm run android:web` copies them)
-const list = [...['index.html', 'lib.js', 'flowstream.js', 'legal.html', 'logo.png'], ...git('ls-tree', '-r', '--name-only', 'HEAD', '--', 'licenses', 'fonts').split('\n').filter(Boolean)];
+const list = [...['index.html', 'lib.js', 'flowstream.js', 'endverse.js', 'bridgethemusic.js', 'legal.html', 'logo.png'], ...git('ls-tree', '-r', '--name-only', 'HEAD', '--', 'licenses', 'fonts').split('\n').filter(Boolean)];
 const files = {};
 for (const f of list.sort()) { const b = blob(f); files[f] = [crypto.createHash('sha256').update(b).digest('hex'), b.length]; }
 
