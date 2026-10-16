@@ -48,6 +48,7 @@ const BUNDLED_YTDLP = app.isPackaged ? path.join(process.resourcesPath, YTDLP_NA
 let ytdlpExe = null, ytdlpUpdated = 0;
 const ytdlKids = new Map(); // the page's job key → its yt-dlp process
 srvMod.ytdlp = () => ytdlp(); // (FlowStream's fallback, in server.js)
+srvMod.heads = path.join(app.getPath('userData'), 'heads'); // (the starts of the last songs played, so they start at once: server.js)
 function ytdlp() {
   if (ytdlpExe) return ytdlpExe;
   const dir = path.join(app.getPath('userData'), 'yt-dlp'), exe = path.join(dir, YTDLP_NAME), mark = path.join(dir, 'bundled.txt');

@@ -87,16 +87,39 @@ const flowAudio = id => flow.audio(id).then(s => ({ ...s, via: 'FlowStream' }), 
 const HEAD = 262144, flowHeads = new Map();
 function flowAhead(ids) {
   flow.prefetch(ids);
-  for (const id of ids.slice(0, 2)) if (/^[\w-]{11}$/.test(id) && !flowHeads.has(id)) {
+  for (const id of ids.slice(0, 2)) if (/^[\w-]{11}$/.test(id) && !flowHeads.has(id) && !keptMeta(id)) { // (kept already: not fetched again)
     const p = flowAudio(id).then(async s => {
       const r = await fetch(s.url, { headers: { Range: `bytes=0-${HEAD - 1}` }, signal: AbortSignal.timeout(15000) });
       const total = +(r.headers.get('content-range') || '').split('/')[1];
       if (r.status !== 206 || !total) throw new Error('no head');
-      return { buf: Buffer.from(await r.arrayBuffer()), total, mime: s.mime.split(';')[0], until: Date.now() + 30 * 60e3 };
+      const buf = Buffer.from(await r.arrayBuffer());
+      keepHead(id, buf, s, total);
+      return { buf, total, mime: s.mime.split(';')[0], until: Date.now() + 30 * 60e3 };
     });
     flowHeads.set(id, p); p.catch(() => flowHeads.delete(id));
     while (flowHeads.size > 2) flowHeads.delete(flowHeads.keys().next().value);
   }
+}
+// The same first 256 KB of the last 100 songs played, kept on this computer too (main.js's folder for them:
+// module.exports.heads), so a song starts the moment it's played, even the first after opening, its address asked for
+// as it plays. A start that turns out not to be the stream's (its length differs: re-encoded since) is dropped.
+// ponytail: the last 100 kept, not the most played.
+const KEPT = 100;
+const keptFile = (id, ext) => module.exports.heads && /^[\w-]{11}$/.test(id) ? path.join(module.exports.heads, id + ext) : null;
+function keptMeta(id) { try { return JSON.parse(fs.readFileSync(keptFile(id, '.json'), 'utf8')); } catch { return null; } }
+const dropKept = id => { for (const ext of ['.json', '.head']) if (keptFile(id, ext)) try { fs.rmSync(keptFile(id, ext), { force: true }); } catch {} }; // (at once: the page asks again straight after)
+async function keepHead(id, buf, s, total) {
+  const dir = module.exports.heads;
+  if (!keptFile(id, '') || buf.length < HEAD || !total) return;
+  try {
+    await fs.promises.mkdir(dir, { recursive: true });
+    await fs.promises.writeFile(keptFile(id, '.head'), buf.subarray(0, HEAD)); // (then its description: there only once the start is whole)
+    await fs.promises.writeFile(keptFile(id, '.json'), JSON.stringify({ mime: s.mime.split(';')[0], total, itag: s.itag, loudnessDb: s.loudnessDb, duration: s.duration || 0 }));
+    const kept = (await fs.promises.readdir(dir)).filter(n => n.endsWith('.json'));
+    if (kept.length <= KEPT + 10) return;
+    const aged = await Promise.all(kept.map(async n => [n.slice(0, -5), (await fs.promises.stat(path.join(dir, n))).mtimeMs]));
+    for (const [old] of aged.sort((a, b) => b[1] - a[1]).slice(KEPT)) dropKept(old); // (the oldest beyond 100 go)
+  } catch {}
 }
 // a stream, forwarded as asked (a range of it: seeking); an address that stopped working asked for again, once
 async function flowMedia(req, res, url) {
@@ -104,12 +127,15 @@ async function flowMedia(req, res, url) {
   const pick = () => video ? flow.video(id, { height: +url.searchParams.get('h') || 1080, fps: +url.searchParams.get('fps') || 60, codecs: (url.searchParams.get('codecs') || 'av01,vp9,avc1').split(',') }) : flowAudio(id);
   const stop = new AbortController();
   res.on('close', () => stop.abort());
-  // its start, fetched ahead: answered from memory (the player asks for the rest next)
-  const head = !video && /^bytes=0-/.test(req.headers.range || '') && await flowHeads.get(id)?.catch(() => null);
-  if (head && head.until > Date.now()) {
+  // its start, kept here or fetched ahead: answered from the disk or memory (the player asks for the rest next). The
+  // kept one first: one fetched ahead may still be on its way.
+  const first = !video && /^bytes=0-/.test(req.headers.range || ''), kept = first && keptMeta(id);
+  const head = first && !kept && await flowHeads.get(id)?.catch(() => null);
+  const start = kept ? { ...kept, buf: await fs.promises.readFile(keptFile(id, '.head')).catch(() => null) } : head && head.until > Date.now() && head;
+  if (start?.buf) {
     flowHeads.delete(id);
-    res.writeHead(206, { 'Content-Type': head.mime, 'Accept-Ranges': 'bytes', 'Cache-Control': 'no-store', 'Content-Length': head.buf.length, 'Content-Range': `bytes 0-${head.buf.length - 1}/${head.total}` });
-    return res.end(head.buf);
+    res.writeHead(206, { 'Content-Type': start.mime, 'Accept-Ranges': 'bytes', 'Cache-Control': 'no-store', 'Content-Length': start.buf.length, 'Content-Range': `bytes 0-${start.buf.length - 1}/${start.total}` });
+    return res.end(start.buf);
   }
   try {
     let s = await pick(), r;
@@ -120,9 +146,14 @@ async function flowMedia(req, res, url) {
       flow.forget(id); flowKept.delete(id); s = await pick(); // (expired, or tied to another address: a fresh one)
     }
     if (!r.ok) return send(res, 502, JSON.stringify({ error: 'the stream answered ' + r.status }));
+    const total = +(r.headers.get('content-range') || '').split('/')[1] || +r.headers.get('content-length') || 0, had = !video && keptMeta(id);
+    if (had && total && had.total !== total) { dropKept(id); if (!/^bytes=0-/.test(req.headers.range || '')) return send(res, 502, JSON.stringify({ error: 'the kept start was another file' })); }
     const head = { 'Content-Type': s.mime.split(';')[0], 'Accept-Ranges': 'bytes', 'Cache-Control': 'no-store' };
     for (const k of ['content-length', 'content-range']) if (r.headers.get(k)) head[k] = r.headers.get(k);
     res.writeHead(r.status, head);
+    // its start, kept: a copy fetched alongside (the player reads only a little from the start before it asks for the end)
+    if (!video && !had && keptFile(id, '') && /^(bytes=0-.*)?$/.test(req.headers.range || ''))
+      fetch(s.url, { headers: { Range: `bytes=0-${HEAD - 1}` }, signal: AbortSignal.timeout(15000) }).then(async k => k.status === 206 && keepHead(id, Buffer.from(await k.arrayBuffer()), s, total)).catch(() => {});
     for await (const c of r.body) { // (as /api/media, by hand)
       if (res.destroyed) break;
       if (!res.write(c)) await new Promise(ok => { const go = () => { res.off('drain', go); res.off('close', go); ok(); }; res.on('drain', go); res.on('close', go); });
@@ -137,6 +168,8 @@ async function handle(req, res) {
   const url = new URL(req.url, 'http://localhost');
   if (url.pathname === '/api/fs/media') return flowMedia(req, res, url);
   if (url.pathname === '/api/fs/audio') { // a song's stream, described (the page then plays /api/fs/media)
+    const id = url.searchParams.get('id') || '', kept = keptMeta(id);
+    if (kept) { flowAudio(id).catch(() => {}); return send(res, 200, JSON.stringify({ itag: kept.itag, mime: kept.mime, loudnessDb: kept.loudnessDb, duration: kept.duration, via: 'FlowStream', kept: true })); } // (its start kept here: at once, its address asked for meanwhile)
     try { const s = await flowAudio(url.searchParams.get('id') || ''); return send(res, 200, JSON.stringify({ itag: s.itag, mime: s.mime, loudnessDb: s.loudnessDb, duration: s.duration || 0, via: s.via, why: s.why || '' })); }
     catch (e) { return send(res, 502, JSON.stringify({ error: e.code || e.message })); }
   }
@@ -235,5 +268,5 @@ const start = port => new Promise((resolve, reject) => {
   srv.listen(port, '127.0.0.1', () => resolve(srv.address().port));
 });
 
-module.exports = { start, ytdlp: null }; // (ytdlp: main.js's, for FlowStream's fallback)
+module.exports = { start, ytdlp: null, heads: null }; // (ytdlp: main.js's, for FlowStream's fallback; heads: its folder for songs' starts)
 if (require.main === module) start(+process.env.PORT || 5173).then(p => console.log(`NetherFlow is up: http://localhost:${p}`));
