@@ -1052,6 +1052,22 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
 .fs.idle .bottom { opacity: 0; transform: translateY(14px); pointer-events: none; }
 .fs.idle .map { opacity: 0; pointer-events: none; }
 .fs.idle, .fs.idle * { cursor: none !important; }
+/* the cursor's glow (computers): a ring in the mood's two colours, turning slowly, gliding after the pointer (see "the
+   cursor's glow"); in the top layer, over dialogs and menus */
+#curGlow { position: fixed; inset: auto; left: 0; top: 0; margin: 0; padding: 0; border: 0; background: none; overflow: visible;
+  width: 30px; height: 30px; pointer-events: none; opacity: 0; transition: opacity .25s, width .2s cubic-bezier(.3,1.4,.5,1), height .2s cubic-bezier(.3,1.4,.5,1);
+  filter: drop-shadow(0 0 5px var(--a)) drop-shadow(0 0 12px color-mix(in srgb, var(--b) 60%, transparent)); will-change: transform; }
+#curGlow.on { opacity: .95; }
+#curGlow i { position: absolute; inset: 0; border-radius: 50%; background: conic-gradient(from 0deg, var(--a), var(--b), #fff 50%, var(--b), var(--a));
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 1.5px)); mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 1.5px));
+  animation: curspin 2.8s linear infinite; }
+#curGlow.hit { width: 46px; height: 46px; }
+#curGlow.hit i { -webkit-mask: radial-gradient(farthest-side, color-mix(in srgb, #000 22%, transparent) calc(100% - 2.5px), #000 calc(100% - 2px)); mask: radial-gradient(farthest-side, color-mix(in srgb, #000 22%, transparent) calc(100% - 2.5px), #000 calc(100% - 2px)); }
+#curGlow.text { width: 12px; height: 12px; }
+#curGlow.text.on { opacity: .45; }
+@keyframes curspin { to { transform: rotate(1turn); } }
+@media (prefers-reduced-motion: reduce) { #curGlow i { animation: none; } }
+body.fs.idle #curGlow { opacity: 0; }
 .fs-btn svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.4; }
 .fs-btn .i-exit, .fs .fs-btn .i-enter { display: none; }
 .fs .fs-btn .i-exit { display: inline; }
@@ -1583,6 +1599,7 @@ if (!('showPopover' in HTMLElement.prototype)) document.addEventListener('DOMCon
     + '<b style="font-size:24px">NetherFlow needs a newer Android System WebView</b><p>Update <b>Android System WebView</b> (and Chrome) from your app store, then open NetherFlow again.</p></div>';
 });
 </script>
+<div id="curGlow" popover="manual" aria-hidden="true"><i></i></div>
 <script src="lib.js"></script>
 <script src="flowstream.js"></script>
 <script>
@@ -2294,6 +2311,7 @@ function renderTextPanel() {
     ...(window.netherflowApp?.presence ? [settingRow('Discord status', ['Off', 'On'], discordOn ? 'On' : 'Off', setDiscord, 'The song you\'re playing on your Discord profile ("Listening to…", with its cover and a link to it), while the Discord app is open. Your friends there see it.')] : []),
     ...(window.netherflowApp?.island ? [settingRow('Island', ['On', 'Off'], islandOn ? 'On' : 'Off', setIsland, 'The song playing, in a small black island at the top middle of the screen, over every other app (hidden while NetherFlow itself is in front). Click it for the cover, the timeline, the volume and the controls.'),
       settingRow('Island glow', ['On', 'Off'], islandGlow ? 'On' : 'Off', setIslandGlow, 'A soft glow round the island in the mood\'s colour, swelling with the bass.')] : []),
+    ...(pcOnly ? [settingRow('Cursor', ['Glow', 'System'], cursorPref(), setCursorPref, 'Glow: an arrow in the mood\'s colours, and a ring that glides after it, opens out over anything you can click and swells with the beat. System: your computer\'s own pointer. (A theme keeps its own.)')] : []),
     settingRow('Drive mode', ['Start'], '', () => { $('textPanel').hidePopover(); openDrive(); }, 'Big, simple controls for the road: play, pause, next and previous, and the song\'s name in large type. Swipe left or right to change songs.'));
 }
 // a labelled row of choices (the mood menu and the Settings panel)
@@ -2439,7 +2457,8 @@ let mood = 0, pal = MOODS[0], palette = [rgb(pal.bg), rgb(pal.a), rgb(pal.b), pa
 function applyPalette(m) {
   pal = m;
   for (const k of ['bg', 'a', 'b', 'ink']) root.style.setProperty('--' + k, m[k]);
-  setCursors(m.a);
+  setCursors(m.a, m.b);
+  if (glowReady) glowEnable(); // (a theme's own pointer: no glow ring with it)
   $('moodName').textContent = m.name;
   target = [rgb(m.bg), rgb(m.a), rgb(m.b), (m.fx || [1, 1, 1, 1]).slice()];
 }
@@ -7508,7 +7527,7 @@ function toggleFull() {
 // Android back button: close what's open, leave full screen, leave the song for the home page (it keeps playing),
 // and from the home page, put the app in the background
 if (native) Capacitor.Plugins.App.addListener('backButton', () => {
-  const pop = document.querySelector(':popover-open:not(.toast)');
+  const pop = document.querySelector(':popover-open:not(.toast, #curGlow)');
   if (pop) pop.hidePopover();
   else if (topDialog()) { // the one on top
     const d = topDialog();
@@ -7535,7 +7554,7 @@ Immersive?.tv?.().then(r => {
 }).catch(() => {});
 const FOCUSABLE = 'button, a[href], input, select, textarea, summary, [tabindex]:not([tabindex="-1"])';
 function tvMove(dir) {
-  const pops = [...document.querySelectorAll(':popover-open:not(.toast)')];
+  const pops = [...document.querySelectorAll(':popover-open:not(.toast, #curGlow)')];
   const scope = pops.at(-1) || topDialog() || document, cur = document.activeElement;
   if (scope === $('about') && (dir === 'up' || dir === 'down')) { // (the terms, privacy, licenses: up and down read them; past either end, on to the buttons)
     const w = $('legalFrame').contentWindow, y = w?.scrollY;
@@ -7601,7 +7620,7 @@ addEventListener('focusin', e => { if (tv && e.target !== body) tvLast = tvKey(e
 function tvLand() {
   const cur = document.activeElement;
   if (cur && cur !== body && cur.isConnected) return;
-  const scope = [...document.querySelectorAll(':popover-open:not(.toast)')].at(-1) || topDialog() || document;
+  const scope = [...document.querySelectorAll(':popover-open:not(.toast, #curGlow)')].at(-1) || topDialog() || document;
   const all = [...scope.querySelectorAll(FOCUSABLE)].filter(e => !e.disabled && e.getClientRects().length && (!e.checkVisibility || e.checkVisibility({ checkVisibilityCSS: true })));
   const seen = e => { const r = e.getBoundingClientRect(); return r.bottom > 0 && r.top < innerHeight && r.right > 0 && r.left < innerWidth; };
   const to = all.find(e => tvKey(e) === tvLast) // the same one, drawn again
@@ -7675,9 +7694,46 @@ function wake() {
   body.classList.remove('idle');
   clearTimeout(idleTimer);
   if (body.classList.contains('fs')) idleTimer = setTimeout(() => {
-    if (!topDialog() && !document.querySelector(':popover-open')) body.classList.add('idle');
+    if (!topDialog() && !document.querySelector(':popover-open:not(#curGlow)')) body.classList.add('idle');
   }, 2600);
 }
+
+// ---------- the cursor's glow (computers; Settings: Cursor, Glow): a ring in the mood's colours gliding after the arrow,
+// opening out over anything clickable, tightening on a press and swelling with the beat; small over text. Only for a
+// mouse (not touch, not a TV's remote), not over a theme (their pointers are their own); with less motion asked for, it
+// follows without gliding or turning. In the top layer, raised again whenever a dialog or menu opens over it. ----------
+const glowEl = $('curGlow'), HIT = 'button:not(:disabled), a[href], [role="button"], summary, select, label, input[type="range"], input[type="checkbox"], .chip, .row, .card';
+let glowOn = false, glowRaf = 0, gx = -99, gy = -99, gtx = -99, gty = -99, gDown = false;
+function glowEnable() {
+  glowOn = pcOnly && !tv && cursorPref() === 'Glow' && !skin;
+  if (!glowOn) { cancelAnimationFrame(glowRaf); glowRaf = 0; glowEl.classList.remove('on'); if (glowEl.matches(':popover-open')) glowEl.hidePopover(); }
+}
+function glowRaise() { if (!glowOn) return; if (glowEl.matches(':popover-open')) glowEl.hidePopover(); glowEl.showPopover(); }
+function glowTick() {
+  glowRaf = 0;
+  const k = motion ? .3 : 1, beat = motion && !P.paused ? lyricKick * .2 : 0;
+  gx += (gtx - gx) * k; gy += (gty - gy) * k;
+  glowEl.style.transform = `translate3d(${gx.toFixed(1)}px, ${gy.toFixed(1)}px, 0) translate(-50%, -50%) scale(${((gDown ? .72 : 1) + beat).toFixed(3)})`;
+  if (Math.abs(gtx - gx) + Math.abs(gty - gy) > .3 || (beat > .005 && glowEl.classList.contains('on'))) glowRaf = requestAnimationFrame(glowTick);
+}
+const glowGo = () => { if (!glowRaf) glowRaf = requestAnimationFrame(glowTick); };
+addEventListener('pointermove', e => {
+  if (!glowOn || e.pointerType !== 'mouse') return;
+  if (!glowEl.matches(':popover-open')) glowRaise();
+  gtx = e.clientX; gty = e.clientY;
+  if (!glowEl.classList.contains('on')) { gx = gtx; gy = gty; glowEl.classList.add('on'); }
+  const t = e.target instanceof Element ? e.target : null, text = !!t?.closest('input:not([type="range"]):not([type="checkbox"]), textarea, [contenteditable]');
+  glowEl.classList.toggle('text', text); glowEl.classList.toggle('hit', !text && !!t?.closest(HIT));
+  glowGo();
+}, { passive: true });
+addEventListener('pointerdown', e => { if (glowOn && e.pointerType === 'mouse') { gDown = true; glowGo(); } }, { passive: true });
+addEventListener('pointerup', () => { if (glowOn) { gDown = false; glowGo(); } }, { passive: true });
+document.documentElement.addEventListener('pointerleave', () => glowEl.classList.remove('on'));
+addEventListener('blur', () => glowEl.classList.remove('on'));
+setInterval(() => { if (glowOn && glowEl.classList.contains('on') && !P.paused) glowGo(); }, 250); // (the beat, while it plays and the pointer's still)
+document.addEventListener('toggle', e => { if (e.target !== glowEl && e.newState === 'open') glowRaise(); }, true); // (a menu or dialog opened: over it)
+new MutationObserver(ms => { if (ms.some(m => m.target.tagName === 'DIALOG' && m.target.open)) glowRaise(); }).observe(body, { subtree: true, attributes: true, attributeFilter: ['open'] });
+var glowReady = true; glowEnable(); // (var: the first mood is set before this line is reached)
 
 // ---------- parallax: the lyrics tilt a little toward the mouse ----------
 addEventListener('pointermove', e => {
@@ -7686,10 +7742,15 @@ addEventListener('pointermove', e => {
   stage.style.setProperty('--mx', (e.clientX / innerWidth - 0.5).toFixed(3)); // (on the stage, not the page: only the lyrics
   stage.style.setProperty('--my', (e.clientY / innerHeight - 0.5).toFixed(3)); // are restyled as it moves)
 });
-// The cursors (html's cursor rule): a plain arrow, dark and edged in light, a thin line of the mood's color down its side;
-// the same filled with the mood's color over anything clickable; an I-beam in text. Drawn at the screen's sharpness
-// (twice as fine on a high-density screen); the arrow's tip is where it clicks.
-function setCursors(accent) { // (called as the first mood is set: everything it needs, inside it)
+// The cursors (html's cursor rule; Settings: Cursor): a sharp arrow in the mood's two colours, edged in white, with a
+// soft glow of the first round it; over anything clickable, white at its tip and glowing brighter; an I-beam in text.
+// "System": the computer's own. Drawn at the screen's sharpness (twice as fine on a high-density screen); the arrow's
+// tip is where it clicks. With the glow ring (see "the cursor's glow") gliding after it.
+// (read where it's needed: the first mood is set before this part of the page is reached)
+function cursorPref() { return store.get('netherflow.cursor') === 'System' ? 'System' : 'Glow'; }
+function setCursorPref(v) { store.set('netherflow.cursor', v === 'System' ? 'System' : ''); setCursors(pal.a, pal.b); glowEnable(); renderTextPanel(); }
+function setCursors(accent, second = accent) { // (called as the first mood is set: everything it needs, inside it)
+  if (cursorPref() === 'System') { for (const k of ['--cur', '--cur-hand', '--cur-text']) root.style.removeProperty(k); return; }
   const ARROW = 'M4.6 2.6v16.7c0 .5.6.8 1 .4l3.7-3.5 2.4 5.6c.2.5.8.7 1.3.5l1.5-.7c.5-.2.7-.8.5-1.3l-2.4-5.4h5.1c.5 0 .8-.6.4-1z';
   const pic = (body, x, y, plain) => {
     const at = px => `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="${px}" height="${px}" viewBox="0 0 24 24">${body}</svg>`)}")`;
@@ -7713,8 +7774,13 @@ function setCursors(accent) { // (called as the first mood is set: everything it
       '<path d="M3 3l17.5 7.2-7.6 2.4-2.5 7.7z" fill="#fff" stroke="#ff1e2d" stroke-width="1.5" stroke-linejoin="round"/>', [3, 3]],
     Ops: [cross('#4cff4c'), cross('#4cff4c') + '<circle cx="12" cy="12" r="1.6" fill="#4cff4c" stroke="#000" stroke-width=".8"/>', [12, 12]],
   }[skin];
-  root.style.setProperty('--cur', own ? pic(own[0], ...own[2], 'default') : pic(arrow('#0d0a0c', accent), 4, 2, 'default'));
-  root.style.setProperty('--cur-hand', own ? pic(own[1], ...own[2], 'pointer') : pic(arrow(accent), 4, 2, 'pointer'));
+  // the mood's own: a sleek notched arrow, its fill running from the first colour to the second, a white edge, glowing
+  const TIP = 'M3.6 2.6 19.8 10.3c.8.4.7 1.2-.1 1.4l-6.6 1.9-2.3 6.6c-.3.8-1.1.8-1.4 0z';
+  const glowArrow = hit => `<defs><linearGradient id="g" x1=".1" y1="0" x2=".7" y2="1"><stop offset="0" stop-color="${hit ? '#fff' : accent}"/><stop offset="1" stop-color="${second}"/></linearGradient>`
+    + `<filter id="f" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="${hit ? 1.6 : 1.1}"/></filter></defs>`
+    + `<path d="${TIP}" fill="${accent}" opacity="${hit ? 1 : .8}" filter="url(#f)"/><path d="${TIP}" fill="url(#g)" stroke="#fff" stroke-width="${hit ? 1.25 : 1}" stroke-linejoin="round"/>`;
+  root.style.setProperty('--cur', own ? pic(own[0], ...own[2], 'default') : pic(glowArrow(false), 3.6, 2.6, 'default'));
+  root.style.setProperty('--cur-hand', own ? pic(own[1], ...own[2], 'pointer') : pic(glowArrow(true), 3.6, 2.6, 'pointer'));
   root.style.setProperty('--cur-text', pic(`<path d="${beam}" fill="none" stroke="#0d0a0c" stroke-width="3.2" stroke-linecap="round"/><path d="${beam}" fill="none" stroke="#f6ede4" stroke-width="1.4" stroke-linecap="round"/>`, 12, 12, 'text'));
 }
 
