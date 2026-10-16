@@ -109,4 +109,49 @@ public class FilesPlugin extends Plugin {
         call.resolve();
     }
 
+    // A request whose answer reaches the page as it was sent: compressed (gzip, when the server does), in base64. A long
+    // playlist's pages (megabytes of text each) cross into the page about fifteen times smaller than the native HTTP's
+    // text answers do — and that crossing, not the network, is what's slow. The page unpacks it.
+    //   packed({ url, method: GET|POST, headers, body }) → { status, encoding, data }
+    private final ExecutorService net = Executors.newFixedThreadPool(4); // (a long list's pages: four at once)
+
+    @PluginMethod
+    public void packed(PluginCall call) {
+        String url = call.getString("url", ""), method = call.getString("method", "GET"), body = call.getString("body", null);
+        JSObject headers = call.getObject("headers", new JSObject());
+        if (!url.matches("https://\\S+") || !method.matches("GET|POST")) { call.reject("bad request"); return; }
+        net.execute(() -> {
+            HttpURLConnection c = null;
+            try {
+                c = (HttpURLConnection) new URL(url).openConnection();
+                c.setRequestMethod(method);
+                c.setConnectTimeout(8000);
+                c.setReadTimeout(15000);
+                for (java.util.Iterator<String> k = headers.keys(); k.hasNext(); ) { String n = k.next(); c.setRequestProperty(n, headers.getString(n)); }
+                c.setRequestProperty("Accept-Encoding", "gzip"); // (asked for by name: handed over as it comes, not unpacked here)
+                if (body != null) {
+                    c.setDoOutput(true);
+                    try (OutputStream o = c.getOutputStream()) { o.write(body.getBytes(java.nio.charset.StandardCharsets.UTF_8)); }
+                }
+                int status = c.getResponseCode();
+                java.io.ByteArrayOutputStream got = new java.io.ByteArrayOutputStream();
+                try (InputStream in = status >= 400 ? c.getErrorStream() : c.getInputStream()) {
+                    if (in != null) {
+                        byte[] b = new byte[65536];
+                        for (int n; (n = in.read(b)) > 0; ) { got.write(b, 0, n); if (got.size() > 32_000_000) throw new java.io.IOException("too big"); }
+                    }
+                }
+                JSObject r = new JSObject();
+                r.put("status", status);
+                r.put("encoding", c.getContentEncoding() == null ? "" : c.getContentEncoding());
+                r.put("data", android.util.Base64.encodeToString(got.toByteArray(), android.util.Base64.NO_WRAP));
+                call.resolve(r);
+            } catch (Exception e) {
+                call.reject(e instanceof java.net.UnknownHostException ? "fetch failed: no connection" : "fetch failed: " + e.getMessage());
+            } finally {
+                if (c != null) c.disconnect();
+            }
+        });
+    }
+
 }

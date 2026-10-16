@@ -1646,7 +1646,21 @@ const nativePost = (url, body, headers) => Capacitor.Plugins.CapacitorHttp.post(
 // EndVerse (endverse.js, NetherFlow's lyrics finder) and BridgeTheMusic (bridgethemusic.js, its playlist importer): on
 // Android, asked from here over the phone's own HTTP; on a computer, through the app's server (the open lyrics database,
 // which lets a page ask, from here on both: pageVerse)
-const nativeVerse = native && EndVerse.create({ get: nativeGet, post: nativePost }), nativeImport = native && BridgeTheMusic.create({ get: nativeGet, post: nativePost });
+// (a long playlist's pages, megabytes of text each: over Files.packed, compressed till they're in the page — about fifteen
+// times less to hand across than the native HTTP's text, and that handing across is what's slow; an app from before it:
+// as before)
+let packedNo = false;
+const nativePacked = async (method, url, headers = {}, body) => {
+  if (!packedNo) try {
+    const r = await Capacitor.Plugins.Files.packed({ method, url, headers, body });
+    const bytes = Uint8Array.from(atob(r.data), c => c.charCodeAt(0));
+    return r.encoding === 'gzip' ? new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).text() : new TextDecoder().decode(bytes);
+  } catch (e) { if (!/not implemented|unimplemented|is not a function/i.test(e?.message || '') && e?.code !== 'UNIMPLEMENTED') throw e; packedNo = true; }
+  return method === 'POST' ? nativePost(url, body, headers) : nativeGet(url, headers);
+};
+const nativeVerse = native && EndVerse.create({ get: nativeGet, post: nativePost }),
+  nativeImport = native && BridgeTheMusic.create({ get: (url, headers) => nativePacked('GET', url, headers), post: (url, body, headers) => nativePacked('POST', url, headers, body),
+    keep: { get: k => store.get('netherflow.bridge.' + k), set: (k, v) => store.set('netherflow.bridge.' + k, v) } }); // (Spotify's query id: its 4 MB player not read again each start)
 const pageVerse = EndVerse.create({ get: (url, headers) => fetch(url, { headers }).then(r => r.text()) });
 const api = {
   yt: async q => {
@@ -1667,8 +1681,8 @@ const api = {
   // source: who provides them (shown with them)
   ytmLyrics: async id => (native ? nativeVerse.forVideo(id) : fetch('/api/videolyrics?' + new URLSearchParams({ id })).then(r => r.ok ? r.json() : {})).catch(() => ({})),
   // a playlist (or album) from its link: { name, from, tracks } (BridgeTheMusic, bridgethemusic.js)
-  playlist: async link => { if (native) return nativeImport.read(link);
-    const r = await fetch('/api/playlist?' + new URLSearchParams({ url: link })), j = await r.json(); if (!r.ok) throw new Error(j.error || 'couldn\'t read it'); return j; },
+  playlist: async (link, o = {}) => { if (native) return nativeImport.read(link, o); // (o.gentle: a read nobody waits for, more slowly; o.first: about its first that many songs)
+    const r = await fetch('/api/playlist?' + new URLSearchParams({ url: link, ...(o.gentle ? { gentle: 1 } : {}), ...(o.first ? { first: o.first } : {}) })), j = await r.json(); if (!r.ok) throw new Error(j.error || 'couldn\'t read it'); return j; },
   // YouTube Music's radio for a song (what Autoplay picks from): [{ id, title, artist, album, year, dur, art }]
   radio: async id => native ? netherflowLib.ytmRadio(nativePost, id) : (await fetch('/api/radio?' + new URLSearchParams({ id }))).json(),
   // Explore: YouTube Music's explore page, its charts, a mood's playlists, an album (see lib.ytmExplore…), for this country
@@ -2348,6 +2362,7 @@ function renderTextPanel() {
       'Your liked songs, playlists, history and stats, swapped between your phone and computer over your Wi-Fi: no account.')] : []),
     ...(native ? [settingRow('Lyrics on the lock screen', ['Off', 'On'], lockLyrics ? 'On' : 'Off', setLockLyrics, 'The line being sung under the song\'s name on the lock screen, in the notification, on the widget and on a car\'s display.')] : []),
     settingRow('Liked songs offline', ['Off', 'On Wi-Fi'], likedOffline ? 'On Wi-Fi' : 'Off', setLikedOffline, 'Songs you like are saved on this device by themselves, a few at a time, only on Wi-Fi: they play with no connection.'),
+    settingRow('Imported playlists', ['Kept in sync', 'As imported'], syncLists ? 'Kept in sync' : 'As imported', setSyncLists, 'Kept in sync: about once a day, NetherFlow reads each playlist you imported again from where it came from (Spotify, Apple Music or YouTube, which see your IP address when it does) and adds the songs new in it. Songs you took out stay out. As imported: never read again.'),
     settingRow('Folders on the home screen', ['Off', 'On'], folders ? 'On' : 'Off', setFolders, 'Liked songs, downloads and your playlists, under the buttons at the top of the home screen. Hidden while a song plays.'),
     ...(window.netherflowApp?.presence ? [settingRow('Discord status', ['Off', 'On'], discordOn ? 'On' : 'Off', setDiscord, 'The song you\'re playing on your Discord profile ("Listening to…", with its cover and a link to it), while the Discord app is open. Your friends there see it.')] : []),
     ...(window.netherflowApp?.island ? [settingRow('Island', ['On', 'Off'], islandOn ? 'On' : 'Off', setIsland, 'The song playing, in a small black island at the top middle of the screen, over every other app (hidden while NetherFlow itself is in front). Click it for the cover, the timeline, the volume and the controls.'),
@@ -2684,6 +2699,9 @@ function fsKeep(vid, s) {
 let keptEra = store.get('netherflow.keptera');
 // Settings: Instant start. Off: the kept starts deleted, and every song asked for with the era "off" (none kept)
 let instantOn = store.get('netherflow.instant') !== 'Off';
+// imported playlists kept in sync with their links (autoImports): songs new in one, added here once a day
+let syncLists = store.get('netherflow.synclists') !== 'Off';
+function setSyncLists(v) { syncLists = v === 'Kept in sync'; store.set('netherflow.synclists', syncLists ? '' : 'Off'); if (syncLists) autoImports(); renderTextPanel(); }
 function setInstant(v) { instantOn = v === 'On'; store.set('netherflow.instant', instantOn ? '' : 'Off'); if (!instantOn) forgetKept(); renderTextPanel(); }
 const keptG = () => instantOn ? keptEra : 'off';
 function forgetKept() {
@@ -4515,6 +4533,7 @@ async function playTrack(t, term = '', queued = false, stay = false, mixed = nul
   if (tgIntercept('play', t)) return;
   if (!mixed) mixAbort();
   lastSong = null; // (another song picked: the last one's no longer waiting)
+  importYield = Date.now() + 6000;
   const id = ++loadId;
   autoStart(t, current, P.t, P.dur);
   current = t; lastLyr = null; songShift = 0; savedDur = 0; fsVid = null;
@@ -4522,6 +4541,7 @@ async function playTrack(t, term = '', queued = false, stay = false, mixed = nul
   if (!stay) goHome(false);
   fromUpNext = queued;
   if (!queued) { qi = queue.findIndex(x => x.trackId === t.trackId); if (qi < 0) { queue = [t]; qi = 0; } }
+  wantNext(); // (an imported playlist's songs coming up: matched now, so they start at once)
   if ($('queuePanel').matches(':popover-open')) renderQueue();
   const ep = t.kind === 'episode';
   if (!ep) { remember(t, term); autoFill(t); }
@@ -4662,14 +4682,14 @@ const LIB = 'netherflow.library';
 let library = { liked: [], playlists: [] }, libReady = false, libDb = null;
 const libStore = (mode, f) => (libDb ||= new Promise((res, rej) => { const r = indexedDB.open('netherflow-library', 1); r.onupgradeneeded = () => r.result.createObjectStore('kv'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }))
   .then(db => new Promise((res, rej) => { const r = f(db.transaction('kv', mode).objectStore('kv')); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }));
-const saveLib = () => {
+const saveLib = (draw = true) => { // (draw: the Library and the home screen's folders drawn again)
   if (libReady) { // (not before it's loaded: that would save the empty one over it)
     const s = JSON.stringify(library);
     libStore('readwrite', kv => kv.put(s, LIB)).catch(() => toast('Couldn\'t save your library on this device'));
     try { localStorage.setItem(LIB, s); } catch { store.set(LIB, ''); } // (too big for the copy: room kept for the rest)
     collabChanged();
   }
-  if ($('library').open) renderLibrary(); renderFolders();
+  if (draw) { if ($('library').open) renderLibrary(); renderFolders(); }
 };
 libStore('readonly', kv => kv.get(LIB)).catch(() => null).then(s => {
   const old = s == null; // (first start with this version: what localStorage had)
@@ -5550,86 +5570,195 @@ const linkIn = s => (String(s).match(/https?:\/\/[^\s<>"']+/) || [String(s).trim
 // the same playlist's link, however it was shared: without Spotify's ?si=… (new at every share) and other trackers
 const linkKey = l => { try { const u = new URL(l), list = u.searchParams.get('list'); return u.hostname.replace(/^(www|m)\./, '') + u.pathname.replace(/\/+$/, '') + (list ? '?list=' + list : '') + u.hash; } catch { return l; } };
 const ytmToTrack = v => ({ kind: 'song', trackId: 'yt:' + v.id, ytId: v.id, ytTitle: v.title, trackName: v.title, artistName: v.artist, collectionName: v.album || 'YouTube Music', artworkUrl100: v.art, trackTimeMillis: v.dur * 1000 });
-async function importPlaylist(link) {
+// A song imported and not yet matched to its YouTube Music entry (trackId "q:…"): its name, artist, album, length and,
+// from a long Spotify list, its album's cover. It plays as one of Apple's does, its upload looked for as it starts
+// (videosFor); the matcher below finds its entry when it's wanted, and puts that in its place.
+const isPending = t => String(t?.trackId).startsWith('q:');
+// (a song started: the matcher steps aside for a few seconds, so that song's own search goes first)
+let importYield = 0;
+const hash36 = s => { let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) | 0; return (h >>> 0).toString(36); };
+// Spotify's own cover on a song not matched yet (a long Spotify list's, as BridgeTheMusic reads it). Legal: yes — only on
+// songs the user imported, loaded straight from Spotify's image server, never kept or passed on by us (a playlist made
+// together carries the song without it; a share link, without any cover)
+const SPOTIFY_ART = true;
+const pendingTrack = s => ({ kind: 'song', trackId: 'q:' + hash36(`${s.title}|${s.artist}|${s.dur}`), trackName: s.title, artistName: s.artist || '',
+  collectionName: s.album || '', trackTimeMillis: (s.dur || 0) * 1000, artworkUrl100: SPOTIFY_ART && /^https:\/\/i\.scdn\.co\/image\/\w+$/.test(s.art || '') ? s.art : undefined });
+// The matcher. A song imported and not matched yet is looked up on YouTube Music (its upload, cover and album) only when
+// it's wanted: on screen, or coming up next (importWant, the latest first) — and every song of a short playlist, right
+// after its import (importBulk, in order: seconds' work). Not all of a long one: ten thousand searches have YouTube slow
+// the whole connection down, and it plays as it is. Two at a time; a song starting first (importYield); YouTube not
+// answering: a pause, longer each time. A match is put in place wherever the song is (playlists, liked songs, the rows
+// on screen) and its upload kept for when it plays; a song not found stays as it is, looked for more widely when played.
+const importWant = [], importBulk = [], matchTried = new Set();
+let matchLive = 0, matchWait = 0, matchMiss = 0, matchSave = 0, matchLater = 0;
+const wantMatch = id => { importWant.push(id); if (importWant.length > 300) importWant.shift(); matchPump(); };
+const wantIO = new IntersectionObserver(es => { for (const e of es) if (e.isIntersecting) { wantIO.unobserve(e.target); wantMatch(e.target.dataset.tid); } }, { rootMargin: '400px 0px' });
+const wantNext = () => { for (const t of queue.slice(qi + 1, qi + 11).reverse()) if (isPending(t)) wantMatch(t.trackId); };
+const firstArtist = a => words((a || '').split(/,|&| and | feat\.? | x /i)[0]).join(' '); // ("and" or "&": the same band)
+const fitsSong = (v, s) => { const a = words(clean(v.title)).join(' '), b = words(clean(s.trackName)).join(' '), who = firstArtist(s.artistName), dur = (s.trackTimeMillis || 0) / 1000;
+  return !!a && (a === b || a.startsWith(b + ' ') || b.startsWith(a + ' ')) && (!who || words(v.artist).join(' ').includes(who)) && (!dur || !v.dur || Math.abs(v.dur - dur) <= 8); };
+const pendingOf = id => { for (const l of [library.liked, ...library.playlists.map(p => p.tracks)]) { const t = l.find(x => x.trackId === id); if (t) return t; } return null; };
+function matchPump() {
+  const until = Math.max(matchWait, importYield);
+  if (Date.now() < until) { clearTimeout(matchLater); matchLater = setTimeout(matchPump, until - Date.now() + 50); return; }
+  while (matchLive < 2) {
+    const id = importWant.length ? importWant.pop() : importBulk.shift();
+    if (id === undefined) return;
+    const s = !matchTried.has(id) && pendingOf(id);
+    if (!s) continue;
+    matchTried.add(id); matchLive++;
+    api.ytm(`${s.artistName} ${clean(s.trackName)}`.trim())
+      .then(list => { matchMiss = 0; const v = list.find(x => fitsSong(x, s)); if (v) placeMatch(id, ytmToTrack(v)); },
+        () => { matchTried.delete(id); importBulk.push(id); if (++matchMiss >= 3) matchWait = Date.now() + Math.min(600, 15 * 2 ** (matchMiss - 3)) * 1000; })
+      .finally(() => { matchLive--; matchPump(); });
+  }
+}
+function placeMatch(id, m) {
+  const t = slim(m);
+  vidCache.set(id, Promise.resolve([{ id: m.ytId, dur: m.trackTimeMillis / 1000 }])); // (played as it is — in a queue already — its upload's found)
+  if (saved.has(id)) return; // (saved offline as it is: left so)
+  for (const l of [library.liked, ...library.playlists.map(p => p.tracks)]) if (!l.some(x => x.trackId === t.trackId)) for (let k = 0; k < l.length; k++) if (l[k].trackId === id) l[k] = t;
+  // (on screen: its row put in place, the list left where it's scrolled to)
+  const v = libView, p = v?.kind === 'playlist' && library.playlists.find(x => x.id === v.id);
+  if ($('library').open) for (const r of $('libList').querySelectorAll(`[data-tid="${id}"]`)) {
+    const n = row(t, +r.style.getPropertyValue('--i'), p ? p.tracks : library.liked, p ? { playlist: p } : {}); n.style.animation = 'none'; r.replaceWith(n);
+  }
+  clearTimeout(matchSave); matchSave = setTimeout(() => saveLib(false), 3000);
+}
+// (one link at a time: a second import while it's read would fill the same playlist twice)
+const importing = new Set();
+async function importPlaylist(link, o = {}) {
+  const k = linkKey(linkIn(link));
+  if (importing.has(k)) return o.quiet || toast('Already importing that playlist: it fills in as it goes');
+  importing.add(k);
+  try { return await importPlaylistNow(link, o); } finally { importing.delete(k); }
+}
+// Imported playlists, looked after by themselves (a little after the app starts, back online, and every hour): a short
+// one's songs not matched yet (its import cut short) matched; and, kept in sync (Settings), each one's link is read again
+// once a day — gently: more slowly than an import someone waits for (Legal) — and the songs new in it since added: only
+// songs the list didn't have the last time it was read, so one taken out here stays out.
+let autoBusy = false;
+async function autoImports() {
+  if (autoBusy || !libReady || !navigator.onLine) return;
+  autoBusy = true;
+  try {
+    for (const p of library.playlists.slice()) {
+      if (p.tracks.length <= 200) for (const t of p.tracks) if (isPending(t) && !matchTried.has(t.trackId)) importBulk.push(t.trackId);
+      if (!p.src || p.collab || SHARE_LINK.test(p.src) || !library.playlists.includes(p)) continue;
+      if (p.left?.length) await importPlaylist(p.src, { quiet: true }); // (an import cut short, by a version before this one)
+      else if (syncLists && Date.now() - (p.synced || 0) > 864e5) await importPlaylist(p.src, { quiet: true, sync: true });
+    }
+  } finally { autoBusy = false; matchPump(); }
+}
+setTimeout(autoImports, 20000); setInterval(autoImports, 3600e3); addEventListener('online', () => setTimeout(autoImports, 5000));
+// an Apple song as Apple's pages describe it (its cover, album, preview, genre, release, track and disc number), as
+// Apple's own search would give it — not looked up again
+const appleTrack = s => ({ kind: 'song', trackId: +s.apple, trackName: s.title, artistName: s.artist || '', collectionName: s.album || '', artworkUrl100: s.art,
+  trackTimeMillis: (s.dur || 0) * 1000, previewUrl: s.preview, primaryGenreName: s.genre, releaseDate: s.released, trackNumber: s.no, discNumber: s.disc });
+async function importPlaylistNow(link, { quiet = false, sync = false } = {}) {
+  const say = (m, ms) => quiet || toast(m, ms); // (quiet: by itself, in the background — nothing said)
   link = linkIn(link);
   const ours = SHARE_LINK.test(link);
   if (COLLAB_LINK.test(link)) return collabJoin(link.match(COLLAB_LINK)[1]);
-  if (!ours && !PLAYLIST_LINK.test(link)) return toast('That isn\'t a Spotify, Apple Music, YouTube or NetherFlow playlist link');
+  if (!ours && !PLAYLIST_LINK.test(link)) return say('That isn\'t a Spotify, Apple Music, YouTube or NetherFlow playlist link');
   // imported from this link before: into that one again (one cut short: just its songs left; else the songs it lacks —
   // new in the list since, or cut off by the service last time — not a second copy)
-  let p = library.playlists.find(x => x.src && linkKey(x.src) === linkKey(link)) || null, pl;
-  const again = !!p && !p.left?.length;
-  if (p && !again) pl = { name: p.name, tracks: p.left, store: p.store };
+  let p = library.playlists.find(x => x.src && linkKey(x.src) === linkKey(link)) || null, pl, opened = false, headIn = false;
+  const again = !!p && !p.left?.length, leftOnly = !!p && !again; // (leftOnly: one cut short, by a version before this one)
+  // a song by its name and first artist
+  const songKey = (title, artist) => words(clean(title)).join(' ') + '|' + firstArtist(artist);
+  const before = new Set((p?.tracks || []).map(t => songKey(t.trackName, t.artistName))); // (to say what's new: not one it had, matched or not)
+  // Into the Library: the songs of a list — Apple's and YouTube's as they are, the rest the Library's own when it has the
+  // song already (liked, in any playlist: by its name, first artist and length), else as they are, waiting for the
+  // matcher — in this playlist's place if it has one (its songs as they were, those still waiting put in place by
+  // what's found now), then what's new, once each. had: a song it has matched already isn't taken again. head: the
+  // list's first page only, there at once (Apple's songs not looked up yet: with all of it, after). The songs left
+  // waiting; null: none at all.
+  const fill = async (pl, { had = false, head = false } = {}) => {
+    const base = p ? p.tracks.slice() : [], out = new Array(pl.tracks.length).fill(null), total = pl.tracks.length;
+    // (a waiting song: which of out it is now — by its very name, artist and length; else by its name and first artist,
+    // as another page of the service may write the artist)
+    const spotId = new Map(pl.tracks.map((s, i) => [pendingTrack(s).trackId, i])), spot = new Map(pl.tracks.map((s, i) => [songKey(s.title, s.artist), i]));
+    // Apple's: as its pages describe them; those they say too little of (no cover, or no preview) looked up, in batches
+    const apple = pl.tracks.map((s, i) => [s, i]).filter(([s]) => s.apple), ask = head ? [] : apple.filter(([s]) => !s.art || !s.preview);
+    for (const [s, i] of apple) if (s.art) out[i] = appleTrack(s);
+    for (let k = 0; k < ask.length; k += 150) {
+      const part = ask.slice(k, k + 150), found = await itunes('lookup', { id: part.map(([s]) => s.apple).join(','), country: pl.store || STORE }).catch(() => []);
+      for (const [s, i] of part) { const t = found.find(x => String(x.trackId) === String(s.apple) && x.wrapperType === 'track'); if (t) out[i] = t; }
+      if (ask.length > 300) say(`Importing ${pl.name} · ${Math.min(k + 150, ask.length)} of ${ask.length}`);
+    }
+    // YouTube's: as they are
+    pl.tracks.forEach((s, i) => { if (s.yt && !out[i]) out[i] = ytmToTrack({ id: s.yt, title: s.title, artist: s.artist, album: s.album, dur: s.dur, art: `https://i.ytimg.com/vi/${s.yt}/hqdefault.jpg` }); });
+    // the rest (those with a name: a shared link's Apple song that Apple no longer has is just an id)
+    const known = new Set(had ? base.filter(t => !isPending(t)).map(t => songKey(t.trackName, t.artistName)) : []);
+    let have = null;
+    const own = k => (have ||= new Map([...library.liked, ...library.playlists.flatMap(x => x.tracks)].filter(t => !isPending(t) && t.kind !== 'episode')
+      .map(t => [songKey(t.trackName, t.artistName), t]))).get(k);
+    const waiting = [];
+    pl.tracks.forEach((s, i) => {
+      if (out[i] || !s.title) return;
+      const k = songKey(s.title, s.artist);
+      if (known.has(k)) return;
+      const h = own(k);
+      if (h && (!s.dur || !h.trackTimeMillis || Math.abs(h.trackTimeMillis / 1000 - s.dur) <= 8)) out[i] = h;
+      else { out[i] = pendingTrack(s); waiting.push(out[i].trackId); }
+    });
+    const t = [], ids = new Set(), put = x => { if (!ids.has(x.trackId)) { ids.add(x.trackId); t.push(x); } }; // (once each: two takes of a song can come to the same match)
+    for (const x of base) { const m = isPending(x) && !saved.has(x.trackId) && out[spotId.get(x.trackId) ?? spot.get(songKey(x.trackName, x.artistName))]; put(m ? slim(m) : x); }
+    for (const x of out) if (x) put(slim(x));
+    if (!t.length || p && !library.playlists.includes(p)) return null; // (nothing; or deleted while it was read: not brought back)
+    p ||= newPlaylist(pl.name);
+    Object.assign(p, { tracks: t, src: link, store: pl.store }); // (its link kept: imported again, it's this one that's filled)
+    delete p.left;
+    saveLib();
+    return waiting;
+  };
+  if (leftOnly) pl = { name: p.name, tracks: p.left, store: p.store };
   else {
-    toast('Reading the playlist…');
-    try { pl = ours ? await readShareLink(link) : await api.playlist(link); }
+    say('Reading the playlist…');
+    if (sync) p.synced = Date.now(); // (tried today: not again till tomorrow, read or not)
+    const read = o => ours ? readShareLink(link) : api.playlist(link, { gentle: quiet, ...o });
+    try {
+      // someone waiting: a long list's first 100 or so in at once, playable, its first 500 a moment after, and the rest
+      // read meanwhile (a short one: that's all of it — nothing asked for twice)
+      if (!quiet && !ours) for (const first of [100, 500]) {
+        const head = await read({ first });
+        if (!head?.more) { pl = head; break; }
+        if (head.tracks?.length && await fill(head, { had: again || headIn, head: true })) {
+          headIn = true;
+          if (!opened) { opened = true; openLibrary({ kind: 'playlist', id: p.id }); }
+          toast(`${head.name}: ${head.tracks.length} songs ready to play · the rest on its way`, 4000);
+        }
+      }
+      pl ||= await read();
+    }
     catch (e) { // (said so a person can do something about it)
       const m = String(e.message || '');
-      return toast(ours ? 'That playlist link is cut short or broken'
+      return say(ours ? 'That playlist link is cut short or broken'
         : /fetch failed|failed to fetch|timeout|network|ENOTFOUND|ECONN|EAI_AGAIN/i.test(m) ? "Couldn't reach it: check the connection and try again"
         : /page changed|unreadable|^not a playlist link$|^$/i.test(m) ? "Couldn't read that playlist: it may be private, or the link may be wrong" : "Couldn't read that playlist: " + m);
     }
-    if (!pl?.tracks?.length) return toast('That playlist looks empty (or private)');
+    if (!pl?.tracks?.length) return say('That playlist looks empty (or private)');
   }
-  const base = p ? p.tracks.slice() : [], out = new Array(pl.tracks.length).fill(null), total = pl.tracks.length;
-  let done = 0, notFound = 0;
-  const progress = (note = 'Importing') => toast(`${note} ${pl.name} · ${done} of ${total}`);
-  // into the Library as it goes: the songs found so far (once each), and those still to look for
-  const keep = left => {
-    const ids = new Set(base.map(t => t.trackId)), t = [...base];
-    for (const x of out) if (x && !ids.has(x.trackId)) { ids.add(x.trackId); t.push(slim(x)); }
-    if (!t.length) return;
-    p ||= newPlaylist(pl.name);
-    Object.assign(p, { tracks: t, src: link, store: pl.store }); // (its link kept: imported again, it's this one that's filled)
-    if (left.length) p.left = left.map(([s]) => s); else delete p.left;
-    saveLib();
-  };
-  // Apple's: by their ids, in batches (the store's own entries: cover, album, genre, preview)
-  const apple = pl.tracks.map((s, i) => [s, i]).filter(([s]) => s.apple);
-  for (let k = 0; k < apple.length; k += 150) {
-    const part = apple.slice(k, k + 150), found = await itunes('lookup', { id: part.map(([s]) => s.apple).join(','), country: pl.store || STORE }).catch(() => []);
-    for (const [s, i] of part) { const t = found.find(x => String(x.trackId) === String(s.apple) && x.wrapperType === 'track'); if (t) { out[i] = t; done++; } }
-    progress();
+  // (the list read now, all of it: what it holds, kept to tell what's new in it next time — kept in sync, only that)
+  const seen = !leftOnly && pl.tracks.map(s => hash36(songKey(s.title, s.artist)));
+  if (sync) {
+    const had = new Set(p.seen || seen); // (not known yet, from before this version: from now on)
+    pl = { ...pl, tracks: pl.tracks.filter((s, i) => !had.has(seen[i])) };
+    if (!pl.tracks.length) { p.seen = seen; return saveLib(false); }
   }
-  // YouTube's: as they are
-  pl.tracks.forEach((s, i) => { if (s.yt && !out[i]) { out[i] = ytmToTrack({ id: s.yt, title: s.title, artist: s.artist, album: s.album, dur: s.dur, art: `https://i.ytimg.com/vi/${s.yt}/hqdefault.jpg` }); done++; } });
-  // the rest: YouTube Music's song search, its best match (only those with a name to search: a shared link's Apple
-  // song that Apple no longer has is just an id)
-  // (imported again: a song the playlist has already, by its name and first artist, isn't looked for again)
-  const songKey = (title, artist) => words(clean(title)).join(' ') + '|' + words((artist || '').split(/,|&| and | feat\.? | x /i)[0]).join(' ');
-  const known = new Set(again ? p.tracks.map(t => songKey(t.trackName, t.artistName)) : []);
-  const rest = pl.tracks.map((s, i) => Object.assign([s, i], { tries: 0 })).filter(([s, i]) => !out[i] && s.title && !known.has(songKey(s.title, s.artist)));
-  notFound = pl.tracks.filter((s, i) => !out[i] && !s.title).length; done = total - rest.length;
-  keep(rest);
-  const fits = (v, s) => { const a = words(clean(v.title)).join(' '), b = words(clean(s.title)).join(' '), who = words((s.artist || '').split(/,|&| and | feat\.? | x /i)[0]).join(' '); // ("and" or "&": the same band)
-    return !!a && (a === b || a.startsWith(b + ' ') || b.startsWith(a + ' ')) && (!who || words(v.artist).join(' ').includes(who)) && (!s.dur || !v.dur || Math.abs(v.dur - s.dur) <= 8); };
-  let width = 6, streak = 0, since = 0, batches = 0;
-  while (rest.length) {
-    const batch = rest.splice(0, width), failed = [];
-    await Promise.all(batch.map(async it => {
-      const [s, i] = it;
-      try { const v = (await api.ytm(`${s.artist || ''} ${clean(s.title)}`.trim())).find(x => fits(x, s)); if (v) out[i] = ytmToTrack(v); else notFound++; done++; }
-      catch { it.tries++; failed.push(it); } // (not answered: tried again, not counted as not found)
-    }));
-    // (one that keeps failing while the others answer is that song's search, not YouTube: after four tries, not found)
-    const again = failed.length < batch.length ? failed.filter(it => it.tries < 4) : failed;
-    notFound += failed.length - again.length; done += failed.length - again.length;
-    rest.unshift(...again);
-    if (failed.length === batch.length) { // (none answered: YouTube slowing the import down — a pause, longer each time)
-      if (!streak++) since = Date.now();
-      if (Date.now() - since > 5 * 60000) break; // (five minutes of no answers: the rest waits for the next import of this link)
-      width = 1;
-      const pause = Math.min(60, 2 ** streak);
-      toast(`YouTube is slowing the import down: carrying on in ${pause} s · ${pl.name} · ${done} of ${total}`);
-      await new Promise(r => setTimeout(r, pause * 1000));
-    } else { streak = 0; width = failed.length ? Math.max(1, width - 1) : Math.min(6, width + 1); progress(); } // (a search or two that timed out: just tried again)
-    if (++batches % 20 === 0) keep(rest);
-  }
-  keep(rest);
-  if (!p) return toast(rest.length ? 'YouTube isn\'t answering right now: import it again in a while' : 'None of its songs could be found here');
-  if (rest.length) toast(`YouTube stopped answering for now: ${p.tracks.length} songs in. Import the same link again later for the other ${rest.length}`);
-  else toast((again ? `${p.name}: ` + (p.tracks.length > base.length ? `${p.tracks.length - base.length} new song${p.tracks.length - base.length > 1 ? 's' : ''} added` : 'nothing new in it') : `Imported ${pl.name}: ${p.tracks.length} songs`) + (notFound ? ` (${notFound} not found)` : '') + (pl.partial ? `. ${pl.from || 'The service'} stopped sending the rest: import it again later for all of it` : ''));
-  openLibrary({ kind: 'playlist', id: p.id });
+  const waiting = await fill(pl, { had: again || headIn });
+  if (!waiting) return p && !library.playlists.includes(p) ? undefined : say('None of its songs could be found here');
+  if (seen) { Object.assign(p, { seen, synced: Date.now() }); saveLib(false); }
+  // a short list: every song matched now (seconds' work; imported again by hand: those not found before, tried again);
+  // a long one's as they're wanted
+  if (!quiet) for (const id of waiting) matchTried.delete(id);
+  if (waiting.length <= 200) { importBulk.push(...waiting); matchPump(); }
+  const added = p.tracks.filter(x => !before.has(songKey(x.trackName, x.artistName))).length;
+  if (sync) return added && toast(`${p.name}: ${added} new song${added > 1 ? 's' : ''} added`); // (kept in sync: said only when there's something new)
+  say((again ? `${p.name}: ` + (added ? `${added} new song${added > 1 ? 's' : ''} added` : 'nothing new in it') : `Imported ${pl.name}: ${p.tracks.length} songs, ready to play`)
+    + (pl.partial ? `. ${pl.from || 'The service'} stopped sending the rest: import it again later for all of it` : ''));
+  if (!quiet && !opened) openLibrary({ kind: 'playlist', id: p.id });
 }
 // ---------- share a playlist: a link, and its QR code, that carry the songs themselves ----------
 // The part of the link after # holds them, deflated: Apple's songs by their catalog ids (looked up in the sharer's store),
@@ -5640,7 +5769,9 @@ const SHARE_URL = 'https://volodya-rua.github.io/NetherFlow/p/#', SHARE_LINK = /
 const QR_MAX = 2000; // (characters of link a code holds: about version 33, still easy for a phone camera to read off a screen)
 const pipe = (data, stream) => new Response(new Blob([data]).stream().pipeThrough(stream)).arrayBuffer();
 async function shareLink(name, tracks) {
-  const t = tracks.map(x => String(x.trackId).startsWith('yt:') ? [x.ytId || String(x.trackId).slice(3), x.trackName, x.artistName, Math.round((x.trackTimeMillis || 0) / 1000)] : +x.trackId).filter(x => x);
+  // (a song not matched yet: its name, artist and length, matched again where the link's opened)
+  const t = tracks.map(x => { const id = String(x.trackId), d = Math.round((x.trackTimeMillis || 0) / 1000);
+    return id.startsWith('yt:') ? [x.ytId || id.slice(3), x.trackName, x.artistName, d] : isPending(x) ? ['', x.trackName, x.artistName, d] : +x.trackId; }).filter(x => x);
   const z = new Uint8Array(await pipe(new TextEncoder().encode(JSON.stringify({ n: name, s: STORE, t })), new CompressionStream('deflate-raw')));
   let s = ''; for (const b of z) s += String.fromCharCode(b);
   return SHARE_URL + btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -5651,7 +5782,7 @@ async function readShareLink(link) { // (anyone can make a link: what's in it is
   for (let size = 0; ;) { const { done, value } = await r.read(); if (done) break; if ((size += value.length) > 4e6) { r.cancel(); throw new Error('too big'); } parts.push(value); }
   const { n, s, t } = JSON.parse(await new Blob(parts).text());
   return { name: String(n || 'Shared playlist').slice(0, 80), store: /^[A-Z]{2}$/.test(s) ? s : '',
-    tracks: (Array.isArray(t) ? t : []).map(x => Array.isArray(x) ? /^[\w-]{11}$/.test(x[0]) && { yt: x[0], title: String(x[1] || '').slice(0, 300), artist: String(x[2] || '').slice(0, 300), dur: +x[3] || 0 }
+    tracks: (Array.isArray(t) ? t : []).map(x => Array.isArray(x) ? (/^[\w-]{11}$/.test(x[0]) || x[0] === '' && x[1]) && { yt: x[0] || undefined, title: String(x[1] || '').slice(0, 300), artist: String(x[2] || '').slice(0, 300), dur: +x[3] || 0 }
       : Number.isSafeInteger(x) && x > 0 && { apple: x }).filter(Boolean) };
 }
 // the QR code, drawn on a canvas: dark on white with its quiet zone, at whole pixels per module
@@ -5963,12 +6094,13 @@ async function collabUnseal(key, bytes) { // (not ours, or broken: null; its unp
 }
 // a song as another member's copy has it: only the fields a song has, of the kinds they are, its pictures and preview only
 // from Apple's and YouTube's own hosts (anyone with the link can write to it: nothing else gets in)
-const COLLAB_ID = /^(yt:[\w-]{11}|\d{1,15})$/;
+const COLLAB_ID = /^(yt:[\w-]{11}|q:[0-9a-z]{1,7}|\d{1,15})$/; // (q: an imported song not matched yet, by its name, artist and length)
 function collabTrack(t) {
   if (!t || typeof t !== 'object' || !COLLAB_ID.test(String(t.trackId))) return null;
   const o = {};
   for (const k of TRACK_KEYS) { const v = t[k]; if (!k.startsWith('ep') && (typeof v === 'string' ? v.length <= 500 : typeof v === 'number' && isFinite(v))) o[k] = v; }
   if (o.kind === 'episode') delete o.kind; // (songs only: never an episode's audio from anyone's address)
+  // (Spotify's covers not among them: shown only to whoever imported the song — Legal)
   if (o.artworkUrl100 && !/^https:\/\/([\w-]+\.)*(mzstatic\.com|ytimg\.com|googleusercontent\.com|ggpht\.com)\//.test(o.artworkUrl100)) delete o.artworkUrl100;
   if (o.previewUrl && !/^https:\/\/([\w-]+\.)*(apple\.com|mzstatic\.com)\//.test(o.previewUrl)) delete o.previewUrl;
   if (o.ytId && !/^[\w-]{11}$/.test(o.ytId)) delete o.ytId;
@@ -6703,7 +6835,7 @@ function renderLibrary() {
       }
     }
     if (p?.left?.length) { // (an import YouTube cut short: the rest, on a tap)
-      const more = el('button', 'pill', `Finish import · ${p.left.length} left`);
+      const more = el('button', 'pill finish-imp', `Finish import · ${p.left.length} left`);
       more.onclick = () => importPlaylist(p.src);
       acts.push(more);
     }
@@ -7162,6 +7294,7 @@ function row(s, i, list, from = {}) {
   if (cover) img.src = cover;
   const txt = el('span'), sub = el('small');
   wrap.dataset.tid = s.trackId;
+  if (isPending(s)) wantIO.observe(wrap); // (not matched yet, and on screen: matched first)
   wrap.classList.toggle('liked', isLiked(s)); // (a heart before the name)
   if (saved.has(s.trackId)) sub.append(el('span', 'offmark', '↓')); // saved on this device
   else {

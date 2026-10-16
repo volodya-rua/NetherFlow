@@ -195,7 +195,7 @@ async function handle(req, res) {
     const link = (url.searchParams.get('url') || '').slice(0, 500);
     let host = ''; try { host = new URL(link).hostname; } catch {}
     if (!/^(music\.youtube\.com|(www\.|m\.)?youtube\.com|youtu\.be|open\.spotify\.com|spotify\.(app\.)?link|music\.apple\.com)$/.test(host)) return send(res, 400, JSON.stringify({ error: 'not a playlist link' }));
-    try { return send(res, 200, JSON.stringify(await bridge.read(link))); }
+    try { return send(res, 200, JSON.stringify(await bridge.read(link, { gentle: url.searchParams.has('gentle'), first: url.searchParams.get('first') === 'true' || +url.searchParams.get('first') || false }))); } // (gentle: a read nobody waits for, a daily sync; first: about its first that many songs)
     catch (e) { return send(res, 502, JSON.stringify({ error: e.message })); }
   }
   // Explore (see lib.ytmExplore…): gl, the country; p, a mood's page; id, an album
