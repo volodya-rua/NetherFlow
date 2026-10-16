@@ -81,6 +81,15 @@ public class PlaybackPlugin extends Plugin {
                 @Override public void onConnected() {
                     JSObject out = new JSObject();
                     out.put("root", b[0].getRoot());
+                    // (who'd be shown the library: Android Auto and Google's app as installed; Android Auto's name from
+                    // an app it isn't — a uid with no such package — refused)
+                    JSObject who = new JSObject();
+                    PlaybackService s = PlaybackService.instance;
+                    for (String p : new String[] { "com.google.android.projection.gearhead", "com.google.android.googlequicksearchbox" }) {
+                        try { who.put(p, s != null && s.trusted(p, getContext().getPackageManager().getApplicationInfo(p, 0).uid)); } catch (Exception e) { who.put(p, "not seen"); }
+                    }
+                    who.put("gearhead's name, another app", s != null && s.trusted("com.google.android.projection.gearhead", 99999));
+                    out.put("trusted", who);
                     load(b[0], b[0].getRoot(), out, 3, () -> {
                         if (!play.isEmpty()) new MediaControllerCompat(getContext(), b[0].getSessionToken()).getTransportControls().playFromMediaId(play, null);
                         b[0].disconnect();

@@ -122,15 +122,43 @@ public class PlaybackService extends MediaBrowserServiceCompat {
         try { return new JSONObject(library); } catch (Exception e) { return new JSONObject(); }
     }
 
-    // Who's shown the library: a car (Android Auto, a car's own media app), the phone's assistant and media controls,
-    // and NetherFlow itself. Any other app gets the controls, not the list of what you listen to.
-    private static final List<String> CARS = Arrays.asList("com.google.android.projection.gearhead", "com.android.car.media", "com.google.android.carassistant",
-        "com.google.android.googlequicksearchbox", "com.android.systemui", "android");
+    // Who's shown the library: NetherFlow itself; the system's own media controls (signed as the system is, or holding
+    // the permission only system apps get); Android Auto and Google's assistant by their signing certificates — an app
+    // can take a package's name where that package isn't installed, never its signature (Android Auto's key was rotated:
+    // both of its certificates). Any other app gets the controls, not the list of what you listen to.
+    private static final java.util.Map<String, List<String>> SIGNED = new java.util.HashMap<>();
+    static {
+        SIGNED.put("com.google.android.projection.gearhead", Arrays.asList("1ca8dcc0bed3cbd872d2cb791200c0292ca9975768a82d676b8b424fb65b5295", "fdb00c43dbde8b51cb312aa81d3b5fa17713adb94b28f598d77f8eb89daceedf"));
+        SIGNED.put("com.google.android.googlequicksearchbox", Arrays.asList("f0fd6c5b410f25cb25c3b53346c8972fae30f8ee7411df910480ad6b2d60db83"));
+    }
     @Override
     public BrowserRoot onGetRoot(@NonNull String client, int uid, Bundle hints) {
-        String[] of = getPackageManager().getPackagesForUid(uid); // (the name it gave is its own: no app passes for another)
-        boolean known = of != null && Arrays.asList(of).contains(client) && (client.equals(getPackageName()) || CARS.contains(client));
-        return new BrowserRoot(known ? "root" : "none", null);
+        return new BrowserRoot(trusted(client, uid) ? "root" : "none", null);
+    }
+    boolean trusted(String client, int uid) {
+        if (uid == android.os.Process.myUid() || uid == android.os.Process.SYSTEM_UID) return true;
+        android.content.pm.PackageManager pm = getPackageManager();
+        String[] of = pm.getPackagesForUid(uid); // (the name it gave is its own)
+        if (of == null || !Arrays.asList(of).contains(client)) return false;
+        if (pm.checkSignatures("android", client) == android.content.pm.PackageManager.SIGNATURE_MATCH) return true; // (the system's own)
+        if (pm.checkPermission("android.permission.MEDIA_CONTENT_CONTROL", client) == android.content.pm.PackageManager.PERMISSION_GRANTED) return true; // (system apps only)
+        List<String> want = SIGNED.get(client);
+        if (want != null) for (String c : certs(pm, client)) if (want.contains(c)) return true;
+        return false;
+    }
+    // a package's signing certificates (and, with a rotated key, the ones before), as SHA-256 hex
+    private static List<String> certs(android.content.pm.PackageManager pm, String pkg) {
+        List<String> out = new ArrayList<>();
+        try {
+            android.content.pm.Signature[] sigs;
+            if (Build.VERSION.SDK_INT >= 28) {
+                android.content.pm.SigningInfo si = pm.getPackageInfo(pkg, android.content.pm.PackageManager.GET_SIGNING_CERTIFICATES).signingInfo;
+                sigs = si == null ? new android.content.pm.Signature[0] : si.hasMultipleSigners() ? si.getApkContentsSigners() : si.getSigningCertificateHistory();
+            } else sigs = pm.getPackageInfo(pkg, android.content.pm.PackageManager.GET_SIGNATURES).signatures;
+            java.security.MessageDigest md = java.security.MessageDigest.getInstance("SHA-256");
+            for (android.content.pm.Signature s : sigs) { StringBuilder h = new StringBuilder(); for (byte b : md.digest(s.toByteArray())) h.append(String.format("%02x", b)); out.add(h.toString()); }
+        } catch (Exception ignored) {}
+        return out;
     }
 
     @Override

@@ -200,15 +200,21 @@ wants a workout. On a slower phone it steps down by itself, so it never lags.
 - **Search anything** (songs, artists, albums) and play it in full. Typos get fixed and suggestions pop up as you type
 - **Autoplay**: when your list runs out it keeps going with songs like the one playing, in the same language and era, and
   it learns from what you skip, play through and like
-- **Smooth mix**: songs blend into each other like a DJ set, right on the beat
-- **Explore**: charts, new releases, trending, moods and genres with their playlists, and **Your mix** and **Discover**
-  made from what you play
+- **Radio**: start one from any song or artist, and songs like it keep coming
+- **Smooth mix**: songs blend into each other like a DJ set, right on the beat. And albums play **gapless**, straight
+  through from one song into the next
+- **Explore**: charts, new releases, trending, moods and genres with their playlists, and **Your mix**, **Discover** and a
+  mix for **the time of day** (morning, afternoon, evening, late night), made from what you play
+- **Follow artists**: their new albums and singles show up first in Explore, and you hear when they're out
 - **Podcasts and audiobooks**: follow shows, pick up where you left off, any speed from 0.8× to 2×
 - **Equalizer** with presets, a volume booster, **headphone correction** for 6,000+ headphones (AutoEQ), and every song at
   its **original loudness** (YouTube turns loud songs down, NetherFlow gives that back)
+- **Sound tools**: 360 sound, crossfeed for headphones, clarity, loudness at low volume and a night mode. And it tells you
+  the quality of what's playing
 - **Save for offline**: one song, a whole playlist with *Download all*, or podcast episodes and audiobook chapters
 - **Import playlists** of any length from Spotify, Apple Music or YouTube, just paste the link (Spotify's short ones too).
-  Yes, even a 10,000-song one: it keeps going when YouTube slows it down, and picks up where it left off
+  Yes, even a 10,000-song one: every song's there in seconds, ready to play, and it can keep itself in step with the
+  original once a day
 - **Your stats**: minutes, plays, streaks, top songs, artists and genres, and a card to share
 
 ### 🎤 Lyrics
@@ -241,6 +247,7 @@ wants a workout. On a slower phone it steps down by itself, so it never lags.
   the link, and they paste it in NetherFlow's search. The songs ride inside the link itself, nothing gets uploaded
 - **Playlists you make together**: *Edit together*, send the link, and everyone with it adds, removes and renames, live.
   End-to-end encrypted, no account
+- **Blend**: your taste and a friend's in one playlist. Send them your link, they open it, done
 - **Phone ↔ PC sync**: liked songs, playlists, history and stats over your own Wi-Fi with a 12-number code
 - **Discord status** (Windows): your song on your Discord profile, cover and progress and all
 
@@ -250,6 +257,9 @@ wants a workout. On a slower phone it steps down by itself, so it never lags.
 - **Linux**: the same app as a .deb or an AppImage, with your song in your desktop's media controls
 - **Android**: a home-screen widget, lyrics on the lock screen (and in the notification and on your car's display), and
   liked songs saving themselves for offline on Wi-Fi
+- **Android Auto**: your liked songs, recently played and playlists on the car's screen, and voice search. NetherFlow
+  plays from your phone, so open it there first. Android Auto shows apps from outside Google Play once its *Unknown
+  sources* developer setting is on
 - **Android TV & Google TV**: on the TV's home screen, and everything works with the remote
 - **Updates right in the app**: the Windows installer only downloads what changed; so does the Linux AppImage; NetherFlow's
   own Android app does the same, signed and checked first (a store's build gets updated by the store). The portable app
