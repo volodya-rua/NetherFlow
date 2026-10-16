@@ -2,22 +2,31 @@
 package io.github.volodya_rua.netherflow;
 
 import android.Manifest;
+import android.content.ComponentName;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.support.v4.media.MediaBrowserCompat;
+import android.support.v4.media.session.MediaControllerCompat;
+import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
+import java.util.ArrayList;
+import java.util.List;
 
 // Bridge between the page and the song notification (PlaybackService):
 //  - the page calls Playback.update({ title, artist, album, art, duration, position, playing, hasNext, lyric }) on every
 //    change (lyric: the line being sung, with lyrics on the lock screen on; "" otherwise);
-//  - presses on the notification, lock screen, headphones or Bluetooth come back as "action" events.
+//  - presses on the notification, lock screen, headphones or Bluetooth come back as "action" events — and a car's
+//    picks too: "playId" (text: the song's id in the library it was shown) and "search" (text: what was said);
+//  - Playback.library({ json }): the library a car shows (see PlaybackService).
 @CapacitorPlugin(name = "Playback")
 public class PlaybackPlugin extends Plugin {
 
@@ -55,16 +64,75 @@ public class PlaybackPlugin extends Plugin {
     }
 
     @PluginMethod
+    public void library(PluginCall call) {
+        PlaybackService.setLibrary(getContext(), call.getString("json", "{}"));
+        call.resolve();
+    }
+
+    // (a debug build only: what a car sees — the library's tree, as a media browser gets it — and, given one, a song asked
+    // for the way a car asks)
+    @PluginMethod
+    public void carCheck(PluginCall call) {
+        if ((getContext().getApplicationInfo().flags & android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) == 0) { call.reject("debug builds only"); return; }
+        String play = call.getString("play", "");
+        getActivity().runOnUiThread(() -> {
+            MediaBrowserCompat[] b = new MediaBrowserCompat[1];
+            b[0] = new MediaBrowserCompat(getContext(), new ComponentName(getContext(), PlaybackService.class), new MediaBrowserCompat.ConnectionCallback() {
+                @Override public void onConnected() {
+                    JSObject out = new JSObject();
+                    out.put("root", b[0].getRoot());
+                    load(b[0], b[0].getRoot(), out, 3, () -> {
+                        if (!play.isEmpty()) new MediaControllerCompat(getContext(), b[0].getSessionToken()).getTransportControls().playFromMediaId(play, null);
+                        b[0].disconnect();
+                        call.resolve(out);
+                    });
+                }
+                @Override public void onConnectionFailed() { call.reject("couldn't connect"); }
+            }, null);
+            b[0].connect();
+        });
+    }
+    private void load(MediaBrowserCompat b, String id, JSObject out, int depth, Runnable done) {
+        b.subscribe(id, new MediaBrowserCompat.SubscriptionCallback() {
+            @Override public void onChildrenLoaded(@NonNull String parent, @NonNull List<MediaBrowserCompat.MediaItem> children) {
+                b.unsubscribe(parent);
+                JSArray list = new JSArray();
+                List<String> deeper = new ArrayList<>();
+                for (MediaBrowserCompat.MediaItem m : children) {
+                    JSObject o = new JSObject();
+                    o.put("id", m.getMediaId()); o.put("title", String.valueOf(m.getDescription().getTitle())); o.put("sub", String.valueOf(m.getDescription().getSubtitle())); o.put("browsable", m.isBrowsable());
+                    list.put(o);
+                    if (m.isBrowsable() && depth > 1) deeper.add(m.getMediaId());
+                }
+                out.put(parent, list);
+                if (deeper.isEmpty()) { done.run(); return; }
+                int[] left = { deeper.size() };
+                for (String d : deeper) load(b, d, out, depth - 1, () -> { if (--left[0] == 0) done.run(); });
+            }
+        });
+    }
+
+    @Override
+    protected void handleOnDestroy() {
+        if (instance == this) instance = null; // (the page gone: a car's pick can't be played — PlaybackService says so)
+    }
+
+    @PluginMethod
     public void stop(PluginCall call) {
         getContext().stopService(new Intent(getContext(), PlaybackService.class));
         call.resolve();
     }
 
-    static void emit(String action, long position) {
-        if (instance == null) return;
+    static void emit(String action, long position) { emit(action, position, ""); }
+    // (false: no page to tell)
+    static boolean emit(String action, long position, String text) {
+        PlaybackPlugin p = instance;
+        if (p == null || p.getActivity() == null || p.getActivity().isFinishing()) return false;
         JSObject data = new JSObject();
         data.put("action", action);
         data.put("position", position);
-        instance.notifyListeners("action", data);
+        data.put("text", text);
+        p.notifyListeners("action", data);
+        return true;
     }
 }

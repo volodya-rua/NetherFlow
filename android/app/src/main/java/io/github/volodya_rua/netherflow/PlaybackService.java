@@ -19,19 +19,35 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
+import android.support.v4.media.MediaBrowserCompat;
+import android.support.v4.media.MediaDescriptionCompat;
 import android.support.v4.media.MediaMetadataCompat;
 import android.support.v4.media.session.MediaSessionCompat;
 import android.support.v4.media.session.PlaybackStateCompat;
 import androidx.core.app.NotificationCompat;
+import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
+import androidx.media.MediaBrowserServiceCompat;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 // The song notification, like Spotify's: cover art, title, artist, previous / play-pause / next and a seek bar,
 // also on the lock screen and in the quick-settings media player. Its media session takes presses from
 // headphones and Bluetooth too (press = play/pause, double press = next, and previous, skip ±10 s and stop
 // from headsets that send them). Running it as a foreground service keeps NetherFlow alive in the background.
-public class PlaybackService extends Service {
+// It's also the music app a car sees (Android Auto, a car's own media screen): your liked songs, recently played and
+// playlists to pick from, and songs and voice searches ("play … on NetherFlow") back to the page, which plays them.
+public class PlaybackService extends MediaBrowserServiceCompat {
 
     static PlaybackService instance;
     private static final String CHANNEL = "now_playing";
@@ -60,11 +76,98 @@ public class PlaybackService extends Service {
             @Override public void onFastForward() { PlaybackPlugin.emit("fwd", 0); }
             @Override public void onRewind() { PlaybackPlugin.emit("back", 0); }
             @Override public void onStop() { PlaybackPlugin.emit("pause", 0); }
+            @Override public void onPlayFromMediaId(String mediaId, Bundle extras) { fromCar("playId", mediaId); }
+            @Override public void onPlayFromSearch(String query, Bundle extras) { fromCar("search", query == null ? "" : query); }
         });
         session.setActive(true);
+        setSessionToken(session.getSessionToken());
+        session.setPlaybackState(new PlaybackStateCompat.Builder().setActions(CAR_ACTIONS | PlaybackStateCompat.ACTION_PLAY).build()); // (what a car can ask, before a song)
         // Headphones unplugged or Bluetooth disconnected: pause, like other music apps (a system broadcast: it reaches a
         // receiver that isn't exported too, and no other app can send it to pause the music)
         ContextCompat.registerReceiver(this, unplugged, new IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY), ContextCompat.RECEIVER_NOT_EXPORTED);
+    }
+
+    // what a car can ask for: a song from the library it was shown, or one by voice
+    private static final long CAR_ACTIONS = PlaybackStateCompat.ACTION_PLAY_FROM_MEDIA_ID | PlaybackStateCompat.ACTION_PLAY_FROM_SEARCH;
+
+    // A song or a search from a car, to the page; NetherFlow not open on the phone (it plays in its page): said on the
+    // car's screen, nothing played
+    private void fromCar(String action, String text) {
+        if (PlaybackPlugin.emit(action, 0, text)) return;
+        session.setPlaybackState(new PlaybackStateCompat.Builder().setActions(CAR_ACTIONS)
+            .setState(PlaybackStateCompat.STATE_ERROR, 0, 0f)
+            .setErrorMessage(PlaybackStateCompat.ERROR_CODE_APP_ERROR, "Open NetherFlow on your phone first: it plays from there")
+            .build());
+    }
+
+    // The library as a car shows it: liked songs, recently played and the playlists, each song [id, title, artist] — a
+    // light copy the page sends when it changes, kept in a file so it's there when a car connects with the app closed.
+    private static String library;
+    private static final String SHELF = "car-library.json";
+    static void setLibrary(Context c, String json) {
+        library = json;
+        try (FileOutputStream out = new FileOutputStream(new File(c.getFilesDir(), SHELF))) { out.write(json.getBytes(StandardCharsets.UTF_8)); } catch (Exception ignored) {}
+        PlaybackService s = instance;
+        if (s == null) return;
+        for (String id : new String[] { "root", "liked", "recent", "playlists" }) s.notifyChildrenChanged(id);
+        try { JSONArray p = new JSONObject(json).optJSONArray("playlists"); for (int i = 0; p != null && i < p.length(); i++) s.notifyChildrenChanged("pl:" + p.getJSONObject(i).optString("id")); } catch (Exception ignored) {}
+    }
+    private static JSONObject library(Context c) {
+        if (library == null) {
+            try (FileInputStream in = new FileInputStream(new File(c.getFilesDir(), SHELF)); ByteArrayOutputStream got = new ByteArrayOutputStream()) {
+                byte[] b = new byte[65536]; for (int n; (n = in.read(b)) > 0; ) got.write(b, 0, n);
+                library = got.toString("UTF-8");
+            } catch (Exception e) { library = "{}"; }
+        }
+        try { return new JSONObject(library); } catch (Exception e) { return new JSONObject(); }
+    }
+
+    // Who's shown the library: a car (Android Auto, a car's own media app), the phone's assistant and media controls,
+    // and NetherFlow itself. Any other app gets the controls, not the list of what you listen to.
+    private static final List<String> CARS = Arrays.asList("com.google.android.projection.gearhead", "com.android.car.media", "com.google.android.carassistant",
+        "com.google.android.googlequicksearchbox", "com.android.systemui", "android");
+    @Override
+    public BrowserRoot onGetRoot(@NonNull String client, int uid, Bundle hints) {
+        String[] of = getPackageManager().getPackagesForUid(uid); // (the name it gave is its own: no app passes for another)
+        boolean known = of != null && Arrays.asList(of).contains(client) && (client.equals(getPackageName()) || CARS.contains(client));
+        return new BrowserRoot(known ? "root" : "none", null);
+    }
+
+    @Override
+    public void onLoadChildren(@NonNull String parent, @NonNull Result<List<MediaBrowserCompat.MediaItem>> result) {
+        List<MediaBrowserCompat.MediaItem> items = new ArrayList<>();
+        JSONObject lib = library(this);
+        try {
+            if (parent.equals("root")) {
+                items.add(folder("liked", "Liked songs", lib.optJSONArray("liked")));
+                items.add(folder("recent", "Recently played", lib.optJSONArray("recent")));
+                JSONArray p = lib.optJSONArray("playlists");
+                items.add(folder("playlists", "Playlists", null, (p == null ? 0 : p.length()) + " playlists"));
+            } else if (parent.equals("playlists")) {
+                JSONArray p = lib.optJSONArray("playlists");
+                for (int i = 0; p != null && i < p.length(); i++) { JSONObject x = p.getJSONObject(i); items.add(folder("pl:" + x.optString("id"), x.optString("name"), x.optJSONArray("tracks"))); }
+            } else {
+                JSONArray songs = songsOf(lib, parent);
+                for (int i = 0; songs != null && i < songs.length(); i++) {
+                    JSONArray t = songs.getJSONArray(i);
+                    // (its id: which list, where in it and which song — the page plays it in that list)
+                    String id = new JSONArray().put(parent).put(i).put(t.optString(0)).toString();
+                    items.add(new MediaBrowserCompat.MediaItem(new MediaDescriptionCompat.Builder().setMediaId(id).setTitle(t.optString(1)).setSubtitle(t.optString(2)).build(),
+                        MediaBrowserCompat.MediaItem.FLAG_PLAYABLE));
+                }
+            }
+        } catch (Exception ignored) {}
+        result.sendResult(items);
+    }
+    private static JSONArray songsOf(JSONObject lib, String parent) throws Exception {
+        if (parent.equals("liked") || parent.equals("recent")) return lib.optJSONArray(parent);
+        JSONArray p = lib.optJSONArray("playlists");
+        for (int i = 0; p != null && i < p.length(); i++) if (("pl:" + p.getJSONObject(i).optString("id")).equals(parent)) return p.getJSONObject(i).optJSONArray("tracks");
+        return null;
+    }
+    private static MediaBrowserCompat.MediaItem folder(String id, String title, JSONArray songs) { return folder(id, title, songs, (songs == null ? 0 : songs.length()) + " songs"); }
+    private static MediaBrowserCompat.MediaItem folder(String id, String title, JSONArray songs, String sub) {
+        return new MediaBrowserCompat.MediaItem(new MediaDescriptionCompat.Builder().setMediaId(id).setTitle(title).setSubtitle(sub).build(), MediaBrowserCompat.MediaItem.FLAG_BROWSABLE);
     }
 
     private final BroadcastReceiver unplugged = new BroadcastReceiver() {
@@ -122,7 +225,7 @@ public class PlaybackService extends Service {
         long actions = PlaybackStateCompat.ACTION_PLAY | PlaybackStateCompat.ACTION_PAUSE | PlaybackStateCompat.ACTION_PLAY_PAUSE
             | PlaybackStateCompat.ACTION_SEEK_TO | PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS
             | PlaybackStateCompat.ACTION_FAST_FORWARD | PlaybackStateCompat.ACTION_REWIND | PlaybackStateCompat.ACTION_STOP
-            | (song.getBoolean("hasNext") ? PlaybackStateCompat.ACTION_SKIP_TO_NEXT : 0);
+            | (song.getBoolean("hasNext") ? PlaybackStateCompat.ACTION_SKIP_TO_NEXT : 0) | CAR_ACTIONS;
         session.setPlaybackState(new PlaybackStateCompat.Builder()
             .setActions(actions)
             .setState(playing ? PlaybackStateCompat.STATE_PLAYING : PlaybackStateCompat.STATE_PAUSED, song.getLong("position"), playing ? 1f : 0f)
@@ -177,6 +280,6 @@ public class PlaybackService extends Service {
 
     @Override
     public IBinder onBind(Intent intent) {
-        return null;
+        return super.onBind(intent); // (a car, or the phone's media controls, browsing: see onGetRoot)
     }
 }

@@ -524,7 +524,7 @@ kbd { font: inherit; border: 1px solid currentColor; border-radius: 3px; padding
 .jump text { fill: currentColor; stroke: none; font: 500 7.2px var(--mono); letter-spacing: -.04em; text-anchor: middle; }
 
 /* ---------- equalizer: drag the points on the curve ---------- */
-.eq { position: fixed; inset: 64px var(--pad) auto auto; margin: 0; width: min(540px, calc(100vw - 32px)); padding: 18px 18px 14px;
+.eq { position: fixed; inset: 64px var(--pad) auto auto; margin: 0; width: min(540px, calc(100vw - 32px)); padding: 18px 18px 14px; max-height: calc(100dvh - 80px); overflow-y: auto;
   background: color-mix(in srgb, var(--bg) 96%, transparent); color: var(--ink); border: 1px solid var(--hair); border-radius: 18px;
   box-shadow: 0 30px 80px rgba(0,0,0,.6); }
 .eq:popover-open { display: grid; gap: 14px; animation: show .25s both; }
@@ -591,6 +591,7 @@ kbd { font: inherit; border: 1px solid currentColor; border-radius: 3px; padding
 .hp-item small { flex: none; opacity: .5; font-size: 9px; }
 .hp-item:hover, .hp-item:focus-visible { background: var(--a); color: var(--bg); outline: none; }
 .eq-loud .bgq { padding: 12px 0 0; }
+.eq-quality { margin: 0 0 6px; font-size: 12px; opacity: .7; }
 /* ---------- the search's top result: the best match, big, with its own play button ---------- */
 .top-hit { display: grid; grid-template-columns: 104px minmax(0, 1fr) auto; align-items: center; gap: 18px; width: calc(100% - 24px); margin: 6px 12px 16px; padding: 14px;
   border-radius: 16px; background: color-mix(in srgb, var(--a) 10%, transparent); border: 1px solid var(--hair); text-align: left; transition: background-color .2s; animation: fade .4s both; }
@@ -1542,7 +1543,7 @@ body.fs.idle #curGlow { opacity: 0; }
   <div class="ap-head">
     <div id="apArt" class="ap-art"></div>
     <div><div id="apSub" class="count lbl"></div><h2 id="apName" class="ap-name"></h2>
-      <div class="ap-acts lbl"><button id="apPlay" class="pill">Play all</button><span id="apStat"></span></div></div>
+      <div class="ap-acts lbl"><button id="apPlay" class="pill">Play all</button><button id="apRadio" class="pill ghost" hidden>Radio</button><button id="apFollow" class="pill ghost" hidden>Follow</button><span id="apStat"></span></div></div>
   </div>
   <div id="apList" class="results"></div>
 </dialog>
@@ -1700,7 +1701,7 @@ let lines = [], synced = false, drift = true, activeIdx = -2, curWords = [], wor
 let loadId = 0, userScroll = 0, offset = 0, lastLyr = null, current = null;
 // A song saved for offline: where its file starts in the song (lyric time = file time + this), and its length.
 let songShift = 0, savedDur = 0;
-let ctx, analyser, freq, boostNode = null, limiterNode = null, boostLevel = 1, audioSrc = null, routed = null, singNode = null, spaceNode = null; // (the booster: see "volume"; singNode: Sing; spaceNode: 360 sound)
+let ctx, analyser, freq, boostNode = null, limiterNode = null, boostLevel = 1, audioSrc = null, routed = null, singNode = null, spaceNode = null, toolNodes = null; // (the booster: see "volume"; singNode: Sing; spaceNode: 360 sound; toolNodes: the sound tools)
 // The sound's path here (previews, saved songs): this page's <audio> → the equalizer's bands, while it's on → analyser →
 // boost and limiter, while boosting → speakers. Only what's in use is in it (a node more is work
 // for the sound's own thread; on a phone, that thread late is a crack).
@@ -1715,12 +1716,15 @@ function routeAudio() {
       const b = ctx.createBiquadFilter(); b.type = type; b.frequency.value = f; b.gain.value = g; b.Q.value = q; return b; })] : [];
     if (hp) hpNodes[0].gain.value = Math.pow(10, hp.pre / 20);
   }
-  const useEq = eqState.on, boosting = boostLevel > 1, singing = singAmount(), spatial = space !== 'Off', key = +!!hpNodes.length + '' + +useEq + +boosting + +!!singing + +spatial;
+  const useEq = eqState.on, boosting = boostLevel > 1, singing = singAmount(), spatial = space !== 'Off';
+  const using = Object.keys(TOOLS).filter(k => tools[k] !== 'Off' && !(k === 'cross' && spatial)); // (crossfeed: not with 360 sound, which places the song itself)
+  const key = +!!hpNodes.length + '' + +useEq + +boosting + +!!singing + +spatial + using.join();
   singNode.set(singing);
   if (key === routed) return;
   routed = key;
-  for (const n of [audioSrc, ...hpNodes, ...eqNodes, singNode.out, spaceNode.out, analyser, boostNode, limiterNode]) n.disconnect();
-  [audioSrc, ...hpNodes, ...(useEq ? eqNodes : []), ...(singing ? [singNode] : []), ...(spatial ? [spaceNode] : []), analyser, ...(boosting ? [boostNode] : []), ...(useEq || boosting || hpNodes.length ? [limiterNode] : []), ctx.destination].reduce((a, b) => (a.connect(b.inp || b), b.out || b));
+  for (const n of [audioSrc, ...hpNodes, ...eqNodes, singNode.out, spaceNode.out, ...Object.values(toolNodes).map(t => t.out), analyser, boostNode, limiterNode]) n.disconnect();
+  [audioSrc, ...hpNodes, ...(useEq ? eqNodes : []), ...(singing ? [singNode] : []), ...(spatial ? [spaceNode] : []), ...using.map(k => toolNodes[k]), analyser, ...(boosting ? [boostNode] : []),
+    ...(useEq || boosting || hpNodes.length || using.length ? [limiterNode] : []), ctx.destination].reduce((a, b) => (a.connect(b.inp || b), b.out || b));
 }
 // 360 sound (the Equalizer panel): the song set round the listener in 3D, as ears hear the world (HRTF). Around: its left
 // and right as two speakers wide either side and a little in front, with a little room round them. Orbit: the two
@@ -1756,6 +1760,75 @@ function makeSpace(c) {
     }
     wet.gain.setTargetAtTime(mode === 'Around' ? .22 : orbit ? .12 : 0, t, .1);
   } };
+}
+// The sound tools (the Equalizer panel), each in the path only while it's on:
+//   Crossfeed (headphones): a little of each side, softened and a moment late, into the other, as speakers reach both
+//     ears: less tiring than headphones' hard left and right
+//   Clarity: the airy top that streaming squeezes out, brought back a little (a gentle lift up top, and soft overtones
+//     made from the song's own highs)
+//   Loudness at low volume: ears hear less bass and treble when it's quiet, so they're turned up as the volume goes down
+//   Night mode: loud parts brought down and quiet ones up, so nothing jumps out
+const TOOLS = { cross: ['Off', 'Light', 'Strong'], clarity: ['Off', 'On'], lowvol: ['Off', 'On'], night: ['Off', 'On'] };
+const tools = (() => { let t = {}; try { t = JSON.parse(store.get('netherflow.tools') || '{}') || {}; } catch {}
+  return Object.fromEntries(Object.entries(TOOLS).map(([k, opts]) => [k, opts.includes(t[k]) ? t[k] : 'Off'])); })();
+function setTool(k, v) {
+  tools[k] = v; store.set('netherflow.tools', Object.values(tools).some(x => x !== 'Off') ? JSON.stringify(tools) : '');
+  toolNodes?.[k].set(v); routeAudio(); renderLoud();
+}
+function makeCross(c) {
+  const g = v => { const n = c.createGain(); n.gain.value = v; return n; };
+  const inp = g(1), split = c.createChannelSplitter(2), out = c.createChannelMerger(2);
+  inp.channelCount = 2; inp.channelCountMode = 'explicit'; inp.channelInterpretation = 'speakers';
+  inp.connect(split);
+  const sides = [0, 1].map(ch => { // (each side: itself, and into the other below 700 Hz, 0.3 ms late — as far as from one ear to the other)
+    const direct = g(1), low = c.createBiquadFilter(), late = c.createDelay(.01), x = g(0);
+    low.type = 'lowpass'; low.frequency.value = 700; low.Q.value = .5; late.delayTime.value = .0003;
+    split.connect(direct, ch); direct.connect(out, 0, ch);
+    split.connect(low, ch); low.connect(late); late.connect(x); x.connect(out, 0, 1 - ch);
+    return { direct, x };
+  });
+  return { inp, out, set(v) {
+    const t = c.currentTime, a = v === 'Strong' ? .45 : v === 'Light' ? .28 : 0;
+    for (const { direct, x } of sides) { x.gain.setTargetAtTime(a, t, .05); direct.gain.setTargetAtTime(1 - a * .35, t, .05); } // (as loud as before, together)
+  } };
+}
+function makeClarity(c) {
+  const g = v => { const n = c.createGain(); n.gain.value = v; return n; };
+  const inp = g(1), out = g(1), lift = c.createBiquadFilter(), high = c.createBiquadFilter(), drive = g(4), shape = c.createWaveShaper(), high2 = c.createBiquadFilter(), wet = g(0);
+  lift.type = 'highshelf'; lift.frequency.value = 7000; lift.gain.value = 0;
+  high.type = 'highpass'; high.frequency.value = 4000; high2.type = 'highpass'; high2.frequency.value = 4000;
+  const curve = new Float32Array(1024); for (let i = 0; i < 1024; i++) curve[i] = Math.tanh(3 * (i / 511.5 - 1)) / Math.tanh(3);
+  shape.curve = curve; shape.oversample = '2x';
+  inp.connect(lift); lift.connect(out);
+  inp.connect(high); high.connect(drive); drive.connect(shape); shape.connect(high2); high2.connect(wet); wet.connect(out); // (the highs, gently saturated: their overtones)
+  return { inp, out, set(v) { const t = c.currentTime, on = v === 'On'; lift.gain.setTargetAtTime(on ? 2.5 : 0, t, .05); wet.gain.setTargetAtTime(on ? .06 : 0, t, .05); } };
+}
+function makeLowVol(c) {
+  const low = c.createBiquadFilter(), high = c.createBiquadFilter();
+  low.type = 'lowshelf'; low.frequency.value = 120; high.type = 'highshelf'; high.frequency.value = 9000;
+  low.connect(high);
+  return { inp: low, out: high, set(v) { // (full at the volume's bottom, none at 100%)
+    const t = c.currentTime, q = v === 'On' ? Math.max(0, Math.min(1, 1 - volume)) : 0;
+    low.gain.setTargetAtTime(q * 9, t, .1); high.gain.setTargetAtTime(q * 4, t, .1);
+  } };
+}
+function makeNight(c) {
+  const squeeze = c.createDynamicsCompressor(), up = c.createGain();
+  squeeze.threshold.value = -32; squeeze.knee.value = 12; squeeze.ratio.value = 4; squeeze.attack.value = .008; squeeze.release.value = .35;
+  squeeze.connect(up);
+  return { inp: squeeze, out: up, set(v) { up.gain.setTargetAtTime(v === 'On' ? 1.8 : 1, c.currentTime, .1); } }; // (the quiet parts up: the limiter after it catches the peaks)
+}
+// what's playing now, and at what quality (the Equalizer panel's first line)
+const KBPS = { 251: 160, 250: 70, 249: 50, 140: 128, 139: 48 };
+function qualityNow() {
+  const src = audio.src || '';
+  if (!current || engine !== 'audio' || !src) return '';
+  if (saved.has(current.trackId)) return 'saved on this device, at the quality it was saved in';
+  if (/audius\.co/.test(src)) return 'MP3 at 320 kbps: the artist\'s own upload, on Audius';
+  if (/mzstatic|apple\.com/.test(src)) return 'a 30-second preview';
+  if (!fsFmt) return '';
+  const codec = /opus/i.test(fsFmt.mime) ? 'Opus' : /mp4a|aac|audio\/mp4/i.test(fsFmt.mime) ? 'AAC' : 'audio', kbps = KBPS[fsFmt.itag] || (codec === 'Opus' ? 160 : 128);
+  return `${codec} at about ${kbps} kbps${kbps >= 160 ? ': the best YouTube has of this song' : ''}`;
 }
 // Sing mode's voice remover: the middle of the stereo picture between the
 // bass and the sizzle, where a singer's mixed, turned down by a (0…1); the sides and the middle's bass and top kept
@@ -2661,8 +2734,41 @@ function notifyNative() {
     lyric: lockLyrics && synced && lines[activeIdx]?.text?.trim() || '',
   }), 150);
 }
-if (native) Capacitor.Plugins.Playback.addListener('action', ({ action, position }) => {
-  if (action === 'play') P.play();
+// Android Auto (and a car's own media screen, the phone's assistant): the library as the car shows it — liked songs,
+// recently played and the playlists, 500 songs of each at most, each [id, title, artist] — sent to the app when it
+// changes (a few seconds after: not on every save); and what the car asks for, played here
+let carSent = '', carTimer = 0;
+function carLibrary() {
+  if (!native || !libReady) return;
+  clearTimeout(carTimer);
+  carTimer = setTimeout(() => {
+    const songs = l => l.filter(t => t?.trackName && t.kind !== 'episode').slice(0, 500).map(t => [String(t.trackId), t.trackName, t.artistName || '']);
+    const json = JSON.stringify({ liked: songs(library.liked), recent: songs(hist.tracks), playlists: library.playlists.slice(0, 100).map(p => ({ id: String(p.id), name: p.name, tracks: songs(p.tracks) })) });
+    if (json !== carSent) { carSent = json; Capacitor.Plugins.Playback.library({ json }).catch(() => {}); }
+  }, 3000);
+}
+// a car's pick: a song from that library (its list played from it: the next ones follow), or a voice search ("play …
+// on NetherFlow": its best match, and the songs found with it; nothing said — the last song, or your liked songs)
+async function carPlay(action, text) {
+  if (action === 'playId') {
+    let parent, at, id;
+    try { [parent, at, id] = JSON.parse(text); } catch { return; }
+    const list = parent === 'liked' ? library.liked : parent === 'recent' ? hist.tracks : library.playlists.find(p => 'pl:' + p.id === parent)?.tracks;
+    if (!list?.length) return;
+    let k = list.findIndex(t => String(t.trackId) === id); // (moved since the car was shown it: found where it is)
+    if (k < 0) k = Math.min(+at || 0, list.length - 1);
+    queue = list.slice(); playTrack(list[k], '', false, true);
+    return;
+  }
+  const q = text.trim();
+  if (!q) { if (lastSong) resumeLast(); else if (library.liked.length) { queue = library.liked.slice(); playTrack(queue[0], '', false, true); } return; }
+  const found = (await searchSongs(q).catch(() => [])).filter(playable);
+  if (!found.length) return toast(`Nothing found for "${q}"`);
+  queue = found.slice(0, 20); playTrack(queue[0], q, false, true);
+}
+if (native) Capacitor.Plugins.Playback.addListener('action', ({ action, position, text }) => {
+  if (action === 'playId' || action === 'search') carPlay(action, text || '');
+  else if (action === 'play') P.play();
   else if (action === 'pause') P.pause();
   else if (action === 'next') nextTrack();
   else if (action === 'prev') prevTrack();
@@ -2676,7 +2782,7 @@ let engine = 'audio', ytQueue = []; // (ytQueue: the song's other uploads found,
 // FlowStream (flowstream.js, NetherFlow's playback engine): a song's best public stream (Opus) played by this page's own
 // player, straight to this device, the equalizer, Sing and the visuals on it as on a saved song. Desktop: through the
 // app's own server (/api/fs/…). An upload it can't play: the next one found, then the 30 s preview. Levelled loudness: YouTube's level for it, from FlowStream (fsLoud, dB).
-let fsVid = null, fsLoud = 0, fsAgain = 0, fsTries = 0;
+let fsVid = null, fsFmt = null, fsLoud = 0, fsAgain = 0, fsTries = 0;
 const fsLevel = () => loud === 'Levelled' && fsVid && fsLoud > 0 ? 10 ** (-fsLoud / 20) : 1;
 // Android: FlowStream runs here in the page (its requests through the phone, a short wait each), the stream through the
 // app itself (/_fs/media, see MainActivity)
@@ -2715,20 +2821,20 @@ async function fsStream(vid) { // → { src (for a player, or a download), loudn
     if (k) { // its start kept here: played from there at once, its address found meanwhile and handed to the app
       const t = Math.random().toString(36).slice(2);
       flowPage.audio(vid).then(s => s.url, () => '').then(u => fetch('/_fs/url?' + new URLSearchParams({ t, u })));
-      return { src: '/_fs/media?' + new URLSearchParams({ id: vid, m: k[0], t, g: keptG() }), loudnessDb: k[1], dur: k[2] };
+      return { src: '/_fs/media?' + new URLSearchParams({ id: vid, m: k[0], t, g: keptG() }), loudnessDb: k[1], dur: k[2], fmt: { mime: k[0] } };
     }
     const s = await flowPage.audio(vid);
     fsKeep(vid, s); // (the app keeps its start as it plays)
-    return { src: '/_fs/media?' + new URLSearchParams({ u: s.url, m: s.mime.split(';')[0], id: vid, g: keptG() }), loudnessDb: s.loudnessDb || 0, dur: s.duration || 0 };
+    return { src: '/_fs/media?' + new URLSearchParams({ u: s.url, m: s.mime.split(';')[0], id: vid, g: keptG() }), loudnessDb: s.loudnessDb || 0, dur: s.duration || 0, fmt: { itag: s.itag, mime: s.mime } };
   }
   const s = await fetch('/api/fs/audio?' + new URLSearchParams({ id: vid })).then(r => r.ok ? r.json() : Promise.reject(new Error('no stream')));
-  return { src: '/api/fs/media?' + new URLSearchParams({ id: vid, g: keptG() }), loudnessDb: s.loudnessDb || 0, dur: s.duration || 0 };
+  return { src: '/api/fs/media?' + new URLSearchParams({ id: vid, g: keptG() }), loudnessDb: s.loudnessDb || 0, dur: s.duration || 0, fmt: { itag: s.itag, mime: s.mime || '' } };
 }
 async function fsPlay(v, id) {
   const s = await fsStream(v.id);
   if (id !== loadId) return;
   useEngine('audio');
-  fsVid = v.id; fsLoud = s.loudnessDb;
+  fsVid = v.id; fsLoud = s.loudnessDb; fsFmt = s.fmt; // (fsFmt: its format, for the Equalizer panel's "playing now")
   audio.src = s.src;
   audio.volume = playerLevel() * fsLevel();
   P.play();
@@ -2806,6 +2912,8 @@ function initAudio() { // created lazily: browsers want a user gesture first
   for (const el of [audio, audioB]) ctx.createMediaElementSource(el).connect(audioSrc);
   // then the volume booster: a gain, and a limiter so a boosted song never distorts
   boostNode = ctx.createGain(); limiterNode = ctx.createDynamicsCompressor(); singNode = makeSing(ctx); spaceNode = makeSpace(ctx); spaceNode.set(space);
+  toolNodes = { cross: makeCross(ctx), clarity: makeClarity(ctx), lowvol: makeLowVol(ctx), night: makeNight(ctx) };
+  for (const k in toolNodes) toolNodes[k].set(tools[k]);
   limiterNode.knee.value = 6; limiterNode.ratio.value = 20; limiterNode.attack.value = 0.004; limiterNode.release.value = 0.25; // (soft)
   applyBoost(boostLevel);
   freq = new Uint8Array(analyser.frequencyBinCount);
@@ -2929,7 +3037,13 @@ function setSing(on) {
 function renderLoud() {
   $('eqLoud').replaceChildren(settingRow('Loudness', ['Original', 'Levelled'], loud, v => { loud = v; store.set('netherflow.loud', v === 'Original' ? '' : v); renderLoud(); applyEq(); setVolume(volume); },
     'Original: each song as loud as it was mastered. Levelled: YouTube turns loud songs down so all play at about one level.'),
-    settingRow('360 sound', SPACES, space, setSpace, 'Around: the song set round you, like speakers wide either side, with a little room. Orbit: it circles your head (the "8D" sound). Best on headphones.'));
+    settingRow('360 sound', SPACES, space, setSpace, 'Around: the song set round you, like speakers wide either side, with a little room. Orbit: it circles your head (the "8D" sound). Best on headphones.'),
+    settingRow('Crossfeed', TOOLS.cross, tools.cross, v => setTool('cross', v), 'For headphones: a little of each side into the other, softened and a moment late, as speakers reach both ears. Easier on long listens.' + (space !== 'Off' ? ' (Not with 360 sound on: that places the song itself.)' : '')),
+    settingRow('Clarity', TOOLS.clarity, tools.clarity, v => setTool('clarity', v), 'Brings back some of the airy top end that streaming squeezes out of a song.'),
+    settingRow('Loudness at low volume', TOOLS.lowvol, tools.lowvol, v => setTool('lowvol', v), 'Ears hear less bass and treble when it\'s quiet: this turns them up as you turn the volume down, and leaves them be at full volume.'),
+    settingRow('Night mode', TOOLS.night, tools.night, v => setTool('night', v), 'Loud parts down and quiet parts up, so nothing jumps out: late at night, in a car, on a train.'));
+  const q = qualityNow();
+  if (q) $('eqLoud').prepend(el('p', 'eq-quality', 'Playing now: ' + q));
 }
 function applyEq(save = false) {
   eqNodes?.forEach((b, i) => { // (gliding: a jump clicks; out of the path, back to flat at once)
@@ -3002,6 +3116,7 @@ $('eqGraph').addEventListener('keydown', e => {
   if (e.key === 'Home') { e.preventDefault(); setBand(i, 0, true); }
 });
 drawEq(); renderLoud(); renderHp();
+$('eqPanel').addEventListener('toggle', e => { if (e.newState === 'open') renderLoud(); }); // (what's playing now: as it is when it opens)
 for (const el of [audio, audioB]) { // (only the one playing the song now: see Smooth mix)
   el.onplay = () => { if (el !== audio) return; initAudio(); if (engine === 'audio') setPlaying(true); };
   el.onpause = () => { if (el === audio && engine === 'audio') setPlaying(false); };
@@ -3051,6 +3166,7 @@ function songEnded() {
 // One song's queued at a time, as the one before it starts (so it's looked up ahead, and Smooth mix can blend into it);
 // the next few it'd pick show in the queue, to play now instead.
 let autoOn = store.get('netherflow.autoplay') !== 'Off';
+let radio = null; // (Radio, see startRadio: the queue it's growing — another list played, and it's over)
 const AUTO_MEM = 'netherflow.autoplay.mem';
 const auto = { radios: new Map(), seeds: [], items: new WeakSet(), more: [], pending: null, mem: (() => { try { return JSON.parse(store.get(AUTO_MEM) || '{}'); } catch { return {}; } })() };
 auto.mem.heard ||= []; auto.mem.taste ||= {};
@@ -3109,24 +3225,34 @@ const autoTrack = c => { const s = { kind: 'song', trackId: 'yt:' + c.id, ytId: 
 // the song playing the last of the list (and nothing added by hand): the next one picked — one of the best few, at random
 // (the same song needn't always lead to the same next one)
 function autoFill(t) {
-  if (tg.role === 'guest' || !autoOn || !t || t.kind === 'episode' || repeat !== 'off' || hasNext() || !fullSongs) return;
+  if (tg.role === 'guest' || !(autoOn || radio === queue) || !t || t.kind === 'episode' || repeat !== 'off' || hasNext() || !fullSongs) return;
   const p = auto.pending = (async () => {
     const seed = await seedFor(t);
     if (!seed || current !== t) return;
     auto.seeds = [seed, ...auto.seeds.filter(s => s !== seed)].slice(0, 3);
     let lists = await Promise.all(auto.seeds.map(radioFor));
     if (!lists[0].length) lists = [await api.ytm(t.artistName || t.trackName).catch(() => []), ...lists.slice(1)]; // (YouTube's radio not answering: the artist's own songs, not silence)
-    if (current !== t || hasNext() || !autoOn) return;
+    if (current !== t || hasNext() || !(autoOn || radio === queue)) return;
     const ranked = autoRank(t, lists);
     if (!ranked.length) return;
     const r = Math.random(), pick = ranked[Math.min(ranked.length - 1, r < .6 ? 0 : r < .85 ? 1 : 2)];
+    const was = queue;
     queue = [...queue, autoTrack(pick)]; // (a new list: the one played from may be a playlist's own)
+    if (radio === was) radio = queue;
     auto.more = ranked.filter(c => c !== pick).slice(0, 6).map(autoTrack);
     queueChanged();
   })().catch(() => {}).finally(() => { if (auto.pending === p) auto.pending = null; });
   return p;
 }
 
+// Radio (a song's ••• menu, an artist's page): that song, then songs like it without end — Autoplay's picks, whether
+// Autoplay's on or not; till another list is played
+function startRadio(t, of = t.trackName) {
+  if (!t) return;
+  radio = queue = [t]; qi = 0; upNext = [];
+  playTrack(t);
+  toast(`Radio: ${of}, and songs like it`);
+}
 function setRepeat(mode) {
   repeat = mode;
   store.set('netherflow.repeat', mode === 'off' ? '' : mode);
@@ -4536,7 +4662,7 @@ async function playTrack(t, term = '', queued = false, stay = false, mixed = nul
   importYield = Date.now() + 6000;
   const id = ++loadId;
   autoStart(t, current, P.t, P.dur);
-  current = t; lastLyr = null; songShift = 0; savedDur = 0; fsVid = null;
+  current = t; lastLyr = null; songShift = 0; savedDur = 0; fsVid = null; fsFmt = null;
   clock.t = 0; clock.hold = null;
   if (!stay) goHome(false);
   fromUpNext = queued;
@@ -4628,6 +4754,7 @@ function remember(t, term) {
   hist.tracks = [slim(t), ...hist.tracks.filter(x => x.trackId !== t.trackId)].slice(0, 12);
   if (term) hist.terms = [term, ...hist.terms.filter(x => x.toLowerCase() !== term.toLowerCase())].slice(0, 8);
   store.set(HIST, JSON.stringify(hist));
+  carLibrary?.(); // (recently played, on a car's screen)
 }
 function sectionHead(text, actionText, onAction) {
   const h = el('div', 'hist-h lbl');
@@ -4687,7 +4814,7 @@ const saveLib = (draw = true) => { // (draw: the Library and the home screen's f
     const s = JSON.stringify(library);
     libStore('readwrite', kv => kv.put(s, LIB)).catch(() => toast('Couldn\'t save your library on this device'));
     try { localStorage.setItem(LIB, s); } catch { store.set(LIB, ''); } // (too big for the copy: room kept for the rest)
-    collabChanged();
+    collabChanged(); carLibrary();
   }
   if (draw) { if ($('library').open) renderLibrary(); renderFolders(); }
 };
@@ -4696,7 +4823,7 @@ libStore('readonly', kv => kv.get(LIB)).catch(() => null).then(s => {
   try { library = JSON.parse((old ? store.get(LIB) : s) || '{}') || {}; } catch { library = {}; }
   library.liked ||= []; library.playlists ||= [];
   libReady = true;
-  if (old) saveLib(); else { renderFolders(); if ($('library').open) renderLibrary(); }
+  if (old) saveLib(); else { renderFolders(); if ($('library').open) renderLibrary(); carLibrary(); }
   collabStart();
   updateLikeBtn?.();
 });
@@ -4766,6 +4893,8 @@ const ICONS = {
   qr: '<path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h2.5v2.5H14zM17.5 17.5H20V20h-2.5zM14 20h1M20 14v1"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
   minus: '<path d="M5 12h14"/>',
+  radio: '<circle cx="12" cy="12" r="1.8"/><path d="M8.6 15.4a4.8 4.8 0 0 1 0-6.8M15.4 8.6a4.8 4.8 0 0 1 0 6.8M5.8 18.2a8.8 8.8 0 0 1 0-12.4M18.2 5.8a8.8 8.8 0 0 1 0 12.4"/>',
+  clock: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
   check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
   x: '<path d="M6 6l12 12M18 6L6 18"/>',
   back: '<path d="M14.5 5.5L8 12l6.5 6.5"/>',
@@ -4831,6 +4960,7 @@ function songMenu(t, anchor, from = {}) {
     ...offlineItems(t, anchor, main),
     ...(from.playlist ? [mi('minus', `Remove from ${from.playlist.name}`, () => { hideMenu(); removeFromPlaylist(from.playlist, t); })] : []),
     mi('mic', 'Go to artist', () => { hideMenu(); openArtist(t); }),
+    ...(t.kind !== 'episode' ? [mi('radio', 'Start radio', () => { hideMenu(); startRadio(t); })] : []),
     mi('out', 'Open on YouTube', () => { hideMenu(); openSource(t); }),
     mi('story', 'Make a story', () => { hideMenu(); makeStory(t); })]);
   const lists = () => showMenu(anchor, [mi('back', 'Back', main),
@@ -5485,6 +5615,7 @@ setInterval(() => {
   add(s.m, mon);
   if (statPlay.id !== t.trackId) Object.assign(statPlay, { id: t.trackId, secs: 0 });
   if ((statPlay.secs += 5) === 30) s.n++;
+  (s.p ||= [0, 0, 0, 0])[daypart()] += 5; // (when in the day it's played: the time-of-day mix)
   for (const a of t.artistName.split(/,|&| feat\.? | x /i).map(x => x.trim()).filter(Boolean).slice(0, 3)) add(m.artists[a] ||= {}, mon);
   if (t.primaryGenreName) add(m.genres[t.primaryGenreName] ||= {}, mon);
   if (++statsTick % 6 === 0) statsSave();
@@ -5739,6 +5870,7 @@ async function importPlaylistNow(link, { quiet = false, sync = false } = {}) {
         : /page changed|unreadable|^not a playlist link$|^$/i.test(m) ? "Couldn't read that playlist: it may be private, or the link may be wrong" : "Couldn't read that playlist: " + m);
     }
     if (!pl?.tracks?.length) return say('That playlist looks empty (or private)');
+    if (pl.blend) pl = blendWith(pl); // (a friend's taste: blended with yours)
   }
   // (the list read now, all of it: what it holds, kept to tell what's new in it next time — kept in sync, only that)
   const seen = !leftOnly && pl.tracks.map(s => hash36(songKey(s.title, s.artist)));
@@ -5768,11 +5900,11 @@ async function importPlaylistNow(link, { quiet = false, sync = false } = {}) {
 const SHARE_URL = 'https://volodya-rua.github.io/NetherFlow/p/#', SHARE_LINK = /^https:\/\/volodya-rua\.github\.io\/NetherFlow\/p\/?#[\w-]+$/i;
 const QR_MAX = 2000; // (characters of link a code holds: about version 33, still easy for a phone camera to read off a screen)
 const pipe = (data, stream) => new Response(new Blob([data]).stream().pipeThrough(stream)).arrayBuffer();
-async function shareLink(name, tracks) {
+async function shareLink(name, tracks, extra = {}) { // (extra: { b: 1 } — a blend's)
   // (a song not matched yet: its name, artist and length, matched again where the link's opened)
   const t = tracks.map(x => { const id = String(x.trackId), d = Math.round((x.trackTimeMillis || 0) / 1000);
     return id.startsWith('yt:') ? [x.ytId || id.slice(3), x.trackName, x.artistName, d] : isPending(x) ? ['', x.trackName, x.artistName, d] : +x.trackId; }).filter(x => x);
-  const z = new Uint8Array(await pipe(new TextEncoder().encode(JSON.stringify({ n: name, s: STORE, t })), new CompressionStream('deflate-raw')));
+  const z = new Uint8Array(await pipe(new TextEncoder().encode(JSON.stringify({ n: name, s: STORE, t, ...extra })), new CompressionStream('deflate-raw')));
   let s = ''; for (const b of z) s += String.fromCharCode(b);
   return SHARE_URL + btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
@@ -5780,8 +5912,8 @@ async function readShareLink(link) { // (anyone can make a link: what's in it is
   const z = Uint8Array.from(atob(link.split('#')[1].replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
   const r = new Blob([z]).stream().pipeThrough(new DecompressionStream('deflate-raw')).getReader(), parts = [];
   for (let size = 0; ;) { const { done, value } = await r.read(); if (done) break; if ((size += value.length) > 4e6) { r.cancel(); throw new Error('too big'); } parts.push(value); }
-  const { n, s, t } = JSON.parse(await new Blob(parts).text());
-  return { name: String(n || 'Shared playlist').slice(0, 80), store: /^[A-Z]{2}$/.test(s) ? s : '',
+  const { n, s, t, b } = JSON.parse(await new Blob(parts).text());
+  return { name: String(n || 'Shared playlist').slice(0, 80), store: /^[A-Z]{2}$/.test(s) ? s : '', blend: b === 1,
     tracks: (Array.isArray(t) ? t : []).map(x => Array.isArray(x) ? (/^[\w-]{11}$/.test(x[0]) || x[0] === '' && x[1]) && { yt: x[0] || undefined, title: String(x[1] || '').slice(0, 300), artist: String(x[2] || '').slice(0, 300), dur: +x[3] || 0 }
       : Number.isSafeInteger(x) && x > 0 && { apple: x }).filter(Boolean) };
 }
@@ -5793,13 +5925,13 @@ function drawQr(canvas, modules, px) {
   modules.forEach((row, y) => row.forEach((dark, x) => dark && g.fillRect((x + q) * px, (y + q) * px, px, px)));
 }
 let qrShared = null;
-async function sharePlaylist(name, tracks) {
-  const link = await shareLink(name, tracks);
+async function sharePlaylist(name, tracks, extra) {
+  const link = await shareLink(name, tracks, extra);
   let n = tracks.length, qrLink = link;
   if (link.length > QR_MAX) { // (too many songs for one code: the most that fit, the link keeps them all)
     let lo = 1, hi = n - 1;
-    while (lo < hi) { const mid = Math.ceil((lo + hi) / 2); if ((await shareLink(name, tracks.slice(0, mid))).length <= QR_MAX) lo = mid; else hi = mid - 1; }
-    n = lo; qrLink = await shareLink(name, tracks.slice(0, n));
+    while (lo < hi) { const mid = Math.ceil((lo + hi) / 2); if ((await shareLink(name, tracks.slice(0, mid), extra)).length <= QR_MAX) lo = mid; else hi = mid - 1; }
+    n = lo; qrLink = await shareLink(name, tracks.slice(0, n), extra);
   }
   const modules = netherflowLib.qr(qrLink);
   qrShared = { name, link, modules, n, total: tracks.length };
@@ -6507,8 +6639,10 @@ function renderExplore(head, list, tok) {
   for (const b of [fresh, charts, albums, trend, moods]) wait(b);
   mine.append(
     libCard(tile('heart', 'Your mix'), 'Your mix', 'Your most played, and more like them', () => openList({ key: 'mix:mine', label: 'Made for you', title: 'Your mix', load: () => makeMix('mine') })),
-    libCard(tile('compass', 'Discover'), 'Discover', 'Songs new to you, like the ones you love', () => openList({ key: 'mix:new', label: 'Made for you', title: 'Discover', load: () => makeMix('new') })));
-  list.push(sectionHead('Made for you'), mine, sectionHead('New from artists you play'), fresh, sectionHead('Charts'), charts, sectionHead('New albums & singles'), albums, sectionHead('Trending'), trend, sectionHead('Moods & genres'), moods);
+    libCard(tile('compass', 'Discover'), 'Discover', 'Songs new to you, like the ones you love', () => openList({ key: 'mix:new', label: 'Made for you', title: 'Discover', load: () => makeMix('new') })),
+    libCard(tile('clock', mixName('now')), mixName('now'), 'What you play at this time of day', () => openList({ key: 'mix:now:' + daypart(), label: 'Made for you', title: mixName('now'), load: () => makeMix('now') })),
+    libCard(tile('together', 'Blend'), 'Blend', 'Your taste and a friend\'s, in one playlist', blendInvite));
+  list.push(sectionHead('Made for you'), mine, sectionHead(follows.length ? 'New from artists you follow and play' : 'New from artists you play'), fresh, sectionHead('Charts'), charts, sectionHead('New albums & singles'), albums, sectionHead('Trending'), trend, sectionHead('Moods & genres'), moods);
   const live = () => tok === libTok;
   xGet('fresh', newFromArtists).then(l => live() && fresh.replaceChildren(...(l.length ? l.map(a => albumTile(a, openAlbumPage)) : [el('p', 'empty', 'Play and like some songs: new albums and singles from those artists show up here.')]))).catch(e => live() && fresh.replaceChildren(xFail(e)));
   xGet('charts', () => api.explore('charts')).then(c => {
@@ -6536,25 +6670,93 @@ function renderMood(v, head, list, tok) {
   }).catch(e => tok === libTok && box.replaceChildren(xFail(e)));
 }
 // Made for you: songs like your most played and liked (their YouTube Music radios, ranked by what you skip and like here),
-// with them ('mine'), or only ones you've never played or liked ('new')
+// with them ('mine'), or only ones you've never played or liked ('new'); 'now': like the songs you play at this time of
+// day (morning, afternoon, evening, late night), with them — your most played, till it's learnt that
+const DAYPARTS = ['Morning', 'Afternoon', 'Evening', 'Late night'];
+const daypart = (h = new Date().getHours()) => h >= 5 && h < 12 ? 0 : h < 17 ? 1 : h < 22 ? 2 : 3;
+// your taste: your most played, then your liked songs, once each
+function myTaste() {
+  const st = statsFor('all'), seen = new Set(), out = [];
+  for (const t of [...st.songs.map(x => x[0]), ...library.liked]) { const k = songKey(t); if (t?.trackName && !seen.has(k)) { seen.add(k); out.push(t); } }
+  return out;
+}
+// the songs you play at this part of the day, most first (on every device you sync with)
+function playedAround(part) {
+  const m = new Map();
+  for (const st of [stats.mine, ...Object.values(stats.others || {})]) for (const [k, v] of Object.entries(st.songs || {})) if (v.p?.[part]) m.set(k, [v.t, (m.get(k)?.[1] || 0) + v.p[part]]);
+  return [...m.values()].sort((x, y) => y[1] - x[1]).map(x => x[0]).filter(t => t?.trackName);
+}
+const mixName = kind => kind === 'now' ? `${DAYPARTS[daypart()]} mix` : kind === 'mine' ? 'Your mix' : 'Discover';
 async function makeMix(kind) {
-  const st = statsFor('all'), seen = new Set(), seeds = [];
-  for (const t of [...st.songs.map(x => x[0]), ...library.liked]) { const k = songKey(t); if (t?.trackName && !seen.has(k)) { seen.add(k); seeds.push(t); } }
-  if (!seeds.length) return { name: kind === 'mine' ? 'Your mix' : 'Discover', tracks: [], empty: 'Play and like some songs first: your mixes are made from them.' };
-  const pickFrom = kind === 'mine' ? seeds.slice(0, 5) : seeds.slice(0, 30).sort(() => Math.random() - .5).slice(0, 5);
+  const seeds = myTaste(), seen = new Set(seeds.map(songKey)), around = kind === 'now' ? playedAround(daypart()) : [], learnt = around.length >= 3;
+  if (!seeds.length) return { name: mixName(kind), tracks: [], empty: 'Play and like some songs first: your mixes are made from them.' };
+  const shuffled = (l, n) => l.slice(0, n).sort(() => Math.random() - .5).slice(0, 5);
+  const pickFrom = kind === 'new' ? shuffled(seeds, 30) : kind === 'now' ? shuffled(learnt ? around : seeds, 10) : seeds.slice(0, 5);
   const radios = await Promise.all(pickFrom.map(async t => { const id = await seedFor(t).catch(() => ''); return id ? radioFor(id) : []; }));
   const known = new Set([...seen, ...library.playlists.flatMap(p => p.tracks.map(songKey)), ...auto.mem.heard]), taken = new Set(), out = [];
   const lists = radios.map(r => r.map(c => ytmToTrack({ id: c.id, title: c.title, artist: c.artist, album: c.album, dur: c.dur, art: c.art }))
-    .filter(t => !isModded(t) && t.trackTimeMillis >= 60e3 && t.trackTimeMillis <= 600e3 && (kind === 'mine' || !known.has(songKey(t))))
-    .sort((a, b) => (auto.mem.taste[artKey(b)] || 0) - (auto.mem.taste[artKey(a)] || 0)));
+    .filter(t => !isModded(t) && t.trackTimeMillis >= 60e3 && t.trackTimeMillis <= 600e3 && (kind !== 'new' || !known.has(songKey(t))))
+    .sort((x, y) => (auto.mem.taste[artKey(y)] || 0) - (auto.mem.taste[artKey(x)] || 0)));
   for (let i = 0; out.length < 40 && lists.some(l => i < l.length); i++) for (const l of lists) { const t = l[i]; if (t && !taken.has(songKey(t))) { taken.add(songKey(t)); out.push(t); } } // (each radio in turn)
-  if (kind === 'mine') pickFrom.forEach((t, i) => out.splice(Math.min(out.length, i * 6), 0, t)); // (your own among them)
+  if (kind !== 'new') pickFrom.forEach((t, i) => out.splice(Math.min(out.length, i * 6), 0, t)); // (your own among them)
   if (!out.length) throw new Error('YouTube Music didn\'t answer');
-  return { name: kind === 'mine' ? 'Your mix' : 'Discover', tracks: out.slice(0, 40), sub: kind === 'mine' ? 'Your most played, and more like them' : 'Songs you haven\'t played, like the ones you love' };
+  return { name: mixName(kind), tracks: out.slice(0, 40), sub: kind === 'now' ? (learnt ? 'What you play around this time of day, and more like it' : 'Your most played for now: it learns what you play at this time of day')
+    : kind === 'mine' ? 'Your most played, and more like them' : 'Songs you haven\'t played, like the ones you love' };
+}
+// Artists you follow (an artist's page: Follow): their new albums and singles first in Explore, and said when they come
+// out — a message here, and the system's notification on a computer; looked for a little after the app starts and twice
+// a day (one request per artist, to Apple's catalog), kept on this device
+const FOLLOWS = 'netherflow.follows';
+let follows = (() => { try { return JSON.parse(store.get(FOLLOWS) || '[]') || []; } catch { return []; } })();
+const following = artist => follows.some(x => x.id === artist.artistId);
+function setFollow(artist, on, albums = []) {
+  const newest = albums.map(al => al.releaseDate || '').sort().pop() || new Date().toISOString(); // (what's out already isn't news)
+  follows = on ? [...follows.filter(x => x.id !== artist.artistId), { id: artist.artistId, name: artist.artistName, seen: newest }] : follows.filter(x => x.id !== artist.artistId);
+  store.set(FOLLOWS, follows.length ? JSON.stringify(follows) : '');
+}
+async function checkReleases() {
+  if (!follows.length || !navigator.onLine || Date.now() - (+store.get('netherflow.follows.at') || 0) < 6 * 3600e3) return;
+  store.set('netherflow.follows.at', String(Date.now()));
+  const now = new Date().toISOString(), news = [];
+  for (const x of follows.slice()) {
+    const albums = await artistAlbums({ artistId: x.id, artistName: x.name }).catch(() => null);
+    if (!albums) continue;
+    const out = albums.filter(al => al.releaseDate && al.releaseDate > x.seen && al.releaseDate <= now);
+    news.push(...out.map(al => [x, al]));
+    x.seen = [x.seen, ...out.map(al => al.releaseDate)].sort().pop();
+  }
+  store.set(FOLLOWS, JSON.stringify(follows));
+  if (!news.length) return;
+  const [x, al] = news[0], msg = `New from ${x.name}: ${al.collectionName}` + (news.length > 1 ? ` (and ${news.length - 1} more)` : '');
+  toast(msg + ' · in Explore', 6000);
+  try { // (a computer: the system's notification too)
+    if (!native && 'Notification' in window && (Notification.permission === 'granted' || await Notification.requestPermission() === 'granted')) new Notification('NetherFlow', { body: msg, icon: 'logo.png', silent: true });
+  } catch {}
+}
+setTimeout(checkReleases, 30000); setInterval(checkReleases, 12 * 3600e3);
+// Blend (Explore): your taste and a friend's in one playlist. Yours goes as a link (a share link of your most played and
+// liked, marked as a blend); theirs, opened here, becomes "Blend · their name": the songs you both love first, then
+// theirs and yours in turn. Nothing goes to a server: the songs ride in the link.
+const songSpec = t => { const id = String(t.trackId), dur = Math.round((t.trackTimeMillis || 0) / 1000);
+  return id.startsWith('yt:') ? { yt: t.ytId || id.slice(3), title: t.trackName, artist: t.artistName, dur } : /^\d+$/.test(id) ? { apple: id, title: t.trackName, artist: t.artistName, dur } : { title: t.trackName, artist: t.artistName, dur }; };
+async function blendInvite() {
+  const mine = myTaste().slice(0, 40);
+  if (mine.length < 5) return toast('Play and like a few more songs first: a blend is made from your taste');
+  const name = await askName('Blend with a friend', '', 'Make my link', 40, 'Your name (so they know it\'s you)');
+  if (name == null) return;
+  return sharePlaylist(`Blend with ${name.trim() || 'a friend'}`, mine, { b: 1 });
+}
+function blendWith(pl) {
+  const friend = pl.name.replace(/^Blend with\s*/i, '').trim() || 'a friend';
+  const key = x => x.title ? words(clean(x.title)).join(' ') + '|' + firstArtist(x.artist) : 'apple:' + x.apple;
+  const mine = myTaste().slice(0, 60).map(songSpec), theirs = pl.tracks.slice(0, 60), mineKeys = new Set(mine.map(key));
+  const out = theirs.filter(x => x.title && mineKeys.has(key(x))), used = new Set(out.map(key)); // (both of you: first)
+  for (let i = 0; out.length < 60 && (i < theirs.length || i < mine.length); i++) for (const x of [theirs[i], mine[i]]) if (x && !used.has(key(x))) { used.add(key(x)); out.push(x); }
+  return { ...pl, name: `Blend · ${friend}`, tracks: out.slice(0, 60) };
 }
 // new albums and singles (the last four months) from the artists you play most and like
 async function newFromArtists() {
-  const st = statsFor('all'), names = [...new Set([...st.artists.map(([n]) => n), ...library.liked.map(t => (t.artistName || '').split(/,|&| feat\.? | x /i)[0].trim())])].filter(Boolean).slice(0, 10);
+  const st = statsFor('all'), names = [...new Set([...follows.map(x => x.name), ...st.artists.map(([n]) => n), ...library.liked.map(t => (t.artistName || '').split(/,|&| feat\.? | x /i)[0].trim())])].filter(Boolean).slice(0, Math.max(10, follows.length));
   const since = new Date(Date.now() - 120 * 864e5).toISOString(), out = [], ids = new Set();
   await Promise.all(names.map(async n => {
     const a = (await searchArtists(n).catch(() => [])).find(x => sameWords(x.artistName, n));
@@ -7198,6 +7400,7 @@ function artistCards(artists, songs) {
 // ---------- artist page (songs + albums) and album page ----------
 let apLoad = 0, apData = null;
 function apHeader(kind, name, sub, art, round) {
+  $('apRadio').hidden = $('apFollow').hidden = true; // (an artist's own: see renderArtist)
   $('apKind').textContent = kind;
   $('apName').textContent = name;
   $('apSub').textContent = sub;
@@ -7229,6 +7432,11 @@ function renderArtist() {
   $('apStat').textContent = `${songs.length} songs · ${albums.length} albums & singles`;
   $('apPlay').hidden = !songs.length;
   $('apPlay').onclick = () => { queue = songs.slice(); playTrack(songs[0]); };
+  $('apRadio').hidden = !songs.length;
+  $('apRadio').onclick = () => startRadio(songs[0], artist.artistName);
+  const follow = $('apFollow'), paint = () => { follow.textContent = following(artist) ? 'Following' : 'Follow'; follow.setAttribute('aria-pressed', following(artist)); };
+  follow.hidden = !artist.artistId; paint();
+  follow.onclick = () => { const on = !following(artist); setFollow(artist, on, albums); paint(); toast(on ? `Following ${artist.artistName}: their new music shows up in Explore, and you'll hear when it's out` : `Not following ${artist.artistName}`); };
   const list = [];
   if (songs.length) {
     list.push(sectionHead('Popular'), ...songs.slice(0, 10).map((s, i) => row(s, i, songs)));
@@ -7557,6 +7765,7 @@ function setVolume(v, mute = muted, fromPhone = false) {
   levelAnalyser();
   if (sysLink && !fromPhone && !muted) setPhoneVolume(Math.min(1, volume));
   if (boostLevel !== (boosted ? volume : 1)) applyBoost(boosted ? volume : 1);
+  toolNodes?.lowvol.set(tools.lowvol); // (Loudness at low volume follows it)
   // (not the slider being dragged: setting its value under the pointer stops it following the drag)
   for (const r of document.querySelectorAll('.vol')) { if (+r.value !== volume) r.value = volume; r.style.setProperty('--p', volume * 50 + '%'); }
   $('volBtn').dataset.level = muted || !volume ? 'mute' : volume < .5 ? 'low' : 'high';

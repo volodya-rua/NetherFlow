@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android Auto: NetherFlow is a media app (its library and controls on the car's screen: see PlaybackService) -->
+<automotiveApp>
+    <uses name="media" />
+</automotiveApp>

@@ -49,11 +49,20 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/widget_now_playing_info" />
         </receiver>
-        <!-- keeps the song playing in the background, with a "now playing" notification -->
+        <!-- keeps the song playing in the background, with a "now playing" notification; and the music app a car sees
+             (Android Auto): only a car, the phone's media controls and NetherFlow itself are shown the library -->
         <service
             android:name=".PlaybackService"
-            android:exported="false"
-            android:foregroundServiceType="mediaPlayback" />
+            android:exported="true"
+            android:foregroundServiceType="mediaPlayback">
+            <intent-filter>
+                <action android:name="android.media.browse.MediaBrowserService" />
+            </intent-filter>
+        </service>
+        <!-- Android Auto: a media app -->
+        <meta-data
+            android:name="com.google.android.gms.car.application"
+            android:resource="@xml/automotive_app_desc" />
     </application>
 
     <!-- TVs (Android TV, Google TV): worked with the remote, no touchscreen needed -->
