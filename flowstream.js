@@ -84,11 +84,19 @@
       return p;
     }
 
-    // each client in turn; the first one's reason kept if none is given it (it says the most)
+    // each client in turn; the first one's reason kept if none is given it (it says the most). The first client, after
+    // three songs in a row it wasn't given and the spare was (YouTube has stopped serving it): asked second for half an
+    // hour, a request saved on every song, then first again.
     async ask(id) {
       let first;
-      for (const c of CLIENTS) {
-        try { return await this.askAs(c, id); } catch (e) { if (e.code === 'network') throw e; first ||= e; }
+      const order = Date.now() < this.demoted ? [...CLIENTS.slice(1), CLIENTS[0]] : CLIENTS;
+      for (const c of order) {
+        try {
+          const a = await this.askAs(c, id);
+          if (order === CLIENTS) this.misses = c === CLIENTS[0] ? 0 : (this.misses || 0) + 1;
+          if (this.misses >= 3) { this.demoted = Date.now() + 30 * 60e3; this.misses = 0; }
+          return a;
+        } catch (e) { if (e.code === 'network') throw e; first ||= e; }
       }
       throw first;
     }
