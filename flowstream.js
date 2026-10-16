@@ -7,7 +7,7 @@
 // desktop) and in the app's page on Android (CapacitorHttp).
 //
 //   const fs = FlowStream.create({ post })
-//   await fs.audio(id)        { url, itag, mime, size, bitrate, loudnessDb, duration, expires }
+//   await fs.audio(id)        { url, itag, mime, size, bitrate, loudnessDb, duration, expires, client (the one given it) }
 //   await fs.video(id, { height: 1080, fps: 60, codecs: ['av01', 'vp9', 'avc1'] })   { url, itag, mime, width, height, fps, expires }
 //   await fs.lyrics(id)       { lines: [{ t, end, text }] } or { plain }, with { source } (who provides them), or {}
 //   fs.prefetch([id, id, id]) the next songs, looked up ahead;  fs.forget(id) after its address stopped working
@@ -17,11 +17,16 @@
 (function (out) {
   'use strict';
   const API = 'https://www.youtube.com/youtubei/v1/', MUSIC = 'https://music.youtube.com/youtubei/v1/';
-  // The client this asks as: the one yt-dlp asks as when it has no JavaScript runtime (its "visionos" client, which is
-  // given plain stream addresses). See NOTICE.
+  // The clients this asks as, in turn, until one is given the video: the ones yt-dlp asks as that are given plain stream
+  // addresses (its "visionos", its default when it has no JavaScript runtime; then its "android_vr", a spare for when
+  // YouTube changes the first). See NOTICE.
   const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 15_7_3) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15';
-  const CLIENT = { clientName: 'VISIONOS', clientVersion: '1.02', deviceMake: 'Apple', deviceModel: 'RealityDevice17,1', userAgent: UA, osName: 'visionOS', osVersion: '26.5.23O471' };
-  const CLIENT_ID = '101', WEB_VERSION = '2.20261001.00.00';
+  const CLIENTS = [
+    { id: '101', client: { clientName: 'VISIONOS', clientVersion: '1.02', deviceMake: 'Apple', deviceModel: 'RealityDevice17,1', userAgent: UA, osName: 'visionOS', osVersion: '26.5.23O471' } },
+    { id: '28', client: { clientName: 'ANDROID_VR', clientVersion: '1.65.10', deviceMake: 'Oculus', deviceModel: 'Quest 3', androidSdkVersion: 32, osName: 'Android', osVersion: '12L',
+      userAgent: 'com.google.android.apps.youtube.vr.oculus/1.65.10 (Linux; U; Android 12L; eureka-user Build/SQ3A.220605.009.A1) gzip' } },
+  ];
+  const WEB_VERSION = '2.20261001.00.00';
   const WEB_MUSIC = { clientName: 'WEB_REMIX', clientVersion: '1.20250101.01.00' };
   const ANDROID_MUSIC = { clientName: 'ANDROID_MUSIC', clientVersion: '7.21.50', androidSdkVersion: 30 }; // (the client given the lyrics' timing)
   const AUDIO = [251, 140, 250, 249, 139]; // the best first: Opus (~130–160 kbps), then AAC, then the smaller ones
@@ -79,16 +84,25 @@
       return p;
     }
 
-    async ask(id, again = true) {
+    // each client in turn; the first one's reason kept if none is given it (it says the most)
+    async ask(id) {
+      let first;
+      for (const c of CLIENTS) {
+        try { return await this.askAs(c, id); } catch (e) { if (e.code === 'network') throw e; first ||= e; }
+      }
+      throw first;
+    }
+
+    async askAs({ id: num, client }, id, again = true) {
       const v = await this.visitor();
-      const j = await this.json(API + 'player', { context: { client: { ...CLIENT, hl: this.hl, gl: this.gl, visitorData: v } }, videoId: id, contentCheckOk: true, racyCheckOk: true },
-        { Origin: 'https://www.youtube.com', 'X-YouTube-Client-Name': CLIENT_ID, 'X-YouTube-Client-Version': CLIENT.clientVersion, 'X-Goog-Visitor-Id': v });
+      const j = await this.json(API + 'player', { context: { client: { ...client, hl: this.hl, gl: this.gl, visitorData: v } }, videoId: id, contentCheckOk: true, racyCheckOk: true },
+        { Origin: 'https://www.youtube.com', 'User-Agent': client.userAgent, 'X-YouTube-Client-Name': num, 'X-YouTube-Client-Version': client.clientVersion, 'X-Goog-Visitor-Id': v });
       const st = j.playabilityStatus?.status;
-      if (st === 'LOGIN_REQUIRED' && again) { await this.visitor(true); return this.ask(id, false); } // (refused: a new visitor id, once)
+      if (st === 'LOGIN_REQUIRED' && again) { await this.visitor(true); return this.askAs({ id: num, client }, id, false); } // (refused: a new visitor id, once)
       if (st !== 'OK') throw new FlowError(st === 'LOGIN_REQUIRED' ? 'blocked' : 'unplayable', j.playabilityStatus?.reason || st || 'no answer');
       const all = j.streamingData?.adaptiveFormats || [], formats = all.filter(f => f.url && !f.drmFamilies); // (public and unprotected only)
       if (!formats.length) throw new FlowError(all.some(f => f.drmFamilies) ? 'drm' : 'shape', 'no public stream for ' + id);
-      return { id, formats, duration: +j.videoDetails?.lengthSeconds || 0, expires: Date.now() + (+j.streamingData.expiresInSeconds || 21600) * 1000 };
+      return { id, client: client.clientName, formats, duration: +j.videoDetails?.lengthSeconds || 0, expires: Date.now() + (+j.streamingData.expiresInSeconds || 21600) * 1000 };
     }
 
     // the best public audio stream
@@ -98,7 +112,7 @@
         || p.formats.filter(x => x.mimeType.startsWith('audio/')).sort((a, b) => b.bitrate - a.bitrate)[0];
       if (!f) throw new FlowError('unplayable', 'no audio stream for ' + id);
       return { id, url: f.url, itag: f.itag, mime: f.mimeType, size: +f.contentLength || 0, bitrate: f.averageBitrate || f.bitrate,
-        loudnessDb: typeof f.loudnessDb === 'number' ? f.loudnessDb : null, duration: p.duration, expires: p.expires };
+        loudnessDb: typeof f.loudnessDb === 'number' ? f.loudnessDb : null, duration: p.duration, expires: p.expires, client: p.client };
     }
 
     // a video stream (no sound: the sound is audio()'s) no taller than the screen needs, no faster than it shows, in the
@@ -140,5 +154,5 @@
 
   out.create = opts => new Engine(opts);
   out.Error = FlowError;
-  out.version = '0.1.0';
+  out.version = '0.2.0';
 })(typeof module === 'object' && module.exports ? module.exports : (globalThis.FlowStream = {}));
