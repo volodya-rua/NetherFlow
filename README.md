@@ -60,8 +60,9 @@ card anyway), about 18 MB smaller, and it updates to Lite.
   video running down your battery
 - **The music video behind the lyrics** (Extreme lyrics, on computers) is sized to your screen and drops to 30 fps on
   battery
-- **Saving for offline goes through FlowStream too:** the same best sound, a song saved in about 2 seconds, and yt-dlp
-  takes over if FlowStream can't get it
+- **Saving for offline goes through FlowStream too:** the same best sound, a song saved in about 2 seconds
+- **A much smaller app:** NetherFlow no longer carries yt-dlp (or, on Android, a whole Python to run it): the phone
+  app is about 7 MB instead of 41, the Windows one about 17 MB lighter
 - YouTube Music's lyrics say who they come from
 - A song that won't load is tried a few ways, then skipped with a note saying which, so the music doesn't stop
 
@@ -443,20 +444,20 @@ NetherFlow doesn't host any music, videos or lyrics. It finds them on other serv
 | What | From |
 |:--|:--|
 | Song search, artwork | Apple's iTunes Search API, YouTube Music |
-| Playback | FlowStream, NetherFlow's own player: the audio and music videos from YouTube's servers, as YouTube serves them to its own apps (yt-dlp as a backup); [Audius](https://audius.co) when the artist's own upload is there (320 kbps) |
+| Playback | FlowStream, NetherFlow's own player: the audio and music videos from YouTube's servers, as YouTube serves them to its own apps; [Audius](https://audius.co) when the artist's own upload is there (320 kbps) |
 | Lyrics | [LRCLIB](https://lrclib.net), NetEase Cloud Music, Kugou, YouTube Music (lyrics by LyricFind) |
 | Explore | YouTube Music's charts, new releases, moods and genres; your mixes from its radio for the songs you play most |
 | Podcasts | Apple's podcast directory and charts; the episodes from each show's own feed and host |
 | Audiobooks | [LibriVox](https://librivox.org)'s recordings (public domain in the US), from the [Internet Archive](https://archive.org) |
 | Headphone correction | [AutoEQ](https://github.com/jaakkopasanen/AutoEq)'s published results (MIT), fetched when you pick your headphones |
 | Playlists you make together | NetherFlow's own relay on Cloudflare (public MQTT relays as a backup), end-to-end encrypted with a key from the playlist link |
-| Saving for offline | FlowStream saves the audio from YouTube, as YouTube serves it (its best, Opus), with [yt-dlp](https://github.com/yt-dlp/yt-dlp) as a backup; podcast episodes and audiobook chapters come as their host serves them |
+| Saving for offline | FlowStream saves the audio from YouTube, as YouTube serves it (its best, Opus); podcast episodes and audiobook chapters come as their host serves them |
 | Redline's circuits | [OpenStreetMap](https://www.openstreetmap.org/copyright) map data and NASA's SRTM heights, made into `race/` ahead of time |
 
 The desktop app (Windows and Linux) is [Electron](https://www.electronjs.org), the Android app (phones and TVs) is
-[Capacitor](https://capacitorjs.com) with yt-dlp running in Python through [Chaquopy](https://chaquo.com/chaquopy/), and
-both run the same page, `index.html`. FlowStream (`flowstream.js`) is NetherFlow's own code; it uses the same
-requests to YouTube that yt-dlp does.
+[Capacitor](https://capacitorjs.com), and both run the same page, `index.html`. FlowStream (`flowstream.js`) is
+NetherFlow's own code; it asks YouTube as two of YouTube's own apps do (the client details credited to
+[yt-dlp](https://github.com/yt-dlp/yt-dlp), which documents them).
 Redline's races are drawn with [three.js](https://threejs.org).
 
 <details>
@@ -469,7 +470,7 @@ You need [Node.js](https://nodejs.org) 20 or newer.
 ```bash
 npm ci
 npm start      # run it
-npm run dist   # build the installer and the portable app into dist/ (fetches yt-dlp.exe first and checks its SHA-256)
+npm run dist   # build the installer and the portable app into dist/
 npm test       # a quick self-test: plays a song and checks the lyrics sync
 ```
 
@@ -482,7 +483,7 @@ use its own there or with the `NETHERFLOW_DISCORD_ID` environment variable). Its
 
 ```bash
 npm ci
-npm run dist:linux   # an AppImage and a .deb into dist/ (fetches yt-dlp_linux first and checks its SHA-256)
+npm run dist:linux   # an AppImage and a .deb into dist/
 ```
 
 **Android**: you also need JDK 21 and the Android SDK (API level 36).
