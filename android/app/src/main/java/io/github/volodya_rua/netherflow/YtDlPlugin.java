@@ -26,6 +26,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 // its YouTube upload, as YouTube has it. The page reads the file (convertFileSrc), keeps it, and has it removed.
 //   download({ id, key }) → { path, ext, dur }   ·   events "progress" { key, frac }
 //   cancel({ key })   ·   remove({ path })   ·   setUpdates({ on })   ·   file({ url, key }): a podcast's own file (below)
+//   stream({ id }) → { url, mime }: FlowStream's fallback, a stream's address (below)
 // Only if the user turns on "Update the downloader" (setUpdates; off till the page says so): yt-dlp looks for a newer
 // release of itself once a day, and when a download fails (YouTube changes things). Off, it's the one in the app.
 @CapacitorPlugin(name = "YtDl")
@@ -104,6 +105,28 @@ public class YtDlPlugin extends Plugin {
         out.put("ext", path.substring(path.lastIndexOf('.') + 1));
         out.put("dur", r.get(1).toDouble());
         return out;
+    }
+
+    // FlowStream's fallback (when it can't find a song's stream itself): the best audio stream's address, from yt-dlp,
+    // nothing downloaded. Python stays loaded between songs.   stream({ id }) → { url, mime }
+    @PluginMethod
+    public void stream(PluginCall call) {
+        String id = call.getString("id", "");
+        if (!id.matches("[\\w-]{11}")) { call.reject("bad request"); return; }
+        worker.execute(() -> {
+            ytdl.readLock().lock();
+            try {
+                List<PyObject> r = py().callAttr("stream", id).asList();
+                JSObject o = new JSObject();
+                o.put("url", r.get(0).toString());
+                o.put("mime", r.get(1).toString());
+                call.resolve(o);
+            } catch (Exception e) {
+                call.reject(message(e));
+            } finally {
+                ytdl.readLock().unlock();
+            }
+        });
     }
 
     @PluginMethod

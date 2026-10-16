@@ -98,3 +98,18 @@ def download(video_id, out_dir, key, listener):
         info = ydl.extract_info('https://www.youtube.com/watch?v=' + video_id, download=True)
     path = info['requested_downloads'][0]['filepath']
     return [path, float(info.get('duration') or 0)]
+
+
+def stream(video_id):
+    """FlowStream's fallback: the best audio stream's address, without downloading it. Returns [url, mime]."""
+    import yt_dlp
+    options = {
+        'format': '251/140/bestaudio',
+        'noplaylist': True,
+        'cachedir': os.path.join(HOME, 'yt-dlp-cache'),
+        'quiet': True, 'no_warnings': True,
+    }
+    with yt_dlp.YoutubeDL(options) as ydl:
+        info = ydl.extract_info('https://www.youtube.com/watch?v=' + video_id, download=False)
+    f = (info.get('requested_formats') or [info])[0]
+    return [f['url'], 'audio/webm' if f.get('ext') == 'webm' else 'audio/mp4']

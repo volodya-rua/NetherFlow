@@ -53,7 +53,7 @@ kbd { font: inherit; border: 1px solid currentColor; border-radius: 3px; padding
    (behind another app, it isn't: the plain lines, kept up four times a second, show instead) */
 /* (hidden by its opacity alone: a frame hidden any other way gets no animation frames from the browser, so never draws its first) */
 .vedit { position: fixed; inset: 0; z-index: 1; pointer-events: none; opacity: 0; transition: opacity .6s; background: #000; }
-.vedit iframe { display: block; width: 100%; height: 100%; border: 0; }
+.vedit canvas { display: block; width: 100%; height: 100%; }
 .vid-edit.la-kinetic.has-song:not(.home):not(.view-cover):not(.still) .vedit { opacity: 1; }
 /* Listen together: its panel, the code, the people, reactions floating up */
 .tg-row { display: flex; gap: 10px; align-items: center; padding: 6px 12px; }
@@ -404,8 +404,6 @@ kbd { font: inherit; border: 1px solid currentColor; border-radius: 3px; padding
 
 /* YouTube player: keeps playing, parked out of sight behind the backdrop canvas */
 /* (hidden outright, as well as behind the backdrop: the player's own script then mostly rests — it plays on all the same) */
-.screen { position: fixed; left: 0; bottom: 0; width: 356px; height: 200px; z-index: -1; pointer-events: none; visibility: hidden; }
-.screen iframe, .screen > div { display: block; width: 100%; height: 100%; border: 0; }
 
 /* ---------- bottom ---------- */
 .bottom { display: grid; gap: 10px; }
@@ -975,7 +973,7 @@ body.home .home-now { display: flex; }
   filter: blur(70px) saturate(1.7) brightness(.3) contrast(1.1); }
 @keyframes drift { to { transform: scale(1.18) rotate(8deg); } }
 /* (out of the page unless it's the background chosen: even unseen, a full-screen layer is a layer to blend) */
-.theme-cover .cover-bg { display: block; opacity: 1; @starting-style { opacity: 0; } } /* the canvas stays under it, plain: it keeps the hidden players out of sight */
+.theme-cover .cover-bg { display: block; opacity: 1; @starting-style { opacity: 0; } } /* the canvas stays under it, plain */
 .theme-cover:not(.grain-still) .cover-bg { animation: drift 40s ease-in-out infinite alternate; } /* (only when it's seen) */
 
 @media (max-width: 900px) and (min-height: 521px) { /* (and a narrow window, a tablet upright: in one row, the bar's parts ran into each other) */
@@ -1383,11 +1381,11 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
 <div class="cover-bg" aria-hidden="true"></div>
 <div class="grain" aria-hidden="true"></div>
 <div id="agent" class="agent" aria-hidden="true"><b class="ag-bg"></b><img class="ag-pt" alt=""></div><!-- the Tactical theme's agent (see "the themes' extras") -->
-<div class="vedit" id="vedit" inert aria-hidden="true"><div id="ytv"></div></div><!-- Extreme lyrics: the song's music video, cut like an edit -->
+<div class="vedit" id="vedit" inert aria-hidden="true"><canvas id="vedc"></canvas><video id="vedv" muted playsinline crossorigin="anonymous" preload="auto" hidden></video></div><!-- Extreme lyrics: the song's music video, cut like an edit -->
 <div class="race" inert aria-hidden="true"><canvas id="race"></canvas><div class="race-tag" id="raceTag"><b></b><span></span><small>Map data © OpenStreetMap contributors</small></div></div><!-- Redline on Extreme+: a 3D race (race/race.js) -->
 <canvas id="kin" aria-hidden="true"></canvas><!-- Extreme lyrics: the music video (over the backdrop, under everything else) -->
 <canvas id="viz" aria-hidden="true"></canvas><!-- the beat ring: the whole window, so it's never cut off at the edge of the lyrics area -->
-<div class="screen" id="screen" inert><div id="yt"></div><div id="ytb"></div></div>
+
 <div id="singBar" class="singbar lbl" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg><span>Voice</span><input id="singVoice" class="sl" type="range" min="0" max="100" step="5" aria-label="How much of the voice stays"><b id="singPct"></b><button id="singOff" class="link">Done</button></div>
 <div id="moods" class="moods" popover aria-label="Moods and background"></div>
 <div id="textPanel" class="moods textp" popover aria-label="Settings"></div>
@@ -1586,6 +1584,7 @@ if (!('showPopover' in HTMLElement.prototype)) document.addEventListener('DOMCon
 });
 </script>
 <script src="lib.js"></script>
+<script src="flowstream.js"></script>
 <script>
 const $ = id => document.getElementById(id);
 const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
@@ -1593,12 +1592,12 @@ const pad = n => String(n).padStart(2, '0');
 const fmt = s => isFinite(s) ? `${pad(Math.floor(s / 60))}:${pad(Math.floor(s % 60))}` : '00:00';
 const hash = s => [...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
 const status = s => { $('status').textContent = s; };
-const audio = new Audio();
+let audio = new Audio(), audioB = new Audio(); // (songs' players: Smooth mix readies the next song in the second, and the two swap places as it blends in)
 // podcasts' episodes and audiobooks' chapters play in one of their own, never wired into this page's sound graph: their
 // hosts mostly don't let a page read their sound (and one that can't is heard as silence through the graph), and talk
 // needs no equalizer or beat visuals anyway
 const epAudio = new Audio(); epAudio.preload = 'auto';
-audio.crossOrigin = 'anonymous'; // iTunes previews send CORS headers, so the visualizer can read them
+audio.crossOrigin = audioB.crossOrigin = 'anonymous'; // iTunes previews send CORS headers, so the visualizer can read them
 const root = document.documentElement, body = document.body, stage = $('stage'), dlg = $('search');
 const motion = !matchMedia('(prefers-reduced-motion: reduce)').matches;
 const coarse = matchMedia('(pointer: coarse)').matches; // (a touch screen: a phone, mostly — lighter where it counts)
@@ -1615,8 +1614,8 @@ try {
     localStorage.removeItem(k);
   }
 } catch {}
-// Full songs come from YouTube via the app's built-in server (YouTube's player won't run on
-// file:// pages, and the server does the search). Opened as a plain file, only previews work.
+// Full songs come through the app's built-in server (FlowStream's streams, played as the page's own: they need a
+// page served from it, not a file:// one; and the server does the search). Opened as a plain file, only previews work.
 const fullSongs = location.protocol.startsWith('http');
 // Android app (Capacitor): no server there, so the page runs the YouTube search and word-timing lookups
 // itself (lib.js) over native HTTP, which isn't bound by the browser's cross-site rules.
@@ -1640,9 +1639,9 @@ const api = {
   },
   suggest: async q => native ? netherflowLib.ytmSuggest(nativePost, q).catch(() => [])
     : (await fetch('/api/suggest?' + new URLSearchParams({ q }))).json(),
-  // YouTube Music's own lyrics for a video: { lines } synced to that very recording, { plain }, or {}
-  ytmLyrics: async id => native ? netherflowLib.ytmLyrics(nativePost, id).catch(() => ({}))
-    : (await fetch('/api/ytmlyrics?' + new URLSearchParams({ id }))).json(),
+  // YouTube Music's own lyrics for a video, through FlowStream: { lines } synced to that very recording, { plain }, or {};
+  // source: who provides them (shown with them)
+  ytmLyrics: async id => (native ? flowPage.lyrics(id) : fetch('/api/fs/lyrics?' + new URLSearchParams({ id })).then(r => r.ok ? r.json() : {})).catch(() => ({})),
   // a playlist (or album) from its link: { name, from, tracks } (see lib.js)
   playlist: async link => { if (native) return netherflowLib.playlist(nativeGet, nativePost, link);
     const r = await fetch('/api/playlist?' + new URLSearchParams({ url: link })), j = await r.json(); if (!r.ok) throw new Error(j.error || 'couldn\'t read it'); return j; },
@@ -1661,12 +1660,11 @@ const api = {
 const FILE_NOTE = 'only 30-second previews · open the NetherFlow app for full songs';
 let lines = [], synced = false, drift = true, activeIdx = -2, curWords = [], wordTimes = [], curP = [];
 let loadId = 0, userScroll = 0, offset = 0, lastLyr = null, current = null;
-let outLat = 0; // seconds the full song's sound lags YouTube's clock (its path through the equalizer), from frame-helper.js
 // A song saved for offline: where its file starts in the song (lyric time = file time + this), and its length.
 let songShift = 0, savedDur = 0;
 let ctx, analyser, freq, boostNode = null, limiterNode = null, boostLevel = 1, audioSrc = null, routed = null, singNode = null; // (the booster: see "volume"; singNode: Sing)
 // The sound's path here (previews, saved songs): this page's <audio> → the equalizer's bands, while it's on → analyser →
-// boost and limiter, while boosting → speakers. Only what's in use is in it, as in frame-helper.js (a node more is work
+// boost and limiter, while boosting → speakers. Only what's in use is in it (a node more is work
 // for the sound's own thread; on a phone, that thread late is a crack).
 let hpNodes = [], hpSig = ''; // (the headphones' correction here: its preamp and filters, made again when they change)
 function routeAudio() {
@@ -1686,7 +1684,7 @@ function routeAudio() {
   for (const n of [audioSrc, ...hpNodes, ...eqNodes, singNode.out, analyser, boostNode, limiterNode]) n.disconnect();
   [audioSrc, ...hpNodes, ...(useEq ? eqNodes : []), ...(singing ? [singNode] : []), analyser, ...(boosting ? [boostNode] : []), ...(useEq || boosting || hpNodes.length ? [limiterNode] : []), ctx.destination].reduce((a, b) => (a.connect(b.inp || b), b.out || b));
 }
-// Sing mode's voice remover (see frame-helper.js, where a YouTube song's is): the middle of the stereo picture between the
+// Sing mode's voice remover: the middle of the stereo picture between the
 // bass and the sizzle, where a singer's mixed, turned down by a (0…1); the sides and the middle's bass and top kept
 function makeSing(c) {
   const g = v => { const n = c.createGain(); n.gain.value = v; return n; }, mono = n => { n.channelCount = 1; n.channelCountMode = 'explicit'; return n; };
@@ -2550,42 +2548,10 @@ function setNow(title, artist, art = '', album = '') {
   applyMood(); skinExtras();
   if ('mediaSession' in navigator)
     navigator.mediaSession.metadata = new MediaMetadata({ title, artist, album, artwork: art ? [{ src: art, sizes: '600x600', type: 'image/jpeg' }] : [] });
-  songMeta = { title, artist: artist || '', album, art };
-  ytPost({ nfMeta: songMeta });
 }
-
-// Messages to the helper inside YouTube's player (frame-helper.js): equalizer gains, and the song to show
-// in the system media controls. Silently does nothing outside the apps, where the helper isn't there.
-let songMeta = null;
-// (the spectrum, ~60 a second, comes over a channel of its own, handed over with each ask: kept off the window's messages,
-// which YouTube's own script there reads every one of)
-let specPort = null;
-function ytPost(msg, p = yt) { // (p: which player — Smooth mix's second, for its equalizer)
-  try {
-    const w = p?.getIframe()?.contentWindow;
-    if (!w) return;
-    if (!msg.nfViz || p !== yt) return w.postMessage(msg, 'https://www.youtube.com');
-    const ch = new MessageChannel();
-    ch.port1.onmessage = e => { if (e.data?.nfFreq instanceof Uint8Array) pushSpectrum(e.data.nfFreq, e.data.sr); };
-    specPort?.close(); specPort = ch.port1;
-    w.postMessage(msg, 'https://www.youtube.com', [ch.port2]);
-  } catch {}
-}
-addEventListener('message', e => {
-  if (e.origin !== 'https://www.youtube.com' || !e.data || typeof e.data !== 'object') return;
-  if (e.source === ved.p?.getIframe?.()?.contentWindow) { if (e.data.nfEditInfo) ved.info = e.data.nfEditInfo; return; }
-  if (e.source !== yt?.getIframe()?.contentWindow) return; 
-  if (e.data.nfAction === 'next') nextTrack();
-  if (e.data.nfAction === 'fwd') skipBy(jump);
-  if (e.data.nfAction === 'back') skipBy(-jump);
-  if (e.data.nfAction === 'stop') P.pause();
-  if (e.data.nfAction === 'prev') prevTrack();
-  if (typeof e.data.nfLatency === 'number') outLat = Math.min(0.5, Math.max(0, e.data.nfLatency));
-  if (e.data.nfFreq instanceof Uint8Array) pushSpectrum(e.data.nfFreq, e.data.sr);
-});
 
 // ---------- the music's spectrum, for everything that moves with it (backdrop, scrubber, beat ring) ----------
-// It comes from this page's analyser (saved songs, previews) or from frame-helper.js (YouTube), is kept for a
+// It comes from this page's analyser, is kept for a
 // moment, and is read back as late as the sound reaches the speakers: what moves is what's being heard.
 const specFrames = []; // { t, d } — d: 512 bins (1024-point FFT)
 let sampleRate = 48000;
@@ -2603,8 +2569,8 @@ function readSpectrum(now, lag) {
   freq.set(f.d);
   return true;
 }
-// how late the sound reaches the speakers after the clock: YouTube's path through its frame's audio graph, or this page's
-const soundLag = () => engine === 'yt' ? outLat : ctx ? (ctx.baseLatency || 0) + (ctx.outputLatency || 0) : 0;
+// how late the sound reaches the speakers after the clock: its path through this page's audio graph
+const soundLag = () => ctx ? (ctx.baseLatency || 0) + (ctx.outputLatency || 0) : 0;
 
 // Android: the song notification and lock-screen player (PlaybackService), kept in step with the player.
 let notifyTimer;
@@ -2628,32 +2594,59 @@ if (native) Capacitor.Plugins.Playback.addListener('action', ({ action, position
   else if (action === 'back') skipBy(-jump);
 });
 
-// ---------- playback engines: <audio> (previews, local files), YouTube (full songs), or 'ep' (podcasts, audiobooks) ----------
-let engine = 'audio', yt = null, ytLoading = null, ytQueue = [];
+// ---------- playback engines: <audio> (songs: through FlowStream, saved, previews) or 'ep' (podcasts, audiobooks) ----------
+let engine = 'audio', ytQueue = []; // (ytQueue: the song's other uploads found, tried in turn if one won't play)
+// FlowStream (flowstream.js, NetherFlow's playback engine): a song's best public stream (Opus) played by this page's own
+// player, straight to this device, the equalizer, Sing and the visuals on it as on a saved song. Desktop: through the
+// app's own server (/api/fs/…), which asks the bundled yt-dlp when FlowStream can't. An upload neither can play: the
+// next one found, then the 30 s preview. Levelled loudness: YouTube's level for it, from FlowStream (fsLoud, dB).
+let fsVid = null, fsLoud = 0, fsAgain = 0, fsTries = 0;
+const fsLevel = () => loud === 'Levelled' && fsVid && fsLoud > 0 ? 10 ** (-fsLoud / 20) : 1;
+// Android: FlowStream runs here in the page (its requests through the phone, a short wait each), the stream through the
+// app itself (/_fs/media, see MainActivity), and yt-dlp (YtDl.stream) when FlowStream can't find it
+const flowPage = native && window.FlowStream ? FlowStream.create({ visitor: store.get('netherflow.fsvisitor') || '', saveVisitor: v => store.set('netherflow.fsvisitor', v),
+  post: (url, body, headers) => Capacitor.Plugins.CapacitorHttp.post({ url, headers, data: JSON.parse(body), responseType: 'text', connectTimeout: 6000, readTimeout: 6000 })
+    .then(r => typeof r.data === 'string' ? r.data : JSON.stringify(r.data)) }) : null;
+async function fsStream(vid) { // → { src (for a player), loudnessDb }
+  if (native) {
+    const s = await flowPage.audio(vid).catch(() => Capacitor.Plugins.YtDl.stream({ id: vid }));
+    return { src: '/_fs/media?' + new URLSearchParams({ u: s.url, m: s.mime.split(';')[0] }), loudnessDb: s.loudnessDb || 0 };
+  }
+  const s = await fetch('/api/fs/audio?' + new URLSearchParams({ id: vid })).then(r => r.ok ? r.json() : Promise.reject(new Error('no stream')));
+  return { src: '/api/fs/media?' + new URLSearchParams({ id: vid }), loudnessDb: s.loudnessDb || 0 };
+}
+async function fsPlay(v, id) {
+  const s = await fsStream(v.id);
+  if (id !== loadId) return;
+  useEngine('audio');
+  fsVid = v.id; fsLoud = s.loudnessDb;
+  audio.src = s.src;
+  audio.volume = playerLevel() * fsLevel();
+  P.play();
+}
 const A = () => engine === 'ep' ? epAudio : audio; // (the <audio> playing: songs' or talk's)
 const P = {
-  get paused() { return engine === 'yt' ? yt?.getPlayerState() !== 1 : A().paused; },
-  get t() { return (engine === 'yt' ? yt?.getCurrentTime() : A().currentTime) || 0; },
+  get paused() { return A().paused; },
+  get t() { return A().currentTime || 0; },
   // recordings saved for offline don't carry their length in the file: the length saved with them stands in
-  get dur() { return (engine === 'yt' ? yt?.getDuration() : isFinite(A().duration) ? A().duration : savedDur) || 0; },
-  get loaded() { return engine === 'yt' ? !!yt : !!A().src; },
-  play() { engine === 'yt' ? yt?.playVideo() : A().play().catch(() => {}); },
-  pause() { mixAbort(); engine === 'yt' ? yt?.pauseVideo() : A().pause(); },
+  get dur() { return (isFinite(A().duration) ? A().duration : savedDur) || 0; },
+  get loaded() { return !!A().src; },
+  play() { A().play().catch(() => {}); },
+  pause() { mixAbort(); A().pause(); },
   seek(t) {
     mixAbort();
-    engine === 'yt' ? yt?.seekTo(t, true) : (A().currentTime = t);
+    A().currentTime = t;
     clock.t = clock.hold = t; clock.until = performance.now() + 1500; // (the lyrics go there at once: see songTime)
     setTimeout(notifyNative, 300);
   },
 };
 // Where the app is (desktop: main.js; Android: the app in front or not): 2 in front · 1 on screen, another app in front
 // · 0 away (minimized, hidden; Android: in the background, or the screen off). On screen, everything moves, in front or
-// not (watched beside another app); away, nothing at all — the loop stops, every animation's paused (.still), and
-// YouTube's frame stops sending its spectrum. (A window covered whole — a game full screen — isn't drawn by Chromium
+// not (watched beside another app); away, nothing at all — the loop stops, every animation's paused (.still). (A window covered whole — a game full screen — isn't drawn by Chromium
 // anyway.) The screen stays on while a song plays with the app on screen (desktop: main.js; Android: ImmersivePlugin).
 let place = 2;
-// the island (desktop, Settings › Island): the song playing, over every other app — YouTube's frame keeps sending the
-// spectrum for it while this window's not in front
+// the island (desktop, Settings › Island): the song playing, over every other app — its beat from this page's analyser
+// while this window's not in front
 let islandOn = store.get('netherflow.island') !== 'Off', islandGlow = store.get('netherflow.islandglow') !== 'Off';
 let discordOn = store.get('netherflow.discord') === 'On'; // (Discord status: see setDiscord)
 let lockLyrics = store.get('netherflow.locklyrics') === 'On', likedOffline = store.get('netherflow.likedoff') === 'On'; // (Android extras: see setLockLyrics)
@@ -2666,7 +2659,7 @@ function keepAwake() {
 }
 function setPlace(v) {
   if (v === place) return;
-  place = v; keepAwake(); ytPost({ nfViz: vizWanted() });
+  place = v; keepAwake();
   body.classList.toggle('still', v < 1);
   speed.n = speed.s = speed.slow = 0;
   if (v > 0 && !looping) { looping = true; requestAnimationFrame(frame); }
@@ -2684,13 +2677,12 @@ function useEngine(kind) {
   engine = kind;
   if (kind !== 'audio') audio.pause();
   if (kind !== 'ep') epAudio.pause();
-  if (kind === 'yt') ctx?.suspend(); else yt?.pauseVideo(); // (this page's own sound idle meanwhile: one stream fewer — playing here resumes it, see initAudio)
   setPlaying(false);
 }
 
 function initAudio() { // created lazily: browsers want a user gesture first
   if (ctx) return ctx.resume();
-  ctx = new AudioContext({ latencyHint: 'playback' }); // (music's larger buffers: no cracks when the device is busy — as frame-helper.js)
+  ctx = new AudioContext({ latencyHint: 'playback' }); // (music's larger buffers: no cracks when the device is busy)
   analyser = ctx.createAnalyser();
   analyser.fftSize = 1024; // ~47 Hz per bin: enough to tell the kick from the bass line
   analyser.smoothingTimeConstant = 0.55;
@@ -2702,17 +2694,18 @@ function initAudio() { // created lazily: browsers want a user gesture first
     b.Q.value = 1.1;
     return b;
   });
-  audioSrc = ctx.createMediaElementSource(audio);
-  // then the volume booster: a gain, and a limiter so a boosted song never distorts (as in frame-helper.js)
+  audioSrc = ctx.createGain(); // (both songs' players into it: see Smooth mix)
+  for (const el of [audio, audioB]) ctx.createMediaElementSource(el).connect(audioSrc);
+  // then the volume booster: a gain, and a limiter so a boosted song never distorts
   boostNode = ctx.createGain(); limiterNode = ctx.createDynamicsCompressor(); singNode = makeSing(ctx);
-  limiterNode.knee.value = 6; limiterNode.ratio.value = 20; limiterNode.attack.value = 0.004; limiterNode.release.value = 0.25; // (soft: see frame-helper.js)
+  limiterNode.knee.value = 6; limiterNode.ratio.value = 20; limiterNode.attack.value = 0.004; limiterNode.release.value = 0.25; // (soft)
   applyBoost(boostLevel);
   freq = new Uint8Array(analyser.frequencyBinCount);
   applyEq();
 }
 
-// ---------- equalizer: 6 bands like Spotify's, ±12 dB. Full songs are equalized inside YouTube's player by the
-// app's helper (frame-helper.js), previews here. Settings are kept on this device. ----------
+// ---------- equalizer: 6 bands like Spotify's, ±12 dB, on every song, in this page's own sound graph. Settings are
+// kept on this device. ----------
 const EQ = {
   freqs: [60, 150, 400, 1000, 2400, 15000],
   labels: ['60', '150', '400', '1K', '2.4K', '15K'],
@@ -2725,14 +2718,14 @@ const EQ = {
 let eqNodes = null, eqState;
 try { eqState = JSON.parse(store.get('netherflow.eq')); } catch {}
 if (!eqState?.gains || eqState.gains.length !== 6) eqState = { on: false, preset: 'Flat', gains: [0, 0, 0, 0, 0, 0] };
-// Loudness: YouTube turns loud songs down to one level (by up to ~8 dB). Original gives that back in its player (see
-// frame-helper.js), so a song plays as loud and full as it was mastered, as a saved one does; Levelled keeps YouTube's.
+// Loudness: YouTube turns loud songs down to one level (by up to ~8 dB). Original plays a song as loud and full as it was
+// mastered (FlowStream's stream as it is, as a saved one); Levelled turns it down as YouTube would (fsLevel).
 let loud = store.get('netherflow.loud') === 'Levelled' ? 'Levelled' : 'Original';
 const eqMsg = () => ({ on: eqState.on, gains: eqState.gains.slice(), boost: boostLevel, orig: loud === 'Original', sing: singAmount(), hp: hp && { pre: hp.pre, f: hp.filters } });
 // ---------- headphones (Equalizer › Headphones): AutoEQ's correction for the listener's own headphones — measured on a
 // test rig, their colour (a bump in the bass, a dip at 3 kHz…) evened out toward a neutral target — ahead of the bands.
 // 8,000+ models, from AutoEq (MIT, Jaakko Pasanen): its index when the list is opened, then the one chosen (a preamp and up
-// to 10 filters), kept on this device, so it works offline. In both players (frame-helper.js, routeAudio). ----------
+// to 10 filters), kept on this device, so it works offline. In the page's sound graph (routeAudio). ----------
 const AUTOEQ = 'https://raw.githubusercontent.com/jaakkopasanen/AutoEq/master/results/';
 let hp = null; try { hp = JSON.parse(store.get('netherflow.hp')); } catch {}
 if (!hp?.filters?.length) hp = null;
@@ -2826,7 +2819,7 @@ function setSing(on) {
   toast(on ? 'Sing: the voice turned down' : 'Sing off');
 }
 function renderLoud() {
-  $('eqLoud').replaceChildren(settingRow('Loudness', ['Original', 'Levelled'], loud, v => { loud = v; store.set('netherflow.loud', v === 'Original' ? '' : v); renderLoud(); applyEq(); },
+  $('eqLoud').replaceChildren(settingRow('Loudness', ['Original', 'Levelled'], loud, v => { loud = v; store.set('netherflow.loud', v === 'Original' ? '' : v); renderLoud(); applyEq(); setVolume(volume); },
     'Original: each song as loud as it was mastered. Levelled: YouTube turns loud songs down so all play at about one level.'));
 }
 function applyEq(save = false) {
@@ -2834,7 +2827,6 @@ function applyEq(save = false) {
     if (eqState.on) b.gain.setTargetAtTime(eqState.gains[i], ctx.currentTime, .015); else { b.gain.cancelScheduledValues(0); b.gain.value = 0; }
   });
   routeAudio();
-  ytPost({ nfEq: eqMsg() });
   if (save) store.set('netherflow.eq', JSON.stringify(eqState));
 }
 // the curve: x per band, y for gain (0 dB in the middle)
@@ -2901,9 +2893,11 @@ $('eqGraph').addEventListener('keydown', e => {
   if (e.key === 'Home') { e.preventDefault(); setBand(i, 0, true); }
 });
 drawEq(); renderLoud(); renderHp();
-audio.onplay = () => { initAudio(); if (engine === 'audio') setPlaying(true); };
-audio.onpause = () => { if (engine === 'audio') setPlaying(false); };
-audio.onended = () => { if (engine === 'audio') { setPlaying(false); songEnded(); } };
+for (const el of [audio, audioB]) { // (only the one playing the song now: see Smooth mix)
+  el.onplay = () => { if (el !== audio) return; initAudio(); if (engine === 'audio') setPlaying(true); };
+  el.onpause = () => { if (el === audio && engine === 'audio') setPlaying(false); };
+  el.onended = () => { if (el === audio && engine === 'audio') { setPlaying(false); songEnded(); } };
+}
 epAudio.onplay = () => { if (engine === 'ep') setPlaying(true); };
 epAudio.onpause = () => { if (engine === 'ep') { setPlaying(false); epKeep(); } };
 epAudio.onended = () => { if (engine === 'ep') { setPlaying(false); epKeep(true); songEnded(); } };
@@ -3053,101 +3047,58 @@ $('prevBtn').onclick = prevTrack;
 $('nextBtn').onclick = nextTrack;
 $('repeatBtn').onclick = () => setRepeat(REPEATS[(REPEATS.indexOf(repeat) + 1) % 3]);
 
-// YouTube's players report here: the one playing to the app; the other — Smooth mix's, see below — to the mix, till it
-// takes over
-function ytState(e) {
-  if (e.target !== yt) return mixState(e);
-  if (engine === 'yt') stallWatch(e.data === -1 || e.data === 3);
-  if (engine !== 'yt' || e.data === 3) return; // 3 = buffering: keep the current state
-  setPlaying(e.data === 1);
-  if (e.data === 1) { ytPost({ nfEq: eqMsg() }); ytPost({ nfMeta: songMeta }); ytPost({ nfViz: vizWanted() }); holdVolume(); } // a new video: equalizer, song, spectrum please; our volume
-  if (e.data === 0) songEnded();
-}
-// a song that doesn't start, or stops to load and never carries on (the connection, YouTube not sending it — it waited
-// forever before, looking loaded): after 20 s it's loaded again where it was, then YouTube's next match for it, then said
-let stall = { timer: 0, tries: 0, load: -1 };
-function stallWatch(on) {
-  clearTimeout(stall.timer);
-  if (!on) return;
-  if (stall.load !== loadId) stall = { timer: 0, tries: 0, load: loadId };
-  stall.timer = setTimeout(() => {
-    let s; try { s = yt.getPlayerState(); } catch { return; }
-    if (engine !== 'yt' || stall.load !== loadId || (s !== -1 && s !== 3)) return;
-    const at = Math.max(0, P.t - 1), vid = yt.getVideoData?.()?.video_id;
-    if (stall.tries++ === 0 && vid) { status('● loading it again'); yt.loadVideoById(vid, at); }
-    else if (ytQueue.length && stall.tries <= 2) { status('● another upload of it'); yt.loadVideoById(ytQueue.shift().id, at); }
-    else if (navigator.onLine && hasNext()) { toast(`Couldn't load ${current.trackName}: on to the next`); return nextTrack(); } // (as other players skip one that won't play)
-    else { yt.stopVideo(); setPlaying(false); status('◇ couldn\'t load it'); return message('Couldn\'t load it', navigator.onLine ? 'YouTube isn\'t sending this song right now: try again, or another' : 'you\'re offline: songs saved on this device still play'); }
-    stallWatch(true);
-  }, 20000);
-}
-// not embeddable / removed: try the next match, then fall back to the preview (not once another song, saved or a
-// preview, has taken over: the next match would play over it)
-function ytError(e) {
-  if (e.target !== yt) return mixAbort();
-  if (engine === 'yt') ytQueue.length ? yt.loadVideoById(ytQueue.shift().id) : previewFallback('video blocked');
-}
-
 // ---------- Smooth mix (Settings): one song blending into the next, as Apple Music's AutoMix does ----------
-// 25 s before a song's end, the next one (both of them YouTube's) is made ready in a second, hidden player: paused at its
-// start, silent. Then — with FADE seconds left, or at once if the song's gone quiet (a silent or faded-out ending is
-// skipped) — on a beat, the next starts and the two cross over for FADE seconds (equal power: together as loud as one);
-// halfway, the app moves on to the next song (its lyrics, its cover…). Pause, a seek or another song picked: the mix is
-// dropped at once. ponytail: a crossfade on a beat with quiet endings skipped, not AutoMix's stretching of both songs
-// to one tempo.
-let smoothMix = store.get('netherflow.mix') === 'On', ytB = null, ytBLoading = null;
+// 25 s before a song's end, the next one (both through FlowStream) is made ready in the second player: loaded, silent.
+// Then — with FADE seconds left, or at once if the song's gone quiet (a silent or faded-out ending is skipped) — on a
+// beat, the next starts and the two cross over for FADE seconds (equal power: together as loud as one); halfway, the
+// two players swap places and the app moves on to the next song (its lyrics, its cover…). Pause, a seek or another song
+// picked: the mix is dropped at once. ponytail: a crossfade on a beat with quiet endings skipped, not AutoMix's
+// stretching of both songs to one tempo.
+let smoothMix = store.get('netherflow.mix') === 'On';
 function setSmoothMix(v) { smoothMix = v === 'On'; store.set('netherflow.mix', smoothMix ? 'On' : ''); if (!smoothMix) mixAbort(); renderTextPanel(); }
 const FADE = 8;
-const mix = { for: null, next: null, fromUp: false, vids: null, ready: false, on: false, t0: 0, swapped: false, quiet: 0 };
-function loadYTB() {
-  return ytBLoading ||= new Promise(res => new YT.Player('ytb', { width: '100%', height: '100%',
-    playerVars: { playsinline: 1, rel: 0, controls: 0, disablekb: 1, fs: 0, iv_load_policy: 3 },
-    events: { onReady: e => { ytB = e.target; res(ytB); }, onStateChange: ytState, onError: ytError } }));
-}
+const mix = { for: null, next: null, fromUp: false, vids: null, ready: false, on: false, t0: 0, swapped: false, quiet: 0, loud: 0, outLevel: 1 };
 // the song to come after this one, as Next would play it (and whether it's from Play next / Add to queue)
 const nextUp = () => upNext.length ? [upNext[0], true] : qi + 1 < queue.length ? [queue[qi + 1], false] : repeat === 'all' && queue.length ? [queue[0], false] : [null, false];
-const mixReset = () => Object.assign(mix, { for: null, next: null, vids: null, ready: false, on: false, swapped: false, quiet: 0 });
+const mixReset = () => Object.assign(mix, { for: null, next: null, vids: null, ready: false, on: false, swapped: false, quiet: 0, loud: 0, outLevel: 1 });
+const mixLevel = db => loud === 'Levelled' && db > 0 ? 10 ** (-db / 20) : 1; // (as fsLevel, for the song coming in)
+const mixClear = () => { audioB.oncanplay = null; audioB.pause(); audioB.removeAttribute('src'); audioB.load(); };
 // dropped: the song coming in stopped (or, after the switch, the one going out); the one playing at its own volume again
 function mixAbort() {
   if (!mix.for && !mix.on) return;
-  try { if (mix.vids) ytB?.stopVideo(); } catch {}
-  mixReset();
-  holdVolume();
-}
-// the second player readying the next song: once it starts, paused at its very start
-function mixState(e) {
-  if (e.target === ytB && mix.vids && !mix.on && !mix.ready && e.data === 1) { ytB.pauseVideo(); ytB.seekTo(0, true); mix.ready = true; }
+  mixClear(); mixReset();
+  setVolume(volume);
 }
 async function mixPrepare(t, fromUp) {
   Object.assign(mix, { for: current.trackId, next: t, fromUp });
   const [au, vids] = await Promise.all([audiusFor(t), videosFor(t).catch(() => [])]);
   if (mix.next !== t || au || !vids.length || saved.has(t.trackId)) return; // (one from Audius, or saved: played as usual, after)
-  await loadYT(); await loadYTB();
-  if (mix.next !== t) return;
-  mix.vids = vids;
-  ytB.mute(); ytB.setVolume(0); ytB.loadVideoById(vids[0].id);
+  const st = await fsStream(vids[0].id).catch(() => null);
+  if (mix.next !== t || !st) return;
+  Object.assign(mix, { vids, loud: st.loudnessDb });
+  audioB.volume = 0; audioB.src = st.src; // (its start loaded, silent, till it begins)
+  audioB.oncanplay = () => { audioB.oncanplay = null; if (mix.vids === vids) mix.ready = true; };
 }
 function mixBegin() {
-  mix.on = true; mix.t0 = performance.now();
-  ytPost({ nfEq: eqMsg() }, ytB); ytPost({ nfMeta: songMeta }, ytB); // (its equalizer and loudness from the start)
-  ytB.setVolume(0); ytB.unMute(); ytB.playVideo();
+  mix.on = true; mix.t0 = performance.now(); mix.outLevel = fsLevel();
+  audioB.volume = 0; audioB.play().catch(() => mixAbort());
   mixStep();
 }
 function mixStep() {
-  const x = Math.min(1, (performance.now() - mix.t0) / (FADE * 1000)), L = playerLevel() * 100;
-  const out = mix.swapped ? ytB : yt, inn = mix.swapped ? yt : ytB;
-  out.setVolume(Math.round(L * Math.cos(x * Math.PI / 2))); inn.setVolume(Math.round(L * Math.sin(x * Math.PI / 2)));
-  if (x >= .5 && !mix.swapped) { // halfway: the next song is the one playing now
+  const x = Math.min(1, (performance.now() - mix.t0) / (FADE * 1000)), L = playerLevel();
+  const out = mix.swapped ? audioB : audio, inn = mix.swapped ? audio : audioB;
+  out.volume = L * mix.outLevel * Math.cos(x * Math.PI / 2); inn.volume = L * mixLevel(mix.loud) * Math.sin(x * Math.PI / 2);
+  if (x >= .5 && !mix.swapped) { // halfway: the next song is the one playing now, in the main player
     mix.swapped = true;
-    [yt, ytB] = [ytB, yt];
+    [audio, audioB] = [audioB, audio];
     if (mix.fromUp) upNext.shift();
     playTrack(mix.next, '', mix.fromUp, true, mix.vids);
-    ytPost({ nfEq: eqMsg() }); ytPost({ nfViz: vizWanted() }); setPlaying(true);
+    setPlaying(true);
   }
-  if (x >= 1) { try { ytB.stopVideo(); } catch {} mixReset(); holdVolume(); }
+  if (x >= 1) { mixClear(); mixReset(); setVolume(volume); }
 }
 setInterval(() => {
-  if (!smoothMix || engine !== 'yt' || !yt || !current || (native && place === 0)) return; // (a phone in the background: as usual)
+  if (!smoothMix || engine !== 'audio' || !fsVid || !current || (native && place === 0)) return; // (a phone in the background: as usual)
   if (mix.on) return mixStep();
   if (mix.for && mix.for !== current.trackId) mixReset(); // (another song since)
   const left = P.dur - P.t, [next, up] = nextUp();
@@ -3162,24 +3113,6 @@ setInterval(() => {
   mix.quiet = level < .03 ? mix.quiet + .05 : 0;
   if (mix.quiet > 1.5 || left <= FADE - .4 || (left <= FADE + .4 && lyricKick > .5)) mixBegin(); // (on a beat, when there's one in time)
 }, 50);
-function loadYT() {
-  return ytLoading ||= new Promise((res, rej) => {
-    window.onYouTubeIframeAPIReady = () => new YT.Player('yt', {
-      width: '100%', height: '100%',
-      // (no controls, keys, full screen or notes: never seen — and without them the hidden player has far less of its own
-      // to keep measuring and redrawing, which on Android holds up this page too)
-      playerVars: { playsinline: 1, rel: 0, controls: 0, disablekb: 1, fs: 0, iv_load_policy: 3 },
-      events: {
-        onReady: e => { yt = e.target; yt.setVolume(playerLevel() * 100); res(yt); },
-        onStateChange: ytState, onError: ytError,
-      },
-    });
-    const s = el('script');
-    s.src = 'https://www.youtube.com/iframe_api';
-    s.onerror = () => { ytLoading = null; rej(new Error('YouTube unreachable')); };
-    document.head.append(s);
-  });
-}
 
 // Is this upload the song? named: its title (or channel) has every word of the song's name (a long name may miss
 // one); byArtist: its title or channel has one of the artists' names (or, for a film song — "Song (From "Film")" —
@@ -3230,16 +3163,35 @@ function audiusFor(t) {
   return audiusCache.get(t.trackId);
 }
 // Audius's stream failing (gone, or the network): the same song from YouTube instead
-audio.onerror = () => {
+for (const el of [audio, audioB]) el.onerror = () => {
+  if (el !== audio) return mixAbort(); // (Smooth mix's next song not loading: the mix dropped)
   const t = current; if (engine !== 'audio' || !t || !audio.getAttribute('src')) return;
   if (audio.src.includes('audius.co')) { audiusBad.add(t.trackId); playTrack(t, '', fromUpNext, true); }
+  else if (fsVid && audio.src.includes('fs/media')) { // (FlowStream's stream failing: a fresh address once, from where it was; then the next upload found; then the next song, or the preview)
+    const at = P.t, vid = fsVid, id = loadId, next = () => {
+      const v = ++fsTries < 3 && ytQueue.shift(); // (three uploads at most: then the next song, or the preview)
+      if (id !== loadId) return;
+      if (v) fsPlay(v, id).catch(next);
+      else if (navigator.onLine && hasNext()) { toast(`Couldn't load ${t.trackName}: on to the next`); nextTrack(); }
+      else previewFallback('couldn\'t load it');
+    };
+    if (fsAgain !== id) { fsAgain = id; fsTries = 0; flowPage?.forget(vid); fsPlay({ id: vid }, id).then(() => { if (at > 1) P.seek(at); }).catch(next); }
+    else next();
+  }
   else if (!audio.src.startsWith('blob:')) { audio.pause(); setPlaying(false); status("◇ couldn't load it"); message("Couldn't play it", navigator.onLine ? "the preview didn't load: try again" : "you're offline: songs saved on this device still play"); }
 };
+// A stream that stops coming mid-song (the connection, its source): 20 s with no progress counts as failed (above)
+let fsLast = { t: -1, at: 0 };
+setInterval(() => {
+  if (engine !== 'audio' || !fsVid || audio.paused) { fsLast.at = 0; return; }
+  if (audio.currentTime !== fsLast.t || !fsLast.at) { fsLast = { t: audio.currentTime, at: Date.now() }; return; }
+  if (Date.now() - fsLast.at > 20000) { fsLast.at = 0; audio.onerror(); }
+}, 5000);
 // While a song plays, the next one's upload and lyrics are looked up, so skipping to it (or its turn) starts at once.
 function prefetchNext() {
   const n = upNext[0] || queue[qi + 1];
   if (!n || !fullSongs || saved.has(n.trackId)) return;
-  videosFor(n).then(v => v[0] && ytmLyricsFor(v[0].id)).catch(() => {});
+  videosFor(n).then(v => { if (!v[0]) return; ytmLyricsFor(v[0].id); native ? flowPage?.audio(v[0].id).then(s => fetch('/_fs/ahead?' + new URLSearchParams({ u: s.url }))).catch(() => {}) : fetch('/api/fs/ahead?' + new URLSearchParams({ ids: v[0].id })).catch(() => {}); }).catch(() => {}); // (FlowStream: its stream looked up ahead too)
   audiusFor(n);
   lyricsFor(n);
 }
@@ -3265,9 +3217,13 @@ async function findVideos(artist, title, dur, album = '', lang = '') {
 }
 
 function previewFallback(reason) {
+  fsVid = null; // (no longer FlowStream's)
   if (!current) return;
   useEngine('audio');
-  if (!current.previewUrl) return message('No source', `${reason} · nothing playable for this one`);
+  if (!current.previewUrl) { // (the stream that failed stopped too: nothing left looking as if it plays)
+    audio.pause(); audio.removeAttribute('src'); audio.load(); setPlaying(false); status(`◇ ${reason}`);
+    return message('No source', `${reason} · nothing playable for this one`);
+  }
   status(`◇ ${reason} · 30s preview`);
   audio.src = current.previewUrl;
   P.play();
@@ -4459,7 +4415,7 @@ const lrcOf = ls => ls.map(l => `[${pad(Math.floor(l.t / 60))}:${(l.t % 60).toFi
 function withYtm(lyr, y, vid, want = '') {
   const lrc = y.lines?.length ? lrcOf(y.lines) : '', text = lrc || y.plain || '';
   if (!text) return lyr;
-  const theirs = { raw: text, dur: vid?.dur || 0, src: 'YouTube Music', exact: true, kind: lrc ? 'synced lyrics' : 'plain lyrics' };
+  const theirs = { raw: text, dur: vid?.dur || 0, src: 'YouTube Music', credit: y.source || '', exact: true, kind: lrc ? 'synced lyrics' : 'plain lyrics' }; // (credit: who provides them, shown with them)
   const ours = lyr.instrumental ? '' : lyr.raw;
   if (!ours) return theirs;
   // two languages (a translation, another language's version): the song's, if its names say which; else theirs, which
@@ -4505,7 +4461,7 @@ async function playTrack(t, term = '', queued = false, stay = false, mixed = nul
   if (!mixed) mixAbort();
   const id = ++loadId;
   autoStart(t, current, P.t, P.dur);
-  current = t; lastLyr = null; songShift = 0; savedDur = 0;
+  current = t; lastLyr = null; songShift = 0; savedDur = 0; fsVid = null;
   clock.t = 0; clock.hold = null;
   if (!stay) goHome(false);
   fromUpNext = queued;
@@ -4526,21 +4482,19 @@ async function playTrack(t, term = '', queued = false, stay = false, mixed = nul
   const lyrics = lyricsFor(t);
 
   let source = '◇ 30s preview', vid = null, au = null, vids = [], why = fullSongs ? 'not found on YouTube' : FILE_NOTE;
-  if (mixed) { [vid, ...ytQueue] = vids = mixed; source = '◆ full song · smooth mix'; }
+  if (mixed) { [vid, ...ytQueue] = vids = mixed; fsVid = vid.id; fsLoud = mix.loud; source = '◆ full song · smooth mix'; } // (already playing: see Smooth mix)
   else if (fullSongs) {
     // the artist's own upload on Audius (320 kbps) when it's there, else YouTube's best — both looked for at once
     [au, vids] = await Promise.all([audiusFor(t), videosFor(t).catch(e => { why = e.message; return []; })]); // (found on YouTube: that video)
     if (id !== loadId) return;
     if (au) source = '◆ full song · Audius 320 kbps';
     else if (vids.length) {
-      try {
-        useEngine('yt');
-        await loadYT();
-        if (id !== loadId) return;
-        [vid, ...ytQueue] = vids;
-        yt.loadVideoById(vid.id); stallWatch(true);
-        source = '◆ full song';
-      } catch (e) { why = e.message; vid = null; }
+      [vid, ...ytQueue] = vids;
+      for (let v = vid, n = 0; v && !fsVid && id === loadId && n < 3; v = ytQueue.shift(), n++) { await fsPlay(v, id).catch(() => {}); if (fsVid) vid = v; } // (one that won't play: the next upload found; three at most)
+      if (id !== loadId) return;
+      if (fsVid) source = '◆ full song';
+      else if (navigator.onLine && hasNext() && !stay) { toast(`Couldn't load ${t.trackName}: on to the next`); return nextTrack(); } // (as other players skip one that won't play)
+      else { why = 'couldn\'t load it'; vid = null; }
     }
   }
   loadOffset(au ? 'netherflow.off.au' + au.id : vid ? 'netherflow.off.' + vid.id : '');
@@ -4559,7 +4513,7 @@ async function playTrack(t, term = '', queued = false, stay = false, mixed = nul
   const lyr = await lyrics(au ? au.dur : vid?.dur, au ? vids[0] && { ...vids[0], channel: 'Audius' } : vid);
   if (id !== loadId) return;
   const full = !!(vid || au), gap = vid && lyr.dur ? Math.round(vid.dur - lyr.dur) : 0;
-  status(`${source} · ${full ? lyr.kind : lyr.kind.replace('synced ', '')}`
+  status(`${source} · ${full ? lyr.kind : lyr.kind.replace('synced ', '')}${lyr.credit ? ` by ${lyr.credit}` : ''}`
     + (Math.abs(gap) > 3 ? ` · this upload runs ${Math.abs(gap)}s ${gap > 0 ? 'longer' : 'shorter'}, nudge sync if off` : ''));
   setLines(lyr.raw, { preview: full ? '' : why, yrc: !!lyr.yrc, guide: lyr.guide, ref: lyr.ref, ...(lyr.instrumental && { note: 'an instrumental: no words to sing along to' }) });
   setTimeout(() => id === loadId && prefetchNext(), 3000); // (once this one's going)
@@ -4582,7 +4536,7 @@ async function playSaved(t, id) {
     lyr = navigator.onLine ? await lyricsFor(t)(rec.dur, rec.ytId && { id: rec.ytId }) : { raw: '', kind: 'lyrics weren\'t saved' };
     if (id !== loadId) return;
   }
-  status(`◆ saved on this device · ${lyr.kind}`);
+  status(`◆ saved on this device · ${lyr.kind}${lyr.credit ? ` by ${lyr.credit}` : ''}`);
   setLines(lyr.raw, { yrc: !!lyr.yrc, guide: lyr.guide, ref: lyr.ref, note: navigator.onLine ? 'no lyrics found for this one' : 'saved without lyrics' });
 }
 
@@ -4884,7 +4838,7 @@ singShow();
 // ---------- where a song comes from: its YouTube video, opened in the browser (or the YouTube app on a phone) ----------
 async function openSource(t) {
   const isCur = current?.trackId === t.trackId;
-  let id = t.ytId || saved.get(t.trackId)?.ytId || (isCur && engine === 'yt' ? yt?.getVideoData?.().video_id : '');
+  let id = t.ytId || saved.get(t.trackId)?.ytId || (isCur ? fsVid || '' : '');
   if (!id) id = (await videosFor(t).catch(() => []))[0]?.id;
   openExternal(id ? 'https://www.youtube.com/watch?v=' + id + (isCur && P.t > 5 ? '&t=' + Math.floor(P.t) + 's' : '')
                   : 'https://www.youtube.com/results?search_query=' + encodeURIComponent(t.artistName + ' ' + t.trackName));
@@ -5760,7 +5714,7 @@ async function tgConnect(code, from = 0) {
 // what's playing, as a guest needs it: the song (and the very YouTube upload, so the timing's the same), where it's at
 function tgNow() {
   if (!current) return null;
-  const vid = engine === 'yt' ? yt?.getVideoData?.().video_id : saved.get(current.trackId)?.ytId || current.ytId;
+  const vid = fsVid || saved.get(current.trackId)?.ytId || current.ytId;
   return { id: current.trackId, track: slim(current), vid: vid || '', pos: +P.t.toFixed(2), playing: !P.paused, at: Date.now() };
 }
 async function tgStart() {
@@ -6774,6 +6728,7 @@ const playable = s => s.kind === 'song' && (s.previewUrl || fullSongs);
 const artUrl = (x, size) => x?.artworkUrl100 ? x.artworkUrl100.replace('100x100bb', `${size}x${size}bb`) : '';
 
 async function searchSongs(term, signal) {
+  flowPage?.visitor().catch(() => {}); // (FlowStream's visitor id, once and kept: so the first song doesn't wait for it)
   let q = words(term), found = [];
   while (q.length) {
     found = (await Promise.all(STORES.map(country => itunes('search', { term: q.join(' '), entity: 'song', limit: 50, country }, signal).catch(quiet)))).flat();
@@ -7194,7 +7149,6 @@ const TERMS = 'netherflow.terms', TERMS_VERSION = '2026-10-16.3'; // bump when t
 if (store.get(TERMS) !== TERMS_VERSION) { $('consent').showModal(); placeWinctl(); }
 // its usual port taken (see main.js): the library and settings are kept under that one, so here all looks new; said so
 if (window.netherflowApp?.portMoved) setTimeout(() => { toast('Something else is using NetherFlow\'s port, so your library and settings aren\'t shown. Close it (or another NetherFlow) and open NetherFlow again.'); clearTimeout(toastTimer); toastTimer = setTimeout(() => $('toast').hidePopover(), 15000); }, 1500);
-else if (fullSongs) setTimeout(() => loadYT().catch(() => {}), 2500); // (the first song then starts sooner)
 $('consent').addEventListener('cancel', e => e.preventDefault()); // Esc doesn't count as agreeing
 $('agree').onclick = () => { store.set(TERMS, TERMS_VERSION); $('consent').close(); };
 $('decline').onclick = () => {
@@ -7284,23 +7238,11 @@ let scrubTimer = 0;
 // ---------- volume (remembered on this device). The speaker button mutes on a computer, where the slider sits
 // beside it; on a phone (no room for the slider) it opens the slider in a small menu, and closes it again.
 // 0…100% is the player's own volume — on a phone, the phone's own media volume, the same as its volume keys (kept in
-// step both ways); 100…200% is the volume booster: extra gain after the equalizer, through a limiter (YouTube's
-// sound: in frame-helper.js; saved songs and previews: here).
+// step both ways); 100…200% is the volume booster: extra gain after the equalizer, through a limiter.
 let volume = +store.get('netherflow.vol') || (store.get('netherflow.vol') === '0' ? 0 : 1), muted = false;
 const sysVol = native && Capacitor.Plugins.SystemVolume;
 let sysLink = false, sysSteps = 15; // (linked once the phone says its volume can be set)
 const playerLevel = () => muted ? 0 : sysLink ? 1 : Math.min(1, volume); // the player's own volume, under the phone's
-// YouTube's player can change its own volume: it keeps the last volume any of its players used (the hidden saving
-// players turn theirs right up) and may bring it back on a new video. So it's put back where the slider is: as each
-// video starts, and checked every second.
-function holdVolume() {
-  if (engine !== 'yt' || !yt?.getVolume || mix.on) return; // (Smooth mix sets both players' volumes as it goes)
-  const want = Math.round(playerLevel() * 100);
-  if (Math.abs(yt.getVolume() - want) > 1) yt.setVolume(want);
-  if (want > 0 && yt.isMuted?.()) yt.unMute();
-}
-setInterval(holdVolume, 1000);
-
 // ---------- the island (desktop): what's playing, in a small black island at the top middle of the screen, over every
 // other app (main.js, island.html). This page sends it the song and the beat ~30 times a second; it sends back what's
 // pressed. The beat: seven bands of what's being heard (bass … treble), each against its own recent peak. ----------
@@ -7315,12 +7257,12 @@ function presence() {
   if (key === presLast) return;
   presLast = key;
   if (!on) return netherflowApp.presence(null);
-  const vid = engine === 'yt' ? yt?.getVideoData?.().video_id : current.ytId || saved.get(current.trackId)?.ytId;
+  const vid = fsVid || current.ytId || saved.get(current.trackId)?.ytId;
   netherflowApp.presence({ title: current.trackName, artist: current.artistName, album: current.collectionName || '', art: /^https:/.test(curArt) ? curArt : artUrl(current, 300),
     start, end: start + Math.round(P.dur * 1000), url: vid ? 'https://www.youtube.com/watch?v=' + vid : '' });
 }
 setInterval(presence, 2000);
-function setIsland(v) { islandOn = v === 'On'; store.set('netherflow.island', islandOn ? '' : 'Off'); ytPost({ nfViz: vizWanted() }); renderTextPanel(); }
+function setIsland(v) { islandOn = v === 'On'; store.set('netherflow.island', islandOn ? '' : 'Off'); renderTextPanel(); }
 function setIslandGlow(v) { islandGlow = v === 'On'; store.set('netherflow.islandglow', islandGlow ? '' : 'Off'); renderTextPanel(); }
 if (window.netherflowApp?.island) {
   const EDGES = [40, 110, 260, 600, 1400, 3200, 7000, 16000], peak = new Float32Array(7).fill(.25), bars = new Array(7).fill(0);
@@ -7374,21 +7316,19 @@ function applyBoost(g) {
   boostLevel = g;
   if (boostNode) { boostNode.gain.setTargetAtTime(g, ctx.currentTime, .015); limiterNode.threshold.setTargetAtTime(g > 1 ? -1 : 0, ctx.currentTime, .015); }
   routeAudio();
-  ytPost({ nfEq: eqMsg() });
 }
 // The volume is applied before the analyser: shift its range to match, so the visuals don't shrink with it.
 function levelAnalyser() {
   if (!analyser) return;
   const g = 20 * Math.log10(Math.max(playerLevel(), 0.02));
-  analyser.minDecibels = -92 + g; analyser.maxDecibels = -12 + g; // room above loud masters, so a kick stands out (as in frame-helper.js)
+  analyser.minDecibels = -92 + g; analyser.maxDecibels = -12 + g; // room above loud masters, so a kick stands out
 }
 const volPct = () => Math.round(volume * 100) + '%' + (volume > 1 ? ' boost' : '');
 function setVolume(v, mute = muted, fromPhone = false) {
   volume = Math.min(2, Math.max(0, v)); muted = mute;
   const boosted = !muted && volume > 1;
-  audio.volume = epAudio.volume = playerLevel();
+  audio.volume = playerLevel() * fsLevel(); epAudio.volume = playerLevel();
   levelAnalyser();
-  yt?.setVolume(playerLevel() * 100);
   if (sysLink && !fromPhone && !muted) setPhoneVolume(Math.min(1, volume));
   if (boostLevel !== (boosted ? volume : 1)) applyBoost(boosted ? volume : 1);
   // (not the slider being dragged: setting its value under the pointer stops it following the drag)
@@ -7682,7 +7622,7 @@ function setCursors(accent) { // (called as the first mood is set: everything it
 }
 
 // ---------- shader backdrop ----------
-// (opaque: nothing behind it is drawn at all — the page's own background, the hidden players)
+// (opaque: nothing behind it is drawn at all — the page's own background)
 const fx = $('fx'), gl = fx.getContext('webgl', { antialias: false, alpha: false });
 let U = {};
 // One small program per background theme (STYLE = its place in THEMES), compiled the first time it's shown,
@@ -8718,7 +8658,6 @@ if (gl) {
   gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
   useStyle(0);
 }
-if (!gl) $('screen').style.opacity = 0; // nothing opaque in front of it without WebGL
 // The backdrop is soft smoke, so it renders below screen resolution (Balanced = half), per the quality setting.
 // (the heaviest backdrops drawn a little smaller on Balanced and Low: Blocks — a world traced block by block, pixel art
 // anyway — and Ops and Redline, their smoke and light trails soft anyway)
@@ -10927,13 +10866,15 @@ function kinShot(now) {
     roll: (r() - .5) * .3, t0: now, cut: now, ground: L.ground(r), col: L.colors(r, A), lay: null };
 }
 // ---- the music video (Extreme lyrics; Settings: Music video)
-// When the song has an official video, it plays under the words — muted, in a player of its own — smoothly, straight
-// through: in time with the song when the two are the same length (back in step, if they drift apart, with a dissolve,
-// never a jump), otherwise from a little way in (past the logos); slowly drifting, in one colour grade for the song.
-// frame-helper.js draws it, in YouTube's frame (the page can't read the video's frames); here, where it plays from.
+// When the song has an official video, it plays under the words — muted, its picture only, through FlowStream (the
+// sound is the song's own stream) — smoothly, straight through: in time with the song when the two are the same length
+// (back in step, if they drift apart, with a dissolve, never a jump), otherwise from a little way in (past the logos);
+// slowly drifting, in one colour grade for the song, drawn here through a shader (VED_FS). Only while it's seen: hidden,
+// it's paused, and a song's isn't fetched till it shows. No taller than the window shows it, in the first codec this device
+// decodes efficiently (AV1, VP9, H.264), at 30 frames a second on battery.
 // (Its setting: with Extreme lyrics' others, early on.)
-const ved = { p: null, loading: null, for: null, mv: null, info: null, shown: false, cut: 0, t: 0, at: 0, fade: 0, grade: 0, fails: new Set() };
-const VED_GRADES = [3, 0, 4, 1]; // (see frame-helper.js: 0 none, 1 teal and orange, 3 warm film, 4 cool)
+const ved = { for: null, mv: null, shown: false, cut: 0, t: 0, at: 0, fade: 0, grade: 0, playing: false, fails: new Set(), codecs: null };
+const VED_GRADES = [3, 0, 4, 1]; // (see VED_FS: 0 none, 1 teal and orange, 3 warm film, 4 cool)
 // the looks on paper (their ground hides the video): left out of Mixed while it shows
 const KIN_PAPER = new Set(['sketch', 'marker', 'typewriter', 'stack', 'highlighter', 'graffiti', 'acid', 'label', 'collage', 'strobe', 'doodle']);
 // The song's official video on YouTube: by its artist, named for it, said to be its video — not a lyric video, its audio,
@@ -10949,41 +10890,145 @@ function mvFor(t) {
   })().catch(() => { mvCache.delete(t.trackId); return null; }));
   return mvCache.get(t.trackId);
 }
-function vedPlayer() {
-  return ved.loading ||= loadYT().then(() => new Promise(res => new YT.Player('ytv', { width: '100%', height: '100%',
-    playerVars: { playsinline: 1, rel: 0, controls: 0, disablekb: 1, fs: 0, iv_load_policy: 3, mute: 1 },
-    events: { onReady: e => { ved.p = e.target; res(ved.p); },
-      onError: () => { if (ved.mv) { ved.fails.add(ved.mv.id); mvCache.delete(ved.for); } vedStop(); } } }))); // (not playable here: the next one found, if any)
-}
 const vedShow = on => { if (ved.shown !== on) { ved.shown = on; body.classList.toggle('vid-edit', on); } };
 // Redline on Extreme+ (computers): its own 3D race in place of the music video (see "Redline's races")
 const carOn = () => skin === 'Redline' && bgq === 'Extreme+' && pcOnly;
+const vedV = $('vedv');
+vedV.onerror = () => { if (ved.mv) { ved.fails.add(ved.mv.id); mvCache.delete(ved.for); } vedStop(); }; // (not playable: the next one found, if any)
 function vedStop() {
-  try { if (ved.mv) ved.p?.stopVideo(); } catch {}
-  Object.assign(ved, { for: null, mv: null, info: null, cut: 0, at: 0, playing: false });
+  vedV.pause(); vedV.removeAttribute('src'); vedV.load(); // (nothing more fetched for it)
+  Object.assign(ved, { for: null, mv: null, cut: 0, at: 0, playing: false });
   vedShow(false);
 }
-// every frame: (seen: Extreme lyrics showing) the video found, loaded, and where it should be — sent to its player's frame
+// the codecs this device plays smoothly and with little power, best first (asked once)
+async function vedCodecs() {
+  if (ved.codecs) return ved.codecs;
+  const all = [['av01', 'video/webm; codecs="av01.0.08M.08"'], ['vp9', 'video/webm; codecs="vp9"'], ['avc1', 'video/mp4; codecs="avc1.640028"']];
+  const got = await Promise.all(all.map(([c, contentType]) => Promise.resolve(navigator.mediaCapabilities?.decodingInfo({ type: 'file', video: { contentType, width: 1920, height: 1080, bitrate: 4e6, framerate: 30 } }) || { supported: true })
+    .then(r => [c, r], () => [c, { supported: false }])));
+  return ved.codecs = got.filter(([, r]) => r.supported).sort((x, y) => (y[1].powerEfficient ? 1 : 0) - (x[1].powerEfficient ? 1 : 0)).map(([c]) => c);
+}
+// every frame: (seen: Extreme lyrics showing) the video found, loaded, and where it should be — drawn
 function vedFrame(now, seen, kick) {
   const t = current, on = vEditOn && seen && !carOn(), go = !!(on && t && !P.paused && ved.mv && ved.for === t.trackId);
-  if (ved.p && go !== ved.playing) { try { go ? ved.p.playVideo() : ved.p.pauseVideo(); } catch {} ved.playing = go; } // (playing only while it's seen and the song plays)
+  if (go !== ved.playing) { go ? vedV.play().catch(() => {}) : vedV.pause(); ved.playing = go; } // (playing only while it's seen and the song plays)
   if (!on || !t) return vedShow(false);
   if (ved.for !== t.trackId) { // a new song: its video looked for, then loaded (a little way in: past the logos)
     vedStop(); ved.for = t.trackId;
     ved.grade = pickR(Math.random, VED_GRADES);
-    mvFor(t).then(mv => { if (ved.for !== t.trackId || !mv) return; ved.mv = mv; return vedPlayer().then(p => { if (ved.mv === mv) { const o = vedSync(t); p.loadVideoById({ videoId: mv.id, startSeconds: Math.round(o == null ? mv.dur * .2 : P.t + o) }); ved.playing = true; } }); }).catch(() => {});
+    Promise.all([mvFor(t), vedCodecs(), navigator.getBattery?.().catch(() => null)]).then(([mv, codecs, bat]) => {
+      if (ved.for !== t.trackId || !mv || !codecs.length) return;
+      ved.mv = mv;
+      const o = vedSync(t), h = Math.min(2160, Math.round(innerHeight * Math.min(2, devicePixelRatio || 1)));
+      vedV.src = '/api/fs/media?' + new URLSearchParams({ kind: 'video', id: mv.id, h, fps: bat && !bat.charging ? 30 : 60, codecs: codecs.join(',') });
+      vedV.currentTime = Math.round(o == null ? mv.dur * .2 : P.t + o); ved.playing = false;
+    });
     return;
   }
-  const w = ved.mv && ved.p?.getIframe?.()?.contentWindow;
-  if (!w) return vedShow(false);
-  vedShow(ved.shown || !!ved.info?.ok);
+  if (!ved.mv || vedV.readyState < 2) return vedShow(false);
+  vedShow(true);
   // in step with the song (if it can be): back into step with a dissolve if it's drifted (a seek, a stall)
-  const I = ved.info, o = vedSync(t);
-  if (o != null && I?.dur && !I.waiting && !P.paused && now - ved.at > 3000 && Math.abs(I.t - (P.t + o)) > 1.5) Object.assign(ved, { at: now, cut: ved.cut + 1, t: P.t + o, fade: .6 });
+  const o = vedSync(t);
+  if (o != null && vedV.duration && !vedGl?.waiting && !P.paused && now - ved.at > 3000 && Math.abs(vedV.currentTime - (P.t + o)) > 1.5) Object.assign(ved, { at: now, cut: ved.cut + 1, t: P.t + o, fade: .6 });
   // a slow drift in and across (still, without motion)
   const sec = now / 1000, live = motion ? 1 : 0, ox = .012 * Math.sin(sec * .031) * live, oy = .01 * Math.cos(sec * .027) * live;
-  w.postMessage({ nfEdit: { play: !P.paused, r: 1, z: 1.06 + .02 * Math.sin(sec * .05) * live, rot: 0, ox, oy, ca: .0008, zb: 0, mb: 0, sat: 1.08, vg: .45, k: 0,
-    fl: 0, inv: 0, mir: 0, gli: 0, gr: ved.grade, fz: 0, cut: { id: ved.cut, t: ved.t, fade: ved.fade }, cA: rgb(pal.a), cB: rgb(pal.b) } }, 'https://www.youtube.com');
+  vedDraw(now, { z: 1.06 + .02 * Math.sin(sec * .05) * live, rot: 0, ox, oy, ca: .0008, zb: 0, mb: 0, sat: 1.08, vg: .45, k: 0,
+    fl: 0, inv: 0, mir: 0, gli: 0, gr: ved.grade, fz: 0, cut: { id: ved.cut, t: ved.t, fade: ved.fade }, cA: rgb(pal.a), cB: rgb(pal.b) });
+}
+// the video through a shader: a zoom, turn and shake; a glitch's shoved rows; colour fringes; a zoom blur; a still frame
+// held (a cut waiting for its new shot, a freeze) or dissolving away; a grade; a flash; a negative; a trail of the frames
+// before (motion blur). (Its picture comes through this app, so the page may read its frames.)
+const VED_FS = `#version 300 es
+precision highp float;
+uniform sampler2D V, H, F; uniform vec2 R, VS, off; uniform vec3 cA, cB;
+uniform float z, rot, ca, zb, mb, fl, inv, mir, gli, gr, sat, hold, t, vg, k;
+out vec4 o;
+float h1(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+// (a point on the screen, 0…1 from the top left → the video's: filling the screen, its overflow cut off)
+vec2 fit(vec2 p) { float a = R.x / R.y, va = VS.x / max(1., VS.y); vec2 s = a > va ? vec2(1., va / a) : vec2(a / va, 1.); return (p - .5) * s + .5; }
+vec3 px(sampler2D T, vec2 q) { return texture(T, clamp(q, .001, .999)).rgb; }
+vec3 rgbAt(sampler2D T, vec2 q, vec2 d) { return vec3(px(T, q + d).r, px(T, q).g, px(T, q - d).b); }
+void main() {
+  vec2 u = vec2(gl_FragCoord.x / R.x, 1. - gl_FragCoord.y / R.y), p = u - .5;
+  float asp = R.x / R.y;
+  p.x *= asp; p = mat2(cos(rot), sin(rot), -sin(rot), cos(rot)) * p / z; p.x /= asp; p += .5 + off;
+  if (mir > .5) p.x = 1. - p.x;
+  float row = floor(u.y * 28.), fr = floor(t * 24.);
+  p.x += gli * step(.7, h1(vec2(row, fr))) * (h1(vec2(row, fr + 7.)) - .5) * .14;
+  vec2 q = fit(p), d = (q - .5) * ca;
+  vec3 c = rgbAt(V, q, d);
+  if (zb > .002) { for (int i = 1; i < 8; i++) c += rgbAt(V, mix(q, vec2(.5), zb * float(i) / 7.), d); c /= 8.; }
+  if (hold > .001) c = mix(c, rgbAt(H, q, d), hold);
+  float l = dot(c, vec3(.299, .587, .114));
+  if (gr == 1.) c += mix(vec3(-.05, .01, .06), vec3(.08, .02, -.07), smoothstep(.2, .8, l)); // teal shadows, orange highlights
+  else if (gr == 2.) c = vec3(smoothstep(.05, .92, l)); // black and white, hard
+  else if (gr == 3.) c = c * vec3(1.05, 1., .86) + vec3(.045, .032, .02); // warm film, the blacks lifted
+  else if (gr == 4.) c = mix(c, c * vec3(.78, .95, 1.18), .75); // cool, night blue
+  else if (gr == 5.) c = mix(cA * .22, mix(cB, vec3(1.), .55), smoothstep(.08, .92, l)); // duotone in the song's colours: its darks deep, its lights pale (the shapes kept)
+  l = dot(c, vec3(.299, .587, .114));
+  c = mix(vec3(l), c, sat);
+  c = (c - .5) * 1.08 + .5;
+  c = mix(c, 1. - c, inv) * (1. + k * .12) + fl;
+  c *= 1. - vg * smoothstep(.35, 1.1, length((u - .5) * vec2(asp * .75, 1.)));
+  if (mb > .001) c = mix(c, texture(F, gl_FragCoord.xy / R).rgb, mb);
+  o = vec4(c, 1.);
+}`;
+let vedGl = null;
+function vedGlInit() {
+  const cv = $('vedc'), g = cv.getContext('webgl2', { alpha: false, antialias: false });
+  if (!g) return { off: true };
+  const sh = (type, src) => { const x = g.createShader(type); g.shaderSource(x, src); g.compileShader(x); return x; };
+  const pr = g.createProgram();
+  g.attachShader(pr, sh(g.VERTEX_SHADER, '#version 300 es\nin vec2 a; void main() { gl_Position = vec4(a, 0., 1.); }'));
+  g.attachShader(pr, sh(g.FRAGMENT_SHADER, VED_FS));
+  g.bindAttribLocation(pr, 0, 'a'); g.linkProgram(pr); g.useProgram(pr);
+  g.bindBuffer(g.ARRAY_BUFFER, g.createBuffer()); g.bufferData(g.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), g.STATIC_DRAW);
+  g.enableVertexAttribArray(0); g.vertexAttribPointer(0, 2, g.FLOAT, false, 0, 0);
+  const tex = () => { const x = g.createTexture(); g.bindTexture(g.TEXTURE_2D, x); for (const [p, v] of [[g.TEXTURE_MIN_FILTER, g.LINEAR], [g.TEXTURE_MAG_FILTER, g.LINEAR], [g.TEXTURE_WRAP_S, g.CLAMP_TO_EDGE], [g.TEXTURE_WRAP_T, g.CLAMP_TO_EDGE]]) g.texParameteri(g.TEXTURE_2D, p, v);
+    g.texImage2D(g.TEXTURE_2D, 0, g.RGBA, 1, 1, 0, g.RGBA, g.UNSIGNED_BYTE, new Uint8Array(4)); return x; };
+  const U = {};
+  for (const n of ['V', 'H', 'F', 'R', 'VS', 'off', 'cA', 'cB', 'z', 'rot', 'ca', 'zb', 'mb', 'fl', 'inv', 'mir', 'gli', 'gr', 'sat', 'hold', 't', 'vg', 'k']) U[n] = g.getUniformLocation(pr, n);
+  g.uniform1i(U.V, 0); g.uniform1i(U.H, 1); g.uniform1i(U.F, 2);
+  return { cv, g, U, V: tex(), H: tex(), fb: [0, 1].map(() => ({ f: g.createFramebuffer(), t: tex() })), i: 0, cut: 0, waiting: false, fade: 0, rel: 0, frozen: false, drawn: 0 };
+}
+// the frame showing now, kept (to hold over a cut, or for a freeze)
+const vedSnap = () => { const g = vedGl.g; g.activeTexture(g.TEXTURE1); g.bindTexture(g.TEXTURE_2D, vedGl.H); g.texImage2D(g.TEXTURE_2D, 0, g.RGBA, g.RGBA, g.UNSIGNED_BYTE, vedV); };
+function vedDraw(now, m) {
+  const e = vedGl ||= vedGlInit(), v = vedV;
+  if (e.off || now - e.drawn < 14) return; // (about 60 a second, on a faster screen too)
+  e.drawn = now;
+  const g = e.g, U = e.U;
+  // a cut: the frame showing held till the new shot's first frame is ready (then let go at once, or dissolved over m.cut.fade)
+  if (m.cut && m.cut.id !== e.cut && v.readyState > 1) {
+    e.cut = m.cut.id; e.fade = m.cut.fade || 0;
+    vedSnap(); e.waiting = now;
+    v.addEventListener('seeked', () => v.requestVideoFrameCallback(() => { e.waiting = false; e.rel = performance.now(); }), { once: true });
+    v.currentTime = Math.min(m.cut.t, (v.duration || 1e9) - 3);
+  }
+  if (e.waiting && now - e.waiting > 1500) e.waiting = false; // (a seek that never said it was done: let go anyway)
+  if (m.fz && !e.frozen && !e.waiting && v.readyState > 1) { vedSnap(); e.frozen = true; } // a freeze: this frame, held while the video runs on under it
+  if (!m.fz) e.frozen = false;
+  const W = Math.round(e.cv.clientWidth * Math.min(1.5, devicePixelRatio || 1)), Hh = Math.round(e.cv.clientHeight * Math.min(1.5, devicePixelRatio || 1));
+  if (!W || !Hh) return;
+  if (e.cv.width !== W || e.cv.height !== Hh) {
+    e.cv.width = W; e.cv.height = Hh; g.activeTexture(g.TEXTURE3); // (a unit of its own: none the shader reads)
+    for (const b of e.fb) { g.bindTexture(g.TEXTURE_2D, b.t); g.texImage2D(g.TEXTURE_2D, 0, g.RGBA, W, Hh, 0, g.RGBA, g.UNSIGNED_BYTE, null); g.bindFramebuffer(g.FRAMEBUFFER, b.f); g.framebufferTexture2D(g.FRAMEBUFFER, g.COLOR_ATTACHMENT0, g.TEXTURE_2D, b.t, 0); }
+  }
+  g.activeTexture(g.TEXTURE0); g.bindTexture(g.TEXTURE_2D, e.V);
+  if (v.readyState > 1) g.texImage2D(g.TEXTURE_2D, 0, g.RGBA, g.RGBA, g.UNSIGNED_BYTE, v);
+  const hold = e.waiting || e.frozen ? 1 : e.fade ? Math.max(0, 1 - (now - e.rel) / (e.fade * 1000)) : 0;
+  const A = e.fb[e.i], B = e.fb[1 - e.i];
+  g.activeTexture(g.TEXTURE1); g.bindTexture(g.TEXTURE_2D, e.H);
+  g.activeTexture(g.TEXTURE2); g.bindTexture(g.TEXTURE_2D, B.t);
+  g.bindFramebuffer(g.FRAMEBUFFER, A.f); g.viewport(0, 0, W, Hh);
+  g.uniform2f(U.R, W, Hh); g.uniform2f(U.VS, v.videoWidth || 16, v.videoHeight || 9); g.uniform2f(U.off, m.ox || 0, m.oy || 0);
+  g.uniform3fv(U.cA, m.cA || [1, .4, .2]); g.uniform3fv(U.cB, m.cB || [.2, .4, 1]);
+  for (const n of ['z', 'rot', 'ca', 'zb', 'mb', 'fl', 'inv', 'mir', 'gli', 'gr', 'sat', 'vg', 'k']) g.uniform1f(U[n], +m[n] || 0);
+  g.uniform1f(U.z, m.z || 1); g.uniform1f(U.sat, m.sat ?? 1); g.uniform1f(U.hold, hold); g.uniform1f(U.t, now / 1000 % 1000);
+  g.drawArrays(g.TRIANGLES, 0, 3);
+  g.bindFramebuffer(g.READ_FRAMEBUFFER, A.f); g.bindFramebuffer(g.DRAW_FRAMEBUFFER, null);
+  g.blitFramebuffer(0, 0, W, Hh, 0, 0, W, Hh, g.COLOR_BUFFER_BIT, g.NEAREST);
+  e.i = 1 - e.i;
 }
 // how far into its video the song's start is, when they're the same length (to 6 s: an intro's), so the two keep in
 // step; null when they aren't (a video with a story before or after: no telling where the song is in it)

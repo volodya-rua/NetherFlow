@@ -1,11 +1,11 @@
 // NetherFlow - Copyright (C) 2026 Volodya.rua - GNU GPL v3 only, with additional terms (credit, name and logo): see LICENSE and NOTICE.
 // NetherFlow desktop app: a window around the player page, served by the built-in server
-// (YouTube's player won't run on file:// pages), with YouTube ads skipped automatically.
-const { app, BrowserWindow, session, webFrameMain, shell, ipcMain, powerSaveBlocker, screen, powerMonitor } = require('electron');
+// (which also hands the page FlowStream's streams, from its own address, so the equalizer and visuals can hear them).
+const { app, BrowserWindow, shell, ipcMain, powerSaveBlocker, screen, powerMonitor } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { spawn, execFileSync } = require('child_process');
-const { start } = require('./server');
+const srvMod = require('./server'), { start } = srvMod;
 
 const PORT = 41739; // fixed, so settings saved by the page (lyric sync per song) survive restarts
 const LITE = !!require('./package.json').lite; // (NetherFlow Lite: built by tools/lite-build.js, without Extreme+)
@@ -13,17 +13,6 @@ const LITE = !!require('./package.json').lite; // (NetherFlow Lite: built by too
 // › Region). The language's own region is often another (English (United States) in India), and Electron reads that one.
 let COUNTRY = '';
 try { if (process.platform === 'win32') COUNTRY = execFileSync('reg', ['query', String.raw`HKCU\Control Panel\International\Geo`, '/v', 'Name'], { encoding: 'utf8', timeout: 2000, windowsHide: true }).match(/Name\s+REG_SZ\s+([A-Z]{2})\b/)?.[1] || ''; } catch {}
-
-// Ad servers the YouTube player calls. Blocking them stops many ads from loading at all.
-const AD_URLS = [
-  '*://*.doubleclick.net/*', '*://*.googlesyndication.com/*', '*://*.googleadservices.com/*',
-  '*://www.youtube.com/pagead/*', '*://www.youtube.com/api/stats/ads*', '*://www.youtube.com/get_midroll_*',
-];
-
-// Injected into YouTube's player frame: skips ads, applies the equalizer, shows the song in the
-// Windows media panel (see frame-helper.js, shared with the Android app).
-const FRAME_HELPER = require('fs').readFileSync(path.join(__dirname, 'frame-helper.js'), 'utf8');
-const isYouTubePlayer = url => /^https:\/\/www\.youtube(-nocookie)?\.com\/embed\//.test(url);
 
 // Songs start right after a search finishes, which isn't a click as far as Chromium is concerned.
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
@@ -58,6 +47,7 @@ const YTDLP_NAME = process.platform === 'win32' ? 'yt-dlp.exe' : 'yt-dlp'; // (L
 const BUNDLED_YTDLP = app.isPackaged ? path.join(process.resourcesPath, YTDLP_NAME) : path.join(__dirname, 'vendor', 'yt-dlp', YTDLP_NAME);
 let ytdlpExe = null, ytdlpUpdated = 0;
 const ytdlKids = new Map(); // the page's job key → its yt-dlp process
+srvMod.ytdlp = () => ytdlp(); // (FlowStream's fallback, in server.js)
 function ytdlp() {
   if (ytdlpExe) return ytdlpExe;
   const dir = path.join(app.getPath('userData'), 'yt-dlp'), exe = path.join(dir, YTDLP_NAME), mark = path.join(dir, 'bundled.txt');
@@ -336,7 +326,6 @@ app.whenReady().then(async () => {
   let port = 0;
   for (let i = 0; i < 12 && !port; i++) port = await start(PORT).catch(() => new Promise(r => setTimeout(r, 250, 0)));
   if (!port) port = await start(0);
-  session.defaultSession.webRequest.onBeforeRequest({ urls: AD_URLS }, (_, done) => done({ cancel: true }));
 
   // 1280×820, or as much as the screen has free (a 1366×768 laptop: else the player sat under the taskbar)
   const free = screen.getPrimaryDisplay().workAreaSize;
@@ -346,7 +335,7 @@ app.whenReady().then(async () => {
     titleBarStyle: 'hidden', // no native title bar or buttons: the page draws its own (see preload.js)
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
-      backgroundThrottling: false, // keep timers at full speed when minimized, so ads are still skipped instantly
+      backgroundThrottling: false, // keep timers at full speed when minimized (the next song readied, Smooth mix on time)
       additionalArguments: [...(LITE ? ['--nf-lite'] : []), ...(port !== PORT ? ['--nf-port-moved'] : []), '--nf-country=' + (COUNTRY || app.getLocaleCountryCode() || '')], // (see preload.js: lite, portMoved, country)
     },
   });
@@ -359,10 +348,6 @@ app.whenReady().then(async () => {
   for (const ev of ['minimize', 'restore', 'hide', 'show', 'focus', 'blur']) win.on(ev, () => { if (!win.webContents.isDestroyed()) win.webContents.send('shown', where()); });
   win.webContents.on('did-finish-load', () => win.webContents.send('shown', where()));
 
-  win.webContents.on('did-frame-finish-load', (_, isMain, pid, rid) => {
-    const frame = !isMain && webFrameMain.fromId(pid, rid);
-    if (frame && isYouTubePlayer(frame.url)) frame.executeJavaScript(FRAME_HELPER).catch(() => {});
-  });
   // Stay on the player page: web links open in the real browser (email links in the email app), nothing navigates the app away.
   win.webContents.setWindowOpenHandler(({ url }) => {
     if (/^(https?:\/\/|mailto:)/.test(url)) shell.openExternal(url);

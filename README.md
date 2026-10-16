@@ -55,6 +55,14 @@ card anyway), about 18 MB smaller, and it updates to Lite.
 
 ### 📺 1.4.3: the whole app on your TV's remote
 
+- **Songs start right away, and the next one's already there when you skip.** NetherFlow plays through its own player
+  now, FlowStream, in place of a hidden YouTube player: every song in the best sound YouTube has (Opus), and no hidden
+  video running down your battery
+- **The music video behind the lyrics** (Extreme lyrics, on computers) is sized to your screen and drops to 30 fps on
+  battery
+- YouTube Music's lyrics say who they come from
+- A song that won't load is tried a few ways, then skipped with a note saying which, so the music doesn't stop
+
 - **Every screen works with the remote.** Move songs in the queue (OK on a song's handle, then up and down), read the
   terms, and use the QR code, Rename and artist pages over the Library. Back always closes the screen on top
 - **The TV home's title** no longer runs into the header
@@ -296,7 +304,7 @@ the big ones beat it on catalog, sound, discovery and devices. Here's the deep v
 | | NetherFlow | Spotify | Apple Music | YouTube Music |
 |:--|:--|:--|:--|:--|
 | Songs | everything on YouTube, found through Apple's catalog | 100M+ | 100M+ | 100M+, plus YouTube's covers, live versions and remixes |
-| Officially licensed | ❌ it plays through YouTube's own player | ✅ | ✅ | ✅ |
+| Officially licensed | ❌ it plays the songs from YouTube | ✅ | ✅ | ✅ |
 | Podcasts | ✅ every show in Apple's directory, saved for offline too | ✅ | ⚠️ in a separate app | ✅ |
 | Audiobooks | ⚠️ free classics only (LibriVox, public domain in the US) | ✅ the bestsellers | ⚠️ in Apple Books | ❌ |
 | Can break when YouTube changes stuff | ⚠️ yes, until an update fixes it | ✅ no | ✅ no | ✅ no |
@@ -383,13 +391,13 @@ the big ones beat it on catalog, sound, discovery and devices. Here's the deep v
 </details>
 
 ### 😤 Where NetherFlow loses (real talk)
-- **It's not a licensed service.** It plays songs through YouTube's own player, so it depends on YouTube. If YouTube
+- **It's not a licensed service.** It plays songs from YouTube, so it depends on YouTube. If YouTube
   changes something, stuff can break until an update fixes it
 - **The sound tops out around 160 kbps.** On good headphones, Apple Music's and Spotify's lossless is clearly better
 - **No iPhone and no Mac** (yet?). Windows, Linux, Android and Android TV
 - **Audiobooks are free classics only** (LibriVox's), not the bestsellers Spotify and Apple have. And finding new music is
   good now, but Spotify's is still better
-- **Artists earn less from your plays** than on the paid apps, since YouTube's ads get skipped. If you love an artist,
+- **Artists earn less from your plays** than on the paid apps, since no YouTube ads play. If you love an artist,
   show them some love: buy the merch, go to the show, or stream them on a paid app too 🫶
 
 ### 🎯 So which one's for you?
@@ -433,7 +441,7 @@ NetherFlow doesn't host any music, videos or lyrics. It finds them on other serv
 | What | From |
 |:--|:--|
 | Song search, artwork | Apple's iTunes Search API, YouTube Music |
-| Playback | YouTube's embedded player; [Audius](https://audius.co) when the artist's own upload is there (320 kbps) |
+| Playback | FlowStream, NetherFlow's own player: the audio and music videos from YouTube's servers, as YouTube serves them to its own apps (yt-dlp as a backup); [Audius](https://audius.co) when the artist's own upload is there (320 kbps) |
 | Lyrics | [LRCLIB](https://lrclib.net), NetEase Cloud Music, Kugou, YouTube Music (lyrics by LyricFind) |
 | Explore | YouTube Music's charts, new releases, moods and genres; your mixes from its radio for the songs you play most |
 | Podcasts | Apple's podcast directory and charts; the episodes from each show's own feed and host |
@@ -445,7 +453,8 @@ NetherFlow doesn't host any music, videos or lyrics. It finds them on other serv
 
 The desktop app (Windows and Linux) is [Electron](https://www.electronjs.org), the Android app (phones and TVs) is
 [Capacitor](https://capacitorjs.com) with yt-dlp running in Python through [Chaquopy](https://chaquo.com/chaquopy/), and
-both run the same page, `index.html`.
+both run the same page, `index.html`. FlowStream (`flowstream.js`) is NetherFlow's own code; it uses the same
+requests to YouTube that yt-dlp does.
 Redline's races are drawn with [three.js](https://threejs.org).
 
 <details>

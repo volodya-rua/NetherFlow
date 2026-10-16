@@ -68,24 +68,6 @@
     })(json);
     return out;
   };
-  // YouTube Music's own lyrics for a video (from LyricFind), time-synced to its recording when it has them: { lines:
-  // [{ t, end, text }] } (seconds), or { plain } (text alone), or {} — the lyrics tab's id from the video's "next" page,
-  // then the lyrics themselves, asked as YouTube Music's Android app (only that client is given the timing).
-  lib.ytmLyrics = async (post, id) => {
-    const find = (o, key) => { if (!o || typeof o !== 'object') return null; if (o[key]) return o[key]; for (const k in o) { const r = find(o[k], key); if (r) return r; } return null; };
-    const next = await ytmPost(post, 'next', { context: WEB_MUSIC, videoId: id, isAudioOnly: true });
-    const tabs = [];
-    (function walk(o) { if (o && typeof o === 'object') { if (o.tabRenderer) tabs.push(o.tabRenderer); for (const k in o) walk(o[k]); } })(next);
-    const browseId = tabs.map(t => t.endpoint?.browseEndpoint?.browseId).find(b => b && b.startsWith('MPLY'));
-    if (!browseId) return {};
-    const json = await ytmPost(post, 'browse', { context: { client: { clientName: 'ANDROID_MUSIC', clientVersion: '7.21.50', androidSdkVersion: 30, hl: 'en', gl: 'US' } }, browseId },
-      { 'User-Agent': 'com.google.android.apps.youtube.music/7.21.50 (Linux; U; Android 11) gzip' });
-    const timed = find(json, 'timedLyricsData');
-    if (timed?.length) return { lines: timed.filter(l => l.cueRange).map(l => ({ t: +l.cueRange.startTimeMilliseconds / 1000, end: +l.cueRange.endTimeMilliseconds / 1000,
-      text: (l.lyricLine || '').replace(/\s+/g, ' ').trim() })).filter(l => l.text && l.text !== '♪') };
-    const plain = find(json, 'musicDescriptionShelfRenderer')?.description?.runs?.map(r => r.text).join('') || '';
-    return plain ? { plain } : {};
-  };
 
   // ---- Explore: YouTube Music's own explore page (new albums and singles, moods and genres, what's trending), its charts
   // (a country's: the most played music videos, by genre and language), a mood's or genre's playlists, an album's songs.
