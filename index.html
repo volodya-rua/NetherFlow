@@ -1679,7 +1679,7 @@ let lines = [], synced = false, drift = true, activeIdx = -2, curWords = [], wor
 let loadId = 0, userScroll = 0, offset = 0, lastLyr = null, current = null;
 // A song saved for offline: where its file starts in the song (lyric time = file time + this), and its length.
 let songShift = 0, savedDur = 0;
-let ctx, analyser, freq, boostNode = null, limiterNode = null, boostLevel = 1, audioSrc = null, routed = null, singNode = null; // (the booster: see "volume"; singNode: Sing)
+let ctx, analyser, freq, boostNode = null, limiterNode = null, boostLevel = 1, audioSrc = null, routed = null, singNode = null, spaceNode = null; // (the booster: see "volume"; singNode: Sing; spaceNode: 360 sound)
 // The sound's path here (previews, saved songs): this page's <audio> → the equalizer's bands, while it's on → analyser →
 // boost and limiter, while boosting → speakers. Only what's in use is in it (a node more is work
 // for the sound's own thread; on a phone, that thread late is a crack).
@@ -1694,12 +1694,47 @@ function routeAudio() {
       const b = ctx.createBiquadFilter(); b.type = type; b.frequency.value = f; b.gain.value = g; b.Q.value = q; return b; })] : [];
     if (hp) hpNodes[0].gain.value = Math.pow(10, hp.pre / 20);
   }
-  const useEq = eqState.on, boosting = boostLevel > 1, singing = singAmount(), key = +!!hpNodes.length + '' + +useEq + +boosting + +!!singing;
+  const useEq = eqState.on, boosting = boostLevel > 1, singing = singAmount(), spatial = space !== 'Off', key = +!!hpNodes.length + '' + +useEq + +boosting + +!!singing + +spatial;
   singNode.set(singing);
   if (key === routed) return;
   routed = key;
-  for (const n of [audioSrc, ...hpNodes, ...eqNodes, singNode.out, analyser, boostNode, limiterNode]) n.disconnect();
-  [audioSrc, ...hpNodes, ...(useEq ? eqNodes : []), ...(singing ? [singNode] : []), analyser, ...(boosting ? [boostNode] : []), ...(useEq || boosting || hpNodes.length ? [limiterNode] : []), ctx.destination].reduce((a, b) => (a.connect(b.inp || b), b.out || b));
+  for (const n of [audioSrc, ...hpNodes, ...eqNodes, singNode.out, spaceNode.out, analyser, boostNode, limiterNode]) n.disconnect();
+  [audioSrc, ...hpNodes, ...(useEq ? eqNodes : []), ...(singing ? [singNode] : []), ...(spatial ? [spaceNode] : []), analyser, ...(boosting ? [boostNode] : []), ...(useEq || boosting || hpNodes.length ? [limiterNode] : []), ctx.destination].reduce((a, b) => (a.connect(b.inp || b), b.out || b));
+}
+// 360 sound (the Equalizer panel): the song set round the listener in 3D, as ears hear the world (HRTF). Around: its left
+// and right as two speakers wide either side and a little in front, with a little room round them. Orbit: the two
+// circling the head, opposite each other, once every 16 seconds (the "8D" sound), turned by two slow oscillators on the
+// audio thread itself, not by the page. Best on headphones. set(mode): 'Off' | 'Around' | 'Orbit', gliding over.
+const SPACES = ['Off', 'Around', 'Orbit'];
+let space = SPACES.includes(store.get('netherflow.space')) ? store.get('netherflow.space') : 'Off';
+function setSpace(v) { space = v; store.set('netherflow.space', v === 'Off' ? '' : v); spaceNode?.set(v); routeAudio(); renderLoud(); }
+function makeSpace(c) {
+  const g = v => { const n = c.createGain(); n.gain.value = v; return n; };
+  const inp = g(1), out = g(1), split = c.createChannelSplitter(2), room = c.createConvolver(), wet = g(0);
+  inp.channelCount = 2; inp.channelCountMode = 'explicit'; inp.channelInterpretation = 'speakers';
+  inp.connect(split);
+  // the room: a second and a half of soft, fading echo
+  const len = Math.round(c.sampleRate * 1.5), ir = c.createBuffer(2, len, c.sampleRate);
+  for (let ch = 0; ch < 2; ch++) { const d = ir.getChannelData(ch); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len) ** 3; }
+  room.buffer = ir; room.connect(wet); wet.connect(out);
+  // the slow turn: sin and cos of the angle, once every 16 s
+  const osc = wave => { const o = c.createOscillator(); o.frequency.value = 1 / 16; if (wave) o.setPeriodicWave(wave); o.start(); return o; };
+  const sin = osc(), cos = osc(c.createPeriodicWave(new Float32Array([0, 1]), new Float32Array([0, 0])));
+  // left (0) and right (1): each its own point in space, its stereo sound (HRTF) into the mix and the room
+  const ears = [0, 1].map(ch => {
+    const p = new PannerNode(c, { panningModel: 'HRTF', distanceModel: 'linear', refDistance: 1, maxDistance: 10, rolloffFactor: 0 });
+    split.connect(p, ch); p.connect(out); p.connect(room);
+    const gx = g(0), gz = g(0); sin.connect(gx); cos.connect(gz); gx.connect(p.positionX); gz.connect(p.positionZ);
+    return { p, gx, gz, side: ch ? 1 : -1 };
+  });
+  return { inp, out, set(mode) {
+    const t = c.currentTime, orbit = mode === 'Orbit';
+    for (const { p, gx, gz, side } of ears) {
+      p.positionX.setTargetAtTime(orbit ? 0 : side * 1.7, t, .08); p.positionZ.setTargetAtTime(orbit ? 0 : -1, t, .08); // (Around: wide, a little in front)
+      gx.gain.setTargetAtTime(orbit ? -side * 2 : 0, t, .3); gz.gain.setTargetAtTime(orbit ? side * 2 : 0, t, .3); // (Orbit: on a circle, opposite each other)
+    }
+    wet.gain.setTargetAtTime(mode === 'Around' ? .22 : orbit ? .12 : 0, t, .1);
+  } };
 }
 // Sing mode's voice remover: the middle of the stereo picture between the
 // bass and the sizzle, where a singer's mixed, turned down by a (0…1); the sides and the middle's bass and top kept
@@ -2748,7 +2783,7 @@ function initAudio() { // created lazily: browsers want a user gesture first
   audioSrc = ctx.createGain(); // (both songs' players into it: see Smooth mix)
   for (const el of [audio, audioB]) ctx.createMediaElementSource(el).connect(audioSrc);
   // then the volume booster: a gain, and a limiter so a boosted song never distorts
-  boostNode = ctx.createGain(); limiterNode = ctx.createDynamicsCompressor(); singNode = makeSing(ctx);
+  boostNode = ctx.createGain(); limiterNode = ctx.createDynamicsCompressor(); singNode = makeSing(ctx); spaceNode = makeSpace(ctx); spaceNode.set(space);
   limiterNode.knee.value = 6; limiterNode.ratio.value = 20; limiterNode.attack.value = 0.004; limiterNode.release.value = 0.25; // (soft)
   applyBoost(boostLevel);
   freq = new Uint8Array(analyser.frequencyBinCount);
@@ -2871,7 +2906,8 @@ function setSing(on) {
 }
 function renderLoud() {
   $('eqLoud').replaceChildren(settingRow('Loudness', ['Original', 'Levelled'], loud, v => { loud = v; store.set('netherflow.loud', v === 'Original' ? '' : v); renderLoud(); applyEq(); setVolume(volume); },
-    'Original: each song as loud as it was mastered. Levelled: YouTube turns loud songs down so all play at about one level.'));
+    'Original: each song as loud as it was mastered. Levelled: YouTube turns loud songs down so all play at about one level.'),
+    settingRow('360 sound', SPACES, space, setSpace, 'Around: the song set round you, like speakers wide either side, with a little room. Orbit: it circles your head (the "8D" sound). Best on headphones.'));
 }
 function applyEq(save = false) {
   eqNodes?.forEach((b, i) => { // (gliding: a jump clicks; out of the path, back to flat at once)
