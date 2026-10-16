@@ -353,7 +353,7 @@ the big ones beat it on catalog, sound, discovery and devices. Here's the deep v
 
 | | NetherFlow | Spotify | Apple Music | YouTube Music |
 |:--|:--|:--|:--|:--|
-| Tracking | ✅ no analytics, nothing sent to us | ⚠️ your listening shapes ads (free) and suggestions | ⚠️ your listening shapes suggestions | ⚠️ tied to your whole Google account |
+| Tracking | ✅ no analytics, nothing we can read reaches us | ⚠️ your listening shapes ads (free) and suggestions | ⚠️ your listening shapes suggestions | ⚠️ tied to your whole Google account |
 | Open source | ✅ GPL v3 | ❌ | ❌ | ❌ |
 | **Score** | **10** | 4 | 7 | 3 |
 </details>
@@ -439,7 +439,7 @@ NetherFlow doesn't host any music, videos or lyrics. It finds them on other serv
 | Podcasts | Apple's podcast directory and charts; the episodes from each show's own feed and host |
 | Audiobooks | [LibriVox](https://librivox.org)'s recordings (public domain in the US), from the [Internet Archive](https://archive.org) |
 | Headphone correction | [AutoEQ](https://github.com/jaakkopasanen/AutoEq)'s published results (MIT), fetched when you pick your headphones |
-| Playlists you make together | public MQTT relays, end-to-end encrypted with a key from the playlist link |
+| Playlists you make together | NetherFlow's own relay on Cloudflare (public MQTT relays as a backup), end-to-end encrypted with a key from the playlist link |
 | Saving for offline | [yt-dlp](https://github.com/yt-dlp/yt-dlp) downloads the audio from YouTube, as YouTube serves it; podcast episodes and audiobook chapters come as their host serves them |
 | Redline's circuits | [OpenStreetMap](https://www.openstreetmap.org/copyright) map data and NASA's SRTM heights, made into `race/` ahead of time |
 
@@ -491,11 +491,11 @@ they come out unsigned (as F-Droid wants them). Add `-PnfEmulator` to include x8
 
 ## 🔒 Privacy
 
-NetherFlow has no accounts and no analytics, and sends nothing to its developer. Your settings, library and saved songs
+NetherFlow has no accounts and no analytics, and nothing it sends reaches its developer in a form anyone there can read. Your settings, library and saved songs
 stay on your device. When you use it, it talks directly to the services above (GitHub too: to look for a newer
 NetherFlow, and to update yt-dlp, on Android only if you turn on "Update the downloader"; podcast hosts and the Internet Archive for podcasts and audiobooks), which see your IP address. A
 playlist you share lives only inside its link (the page it opens, on GitHub Pages, never gets the songs part); one you
-edit together is kept on public relays, encrypted with a key from its link, so anyone with the link can read and change it. The full [Privacy Policy](https://volodya-rua.github.io/NetherFlow/legal.html#privacy) is in the app and on the website.
+edit together is kept on NetherFlow's own relay (on Cloudflare; for now public relays too, as a backup), encrypted with a key from its link, so anyone with the link can read and change it. The full [Privacy Policy](https://volodya-rua.github.io/NetherFlow/legal.html#privacy) is in the app and on the website.
 
 ## ⚖️ Legal
 
