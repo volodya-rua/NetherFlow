@@ -1,0 +1,25 @@
+# NetherFlow - Copyright (C) 2026 Volodya.rua - GNU GPL v3 only, with additional terms (credit, name and logo): see LICENSE and NOTICE.
+# FlowStream's daily check: a song asked for the way the app asks for it, every morning (and by hand: Run workflow), so
+# a change on YouTube's side is seen within the day, before people notice. A failed run emails the repository's owner.
+name: FlowStream health
+
+on:
+  schedule:
+    - cron: '17 1 * * *' # (06:47 in India)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - run: node tools/flowstream-check.js
