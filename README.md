@@ -64,7 +64,8 @@ card anyway), about 18 MB smaller, and it updates to Lite.
   read anything (it's all end-to-end encrypted). The public relays stay as a backup for a while
 - Heads-up: someone on 1.4.2 or older can't join a Listen together session started on 1.4.3, so update both sides.
   Shared playlists keep working with older versions
-- The terms changed a little (which country's law applies, and a note on flashing light), so you're asked to accept them again
+- The terms and privacy policy changed a little (which country's law applies, a note on flashing light, and the new
+  relay), so you're asked to accept them again
 
 ### 🔐 1.4.2: Listen together and sync, locked down tighter
 
