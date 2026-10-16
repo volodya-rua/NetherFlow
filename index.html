@@ -2607,10 +2607,26 @@ const fsLevel = () => loud === 'Levelled' && fsVid && fsLoud > 0 ? 10 ** (-fsLou
 const flowPage = native && window.FlowStream ? FlowStream.create({ visitor: store.get('netherflow.fsvisitor') || '', saveVisitor: v => store.set('netherflow.fsvisitor', v),
   post: (url, body, headers) => Capacitor.Plugins.CapacitorHttp.post({ url, headers, data: JSON.parse(body), responseType: 'text', connectTimeout: 6000, readTimeout: 6000 })
     .then(r => typeof r.data === 'string' ? r.data : JSON.stringify(r.data)) }) : null;
+// Android: the songs whose start the app keeps on this phone (MainActivity: the last 100 played; Android may clear them)
+// and what the page needs to play one at once, before its address is found: its type, loudness and length. (One whose
+// start is gone after all is simply fetched as usual.)
+const fsKept = (() => { try { return new Map(JSON.parse(store.get('netherflow.kept') || '[]')); } catch { return new Map(); } })();
+function fsKeep(vid, s) {
+  fsKept.delete(vid); fsKept.set(vid, [s.mime.split(';')[0], s.loudnessDb || 0, s.duration || 0]);
+  while (fsKept.size > 100) fsKept.delete(fsKept.keys().next().value);
+  store.set('netherflow.kept', JSON.stringify([...fsKept]));
+}
 async function fsStream(vid) { // → { src (for a player, or a download), loudnessDb, dur }
   if (native) {
+    const k = fsKept.get(vid);
+    if (k) { // its start kept here: played from there at once, its address found meanwhile and handed to the app
+      const t = Math.random().toString(36).slice(2);
+      flowPage.audio(vid).catch(() => Capacitor.Plugins.YtDl.stream({ id: vid })).then(s => s.url, () => '').then(u => fetch('/_fs/url?' + new URLSearchParams({ t, u })));
+      return { src: '/_fs/media?' + new URLSearchParams({ id: vid, m: k[0], t }), loudnessDb: k[1], dur: k[2] };
+    }
     const s = await flowPage.audio(vid).catch(() => Capacitor.Plugins.YtDl.stream({ id: vid }));
-    return { src: '/_fs/media?' + new URLSearchParams({ u: s.url, m: s.mime.split(';')[0] }), loudnessDb: s.loudnessDb || 0, dur: s.duration || 0 };
+    fsKeep(vid, s); // (the app keeps its start as it plays)
+    return { src: '/_fs/media?' + new URLSearchParams({ u: s.url, m: s.mime.split(';')[0], id: vid }), loudnessDb: s.loudnessDb || 0, dur: s.duration || 0 };
   }
   const s = await fetch('/api/fs/audio?' + new URLSearchParams({ id: vid })).then(r => r.ok ? r.json() : Promise.reject(new Error('no stream')));
   return { src: '/api/fs/media?' + new URLSearchParams({ id: vid }), loudnessDb: s.loudnessDb || 0, dur: s.duration || 0 };
@@ -3198,7 +3214,7 @@ setInterval(() => {
 function prefetchNext() {
   const n = upNext[0] || queue[qi + 1];
   if (!n || !fullSongs || saved.has(n.trackId)) return;
-  videosFor(n).then(v => { if (!v[0]) return; ytmLyricsFor(v[0].id); native ? flowPage?.audio(v[0].id).then(s => fetch('/_fs/ahead?' + new URLSearchParams({ u: s.url }))).catch(() => {}) : fetch('/api/fs/ahead?' + new URLSearchParams({ ids: v[0].id })).catch(() => {}); }).catch(() => {}); // (FlowStream: its stream looked up ahead too)
+  videosFor(n).then(v => { if (!v[0]) return; ytmLyricsFor(v[0].id); native ? flowPage?.audio(v[0].id).then(s => { fsKeep(v[0].id, s); return fetch('/_fs/ahead?' + new URLSearchParams({ u: s.url, id: v[0].id })); }).catch(() => {}) : fetch('/api/fs/ahead?' + new URLSearchParams({ ids: v[0].id })).catch(() => {}); }).catch(() => {}); // (FlowStream: its stream looked up ahead too)
   audiusFor(n);
   lyricsFor(n);
 }
