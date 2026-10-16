@@ -4498,6 +4498,7 @@ function alignTo(ls, ref) {
 async function playTrack(t, term = '', queued = false, stay = false, mixed = null) {
   if (tgIntercept('play', t)) return;
   if (!mixed) mixAbort();
+  lastSong = null; // (another song picked: the last one's no longer waiting)
   const id = ++loadId;
   autoStart(t, current, P.t, P.dur);
   current = t; lastLyr = null; songShift = 0; savedDur = 0; fsVid = null;
@@ -7296,8 +7297,29 @@ function setOffset(v, save = true) {
 function loadOffset(key) { offKey = key; setOffset(+store.get(key) || 0, false); }
 $('sooner').onclick = () => setOffset(offset + 0.1);
 $('later').onclick = () => setOffset(offset - 0.1);
-const toggle = () => { if (tg.role === 'guest' && P.loaded) tg.held = !P.paused; return !P.loaded ? openSearch() : P.paused ? P.play() : P.pause(); }; // (a guest's own pause: theirs; Play catches up)
+const toggle = () => { if (tg.role === 'guest' && P.loaded) tg.held = !P.paused; return !P.loaded ? (lastSong ? resumeLast() : openSearch()) : P.paused ? P.play() : P.pause(); }; // (a guest's own pause: theirs; Play catches up)
 $('play').onclick = toggle;
+// ---------- the last song (kept on this device, never synced): where it was left, shown when the app opens, and Play
+// carries on from there (a podcast episode or audiobook chapter: their own place is kept, see Podcasts)
+const LAST = 'netherflow.last';
+let lastSong = null; // ({ t, at }: shown, not loaded yet)
+function keepLast() { if (current && current.kind !== 'episode' && P.loaded && !lastSong) store.set(LAST, JSON.stringify({ t: slim(current), at: Math.round(P.t) })); }
+setInterval(() => { if (!P.paused) keepLast(); }, 5000);
+addEventListener('pagehide', keepLast);
+function resumeLast() {
+  const { t, at } = lastSong;
+  lastSong = null;
+  if (at > 3) for (const el of [audio, audioB]) el.addEventListener('loadedmetadata', function go() { for (const e of [audio, audioB]) e.removeEventListener('loadedmetadata', go); if (current === t && P.t < 1) P.seek(Math.min(at, P.dur - 5)); }); // (at its place before it's heard)
+  playTrack(t, '', false, true);
+}
+try {
+  const l = JSON.parse(store.get(LAST) || 'null');
+  if (l?.t?.trackId && !current) {
+    lastSong = l; current = l.t; queue = [l.t]; qi = 0;
+    setNow(l.t.trackName, l.t.artistName, saved.get(l.t.trackId)?.coverUrl || l.t.artworkUrl100?.replace('100x100bb', '600x600bb'), l.t.collectionName);
+    updateSkips(); updateLikeBtn(); status(`▶ Play to carry on${l.at > 3 ? ` from ${Math.floor(l.at / 60)}:${String(l.at % 60).padStart(2, '0')}` : ''}`);
+  }
+} catch {}
 renderMoodMenu();
 setView(view);
 applyMood();
