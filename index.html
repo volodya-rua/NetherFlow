@@ -2616,20 +2616,29 @@ function fsKeep(vid, s) {
   while (fsKept.size > 100) fsKept.delete(fsKept.keys().next().value);
   store.set('netherflow.kept', JSON.stringify([...fsKept]));
 }
+// The kept starts are a trace of what was played: cleared with the history (Clear history), on this device. (Clearing
+// the app's data clears them too: they're in its own folder.)
+// (each clear begins a new era, given with every song asked for after it: a song that began before the clear isn't kept)
+let keptEra = store.get('netherflow.keptera');
+function forgetKept() {
+  keptEra = Math.random().toString(36).slice(2); store.set('netherflow.keptera', keptEra);
+  fsKept.clear(); store.set('netherflow.kept', '');
+  fetch((native ? '/_fs/clear?' : '/api/fs/kept?') + new URLSearchParams({ g: keptEra }), { method: native ? 'GET' : 'DELETE' }).catch(() => {});
+}
 async function fsStream(vid) { // → { src (for a player, or a download), loudnessDb, dur }
   if (native) {
     const k = fsKept.get(vid);
     if (k) { // its start kept here: played from there at once, its address found meanwhile and handed to the app
       const t = Math.random().toString(36).slice(2);
       flowPage.audio(vid).catch(() => Capacitor.Plugins.YtDl.stream({ id: vid })).then(s => s.url, () => '').then(u => fetch('/_fs/url?' + new URLSearchParams({ t, u })));
-      return { src: '/_fs/media?' + new URLSearchParams({ id: vid, m: k[0], t }), loudnessDb: k[1], dur: k[2] };
+      return { src: '/_fs/media?' + new URLSearchParams({ id: vid, m: k[0], t, g: keptEra }), loudnessDb: k[1], dur: k[2] };
     }
     const s = await flowPage.audio(vid).catch(() => Capacitor.Plugins.YtDl.stream({ id: vid }));
     fsKeep(vid, s); // (the app keeps its start as it plays)
-    return { src: '/_fs/media?' + new URLSearchParams({ u: s.url, m: s.mime.split(';')[0], id: vid }), loudnessDb: s.loudnessDb || 0, dur: s.duration || 0 };
+    return { src: '/_fs/media?' + new URLSearchParams({ u: s.url, m: s.mime.split(';')[0], id: vid, g: keptEra }), loudnessDb: s.loudnessDb || 0, dur: s.duration || 0 };
   }
   const s = await fetch('/api/fs/audio?' + new URLSearchParams({ id: vid })).then(r => r.ok ? r.json() : Promise.reject(new Error('no stream')));
-  return { src: '/api/fs/media?' + new URLSearchParams({ id: vid }), loudnessDb: s.loudnessDb || 0, dur: s.duration || 0 };
+  return { src: '/api/fs/media?' + new URLSearchParams({ id: vid, g: keptEra }), loudnessDb: s.loudnessDb || 0, dur: s.duration || 0 };
 }
 async function fsPlay(v, id) {
   const s = await fsStream(v.id);
@@ -3214,7 +3223,7 @@ setInterval(() => {
 function prefetchNext() {
   const n = upNext[0] || queue[qi + 1];
   if (!n || !fullSongs || saved.has(n.trackId)) return;
-  videosFor(n).then(v => { if (!v[0]) return; ytmLyricsFor(v[0].id); native ? flowPage?.audio(v[0].id).then(s => { fsKeep(v[0].id, s); return fetch('/_fs/ahead?' + new URLSearchParams({ u: s.url, id: v[0].id })); }).catch(() => {}) : fetch('/api/fs/ahead?' + new URLSearchParams({ ids: v[0].id })).catch(() => {}); }).catch(() => {}); // (FlowStream: its stream looked up ahead too)
+  videosFor(n).then(v => { if (!v[0]) return; ytmLyricsFor(v[0].id); native ? flowPage?.audio(v[0].id).then(s => { fsKeep(v[0].id, s); return fetch('/_fs/ahead?' + new URLSearchParams({ u: s.url, id: v[0].id, g: keptEra })); }).catch(() => {}) : fetch('/api/fs/ahead?' + new URLSearchParams({ ids: v[0].id, g: keptEra })).catch(() => {}); }).catch(() => {}); // (FlowStream: its stream looked up ahead too)
   audiusFor(n);
   lyricsFor(n);
 }
@@ -4605,7 +4614,7 @@ function showHistory() {
       clearTimeout(b.disarm); b.disarm = setTimeout(() => { b.classList.remove('armed'); b.textContent = 'Clear history'; }, 3500);
       return;
     }
-    hist = { tracks: [], terms: [] }; store.set(HIST, ''); showHistory(); $('q').focus();
+    hist = { tracks: [], terms: [] }; store.set(HIST, ''); forgetKept(); showHistory(); $('q').focus();
   });
   if (hist.terms.length) {
     const chips = el('div', 'chips');

@@ -31,8 +31,9 @@ public class MainActivity extends BridgeActivity {
             public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
                 android.net.Uri q = request.getUrl();
                 if ("localhost".equals(q.getHost()) && "/_fs/media".equals(q.getPath())) return flowMedia(request);
-                if ("localhost".equals(q.getHost()) && "/_fs/ahead".equals(q.getPath())) return flowAhead(q.getQueryParameter("u"), q.getQueryParameter("id"));
+                if ("localhost".equals(q.getHost()) && "/_fs/ahead".equals(q.getPath())) return flowAhead(q.getQueryParameter("u"), q.getQueryParameter("id"), q.getQueryParameter("g"));
                 if ("localhost".equals(q.getHost()) && "/_fs/url".equals(q.getPath())) return handOver(q.getQueryParameter("t"), q.getQueryParameter("u"));
+                if ("localhost".equals(q.getHost()) && "/_fs/clear".equals(q.getPath())) return forgetKept(q.getQueryParameter("g"));
                 return super.shouldInterceptRequest(view, request);
             }
         });
@@ -71,7 +72,7 @@ public class MainActivity extends BridgeActivity {
             java.util.Map<String, String> head = new java.util.HashMap<>();
             head.put("Accept-Ranges", "bytes"); head.put("Cache-Control", "no-store");
             for (String k : new String[] { "Content-Length", "Content-Range" }) if (c.getHeaderField(k) != null) head.put(k, c.getHeaderField(k));
-            if (first) keepStart(id, u); // (for next time)
+            if (first) keepStart(id, u, q.getQueryParameter("g")); // (for next time)
             return new WebResourceResponse(type, null, code, code == 206 ? "Partial Content" : "OK", head, c.getInputStream());
         } catch (Exception e) {
             return failed(502);
@@ -116,7 +117,18 @@ public class MainActivity extends BridgeActivity {
             }
         } catch (Exception ignored) {}
     }
-    private static void keepStart(String id, String u) { java.io.File f = kept(id); if (f != null && !f.exists()) new Thread(() -> { Head h = fetchStart(u); if (h != null) saveKept(id, h); }).start(); }
+    // Clear history: the kept starts go too (a trace of what was played), and the next songs' in memory
+    // The page's era: a new one at each Clear history, given with every song it asks for; only a start asked for in the
+    // latest is kept (a song that began before the clear isn't kept after it). null: any, till the first clear in this run.
+    private static volatile String keptEra;
+    private static boolean keptNow(String era) { String e = keptEra; return e == null || e.equals(era); }
+    private static WebResourceResponse forgetKept(String era) {
+        keptEra = era == null ? "" : era; HEADS.clear();
+        java.io.File[] all = keptDir == null ? null : keptDir.listFiles();
+        if (all != null) for (java.io.File f : all) f.delete();
+        return new WebResourceResponse("text/plain", "utf-8", 204, "No Content", null, new ByteArrayInputStream(new byte[0]));
+    }
+    private static void keepStart(String id, String u, String era) { java.io.File f = kept(id); if (f != null && !f.exists() && keptNow(era)) new Thread(() -> { Head h = fetchStart(u); if (h != null && keptNow(era)) saveKept(id, h); }).start(); }
 
     // The addresses the page hands over, by the token of the request waiting for one ("" when it found none). 50 at most.
     private static final java.util.Map<String, String> URLS = new java.util.LinkedHashMap<String, String>() {
@@ -157,11 +169,11 @@ public class MainActivity extends BridgeActivity {
     private static final java.util.Map<String, Head> HEADS = java.util.Collections.synchronizedMap(new java.util.LinkedHashMap<String, Head>() {
         @Override protected boolean removeEldestEntry(java.util.Map.Entry<String, Head> e) { return size() > 2; }
     });
-    private static WebResourceResponse flowAhead(String u, String id) {
+    private static WebResourceResponse flowAhead(String u, String id, String era) {
         java.io.File f = kept(id);
         if (streamable(u) && !HEADS.containsKey(u) && (f == null || !f.exists())) new Thread(() -> { // (kept already: not fetched again)
             Head h = fetchStart(u);
-            if (h != null) { HEADS.put(u, h); saveKept(id, h); }
+            if (h != null) { HEADS.put(u, h); if (keptNow(era)) saveKept(id, h); }
         }).start();
         return new WebResourceResponse("text/plain", "utf-8", 204, "No Content", null, new ByteArrayInputStream(new byte[0]));
     }

@@ -85,7 +85,7 @@ const flowAudio = id => flow.audio(id).then(s => ({ ...s, via: 'FlowStream' }), 
 // The next song's first 256 KB (about 15 s), fetched ahead into memory, so it starts the moment it's asked for (the
 // rest follows from its source as it plays). Two songs' at most.
 const HEAD = 262144, flowHeads = new Map();
-function flowAhead(ids) {
+function flowAhead(ids, era) {
   flow.prefetch(ids);
   for (const id of ids.slice(0, 2)) if (/^[\w-]{11}$/.test(id) && !flowHeads.has(id) && !keptMeta(id)) { // (kept already: not fetched again)
     const p = flowAudio(id).then(async s => {
@@ -93,7 +93,7 @@ function flowAhead(ids) {
       const total = +(r.headers.get('content-range') || '').split('/')[1];
       if (r.status !== 206 || !total) throw new Error('no head');
       const buf = Buffer.from(await r.arrayBuffer());
-      keepHead(id, buf, s, total);
+      keepHead(id, buf, s, total, era);
       return { buf, total, mime: s.mime.split(';')[0], until: Date.now() + 30 * 60e3 };
     });
     flowHeads.set(id, p); p.catch(() => flowHeads.delete(id));
@@ -105,12 +105,15 @@ function flowAhead(ids) {
 // as it plays. A start that turns out not to be the stream's (its length differs: re-encoded since) is dropped.
 // ponytail: the last 100 kept, not the most played.
 const KEPT = 100;
+// The page's era: a new one at each Clear history, given with every song it asks for; only a start asked for in the
+// latest is kept (a song that began before the clear isn't kept after it). null: any, till the first clear in this run.
+let keptEra = null;
 const keptFile = (id, ext) => module.exports.heads && /^[\w-]{11}$/.test(id) ? path.join(module.exports.heads, id + ext) : null;
 function keptMeta(id) { try { return JSON.parse(fs.readFileSync(keptFile(id, '.json'), 'utf8')); } catch { return null; } }
 const dropKept = id => { for (const ext of ['.json', '.head']) if (keptFile(id, ext)) try { fs.rmSync(keptFile(id, ext), { force: true }); } catch {} }; // (at once: the page asks again straight after)
-async function keepHead(id, buf, s, total) {
+async function keepHead(id, buf, s, total, era) {
   const dir = module.exports.heads;
-  if (!keptFile(id, '') || buf.length < HEAD || !total) return;
+  if (!keptFile(id, '') || buf.length < HEAD || !total || keptEra !== null && era !== keptEra) return;
   try {
     await fs.promises.mkdir(dir, { recursive: true });
     await fs.promises.writeFile(keptFile(id, '.head'), buf.subarray(0, HEAD)); // (then its description: there only once the start is whole)
@@ -152,8 +155,9 @@ async function flowMedia(req, res, url) {
     for (const k of ['content-length', 'content-range']) if (r.headers.get(k)) head[k] = r.headers.get(k);
     res.writeHead(r.status, head);
     // its start, kept: a copy fetched alongside (the player reads only a little from the start before it asks for the end)
+    const era = url.searchParams.get('g');
     if (!video && !had && keptFile(id, '') && /^(bytes=0-.*)?$/.test(req.headers.range || ''))
-      fetch(s.url, { headers: { Range: `bytes=0-${HEAD - 1}` }, signal: AbortSignal.timeout(15000) }).then(async k => k.status === 206 && keepHead(id, Buffer.from(await k.arrayBuffer()), s, total)).catch(() => {});
+      fetch(s.url, { headers: { Range: `bytes=0-${HEAD - 1}` }, signal: AbortSignal.timeout(15000) }).then(async k => k.status === 206 && keepHead(id, Buffer.from(await k.arrayBuffer()), s, total, era)).catch(() => {});
     for await (const c of r.body) { // (as /api/media, by hand)
       if (res.destroyed) break;
       if (!res.write(c)) await new Promise(ok => { const go = () => { res.off('drain', go); res.off('close', go); ok(); }; res.on('drain', go); res.on('close', go); });
@@ -173,7 +177,12 @@ async function handle(req, res) {
     try { const s = await flowAudio(url.searchParams.get('id') || ''); return send(res, 200, JSON.stringify({ itag: s.itag, mime: s.mime, loudnessDb: s.loudnessDb, duration: s.duration || 0, via: s.via, why: s.why || '' })); }
     catch (e) { return send(res, 502, JSON.stringify({ error: e.code || e.message })); }
   }
-  if (url.pathname === '/api/fs/ahead') { flowAhead((url.searchParams.get('ids') || '').split(',')); return send(res, 204, ''); } // (the next songs, looked up ahead)
+  if (url.pathname === '/api/fs/kept' && req.method === 'DELETE') { // (Clear history: the kept starts go too)
+    flowHeads.clear(); keptEra = url.searchParams.get('g') || '';
+    if (module.exports.heads) fs.rmSync(module.exports.heads, { recursive: true, force: true });
+    return send(res, 204, '');
+  }
+  if (url.pathname === '/api/fs/ahead') { flowAhead((url.searchParams.get('ids') || '').split(','), url.searchParams.get('g')); return send(res, 204, ''); } // (the next songs, looked up ahead)
   if (url.pathname === '/api/fs/lyrics') {
     try { return send(res, 200, JSON.stringify(await flow.lyrics(url.searchParams.get('id') || ''))); }
     catch (e) { return send(res, 502, JSON.stringify({ error: e.code || e.message })); }
