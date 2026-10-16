@@ -41,7 +41,7 @@ h1 { margin: 14px 0 6px; font: 400 clamp(44px, 11vw, 92px)/.95 Anton, Impact, sa
 .how ol { margin: 6px 0 0; padding-left: 20px; color: var(--mute); }
 .list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
 .list li { border-bottom: 1px solid var(--line); }
-.list a { display: grid; grid-template-columns: 26px 52px 1fr; align-items: center; gap: 14px; padding: 10px 4px; text-decoration: none; }
+.list li > * { display: grid; grid-template-columns: 26px 52px 1fr; align-items: center; gap: 14px; padding: 10px 4px; text-decoration: none; }
 .list .n { font: 500 12px/1 var(--mono); color: var(--mute); text-align: right; }
 .list img, .list .ph { width: 52px; height: 52px; border-radius: 8px; object-fit: cover; background: #ffffff12; }
 .list span { min-width: 0; }
@@ -86,11 +86,11 @@ async function read() {
   for (let size = 0; ;) { const { done, value } = await r.read(); if (done) break; if ((size += value.length) > 4e6) throw new Error('too big'); parts.push(value); }
   const { n, s, t } = JSON.parse(await new Blob(parts).text());
   return { name: String(n || 'Shared playlist').slice(0, 80), store: /^[A-Z]{2}$/.test(s) ? s : 'US',
-    tracks: (Array.isArray(t) ? t : []).map(x => Array.isArray(x) ? /^[\w-]{11}$/.test(x[0]) && { yt: x[0], title: String(x[1] || ''), artist: String(x[2] || '') }
+    tracks: (Array.isArray(t) ? t : []).map(x => Array.isArray(x) ? (/^[\w-]{11}$/.test(x[0]) || x[0] === '' && x[1]) && { yt: x[0], title: String(x[1] || ''), artist: String(x[2] || '') } // ('' : a song by its name only, not looked up yet)
       : Number.isSafeInteger(x) && x > 0 && { apple: x }).filter(Boolean) };
 }
 function row(i, title, artist, img, href) {
-  const li = el('li'), a = el('a'); a.href = href; a.target = '_blank'; a.rel = 'noopener';
+  const li = el('li'), a = el(href ? 'a' : 'div'); if (href) { a.href = href; a.target = '_blank'; a.rel = 'noopener'; }
   const pic = img ? el('img') : el('div', 'ph'); if (img) { pic.src = img; pic.alt = ''; pic.loading = 'lazy'; }
   const txt = el('span'); txt.append(el('strong', '', title), el('small', '', artist));
   a.append(el('span', 'n', String(i + 1)), pic, txt); li.append(a); return li;
@@ -154,7 +154,7 @@ async function readTogether(code) {
     if (!pl) { $('name').textContent = 'Not here right now'; $('meta').textContent = 'Someone in it needs to open NetherFlow: the relay only keeps it a while'; return; }
     $('name').textContent = pl.name; document.title = pl.name + ' · NetherFlow';
     $('meta').textContent = `${pl.tracks.length} songs · edited together in NetherFlow`;
-    $('list').replaceChildren(...pl.tracks.map((x, i) => row(i, x.title, x.artist, x.img, x.href || '#')));
+    $('list').replaceChildren(...pl.tracks.map((x, i) => row(i, x.title, x.artist, x.img, x.href)));
     return;
   }
   let pl;
@@ -169,6 +169,7 @@ async function readTogether(code) {
   }
   $('list').replaceChildren(...pl.tracks.map((x, i) => {
     if (x.yt) return row(i, x.title, x.artist, `https://i.ytimg.com/vi/${x.yt}/mqdefault.jpg`, `https://www.youtube.com/watch?v=${x.yt}`);
+    if (!x.apple) return row(i, x.title, x.artist, '', '');
     const r = found.get(x.apple);
     return r ? row(i, r.trackName, r.artistName, (r.artworkUrl100 || '').replace('100x100bb', '160x160bb'), r.trackViewUrl || `https://music.apple.com/song/${x.apple}`)
       : row(i, 'A song', 'not in this country’s store', '', `https://music.apple.com/song/${x.apple}`);
