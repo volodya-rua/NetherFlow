@@ -2896,7 +2896,7 @@ drawEq(); renderLoud(); renderHp();
 for (const el of [audio, audioB]) { // (only the one playing the song now: see Smooth mix)
   el.onplay = () => { if (el !== audio) return; initAudio(); if (engine === 'audio') setPlaying(true); };
   el.onpause = () => { if (el === audio && engine === 'audio') setPlaying(false); };
-  el.onended = () => { if (el === audio && engine === 'audio') { setPlaying(false); songEnded(); } };
+  el.onended = () => { if (el === audio && engine === 'audio') { if (mix.ready && !mix.fade && !mix.on) return mixBegin(); setPlaying(false); songEnded(); } }; // (gapless: the next, readied, at once)
 }
 epAudio.onplay = () => { if (engine === 'ep') setPlaying(true); };
 epAudio.onpause = () => { if (engine === 'ep') { setPlaying(false); epKeep(); } };
@@ -3054,13 +3054,17 @@ $('repeatBtn').onclick = () => setRepeat(REPEATS[(REPEATS.indexOf(repeat) + 1) %
 // two players swap places and the app moves on to the next song (its lyrics, its cover…). Pause, a seek or another song
 // picked: the mix is dropped at once. ponytail: a crossfade on a beat with quiet endings skipped, not AutoMix's
 // stretching of both songs to one tempo.
+// Gapless (always, Smooth mix or not): the next track of the same album is readied the same way and starts the moment
+// this one ends, no fade (a live album, a DJ mix, a symphony's movements run on as on the record).
 let smoothMix = store.get('netherflow.mix') === 'On';
 function setSmoothMix(v) { smoothMix = v === 'On'; store.set('netherflow.mix', smoothMix ? 'On' : ''); if (!smoothMix) mixAbort(); renderTextPanel(); }
 const FADE = 8;
-const mix = { for: null, next: null, fromUp: false, vids: null, ready: false, on: false, t0: 0, swapped: false, quiet: 0, loud: 0, outLevel: 1 };
+const mix = { for: null, next: null, fromUp: false, vids: null, ready: false, on: false, t0: 0, swapped: false, quiet: 0, loud: 0, outLevel: 1, fade: FADE, timer: 0 };
+// the next track on the same album (and disc), as the album has them
+const albumNext = (a, b) => !!(a && b && a.collectionName && a.collectionName === b.collectionName && a.trackNumber && b.trackNumber === a.trackNumber + 1 && (a.discNumber || 1) === (b.discNumber || 1));
 // the song to come after this one, as Next would play it (and whether it's from Play next / Add to queue)
 const nextUp = () => upNext.length ? [upNext[0], true] : qi + 1 < queue.length ? [queue[qi + 1], false] : repeat === 'all' && queue.length ? [queue[0], false] : [null, false];
-const mixReset = () => Object.assign(mix, { for: null, next: null, vids: null, ready: false, on: false, swapped: false, quiet: 0, loud: 0, outLevel: 1 });
+const mixReset = () => { clearTimeout(mix.timer); Object.assign(mix, { for: null, next: null, vids: null, ready: false, on: false, swapped: false, quiet: 0, loud: 0, outLevel: 1, fade: FADE, timer: 0 }); };
 const mixLevel = db => loud === 'Levelled' && db > 0 ? 10 ** (-db / 20) : 1; // (as fsLevel, for the song coming in)
 const mixClear = () => { audioB.oncanplay = null; audioB.pause(); audioB.removeAttribute('src'); audioB.load(); };
 // dropped: the song coming in stopped (or, after the switch, the one going out); the one playing at its own volume again
@@ -3070,7 +3074,7 @@ function mixAbort() {
   setVolume(volume);
 }
 async function mixPrepare(t, fromUp) {
-  Object.assign(mix, { for: current.trackId, next: t, fromUp });
+  Object.assign(mix, { for: current.trackId, next: t, fromUp, fade: albumNext(current, t) ? 0 : FADE });
   const [au, vids] = await Promise.all([audiusFor(t), videosFor(t).catch(() => [])]);
   if (mix.next !== t || au || !vids.length || saved.has(t.trackId)) return; // (one from Audius, or saved: played as usual, after)
   const st = await fsStream(vids[0].id).catch(() => null);
@@ -3080,12 +3084,13 @@ async function mixPrepare(t, fromUp) {
   audioB.oncanplay = () => { audioB.oncanplay = null; if (mix.vids === vids) mix.ready = true; };
 }
 function mixBegin() {
+  clearTimeout(mix.timer);
   mix.on = true; mix.t0 = performance.now(); mix.outLevel = fsLevel();
   audioB.volume = 0; audioB.play().catch(() => mixAbort());
   mixStep();
 }
 function mixStep() {
-  const x = Math.min(1, (performance.now() - mix.t0) / (FADE * 1000)), L = playerLevel();
+  const x = mix.fade ? Math.min(1, (performance.now() - mix.t0) / (mix.fade * 1000)) : 1, L = playerLevel();
   const out = mix.swapped ? audioB : audio, inn = mix.swapped ? audio : audioB;
   out.volume = L * mix.outLevel * Math.cos(x * Math.PI / 2); inn.volume = L * mixLevel(mix.loud) * Math.sin(x * Math.PI / 2);
   if (x >= .5 && !mix.swapped) { // halfway: the next song is the one playing now, in the main player
@@ -3098,16 +3103,18 @@ function mixStep() {
   if (x >= 1) { mixClear(); mixReset(); setVolume(volume); }
 }
 setInterval(() => {
-  if (!smoothMix || engine !== 'audio' || !fsVid || !current || (native && place === 0)) return; // (a phone in the background: as usual)
+  const [next, up] = nextUp(), seamless = albumNext(current, next);
+  if (!(smoothMix || seamless || mix.on) || engine !== 'audio' || !fsVid || !current || (native && place === 0)) return; // (a phone in the background: as usual)
   if (mix.on) return mixStep();
   if (mix.for && mix.for !== current.trackId) mixReset(); // (another song since)
-  const left = P.dur - P.t, [next, up] = nextUp();
+  const left = P.dur - P.t;
   if (!mix.for) {
-    if (next && P.dur > 40 && left < 25 && left > FADE && repeat !== 'one' && !P.paused) mixPrepare(next, up);
+    if (next && P.dur > 40 && left < 25 && left > (seamless ? 1 : FADE) && repeat !== 'one' && !P.paused) mixPrepare(next, up);
     return;
   }
   if (next !== mix.next) return mixAbort(); // (the queue changed: readied again, for the new next)
   if (!mix.ready || P.paused) return;
+  if (!mix.fade) { if (left < .6 && !mix.timer) mix.timer = setTimeout(mixBegin, Math.max(0, (left - .02) * 1000)); return; } // (gapless: at its very end; or as it ends, below)
   // a quiet ending: the music (nearly) silent for a second and a half — the mix begins there and then
   const f = specFrames[specFrames.length - 1], level = f && performance.now() - f.t < 400 ? f.d.reduce((a, v) => a + v, 0) / f.d.length / 255 : 1;
   mix.quiet = level < .03 ? mix.quiet + .05 : 0;
@@ -4546,7 +4553,7 @@ let hist;
 try { hist = JSON.parse(store.get(HIST) || '{}'); } catch { hist = {}; }
 hist.tracks ||= []; hist.terms ||= [];
 // what's kept of a song (history, playlists, saved songs): enough to show it and play it again
-const TRACK_KEYS = ['trackId', 'trackName', 'artistId', 'artistName', 'collectionName', 'artworkUrl100', 'trackTimeMillis', 'previewUrl', 'releaseDate', 'primaryGenreName', 'kind', 'ytId', 'ytTitle', 'epUrl', 'epShow', 'epBook', 'epAbout'];
+const TRACK_KEYS = ['trackId', 'trackName', 'artistId', 'artistName', 'collectionName', 'trackNumber', 'discNumber', 'artworkUrl100', 'trackTimeMillis', 'previewUrl', 'releaseDate', 'primaryGenreName', 'kind', 'ytId', 'ytTitle', 'epUrl', 'epShow', 'epBook', 'epAbout'];
 const slim = t => Object.fromEntries(TRACK_KEYS.map(k => [k, t[k]]));
 function remember(t, term) {
   hist.tracks = [slim(t), ...hist.tracks.filter(x => x.trackId !== t.trackId)].slice(0, 12);
@@ -6311,7 +6318,7 @@ const openYtList = (id, title, art, label = 'Playlist') => openList({ key: 'pl:'
   load: () => api.playlist('https://music.youtube.com/playlist?list=' + id).then(pl => ({ name: pl.name || title, tracks: ytPlTracks(pl), src: 'https://music.youtube.com/playlist?list=' + id })) });
 const openYtAlbum = a => openList({ key: 'album:' + a.id, label: a.kind || 'Album', title: a.title, art: a.art,
   load: () => api.explore('album:' + a.id).then(al => ({ name: al.title, sub: [al.kind, al.artist, al.year].filter(Boolean).join(' · '), art: al.art,
-    tracks: al.tracks.map(t => ytmToTrack({ id: t.id, title: t.title, artist: t.artist, album: al.title, dur: t.dur, art: al.art })) })) });
+    tracks: al.tracks.map((t, i) => ({ ...ytmToTrack({ id: t.id, title: t.title, artist: t.artist, album: al.title, dur: t.dur, art: al.art }), trackNumber: i + 1 })) })) });
 function renderList(v, head, list, tok) {
   head(v.label || 'Playlist', v.title, 'Loading…', v.art ? coverTile(v.art, true) : tile('note', v.title));
   xGet(v.key, v.load).then(d => {
