@@ -416,7 +416,7 @@ and it's in.
 people); sound, lyrics, look, discovery, privacy and devices ×10; offline and listening together ×5. That adds up to a
 total out of 100. US prices as of October 2026, from [Spotify](https://www.spotify.com/us/premium/),
 [Apple](https://www.apple.com/apple-music/) and [YouTube](https://www.youtube.com/musicpremium). Spotify, Apple Music and
-YouTube Music are trademarks of their respective owners. NetherFlow is not affiliated with, endorsed by or sponsored by
+YouTube Music are trademarks of their respective owners. NetherFlow is not affiliated with, funded by, authorized by, endorsed by or sponsored by
 any of them. The scores are the author's own opinion.</sub>
 
 <a id="hucla"></a>
@@ -511,7 +511,7 @@ edit together is kept on NetherFlow's own relay (on Cloudflare; for now public r
 
 ## ⚖️ Legal
 
-- NetherFlow is an independent project. It is **not affiliated with, endorsed by or sponsored by** YouTube, Google,
+- NetherFlow is an independent project. It is **not affiliated with, funded by, authorized by, endorsed by or sponsored by** YouTube, Google,
   Apple, Audius, LRCLIB, NetEase, Kugou, LyricFind, the Internet Archive, LibriVox, AutoEQ, any podcast or its publisher,
   or any artist, label or publisher. All names, trademarks, music,
   videos, lyrics and artwork belong to their respective owners.
