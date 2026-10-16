@@ -6641,7 +6641,7 @@ function renderExplore(head, list, tok) {
     libCard(tile('heart', 'Your mix'), 'Your mix', 'Your most played, and more like them', () => openList({ key: 'mix:mine', label: 'Made for you', title: 'Your mix', load: () => makeMix('mine') })),
     libCard(tile('compass', 'Discover'), 'Discover', 'Songs new to you, like the ones you love', () => openList({ key: 'mix:new', label: 'Made for you', title: 'Discover', load: () => makeMix('new') })),
     libCard(tile('clock', mixName('now')), mixName('now'), 'What you play at this time of day', () => openList({ key: 'mix:now:' + daypart(), label: 'Made for you', title: mixName('now'), load: () => makeMix('now') })),
-    libCard(tile('together', 'Blend'), 'Blend', 'Your taste and a friend\'s, in one playlist', blendInvite));
+    libCard(tile('together', 'Mix with a friend'), 'Mix with a friend', 'Your taste and a friend\'s, in one playlist', blendInvite));
   list.push(sectionHead('Made for you'), mine, sectionHead(follows.length ? 'New from artists you follow and play' : 'New from artists you play'), fresh, sectionHead('Charts'), charts, sectionHead('New albums & singles'), albums, sectionHead('Trending'), trend, sectionHead('Moods & genres'), moods);
   const live = () => tok === libTok;
   xGet('fresh', newFromArtists).then(l => live() && fresh.replaceChildren(...(l.length ? l.map(a => albumTile(a, openAlbumPage)) : [el('p', 'empty', 'Play and like some songs: new albums and singles from those artists show up here.')]))).catch(e => live() && fresh.replaceChildren(xFail(e)));
@@ -6734,25 +6734,25 @@ async function checkReleases() {
   } catch {}
 }
 setTimeout(checkReleases, 30000); setInterval(checkReleases, 12 * 3600e3);
-// Blend (Explore): your taste and a friend's in one playlist. Yours goes as a link (a share link of your most played and
-// liked, marked as a blend); theirs, opened here, becomes "Blend · their name": the songs you both love first, then
+// Mix with a friend (Explore): your taste and a friend's in one playlist. Yours goes as a link (a share link of your most
+// played and liked, marked as a mix); theirs, opened here, becomes "Mix with their name": the songs you both love first, then
 // theirs and yours in turn. Nothing goes to a server: the songs ride in the link.
 const songSpec = t => { const id = String(t.trackId), dur = Math.round((t.trackTimeMillis || 0) / 1000);
   return id.startsWith('yt:') ? { yt: t.ytId || id.slice(3), title: t.trackName, artist: t.artistName, dur } : /^\d+$/.test(id) ? { apple: id, title: t.trackName, artist: t.artistName, dur } : { title: t.trackName, artist: t.artistName, dur }; };
 async function blendInvite() {
   const mine = myTaste().slice(0, 40);
-  if (mine.length < 5) return toast('Play and like a few more songs first: a blend is made from your taste');
-  const name = await askName('Blend with a friend', '', 'Make my link', 40, 'Your name (so they know it\'s you)');
+  if (mine.length < 5) return toast('Play and like a few more songs first: a mix with a friend is made from your taste');
+  const name = await askName('Mix with a friend', '', 'Make my link', 40, 'Your name (so they know it\'s you)');
   if (name == null) return;
-  return sharePlaylist(`Blend with ${name.trim() || 'a friend'}`, mine, { b: 1 });
+  return sharePlaylist(`Mix with ${name.trim() || 'a friend'}`, mine, { b: 1 });
 }
 function blendWith(pl) {
-  const friend = pl.name.replace(/^Blend with\s*/i, '').trim() || 'a friend';
+  const friend = pl.name.replace(/^(Mix|Blend) with\s*/i, '').trim() || 'a friend'; // (Blend: what the first test links were called)
   const key = x => x.title ? words(clean(x.title)).join(' ') + '|' + firstArtist(x.artist) : 'apple:' + x.apple;
   const mine = myTaste().slice(0, 60).map(songSpec), theirs = pl.tracks.slice(0, 60), mineKeys = new Set(mine.map(key));
   const out = theirs.filter(x => x.title && mineKeys.has(key(x))), used = new Set(out.map(key)); // (both of you: first)
   for (let i = 0; out.length < 60 && (i < theirs.length || i < mine.length); i++) for (const x of [theirs[i], mine[i]]) if (x && !used.has(key(x))) { used.add(key(x)); out.push(x); }
-  return { ...pl, name: `Blend · ${friend}`, tracks: out.slice(0, 60) };
+  return { ...pl, name: `Mix with ${friend}`, tracks: out.slice(0, 60) };
 }
 // new albums and singles (the last four months) from the artists you play most and like
 async function newFromArtists() {
