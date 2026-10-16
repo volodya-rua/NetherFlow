@@ -1,0 +1,19 @@
+# NetherFlow - Copyright (C) 2026 Volodya.rua - GNU GPL v3 only, with additional terms (credit, name and logo): see LICENSE and NOTICE.
+# NetherFlow's relay on Cloudflare's free plan (see worker.js). Logged in once with `npx wrangler login`, then from this
+# folder: npx wrangler deploy
+name = "netherflow-relay"
+main = "worker.js"
+compatibility_date = "2026-09-01"
+workers_dev = true
+
+# nothing logged or kept about requests
+[observability]
+enabled = false
+
+[[durable_objects.bindings]]
+name = "TOPICS"
+class_name = "Topic"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Topic"]

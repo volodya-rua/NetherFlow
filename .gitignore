@@ -18,3 +18,4 @@ vendor/yt-dlp/yt-dlp
 .idea/
 *.log
 assets-src/
+relay/.wrangler/

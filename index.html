@@ -5678,10 +5678,14 @@ $('qrSave').onclick = () => { // a card to post or send: the name, the code, how
 // ---------- Listen together: up to 10 people hearing the same song at the same moment, each on their own device ----------
 // One starts a session and shares its code; the others join with it. Each plays the song themselves (from YouTube, as
 // ever); the one who started it keeps everyone on the same song at the same moment, playing or paused. Anyone can add a
-// song (it plays next), skip, and send a reaction. There's no server of NetherFlow's: the messages go through a public
-// MQTT relay, end-to-end encrypted with a key made from the code (AES-GCM), so the relay passes on only noise, under a
-// topic that doesn't give the code away. (A guest's pause is their own: Play catches up again.)
+// song (it plays next), skip, and send a reaction. The messages go through NetherFlow's own relay (relay/worker.js, on
+// Cloudflare: it keeps no logs) or, if it can't be reached, a public MQTT relay, end-to-end encrypted with a key made from
+// the code (AES-GCM), so the relay passes on only noise, under a topic that doesn't give the code away. (A guest's pause is their own: Play catches up again.)
+const NF_RELAY = 'wss://netherflow-relay.SUBDOMAIN.workers.dev/mqtt'; // (NetherFlow's own: see relay/worker.js)
 const TG_BROKERS = ['wss://broker.emqx.io:8084/mqtt', 'wss://broker.hivemq.com:8884/mqtt', 'wss://test.mosquitto.org:8081/mqtt'];
+// the relays in the order to try: NetherFlow's own, then the public ones (a backup for now) in an order the code picks,
+// the order older NetherFlows try them in (ponytail: the public ones go once every NetherFlow out there knows ours)
+const relays = seed => [NF_RELAY, ...TG_BROKERS.map((_, i) => TG_BROKERS[(seed + i) % TG_BROKERS.length])];
 const TG_MAX = 10, TG_ABC = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 const tg = { role: null, code: '', key: null, topic: '', conn: null, me: Math.random().toString(36).slice(2, 10), host: '', members: new Map(), state: null,
   offs: [], offset: 0, applying: false, held: false, last: '', lastAt: 0, timers: [], status: '' };
@@ -5693,7 +5697,7 @@ function tgMqtt(url, topic, onMsg, onDrop) {
   const str = s => { const b = tgEnc(s); return [b.length >> 8, b.length & 255, ...b]; };
   const pkt = (type, body) => new Uint8Array([type, ...len(body.length), ...body]);
   return new Promise((res, rej) => {
-    const ws = new WebSocket(url, 'mqtt');
+    const ws = new WebSocket(url === NF_RELAY ? url + '?t=' + encodeURIComponent(topic) : url, 'mqtt');
     ws.binaryType = 'arraybuffer';
     let ok = false, ping = 0, buf = new Uint8Array(0);
     const fail = setTimeout(() => { if (!ok) { ws.close(); rej(new Error('timeout')); } }, 7000);
@@ -5742,11 +5746,11 @@ const tgShow = c => c.match(/.{1,3}/g).join('-');
 // (from: how many of them to pass over first — a guest that found no host on one moves on; see tgJoin)
 async function tgConnect(code, from = 0) {
   Object.assign(tg, await tgKeys(code), { code });
-  const start = parseInt(tg.topic.slice(-4), 16) % TG_BROKERS.length;
-  for (let i = from; i < TG_BROKERS.length; i++) {
+  const list = relays(parseInt(tg.topic.slice(-4), 16));
+  for (let i = from; i < list.length; i++) {
     try {
       let c = null; // (one left on purpose, for another relay, isn't "the connection dropped")
-      c = await tgMqtt(TG_BROKERS[(start + i) % TG_BROKERS.length], tg.topic, b => tgOpen(b).then(m => m && m.f !== tg.me && tgOnMsg(m)), () => { if (tg.conn === c) tgDropped(); });
+      c = await tgMqtt(list[i], tg.topic, b => tgOpen(b).then(m => m && m.f !== tg.me && tgOnMsg(m)), () => { if (tg.conn === c) tgDropped(); });
       tg.relay = i;
       return tg.conn = c;
     } catch {}
@@ -5783,7 +5787,7 @@ async function tgJoin(code) {
   const look = () => setTimeout(async () => {
     if (tg.role !== 'guest' || tg.host) return;
     const old = tg.conn;
-    if (tg.relay + 1 < TG_BROKERS.length) try {
+    if (tg.relay + 1 < relays(0).length) try {
       await tgConnect(code, tg.relay + 1); old?.close();
       if (tg.role === 'guest' && !tg.host) { tgSend({ k: 'hi', n: tgName }); look(); }
       return;
@@ -5901,7 +5905,7 @@ function fitCode(panel) {
   if (b.offsetWidth > room) b.style.fontSize = parseFloat(getComputedStyle(b).fontSize) * room / b.offsetWidth + 'px';
 }
 // ---------- playlists you edit together: a playlist shared by its link, that everyone who has it can add songs to, take
-// them out of and rename, on any phone or PC — kept in step through the same public relays as Listen together,
+// them out of and rename, on any phone or PC — kept in step through the same relays as Listen together,
 // end-to-end encrypted with a key made from the link's code. The relay keeps the latest copy (only noise to it) for
 // whoever opens it next, and every member's app keeps the whole of it, so it's put back if the relay ever loses it. Each
 // song remembers when it was added and when taken out (a name, when it was given), so two people editing at once both
@@ -6001,16 +6005,20 @@ async function collabConnect(code, from = 0) {
   if (had?.conn) return had;
   const c = had || { ...(await collabKeys(code)), conn: null, sent: '', at: -1 };
   collab.set(code, c);
-  const start = [...code].reduce((a, ch) => a + ch.charCodeAt(0), 0) + from;
-  for (let i = 0; i < TG_BROKERS.length && !c.conn; i++) {
-    const at = (start + i) % TG_BROKERS.length;
+  const list = relays([...code].reduce((a, ch) => a + ch.charCodeAt(0), 0)), got = b => collabUnseal(c.key, b).then(s => s && collabGot(code, s));
+  for (let i = from; i < list.length && !c.conn; i++) {
     try {
-      c.conn = await tgMqtt(TG_BROKERS[at], c.topic, b => collabUnseal(c.key, b).then(s => s && collabGot(code, s)),
+      c.conn = await tgMqtt(list[i], c.topic, got,
         () => { c.conn = null; c.sent = ''; if (library.playlists.some(p => p.collab === code)) setTimeout(() => collabConnect(code).then(() => collabSoon(code)).catch(() => {}), 8000); }); // (dropped: back in a while)
-      c.at = at;
+      c.at = i;
     } catch {}
   }
   if (!c.conn) throw new Error('no relay answered');
+  // On ours: kept in step on the public relay too, where members still on an older NetherFlow are (their changes taken
+  // in, ours sent there), till those have all updated (ponytail: goes with the public relays)
+  if (c.at === 0 && !c.old) (async () => {
+    for (const url of list.slice(1)) try { c.old = await tgMqtt(url, c.topic, got, () => { c.old = null; }); c.sent = ''; collabSoon(code); return; } catch {} // (connected: this copy sent there too)
+  })();
   return c;
 }
 function collabGot(code, s) {
@@ -6035,7 +6043,7 @@ async function collabPush(code) {
   if (sig === c.sent) return;
   const bytes = await collabSeal(c.key, snap);
   if (bytes.length > 240000) return toast(`${p.name} is too big to edit together: up to about ${COLLAB_MAX} songs`);
-  c.conn.pub(bytes, true);
+  c.conn.pub(bytes, true); c.old?.pub(bytes, true);
   c.sent = sig;
 }
 function collabChanged() { if (libReady) for (const p of library.playlists) if (p.collab) collabSoon(p.collab); } // (from saveLib)
@@ -6066,7 +6074,7 @@ async function collabJoin(code) {
   if (mine) return openLibrary({ kind: 'playlist', id: mine.id });
   toast('Joining the playlist…');
   let snap = null;
-  for (let from = 0; from < TG_BROKERS.length && !snap; from++) { // (not on the first relay that answers: the others, in turn)
+  for (let from = 0; from < relays(0).length && !snap; from++) { // (not on the first relay that answers: the others, in turn)
     try {
       const c = collab.get(code);
       if (c?.conn && from) { c.conn.close(); c.conn = null; }
@@ -6076,7 +6084,7 @@ async function collabJoin(code) {
     } catch { break; }
   }
   collabWaiting.delete(code);
-  if (!snap) { collab.get(code)?.conn?.close(); collab.delete(code); return toast(navigator.onLine ? 'Couldn\'t find that playlist: someone in it needs to open NetherFlow (the relay only keeps it a while), then try again' : 'You\'re offline: joining needs the internet'); }
+  if (!snap) { collab.get(code)?.conn?.close(); collab.get(code)?.old?.close(); collab.delete(code); return toast(navigator.onLine ? 'Couldn\'t find that playlist: someone in it needs to open NetherFlow (the relay only keeps it a while), then try again' : 'You\'re offline: joining needs the internet'); }
   const p = { id: 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7), name: 'Shared playlist', tracks: [], collab: code, ops: {}, nameAt: 0, nameSeen: 'Shared playlist' };
   collabMerge(p, snap);
   library.playlists.push(p);
@@ -6088,7 +6096,7 @@ async function collabJoin(code) {
 // no longer edited together, here: this copy stays, as an ordinary playlist (the others go on without it)
 function collabLeave(p) {
   const c = collab.get(p.collab);
-  c?.conn?.close(); collab.delete(p.collab); clearTimeout(collabTimers.get(p.collab));
+  c?.conn?.close(); c?.old?.close(); collab.delete(p.collab); clearTimeout(collabTimers.get(p.collab));
   delete p.collab; delete p.ops; delete p.nameAt; delete p.nameSeen;
   saveLib();
 }
