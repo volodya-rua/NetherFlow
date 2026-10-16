@@ -60,6 +60,8 @@ card anyway), about 18 MB smaller, and it updates to Lite.
   video running down your battery
 - **The music video behind the lyrics** (Extreme lyrics, on computers) is sized to your screen and drops to 30 fps on
   battery
+- **Saving for offline goes through FlowStream too:** the same best sound, a song saved in about 2 seconds, and yt-dlp
+  takes over if FlowStream can't get it
 - YouTube Music's lyrics say who they come from
 - A song that won't load is tried a few ways, then skipped with a note saying which, so the music doesn't stop
 
@@ -448,7 +450,7 @@ NetherFlow doesn't host any music, videos or lyrics. It finds them on other serv
 | Audiobooks | [LibriVox](https://librivox.org)'s recordings (public domain in the US), from the [Internet Archive](https://archive.org) |
 | Headphone correction | [AutoEQ](https://github.com/jaakkopasanen/AutoEq)'s published results (MIT), fetched when you pick your headphones |
 | Playlists you make together | NetherFlow's own relay on Cloudflare (public MQTT relays as a backup), end-to-end encrypted with a key from the playlist link |
-| Saving for offline | [yt-dlp](https://github.com/yt-dlp/yt-dlp) downloads the audio from YouTube, as YouTube serves it; podcast episodes and audiobook chapters come as their host serves them |
+| Saving for offline | FlowStream saves the audio from YouTube, as YouTube serves it (its best, Opus), with [yt-dlp](https://github.com/yt-dlp/yt-dlp) as a backup; podcast episodes and audiobook chapters come as their host serves them |
 | Redline's circuits | [OpenStreetMap](https://www.openstreetmap.org/copyright) map data and NASA's SRTM heights, made into `race/` ahead of time |
 
 The desktop app (Windows and Linux) is [Electron](https://www.electronjs.org), the Android app (phones and TVs) is
