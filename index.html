@@ -5899,13 +5899,15 @@ async function importPlaylistNow(link, { quiet = false, sync = false } = {}) {
   };
   if (leftOnly) pl = { name: p.name, tracks: p.left, store: p.store };
   else {
-    say('Reading the playlist…');
+    // (imported before: it's there already, all of it — open at once, and the list read meanwhile for what's new in it)
+    if (again && !quiet) { opened = true; openLibrary({ kind: 'playlist', id: p.id }); say(`${p.name}: looking for new songs in it…`); }
+    else say('Reading the playlist…');
     if (sync) p.synced = Date.now(); // (tried today: not again till tomorrow, read or not)
     const read = o => ours ? readShareLink(link) : api.playlist(link, { gentle: quiet, ...o });
     try {
       // someone waiting: a long list's first 100 or so in at once, playable, its first 500 a moment after, and the rest
       // read meanwhile (a short one: that's all of it — nothing asked for twice)
-      if (!quiet && !ours) for (const first of [100, 500]) {
+      if (!quiet && !ours && !again) for (const first of [100, 500]) { // (imported before: no need — it's all there already)
         const head = await read({ first });
         if (!head?.more) { pl = head; break; }
         if (head.tracks?.length && await fill(head, { had: again || headIn, head: true })) {
