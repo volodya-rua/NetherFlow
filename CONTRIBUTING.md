@@ -2,6 +2,8 @@
 
 Thanks for helping make NetherFlow better. This page covers how to report a problem, suggest an idea, and send a change.
 
+Everyone taking part in issues, discussions and pull requests is expected to follow the [Code of Conduct](CODE_OF_CONDUCT.md).
+
 ## Report a bug
 
 1. Make sure you're on the [latest release](https://github.com/volodya-rua/NetherFlow/releases/latest); the problem may
