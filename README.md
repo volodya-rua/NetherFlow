@@ -58,6 +58,8 @@ card anyway), about 18 MB smaller, and it updates to Lite.
 - **Sound tools** in the Equalizer panel: Crossfeed for headphones, Clarity, Loudness at low volume and Night mode, plus
   360 sound (Around and Orbit). A "Playing now" line says the format and quality of what's playing
 - **Gapless albums:** the next track of the same album starts the moment this one ends
+- **Shuffle:** a toggle next to Repeat, and a Shuffle button beside Play all on playlists, Liked songs, mixes, artists
+  and albums. Every song plays once, Back goes to the one before, and podcasts and audiobooks stay in order
 - **Radio** from any song or artist: songs like it, without end
 - **A mix for the time of day** in Explore (Morning, Afternoon, Evening, Late night), from what you play at that time
 - **Follow artists:** their new releases first in Explore, and a note when they're out
