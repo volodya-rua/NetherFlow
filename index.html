@@ -6050,8 +6050,11 @@ const wantMatch = id => { importWant.push(id); if (importWant.length > 300) impo
 const wantIO = new IntersectionObserver(es => { for (const e of es) if (e.isIntersecting) { wantIO.unobserve(e.target); wantMatch(e.target.dataset.tid); } }, { rootMargin: '400px 0px' });
 const wantNext = () => { for (const t of (shuffling() ? [shufflePick()].filter(Boolean) : queue.slice(qi + 1, qi + 11)).reverse()) if (isPending(t)) wantMatch(t.trackId); };
 const firstArtist = a => words((a || '').split(/,|&| and | feat\.? | x /i)[0]).join(' '); // ("and" or "&": the same band)
+// (and the same version — a remix for a remix, a live take for a live one, never a cover: as videoMatch)
 const fitsSong = (v, s) => { const a = words(clean(v.title)).join(' '), b = words(clean(s.trackName)).join(' '), who = firstArtist(s.artistName), dur = (s.trackTimeMillis || 0) / 1000;
-  return !!a && (a === b || a.startsWith(b + ' ') || b.startsWith(a + ' ')) && (!who || words(v.artist).join(' ').includes(who)) && (!dur || !v.dur || Math.abs(v.dur - dur) <= 8); };
+  const vw = words(v.title), sw = new Set(words(s.trackName));
+  return !!a && (a === b || a.startsWith(b + ' ') || b.startsWith(a + ' ')) && (!who || words(v.artist).join(' ').includes(who)) && (!dur || !v.dur || Math.abs(v.dur - dur) <= 8)
+    && !versionsOf(s.trackName).some(w => !vw.includes(w)) && !vw.some(w => OTHER.has(w) && !sw.has(w)) && !(OTHER_SAID.test(v.title) && !OTHER_SAID.test(s.trackName)); };
 const pendingOf = id => { for (const l of [library.liked, ...library.playlists.map(p => p.tracks)]) { const t = l.find(x => x.trackId === id); if (t) return t; } return null; };
 function matchPump() {
   const until = Math.max(matchWait, importYield, ytLimitedUntil); // (YouTube limiting this connection: no matching meanwhile)
@@ -6481,13 +6484,13 @@ async function tgOnMsg(m) {
       tgMembers(); tgSend({ k: 'state', s: tgNow() }); toast(`${tg.members.get(m.f).name} joined`);
     } else if (m.k === 'ping') tgSend({ k: 'pong', to: m.f, t0: m.t0, th: Date.now() });
     else if (m.k === 'bye') { const n = who?.name; tg.members.delete(m.f); tgMembers(); if (n) toast(`${n} left`); }
-    else if (m.k === 'add' && who && m.track?.trackId) { upNext.push(m.track); queueChanged(); toast(`${who.name} added ${m.track.trackName}`); }
+    else if (m.k === 'add' && who && tgTrack(m.track)) { const tr = tgTrack(m.track); upNext.push(tr); queueChanged(); toast(`${who.name} added ${tr.trackName}`); }
     else if (m.k === 'skip' && who) { nextTrack(); toast(`${who.name} skipped`); }
   } else if (tg.role === 'guest') {
     if (m.k === 'members' && Array.isArray(m.list)) {
       if (!tg.host) { tgSetStatus(''); toast('Joined: listening together'); }
       tg.host = m.f; tg.members = new Map(m.list.map(x => [x.id, { name: String(x.name).slice(0, 30), host: x.id === m.f }])); tgRender();
-    } else if (m.k === 'state' && m.s && (!tg.host || m.f === tg.host)) tg.state = m.s;
+    } else if (m.k === 'state' && m.s && (!tg.host || m.f === tg.host)) { const tr = tgTrack(m.s.track); if (tr) tg.state = { id: tr.trackId, track: tr, vid: /^[\w-]{11}$/.test(m.s.vid || '') ? m.s.vid : '', pos: +m.s.pos || 0, playing: !!m.s.playing, at: +m.s.at || Date.now() }; }
     else if (m.k === 'pong' && m.to === tg.me) { // (the host's clock − ours, from the round trip: the middle of the last few)
       const t1 = Date.now(); tg.offs = [...tg.offs, m.th + (t1 - m.t0) / 2 - t1].slice(-7); tg.offset = [...tg.offs].sort((a, b) => a - b)[tg.offs.length >> 1];
     } else if (m.k === 'full' && m.to === tg.me) { tgSetStatus('That session is full (10 people)'); tgLeave(true); }
@@ -6496,6 +6499,20 @@ async function tgOnMsg(m) {
   if (m.k === 'react' && typeof m.e === 'string') tgFloat(m.e.slice(0, 8), (who?.name || '').slice(0, 30));
 }
 function tgMembers() { tgSend({ k: 'members', list: [...tg.members].map(([id, x]) => ({ id, name: x.name })) }); tgRender(); }
+// A song (or an episode) as someone else in the session sends it, as edit-together takes one (collabTrack): only a song's
+// own fields, its pictures from the stores' own hosts. An episode only from a public web address — never this device's
+// or its network's: someone in a session can't have it fetch a router's page, say. null: not taken.
+const publicUrl = u => { try { const x = new URL(u); return /^https?:$/.test(x.protocol) && !/^(localhost|.*\.localhost|.*\.local|.*\.internal|127\.|10\.|192\.168\.|169\.254\.|172\.(1[6-9]|2\d|3[01])\.|0\.|\[)/i.test(x.hostname) && !/^\d+$/.test(x.hostname); } catch { return false; } };
+function tgTrack(t) {
+  if (!t || typeof t !== 'object') return null;
+  if (t.kind !== 'episode') return collabTrack(t);
+  if (!publicUrl(t.epUrl) || typeof t.trackName !== 'string' || !/^[\w:.\/-]{1,200}$/.test(String(t.trackId))) return null;
+  const o = {};
+  for (const k of TRACK_KEYS) { const v = t[k]; if (typeof v === 'string' ? v.length <= 2000 : typeof v === 'number' && isFinite(v) || typeof v === 'boolean') o[k] = v; }
+  if (o.artworkUrl100 && !/^https:\/\//.test(o.artworkUrl100)) delete o.artworkUrl100;
+  delete o.previewUrl; delete o.ytId;
+  return o;
+}
 // a guest's own choices go to the session: a song picked plays next for everyone, Next skips for everyone
 function tgIntercept(kind, t) {
   if (tg.role !== 'guest' || tg.applying) return false;
@@ -12388,6 +12405,16 @@ console.assert(JSON.stringify(parseLyrics('[00:01.50]hi\n[01:00]yo\nplain')) ===
   const got = [0, 2, 4, 6, 8, 10, 12].map(i => (ls[i].sec.name + ' ' + ls[i].sec.tag).trim()).join(', ');
   console.assert(got === 'Verse 1, Chorus, Verse 2, Chorus ×2, Bridge, Chorus ×3, Outro', 'labelSections broken: ' + got); }
 console.assert(clean('Song (feat. X) [Live] - Remastered 2011') === 'Song', 'clean broken');
+// (what someone in Listen together sends: a song's own fields only; an episode only from a public address)
+console.assert(tgTrack({ kind: 'song', trackId: 'yt:abcdefghijk', trackName: 'Song', artistName: 'A', artworkUrl100: 'https://evil.example/x.jpg', epUrl: 'http://192.168.1.1/' })?.artworkUrl100 === undefined
+  && tgTrack({ kind: 'song', trackId: 'yt:abcdefghijk', trackName: 'Song' })?.trackName === 'Song' && !tgTrack({ kind: 'song', trackId: '../x', trackName: 'S' })
+  && !tgTrack({ kind: 'episode', trackId: 'ep:abc', trackName: 'E', epUrl: 'http://192.168.1.1/reboot' }) && !tgTrack({ kind: 'episode', trackId: 'ep:abc', trackName: 'E', epUrl: 'http://localhost:41739/' })
+  && tgTrack({ kind: 'episode', trackId: 'ep:abc', trackName: 'E', epUrl: 'https://cdn.example.com/ep.mp3', epBook: true })?.epBook === true, 'tgTrack broken');
+// (an imported song's match: its version, never another)
+console.assert(fitsSong({ title: 'Blinding Lights (Remix)', artist: 'The Weeknd', dur: 216 }, { trackName: 'Blinding Lights (Remix)', artistName: 'The Weeknd', trackTimeMillis: 216000 })
+  && !fitsSong({ title: 'Blinding Lights', artist: 'The Weeknd', dur: 210 }, { trackName: 'Blinding Lights (Remix)', artistName: 'The Weeknd', trackTimeMillis: 216000 })
+  && !fitsSong({ title: 'Yellow (Live)', artist: 'Coldplay', dur: 270 }, { trackName: 'Yellow', artistName: 'Coldplay', trackTimeMillis: 269000 })
+  && fitsSong({ title: 'Yellow', artist: 'Coldplay', dur: 267 }, { trackName: 'Yellow', artistName: 'Coldplay', trackTimeMillis: 269000 }), 'fitsSong versions broken');
 // (each of the ten EQ bands is the one pressed at its own column)
 console.assert(EQ.freqs.every((f, i) => Math.round((EQX(i) - EQX(0)) / (EQX(1) - EQX(0))) === i), 'EQ bands broken');
 // (a karaoke label's cover, the original for a remix, the studio take for a live one: not the song; the remix and the
