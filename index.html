@@ -2431,6 +2431,7 @@ function renderTextPanel() {
     ...(skin ? [] : [settingRow('Timeline', BARS, barStyle, setBar, 'The bar under the lyrics that shows where the song is (drag it to move through the song).')]),
     settingRow('Lyrics size', Object.keys(LSIZE), lsize, setLsize, 'Long lines shrink just enough to stay on screen.'),
     settingRow('Lyrics alignment', ALIGNS, lalign, setAlign),
+    settingRow('Romanize lyrics', ['Off', 'On'], romanizeOn ? 'On' : 'Off', setRomanize, 'Show lyrics in another script (Korean, Russian, Greek, Japanese kana) in Latin letters, so you can sing along. On the device, instantly. Chinese and Japanese kanji stay as they are.'),
     stepperRow('Skip back / forward', 1, 60, jump, setJump, ' s', 'The ⟲ ⟳ buttons by the player, and the ← → keys. Hold − or + to count faster.'),
     settingRow('Autoplay', ['On', 'Off'], autoOn ? 'On' : 'Off', setAutoplay, 'When the list runs out, songs like the one playing carry on, as on YouTube Music: from its radio for the song, ranked to what you\'re listening to — the same language and era, songs that fit the last few, more of the artists you play through or like and less of those you skip, never one you just heard.'),
     settingRow('Instant start', ['On', 'Off'], instantOn ? 'On' : 'Off', setInstant, 'The first few seconds of the last 100 songs you played are kept on this device (about 25 MB, never synced), so they start the moment you press play. Off: they\'re deleted, and nothing more is kept.'),
@@ -2834,6 +2835,8 @@ let instantOn = store.get('netherflow.instant') !== 'Off';
 // imported playlists kept in sync with their links (autoImports): songs new in one, added here once a day
 let syncLists = store.get('netherflow.synclists') !== 'Off';
 function setSyncLists(v) { syncLists = v === 'Kept in sync'; store.set('netherflow.synclists', syncLists ? '' : 'Off'); if (syncLists) autoImports(); renderTextPanel(); }
+let romanizeOn = store.get('netherflow.romanize') === 'On';
+function setRomanize(v) { romanizeOn = v === 'On'; store.set('netherflow.romanize', romanizeOn ? 'On' : ''); if (synced && activeIdx >= 0) buildStage(activeIdx); else if (lastLyr) setLines(lastLyr.raw, { yrc: lastLyr.yrc, guide: lastLyr.guide, ref: lastLyr.ref }); renderTextPanel(); }
 function setInstant(v) { instantOn = v === 'On'; store.set('netherflow.instant', instantOn ? '' : 'Off'); if (!instantOn) forgetKept(); renderTextPanel(); }
 const keptG = () => instantOn ? keptEra : 'off';
 function forgetKept() {
@@ -3844,6 +3847,57 @@ function message(big, small) {
 }
 
 // ref: YouTube Music's timed lines for the same recording, to line these up to (see alignTo)
+// ---------- Romanized lyrics: each script transliterated on the device ----------
+const ROMAN = (() => {
+  // Korean: a Hangul syllable block splits into initial, medial, final; each maps to Latin (Revised Romanization)
+  const L = ['g','kk','n','d','tt','r','m','b','pp','s','ss','','j','jj','ch','k','t','p','h'];
+  const V = ['a','ae','ya','yae','eo','e','yeo','ye','o','wa','wae','oe','yo','u','wo','we','wi','yu','eu','ui','i'];
+  const T = ['','g','kk','gs','n','nj','nh','d','l','lg','lm','lb','ls','lt','lp','lh','m','b','bs','s','ss','ng','j','ch','k','t','p','h'];
+  const cyr = { а:'a',б:'b',в:'v',г:'g',д:'d',е:'e',ё:'yo',ж:'zh',з:'z',и:'i',й:'y',к:'k',л:'l',м:'m',н:'n',о:'o',п:'p',р:'r',с:'s',т:'t',у:'u',ф:'f',х:'kh',ц:'ts',ч:'ch',ш:'sh',щ:'shch',ъ:'',ы:'y',ь:'',э:'e',ю:'yu',я:'ya' };
+  const grk = { α:'a',β:'v',γ:'g',δ:'d',ε:'e',ζ:'z',η:'i',θ:'th',ι:'i',κ:'k',λ:'l',μ:'m',ν:'n',ξ:'x',ο:'o',π:'p',ρ:'r',σ:'s',ς:'s',τ:'t',υ:'y',φ:'f',χ:'ch',ψ:'ps',ω:'o',ά:'a',έ:'e',ή:'i',ί:'i',ό:'o',ύ:'y',ώ:'o',ϊ:'i',ϋ:'y',ΐ:'i',ΰ:'y' };
+  // Japanese kana (hiragana + katakana share the layout, 0x60 apart): base syllables; small ya/yu/yo fold onto the i-row
+  const kana = { あ:'a',い:'i',う:'u',え:'e',お:'o',か:'ka',き:'ki',く:'ku',け:'ke',こ:'ko',さ:'sa',し:'shi',す:'su',せ:'se',そ:'so',た:'ta',ち:'chi',つ:'tsu',て:'te',と:'to',な:'na',に:'ni',ぬ:'nu',ね:'ne',の:'no',は:'ha',ひ:'hi',ふ:'fu',へ:'he',ほ:'ho',ま:'ma',み:'mi',む:'mu',め:'me',も:'mo',や:'ya',ゆ:'yu',よ:'yo',ら:'ra',り:'ri',る:'ru',れ:'re',ろ:'ro',わ:'wa',を:'o',ん:'n',が:'ga',ぎ:'gi',ぐ:'gu',げ:'ge',ご:'go',ざ:'za',じ:'ji',ず:'zu',ぜ:'ze',ぞ:'zo',だ:'da',ぢ:'ji',づ:'zu',で:'de',ど:'do',ば:'ba',び:'bi',ぶ:'bu',べ:'be',ぼ:'bo',ぱ:'pa',ぴ:'pi',ぷ:'pu',ぺ:'pe',ぽ:'po',ゔ:'vu' };
+  const small = { ゃ:'ya',ゅ:'yu',ょ:'yo' };
+  const kataToHira = ch => { if (!ch) return ''; const c = ch.codePointAt(0); return c >= 0x30A1 && c <= 0x30F6 ? String.fromCodePoint(c - 0x60) : ch; };
+  const one = ch => {
+    const c = ch.codePointAt(0);
+    if (c >= 0xAC00 && c <= 0xD7A3) { const x = c - 0xAC00; return L[Math.floor(x / 588)] + V[Math.floor((x % 588) / 28)] + T[x % 28]; }
+    const lo = ch.toLowerCase();
+    if (cyr[lo] != null) return ch === lo ? cyr[lo] : cyr[lo].charAt(0).toUpperCase() + cyr[lo].slice(1);
+    if (grk[lo] != null) return ch === lo ? grk[lo] : grk[lo].charAt(0).toUpperCase() + grk[lo].slice(1);
+    return null; // (not a per-char script: kana handled in the word pass; others left as-is)
+  };
+  // a run of Japanese kana, left to right, handling small ゃゅょ, っ (double the next consonant) and ー (long vowel)
+  const jp = word => {
+    let out = '', hold = '';
+    for (let i = 0; i < word.length; i++) {
+      const h = kataToHira(word[i]);
+      if (h === 'っ') { hold = 'DBL'; continue; }
+      if (h === 'ー') { out += out.slice(-1); continue; }
+      let r = kana[h];
+      if (r && small[kataToHira(word[i + 1])]) { r = r.slice(0, -1) + small[kataToHira(word[i + 1])]; i++; } // (きゃ → kya)
+      if (!r) { out += word[i]; hold = ''; continue; }
+      if (hold === 'DBL') { out += r[0]; hold = ''; }
+      out += r;
+    }
+    return out;
+  };
+  const isKana = ch => { const c = kataToHira(ch).codePointAt(0); return (c >= 0x3041 && c <= 0x3096) || ch === 'ー'; };
+  return {
+    has: text => /[\uAC00-\uD7A3\u0400-\u04FF\u0370-\u03FF\u3040-\u30FF]/.test(text),
+    word: w => {
+      if ([...w].some(isKana)) return jp(w);
+      let out = ''; for (const ch of w) { const r = one(ch); out += r == null ? ch : r; } return out;
+    },
+  };
+})();
+const romanize = str => String(str).split(/(\s+)/).map(t => /\s/.test(t) ? t : ROMAN.word(t)).join('');
+const needsRoman = text => romanizeOn && ROMAN.has(text || '');
+// a line as shown: romanized when the setting's on and the script needs it, else as it is (timing kept — words map 1:1)
+function lyrDisp(line) {
+  if (!line || !needsRoman(line.text)) return { text: line?.text || '', words: line?.words ? line.words.map(x => x.w) : null };
+  return { text: romanize(line.text), words: line.words ? line.words.map(x => ROMAN.word(x.w)) : null };
+}
 function setLines(raw, { preview = '', note = 'no lyrics found for this one', yrc = false, guide = '', ref = null } = {}) {
   lastLyr = { raw, yrc, guide, ref };
   let parsed = yrc ? mergeTimed(parseYrc(raw, guide), guide) : parseLyrics(raw);
@@ -3858,7 +3912,7 @@ function setLines(raw, { preview = '', note = 'no lyrics found for this one', yr
   if (!synced) {
     const s = el('div', 'sheet');
     if (preview) s.append(el('div', 'count lbl', `30s clip, lyrics can't sync · ${preview}`));
-    lines.forEach(l => s.append(el('p', '', l.text)));
+    lines.forEach(l => s.append(el('p', '', lyrDisp(l).text)));
     s.onwheel = s.ontouchstart = () => { userScroll = performance.now(); };
     stage.replaceChildren(s);
   }
@@ -3999,10 +4053,11 @@ function buildStage(idx) {
   introDeck = null;
   if (!line) return buildIntro(deck);
   deck.classList.add('lyr'); // lyric lines: these follow the alignment setting
-  deck.append(el('p', 'prev', idx > 0 && lines[idx - 1].text ? lines[idx - 1].text : ' '));
+  deck.append(el('p', 'prev', idx > 0 && lines[idx - 1].text ? lyrDisp(lines[idx - 1]).text : ' '));
 
-  const text = line.text;
-  const words = line.words ? line.words.map(x => x.w) : text ? text.split(/\s+/) : ['●', '●', '●'];
+  const shown = lyrDisp(line);
+  const text = shown.text;
+  const words = shown.words || (text ? text.split(/\s+/) : ['●', '●', '●']);
   // accent = longest word, set in italic serif (only on lines with room for contrast)
   let accent = -1;
   if (text && words.length > 2) accent = words.reduce((best, w, i) => w.length > words[best].length ? i : best, 0);
@@ -4109,7 +4164,7 @@ function syncLyrics() {
   }
   let idx = -1;
   for (let i = 0; i < lines.length && lines[i].t <= t + (i ? LEAD : 0); i++) idx = i; // (the first: when it starts, so at 0:00 it's the intro)
-  if (idx !== activeIdx) { activeIdx = idx; buildStage(idx); $('csLine').textContent = $('dvLine').textContent = lines[idx]?.text || ''; fitCover(); }
+  if (idx !== activeIdx) { activeIdx = idx; buildStage(idx); $('csLine').textContent = $('dvLine').textContent = lyrDisp(lines[idx]).text; fitCover(); }
 
   if (introDeck) { // record slides out + countdown to the first line
     const first = lines[0].t, ip = first > 0 ? Math.min(1, Math.max(0, t / first)) : 1;
