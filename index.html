@@ -712,6 +712,17 @@ kbd { font: inherit; border: 1px solid currentColor; border-radius: 3px; padding
 .ritem.far { animation: none; } /* (far down a long list: no fade of its own — thousands of them were the browser's work each frame) */
 .ritem .row { padding-right: 58px; animation: none; }
 .ritem .rmore { position: absolute; right: 10px; top: 50%; translate: 0 -50%; }
+.lib-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; padding: 12px 12px 8px; }
+.lib-find { flex: 1 1 220px; min-width: 0; padding: 6px 0; background: none; border: 0; border-bottom: 1px solid var(--hair); outline: none;
+  color: var(--ink); caret-color: var(--a); font: italic 400 19px/1.3 var(--serif); }
+.lib-find:focus { border-color: var(--a); }
+.lib-find::-webkit-search-cancel-button { filter: grayscale(1); }
+.lib-edit .ritem .row { padding-right: 104px; }
+.ritem .lgrip { position: absolute; right: 54px; top: 50%; translate: 0 -50%; cursor: grab; touch-action: none; opacity: .6; }
+.ritem .lgrip:hover, .ritem .lgrip:focus-visible, .dragging .lgrip { opacity: 1; color: var(--a); }
+.ritem .lgrip svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
+.ritem.dragging { z-index: 2; transition: none; background: color-mix(in srgb, var(--bg) 85%, var(--a)); box-shadow: 0 10px 30px rgba(0,0,0,.5); }
+.lib-edit .ritem:not(.dragging) { transition: transform .15s; }
 .ritem:has(.row:hover, .row:focus-visible) .rmore { color: var(--bg); }
 .offmark { color: var(--a); margin-right: 6px; opacity: 1; }
 .row:hover .offmark, .row:focus-visible .offmark { color: inherit; }
@@ -3907,19 +3918,35 @@ function mergeTimed(timed, guide) {
   const bw = timed.flatMap(l => l.words || []).map(w => ({ ...w, k: letters(w.w) }));
   const n = aw.length, m = bw.length;
   if (!n || !m) return timed;
-  // the same word: the same letters, or one the other plus a letter or two ("thing"/"things", "goin"/"going")
-  const same = (a, b) => !!a.k && !!b.k && Math.abs(b.t - a.t) < 12 && (a.k === b.k ||
-    Math.min(a.k.length, b.k.length) >= 3 && Math.abs(a.k.length - b.k.length) <= 2 && (a.k.startsWith(b.k) || b.k.startsWith(a.k)));
+  // the same word: the same letters, or one the other plus a letter or two ("thing"/"things", "goin"/"going"), and near
+  // enough in time (near: a and b's times)
+  const word = (a, b) => !!a.k && !!b.k && (a.k === b.k || Math.min(a.k.length, b.k.length) >= 3 && Math.abs(a.k.length - b.k.length) <= 2 && (a.k.startsWith(b.k) || b.k.startsWith(a.k)));
   const L = new Uint16Array((n + 1) * (m + 1)), at = (i, j) => i * (m + 1) + j; // L: the longest shared run from (i, j) on
-  for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--)
-    L[at(i, j)] = same(aw[i], bw[j]) ? L[at(i + 1, j + 1)] + 1 : Math.max(L[at(i + 1, j)], L[at(i, j + 1)]);
-  let matched = 0;
-  for (let i = 0, j = 0; i < n && j < m;) {
-    if (same(aw[i], bw[j]) && L[at(i, j)] === L[at(i + 1, j + 1)] + 1) { aw[i].b = bw[j]; matched++; i++; j++; }
-    else if (L[at(i + 1, j)] >= L[at(i, j + 1)]) i++; else j++;
-  }
-  if (matched < n * .5) return timed;
-  const runs = aw.filter(x => x.first && x.b).map(x => x.b.t - x.t).sort((a, b) => a - b), off = runs[runs.length >> 1] || 0;
+  const pair = near => {
+    const same = (a, b) => near(a.t, b.t) && word(a, b);
+    for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--)
+      L[at(i, j)] = same(aw[i], bw[j]) ? L[at(i + 1, j + 1)] + 1 : Math.max(L[at(i + 1, j)], L[at(i, j + 1)]);
+    let matched = 0;
+    for (const x of aw) delete x.b;
+    for (let i = 0, j = 0; i < n && j < m;) {
+      if (same(aw[i], bw[j]) && L[at(i, j)] === L[at(i + 1, j + 1)] + 1) { aw[i].b = bw[j]; matched++; i++; j++; }
+      else if (L[at(i + 1, j)] >= L[at(i, j + 1)]) i++; else j++;
+    }
+    return matched;
+  };
+  const median = () => { const r = aw.filter(x => x.first && x.b).map(x => x.b.t - x.t).sort((a, b) => a - b); return { runs: r, off: r[r.length >> 1] || 0 }; };
+  // paired within 12 s; then again within 2.5 s of how far the two run apart, so a chorus line isn't paired with its
+  // next time round (measured: "Dynamite", "How You Like That" — half their lines 1.5–13 s off), unless that pairs
+  // too few (a version that drifts)
+  if (pair((a, b) => Math.abs(b - a) < 12) < n * .5) return timed;
+  const first = median().off;
+  if (pair((a, b) => Math.abs(b - a - first) < 2.5) < n * .5) pair((a, b) => Math.abs(b - a) < 12);
+  let { runs, off } = median();
+  // a line whose words came from more than 1.5 s off the rest of the song (a stretch of another arrangement — measured,
+  // "Dynamite"'s middle 13 s late in the word source): its words' timing dropped, the line at its own time, its words
+  // spread by the song's pace (see paceOf) — not a minute of words lit up 13 s late
+  byLine.forEach(ws => { const k = ws.findIndex(x => x.b); if (k >= 0 && Math.abs(ws[k].b.t - ws[k].t - k * .25 - off) > 1.5) for (const x of ws) delete x.b; });
+  ({ runs, off } = median());
   // The word timing, when it's out of line with the line-timed lyrics' (its lines' first words usually 0–0.4 s after
   // their times), moved onto them, 0.2 s after: those agree with YouTube Music's own, hand-timed to the very upload —
   // measured on rap songs, LRCLIB within ~0.2 s of it, while a word source ran 1.9 s late ("In Da Club", another
@@ -5143,7 +5170,7 @@ async function playTrack(t, term = '', queued = false, stay = false, mixed = nul
       // the next. YouTube limiting this connection: stop (another would be refused the same way).
       const tryList = async list => { let picked = null; ytQueue = list.slice(1); for (let v = list[0], n = 0; v && !fsVid && id === loadId && n < 3; v = ytQueue.shift(), n++) { const e = await fsPlay(v, id).then(() => null, e => e); if (fsVid) { picked = v; break; } if (noteLimited(e)) break; } return picked; };
       vid = await tryList(vids);
-      if (!fsVid && vids[0]?.cache && !ytLimited() && id === loadId) { const real = await videosFor(t).catch(() => []); if (real[0] && !real[0].cache) vid = await tryList(real); } // (the shared id didn't fit: a real search, and that's remembered)
+      if (!fsVid && vids[0]?.cache && !ytLimited() && id === loadId) { forgetVids(t); const real = await videosFor(t).catch(() => []); if (real[0] && !real[0].cache) vid = await tryList(real); } // (the shared id didn't fit: a real search, and that's remembered)
       if (id !== loadId) return;
       if (fsVid) source = '◆ full song';
       else if (ytLimited()) vid = null; // (not on to the next: it'd be refused the same way — see below)
@@ -7525,7 +7552,6 @@ function renderBook(v, head, list, tok) {
 }
 function renderLibrary() {
   const v = libView, list = [], acts = [], tok = ++libTok;
-  let more = null; // (a long list: its first rows at once, the rest added a chunk at a time, so it opens straight away)
   const head = (kind, name, sub, art) => { // art: the sleeve, with a record slid out behind it
     $('libKind').textContent = kind; $('libName').replaceChildren(name); $('libSub').textContent = sub; $('libArt').replaceChildren(el('i', 'vinyl'), art);
   };
@@ -7573,8 +7599,8 @@ function renderLibrary() {
       v.kind === 'liked' ? tile('heart', 'Liked songs', tracks.length) : v.kind === 'saved' ? tile('down', 'Saved offline', tracks.length) : mosaic(tracks, listTile(p)));
     if (tracks.length) {
       const play = el('button', 'pill', 'Play all'), mix = el('button', 'pill ghost', 'Shuffle');
-      play.onclick = () => { queue = tracks.slice(); queueFrom = p ? { p, queue } : null; playTrack(queue[0]); };
-      mix.onclick = () => shuffleList(tracks.slice(), p || null);
+      play.onclick = () => { queue = listView(v, tracks).slice(); queueFrom = p ? { p, queue } : null; playTrack(queue[0]); }; // (as it's shown: found, sorted)
+      mix.onclick = () => shuffleList(listView(v, tracks).slice(), p || null);
       acts.push(play, mix);
       if (v.kind !== 'saved') {
         const share = el('button', 'pill ghost');
@@ -7632,27 +7658,104 @@ function renderLibrary() {
       }
     }
     if ((v.kind === 'saved' || tracks.some(t => dlJob(t.trackId))) && (dl.cur.length || dl.queue.length)) list.push(sectionHead('Downloading now'), ...dlRows());
-    const opts = p ? { playlist: p } : {};
-    const rowOf = (s, i) => s.kind === 'episode' ? epRow(s, i, tracks) : row(s, i, tracks, opts); // (a saved episode or chapter: as on its show's page)
+    const opts = p ? { playlist: p } : {}, box = el('div', 'lib-rows');
+    // (its rows as found and sorted — see listView — the first 200 at once, the rest a chunk at a time, so a long list
+    // opens straight away; in Edit order, each with a handle to drag it by)
+    const drawRows = () => {
+      const shown = listView(v, tracks), edit = v.edit && p && shown === tracks, my = ++rowsTok;
+      box.classList.toggle('lib-edit', !!edit);
+      const rowOf = (s, i) => { const r = s.kind === 'episode' ? epRow(s, i, shown) : row(s, i, shown, opts); if (edit) r.append(gripFor(r, p, i, drawRows)); return r; }; // (a saved episode or chapter: as on its show's page)
+      box.replaceChildren(...(shown.length ? shown.slice(0, 200).map(rowOf) : [el('p', 'empty', 'No songs here match that.')]));
+      (async () => { for (let k = 200; k < shown.length; k += 120) { await new Promise(r => setTimeout(r, 16)); if (my !== rowsTok || tok !== libTok) return; box.append(...shown.slice(k, k + 120).map((s, i) => rowOf(s, k + i))); } })();
+    };
     if (!tracks.length) list.push(el('p', 'empty', v.kind === 'saved' ? 'Nothing saved yet. Tap ••• on any song, then Save for offline.' : 'No songs yet. Tap ••• on any song to add it here.'));
-    list.push(...tracks.slice(0, 200).map(rowOf));
-    if (tracks.length > 200) more = { n: tracks.length, rows: k => tracks.slice(k, k + 120).map((s, i) => rowOf(s, k + i)) };
+    else { if (tracks.length > 1 && v.kind !== 'saved') list.push(libTools(v, p, drawRows)); list.push(box); drawRows(); }
   }
   $('libActs').replaceChildren(...acts);
   $('libList').replaceChildren(...list);
-  if (more) (async () => {
-    for (let k = 200; k < more.n; k += 120) { await new Promise(r => setTimeout(r, 16)); if (tok !== libTok) return; $('libList').append(...more.rows(k)); }
-  })();
+}
+// A list's tools (a playlist, Liked songs): a song in it found as you type (every word, each the start of one of the
+// song's); its order — its own (Custom), or by title, artist, the newest added first, length (kept for each list, on
+// this device); and, in its own order, Edit order: each song moved by its handle (dragged, or up and down by the keys).
+const SORTS = ['Custom', 'Title', 'Artist', 'Added', 'Length'], sortKey = v => v.kind + ':' + (v.id || '');
+let libSorts = (() => { try { return JSON.parse(store.get('netherflow.libsort') || '{}') || {}; } catch { return {}; } })(), rowsTok = 0;
+const byName = new Intl.Collator(undefined, { sensitivity: 'base', numeric: true });
+function listView(v, tracks) {
+  const sort = libSorts[sortKey(v)] || 'Custom', want = words(v.q || '');
+  let out = want.length ? tracks.filter(t => { const have = words(`${t.trackName} ${t.artistName} ${t.collectionName || ''}`); return want.every(w => have.some(x => x.startsWith(w))); }) : tracks;
+  if (sort === 'Title') out = [...out].sort((a, b) => byName.compare(clean(a.trackName || ''), clean(b.trackName || '')));
+  else if (sort === 'Artist') out = [...out].sort((a, b) => byName.compare(a.artistName || '', b.artistName || '') || byName.compare(a.trackName || '', b.trackName || ''));
+  else if (sort === 'Length') out = [...out].sort((a, b) => (a.trackTimeMillis || 0) - (b.trackTimeMillis || 0));
+  else if (sort === 'Added' && v.kind !== 'liked') out = [...out].reverse(); // (a playlist's newest are at its end; Liked songs' at its start already)
+  return out;
+}
+function libTools(v, p, redraw) {
+  const bar = el('div', 'lib-tools'), find = el('input', 'lib-find'), seg = el('div', 'seg'), edit = el('button', 'pill ghost'), k = sortKey(v);
+  Object.assign(find, { type: 'search', placeholder: p ? 'Find in this playlist' : 'Find in your liked songs', value: v.q || '', autocomplete: 'off', spellcheck: false });
+  find.setAttribute('aria-label', find.placeholder);
+  seg.setAttribute('role', 'group'); seg.setAttribute('aria-label', 'Order');
+  const canEdit = () => !!p && !libSorts[k] && !(v.q || '').trim(), show = () => { edit.hidden = !canEdit(); edit.textContent = v.edit ? 'Done' : 'Edit order'; };
+  const sorts = () => seg.replaceChildren(...SORTS.map(x => { const b = el('button', '', x); b.setAttribute('aria-pressed', (libSorts[k] || 'Custom') === x);
+    b.onclick = () => { if (x === 'Custom') delete libSorts[k]; else libSorts[k] = x; store.set('netherflow.libsort', JSON.stringify(libSorts)); sorts(); show(); redraw(); }; return b; }));
+  let t = 0;
+  find.oninput = () => { clearTimeout(t); t = setTimeout(() => { v.q = find.value; show(); redraw(); }, 120); };
+  edit.onclick = () => { v.edit = !v.edit; show(); redraw(); };
+  sorts(); show();
+  bar.append(find, seg, edit);
+  return bar;
+}
+function gripFor(r, p, i, redraw) {
+  const g = el('button', 'icon-btn lgrip');
+  g.innerHTML = '<svg viewBox="0 0 24 24"><path d="M5 8h14M5 12h14M5 16h14"/></svg>';
+  g.setAttribute('aria-label', `Move ${p.tracks[i].trackName}: drag it, or up and down`);
+  g.onpointerdown = e => dragLib(e, r, p, i, redraw);
+  g.onkeydown = e => {
+    if (!/^Arrow(Up|Down)$/.test(e.key)) return;
+    e.preventDefault(); e.stopPropagation();
+    const to = i + (e.key === 'ArrowUp' ? -1 : 1);
+    if (to < 0 || to >= p.tracks.length) return;
+    p.tracks.splice(to, 0, ...p.tracks.splice(i, 1)); saveLib(false); redraw();
+    $('libList').querySelectorAll('.lgrip')[to]?.focus();
+  };
+  return g;
+}
+// a song dragged up or down its playlist by its handle: the rows it passes slide out of its way, the list scrolls at
+// its top and bottom edges, and it's put where it's let go
+function dragLib(e, row, p, i, redraw) {
+  e.preventDefault();
+  const grip = e.currentTarget, box = $('libList'), b = box.getBoundingClientRect(), rows = [...row.parentElement.children];
+  const pitch = rows.length > 1 ? rows[1].offsetTop - rows[0].offsetTop : row.offsetHeight, y0 = e.clientY, s0 = box.scrollTop;
+  let to = i, was = i;
+  try { grip.setPointerCapture(e.pointerId); } catch {}
+  row.classList.add('dragging');
+  const move = ev => {
+    if (ev.clientY < b.top + 48) box.scrollTop -= 14; else if (ev.clientY > b.bottom - 48) box.scrollTop += 14;
+    const dy = ev.clientY - y0 + box.scrollTop - s0;
+    to = Math.max(0, Math.min(rows.length - 1, i + Math.round(dy / pitch)));
+    row.style.transform = `translateY(${Math.max(-i * pitch, Math.min((rows.length - 1 - i) * pitch, dy))}px)`;
+    for (let k = Math.min(i, to, was); k <= Math.max(i, to, was); k++) if (rows[k] !== row) rows[k].style.transform = k > i && k <= to ? `translateY(${-pitch}px)` : k < i && k >= to ? `translateY(${pitch}px)` : ''; // (only the rows it's passed)
+    was = to;
+  };
+  const end = () => {
+    grip.removeEventListener('pointermove', move); grip.removeEventListener('pointerup', end); grip.removeEventListener('pointercancel', end);
+    if (to !== i) { p.tracks.splice(to, 0, ...p.tracks.splice(i, 1)); saveLib(false); }
+    const at = box.scrollTop; redraw(); box.scrollTop = at;
+  };
+  grip.addEventListener('pointermove', move); grip.addEventListener('pointerup', end); grip.addEventListener('pointercancel', end);
 }
 $('openLib').onclick = () => openLibrary();
 // a cover YouTube's image server turned away (a few at a time, when a page asks for many): once more, a moment later, by
-// another of its addresses (a size a pixel smaller; a thumbnail without its signed extras), not the failed one again
-$('libList').addEventListener('error', e => {
+// another of its addresses (a size a pixel smaller; a thumbnail without its signed extras), not the failed one again;
+// that failing too, or another server's: the row's next cover (data-alt: the full-size one, the video's own picture)
+document.addEventListener('error', e => {
   const i = e.target;
-  if (i.tagName !== 'IMG') return;
+  if (i.tagName !== 'IMG' || !i.closest('#libList, .results, .ritem')) return;
   i.style.visibility = 'hidden'; // (no broken-picture sign meanwhile: the tile's own ground)
-  const n = +(i.dataset.again || 0);
-  if (n >= 2) return;
+  const n = +(i.dataset.again || 0), alt = (i.dataset.alt || '').split(' ').filter(Boolean);
+  if (n >= 2 || !/googleusercontent\.com|ytimg\.com/.test(i.src)) {
+    if (alt.length) { i.dataset.alt = alt.slice(1).join(' '); i.dataset.again = 0; i.addEventListener('load', () => { i.style.visibility = ''; }, { once: true }); i.src = alt[0]; }
+    return;
+  }
   i.dataset.again = n + 1;
   i.addEventListener('load', () => { i.style.visibility = ''; }, { once: true });
   setTimeout(() => {
@@ -7909,6 +8012,12 @@ async function runSearch(term) {
     const albumHit = albums.find(a => core(a.collectionName.replace(/ - (Single|EP)$/i, '')) === core(asked) && songs.slice(0, 25).some(s => s.artistId === a.artistId)); // (by an artist whose songs came up)
     if (exact && albumHit && !songs.slice(0, 25).some(s => s.artistId === exact.artistId)) exact = null;
     const all = exact ? await artistSongs(exact, ctl.signal).catch(quiet) : [];
+    // (a song Apple found that YouTube Music found too — the label's own upload, its length to the 2 s: that upload kept
+    // for when it's played, so it starts with no search of its own, ~0.5–1 s sooner; one that won't play is searched for)
+    for (const s of [...songs, ...all]) {
+      const y = !vidCache.has(s.trackId) && !isModded(s) && ytm.find(v => songKey(v) === songKey(s) && Math.abs(v.trackTimeMillis - s.trackTimeMillis) <= 2000);
+      if (y) vidCache.set(s.trackId, Promise.resolve([{ id: y.ytId, dur: y.trackTimeMillis / 1000, title: y.ytTitle, channel: y.artistName + ' - Topic', cache: true }]));
+    }
     if (!all.length) exact = null;
     // artists: the one named, or ones whose songs came up ("weeknd": The Weeknd) — not just any whose name has the word in it
     artists = artists.filter(a => a === exact || songs.slice(0, 25).some(s => s.artistId === a.artistId));
@@ -8117,10 +8226,10 @@ function row(s, i, list, from = {}) {
   wrap.style.setProperty('--i', i);
   const img = el('img');
   img.alt = ''; img.loading = 'lazy';
-  // (one that won't load: the full-size one, then a YouTube song's own picture — not an empty square)
+  // (one that won't load: the full-size one, then a YouTube song's own picture — data-alt, see the covers' retry below)
   const covers = [saved.get(s.trackId)?.coverUrl || artUrl(s, 120), s.artworkUrl100, s.ytId && `https://i.ytimg.com/vi/${s.ytId}/mqdefault.jpg`].filter((u, k, a) => u && a.indexOf(u) === k);
-  img.onerror = () => { covers.shift(); if (covers[0]) img.src = covers[0]; };
   if (covers[0]) img.src = covers[0];
+  if (covers.length > 1) img.dataset.alt = covers.slice(1).join(' ');
   const txt = el('span'), sub = el('small');
   wrap.dataset.tid = s.trackId;
   if (isPending(s)) wantIO.observe(wrap); // (not matched yet, and on screen: matched first)
