@@ -7979,7 +7979,10 @@ async function runSearch(term) {
     // joining them when they come: it waited for all of it, 1–3 s with nothing to see)
     let whole = false;
     pSongs.then(l => { if (!whole && !ctl.signal.aborted && l.length) showResults({ list: oneEach(originalsFirst(l)), label: 'Songs', term }, 'All', true); }, () => {});
-    let [songs, artists, ytm, albums] = await Promise.all([pSongs, searchArtists(term, ctl.signal), searchYtm(term), searchAlbums(term, ctl.signal)]);
+    // (an artist typed by name: all their songs asked for the moment the artist's known — ~0.5 s — not after the rest)
+    const bare = x => words(x).filter(w => w !== 'the').join(' '), pArtists = searchArtists(term, ctl.signal);
+    const early = pArtists.then(as => { const a = as.find(a => bare(a.artistName) === bare(term)); if (!a) return null; const songs = artistSongs(a, ctl.signal).catch(quiet); songs.catch(() => {}); return { a, songs }; }, () => null); // (typed on before it's needed: not an error)
+    let [songs, artists, ytm, albums] = await Promise.all([pSongs, pArtists, searchYtm(term), searchAlbums(term, ctl.signal)]);
     whole = true;
     if (ctl.signal.aborted) return;
     // A typo: Apple's search finds only the words as typed, YouTube Music's says what was meant ("levitatng" →
@@ -8011,66 +8014,77 @@ async function runSearch(term) {
     // (an album of that very name, and none of the songs found that artist's — "future nostalgia": the album, not a band)
     const albumHit = albums.find(a => core(a.collectionName.replace(/ - (Single|EP)$/i, '')) === core(asked) && songs.slice(0, 25).some(s => s.artistId === a.artistId)); // (by an artist whose songs came up)
     if (exact && albumHit && !songs.slice(0, 25).some(s => s.artistId === exact.artistId)) exact = null;
-    const all = exact ? await artistSongs(exact, ctl.signal).catch(quiet) : [];
-    // (a song Apple found that YouTube Music found too — the label's own upload, its length to the 2 s: that upload kept
-    // for when it's played, so it starts with no search of its own, ~0.5–1 s sooner; one that won't play is searched for)
-    for (const s of [...songs, ...all]) {
-      const y = !vidCache.has(s.trackId) && !isModded(s) && ytm.find(v => songKey(v) === songKey(s) && Math.abs(v.trackTimeMillis - s.trackTimeMillis) <= 2000);
-      if (y) vidCache.set(s.trackId, Promise.resolve([{ id: y.ytId, dur: y.trackTimeMillis / 1000, title: y.ytTitle, channel: y.artistName + ' - Topic', cache: true }]));
-    }
-    if (!all.length) exact = null;
-    // artists: the one named, or ones whose songs came up ("weeknd": The Weeknd) — not just any whose name has the word in it
-    artists = artists.filter(a => a === exact || songs.slice(0, 25).some(s => s.artistId === a.artistId));
-    const R = { term, mine: searchLibrary(term), artists, songsAll: songs, albums, extra: [] };
-    // (the songs YouTube Music also found for it — its search knows what's played — ahead of those it didn't; remixes,
-    // live takes and covers still after the originals)
-    // (then the other songs of the artists it found, then the rest, and last the ones found only by their album's name —
-    // "after hours": a playlist album "After Hours Drift" full of other songs)
-    const known = new Set(ytm.map(songKey)), knownBy = new Set(ytm.map(s => songKey(s).split('|')[1])), typed = words(asked);
-    const named = s => words(s.trackName + ' ' + s.artistName).some(w => typed.includes(w));
-    const rank = s => meant && isMeant(s) ? -1 : isModded(s) ? 4 : known.has(songKey(s)) ? 0 : knownBy.has(songKey(s).split('|')[1]) ? 1 : named(s) ? 2 : 3;
-    let list = oneEach(originalsFirst(songs)).map((s, i) => [s, i]).sort((a, b) => rank(a[0]) - rank(b[0]) || a[1] - b[1]).map(x => x[0]), label = 'Songs';
-    if (exact) { // (most played first: YouTube Music's own order for the artist, then the store's)
-      const played = new Map(ytm.map((s, i) => [songKey(s), i]));
-      list = originalsFirst(all).map((s, i) => [s, (isModded(s) ? undefined : played.get(songKey(s))) ?? 1e3 + i]).sort((a, b) => a[1] - b[1]).map(x => x[0]); label = `All songs by ${exact.artistName}`;
-    }
-    // (albums by the artists of the songs found first; karaoke, tribute and cover albums left out)
-    const by = new Set(list.slice(0, 10).map(s => s.artistId));
-    R.albums = albums.filter(a => !isModded({ trackName: a.collectionName, artistName: a.artistName, collectionName: a.collectionName })).sort((a, b) => by.has(b.artistId) - by.has(a.artistId));
-    Object.assign(R, { list, label, exact });
-    // other songs matching the words too (say, songs titled like the artist)
-    const others = exact && label !== 'Songs' ? oneEach(originalsFirst(songs.filter(s => s.artistId !== exact.artistId))).slice(0, 10) : [];
-    if (others.length) R.extra.push({ head: 'Other songs', list: others });
-    // weak matches from Apple, better ones on YouTube Music or YouTube: those first
-    const add = (head, l, ahead) => R.extra[ahead ? 'unshift' : 'push']({ head, list: l, ahead });
-    const yl = oneEach(originalsFirst(extra));
-    if (meant) yl.sort((a, b) => isMeant(b) - isMeant(a)); // (the song meant first here too: not after songs that only have the word typed)
-    if (yl.length && !exact) add(songs.length ? 'More on YouTube Music' : 'Found on YouTube Music', yl, extra.match > songs.match && songs.match < .6 || meant === top); // (the song meant: only there)
-    // Still few songs, or none that really match what was typed: YouTube has nearly everything else.
-    let more = [];
-    if (!exact && (list.length + yl.length < 10 || Math.max(songs.match, extra.match) < 0.6)) { // (counted once each)
-      const seen = new Set([...songs, ...yl].map(songKey));
-      more = originalsFirst((await searchYouTube(asked)).filter(s => !yl.some(y => y.ytId === s.ytId) && !seen.has(songKey(s))));
+    // an artist typed: shown at once with their songs the search found (their full list takes ~2 s more: 200 songs
+    // from Apple), then again with all of them as they come in, where it's scrolled to and which chips kept
+    const pre = await early, fullP = exact ? (pre?.a.artistId === exact.artistId ? pre.songs : artistSongs(exact, ctl.signal).catch(quiet)) : Promise.resolve([]);
+    const soon = exact ? songs.filter(s => s.artistId === exact.artistId) : [];
+    let settled = false; fullP.then(() => { settled = true; }, () => {});
+    await null;
+    for (const quick of soon.length >= 4 && !settled ? [true, false] : [false]) {
+      const all = quick ? soon : await fullP;
       if (ctl.signal.aborted) return;
-      if (more.length) add(songs.length + yl.length ? 'More on YouTube' : 'Found on YouTube', more, songs.match < 0.4 && !yl.length);
+      // (a song Apple found that YouTube Music found too — the label's own upload, its length to the 2 s: that upload kept
+      // for when it's played, so it starts with no search of its own, ~0.5–1 s sooner; one that won't play is searched for)
+      for (const s of [...songs, ...all]) {
+        const y = !vidCache.has(s.trackId) && !isModded(s) && ytm.find(v => songKey(v) === songKey(s) && Math.abs(v.trackTimeMillis - s.trackTimeMillis) <= 2000);
+        if (y) vidCache.set(s.trackId, Promise.resolve([{ id: y.ytId, dur: y.trackTimeMillis / 1000, title: y.ytTitle, channel: y.artistName + ' - Topic', cache: true }]));
+      }
+      let ex = all.length ? exact : null;
+      // artists: the one named, or ones whose songs came up ("weeknd": The Weeknd) — not just any whose name has the word in it
+      const arts = artists.filter(a => a === ex || songs.slice(0, 25).some(s => s.artistId === a.artistId));
+      const R = { term, mine: searchLibrary(term), artists: arts, songsAll: songs, albums, extra: [] };
+      // (the songs YouTube Music also found for it — its search knows what's played — ahead of those it didn't; remixes,
+      // live takes and covers still after the originals)
+      // (then the other songs of the artists it found, then the rest, and last the ones found only by their album's name —
+      // "after hours": a playlist album "After Hours Drift" full of other songs)
+      const known = new Set(ytm.map(songKey)), knownBy = new Set(ytm.map(s => songKey(s).split('|')[1])), typed = words(asked);
+      const named = s => words(s.trackName + ' ' + s.artistName).some(w => typed.includes(w));
+      const rank = s => meant && isMeant(s) ? -1 : isModded(s) ? 4 : known.has(songKey(s)) ? 0 : knownBy.has(songKey(s).split('|')[1]) ? 1 : named(s) ? 2 : 3;
+      let list = oneEach(originalsFirst(songs)).map((s, i) => [s, i]).sort((a, b) => rank(a[0]) - rank(b[0]) || a[1] - b[1]).map(x => x[0]), label = 'Songs';
+      if (ex) { // (most played first: YouTube Music's own order for the artist, then the store's)
+        const played = new Map(ytm.map((s, i) => [songKey(s), i]));
+        list = originalsFirst(all).map((s, i) => [s, (isModded(s) ? undefined : played.get(songKey(s))) ?? 1e3 + i]).sort((a, b) => a[1] - b[1]).map(x => x[0]); label = `All songs by ${ex.artistName}`;
+      }
+      // (albums by the artists of the songs found first; karaoke, tribute and cover albums left out)
+      const by = new Set(list.slice(0, 10).map(s => s.artistId));
+      R.albums = albums.filter(a => !isModded({ trackName: a.collectionName, artistName: a.artistName, collectionName: a.collectionName })).sort((a, b) => by.has(b.artistId) - by.has(a.artistId));
+      Object.assign(R, { list, label, exact: ex });
+      // other songs matching the words too (say, songs titled like the artist)
+      const others = ex && label !== 'Songs' ? oneEach(originalsFirst(songs.filter(s => s.artistId !== ex.artistId))).slice(0, 10) : [];
+      if (others.length) R.extra.push({ head: 'Other songs', list: others });
+      // weak matches from Apple, better ones on YouTube Music or YouTube: those first
+      const add = (head, l, ahead) => R.extra[ahead ? 'unshift' : 'push']({ head, list: l, ahead });
+      const yl = oneEach(originalsFirst(extra));
+      if (meant) yl.sort((a, b) => isMeant(b) - isMeant(a)); // (the song meant first here too: not after songs that only have the word typed)
+      if (yl.length && !ex) add(songs.length ? 'More on YouTube Music' : 'Found on YouTube Music', yl, extra.match > songs.match && songs.match < .6 || meant === top); // (the song meant: only there)
+      // Still few songs, or none that really match what was typed: YouTube has nearly everything else.
+      let more = [];
+      if (!ex && (list.length + yl.length < 10 || Math.max(songs.match, extra.match) < 0.6)) { // (counted once each)
+        const seen = new Set([...songs, ...yl].map(songKey));
+        more = originalsFirst((await searchYouTube(asked)).filter(s => !yl.some(y => y.ytId === s.ytId) && !seen.has(songKey(s))));
+        if (ctl.signal.aborted) return;
+        if (more.length) add(songs.length + yl.length ? 'More on YouTube' : 'Found on YouTube', more, songs.match < 0.4 && !yl.length);
+      }
+      const n = list.length + (ex ? 0 : yl.length) + more.length;
+      // the top result: the artist typed; else the best song — YouTube Music's or YouTube's when Apple's were weak and went after
+      // (a song named exactly as typed beats an album of that name)
+      const ytFirst = extra.match > songs.match && songs.match < .6, titled = !meant && list.find(s => !isModded(s) && core(clean(s.trackName)) === core(asked));
+      const best = ex ? null : meant && [...list, ...yl].find(isMeant) || titled || (ytFirst ? yl[0] : list[0]) || yl[0] || more[0], album = !ex && !titled && !meant && albumHit;
+      if (ex || album || best) R.top = () => topHit(best, ex ? all : yl.includes(best) ? yl : more.includes(best) ? more : list.length ? list : yl.length ? yl : more, ex, term, album);
+      showResults(R, quick ? 'All' : shownFilter, false, !quick);
+      const note = fixed ? ` · showing results for “${fixed}”` : '';
+      $('sstat').textContent = n ? `${n} songs${note} · ${fullSongs ? 'full songs' : FILE_NOTE}` : searchFailed ? "Couldn't reach the music catalog: check the connection." : `Nothing${note}. Try another spelling.`;
     }
-    const n = list.length + (exact ? 0 : yl.length) + more.length;
-    // the top result: the artist typed; else the best song — YouTube Music's or YouTube's when Apple's were weak and went after
-    // (a song named exactly as typed beats an album of that name)
-    const ytFirst = extra.match > songs.match && songs.match < .6, titled = !meant && list.find(s => !isModded(s) && core(clean(s.trackName)) === core(asked));
-    const best = exact ? null : meant && [...list, ...yl].find(isMeant) || titled || (ytFirst ? yl[0] : list[0]) || yl[0] || more[0], album = !exact && !titled && !meant && albumHit;
-    if (exact || album || best) R.top = () => topHit(best, exact ? all : yl.includes(best) ? yl : more.includes(best) ? more : list.length ? list : yl.length ? yl : more, exact, term, album);
-    showResults(R, 'All');
-    const note = fixed ? ` · showing results for “${fixed}”` : '';
-    $('sstat').textContent = n ? `${n} songs${note} · ${fullSongs ? 'full songs' : FILE_NOTE}` : searchFailed ? "Couldn't reach the music catalog: check the connection." : `Nothing${note}. Try another spelling.`;
   } catch (e) { if (e.name !== 'AbortError') $('sstat').textContent = 'Search is offline. Songs you saved are in your Library.'; }
 }
 // The results, as the big music apps lay them out: what to show (All, Songs, Artists, Albums: the chips at the top);
 // in All, the top result beside the first four songs, then the artists, the albums, and the songs on (to the 16th —
 // "Show all" for the rest), then YouTube Music's and YouTube's. R: the sections (runSearch); quick: Apple's songs
 // alone, as they come in, till the rest is in.
-function showResults(R, filter, quick = false) {
-  const out = [], songsOf = l => l.map((s, i) => row(s, i, l)), extra = R.extra || [], first = extra.find(x => x.ahead && x.list.length);
+let shownFilter = 'All';
+function showResults(R, filter, quick = false, again = false) {
+  shownFilter = filter;
+  const out = [], at = $('results').scrollTop, songsOf = l => l.map((s, i) => row(s, i, l)), extra = R.extra || [], first = extra.find(x => x.ahead && x.list.length);
   const main = first && !R.exact ? first : { head: R.label, list: R.list || [] }; // (the songs to lead with: YouTube's when Apple's were weak)
   const kinds = [['All', 1], ['Songs', (R.list?.length || 0) + extra.length], ['Artists', R.artists?.length], ['Albums', R.albums?.length]].filter(k => k[1]);
   if (!quick && kinds.length > 2) {
@@ -8103,7 +8117,7 @@ function showResults(R, filter, quick = false) {
   } else if (filter === 'Artists') { const c = artistCards(R.artists, R.songsAll || []); c.classList.add('wrap'); out.push(c); }
   else if (filter === 'Albums') out.push(albumsIn('albums'));
   $('results').replaceChildren(...out);
-  if (!quick) $('results').scrollTop = 0;
+  if (!quick) $('results').scrollTop = again ? at : 0; // (again: the same search, more of it in)
 }
 function artistCards(artists, songs) {
   const box = el('div', 'artists');
