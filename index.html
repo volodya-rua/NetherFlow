@@ -679,7 +679,7 @@ kbd { font: inherit; border: 1px solid currentColor; border-radius: 3px; padding
 .s-hero .top-hit img { grid-column: 1 / -1; width: 120px; height: 120px; }
 .s-hero .top-hit .go { align-self: end; }
 .s-hero .s-four .hist-h { padding-top: 18px; }
-.s-hero:not(:has(.top-hit)) { grid-template-columns: minmax(0, 1fr); }
+.s-hero:not(:has(.top-hit)), .s-hero:not(:has(.s-four)) { grid-template-columns: minmax(0, 1fr); }
 @media (max-width: 900px) { .s-hero { grid-template-columns: minmax(0, 1fr); } .s-hero .top-hit { margin: 6px 12px 4px; } .s-hero .top-hit img { width: 96px; height: 96px; } }
 .artists.wrap { flex-wrap: wrap; overflow: visible; }
 .s-all { margin: 4px 12px 18px; }
@@ -3897,9 +3897,9 @@ function parseYrc(raw, guide = '') {
 // The words from the line-timed lyrics (LRCLIB's, written out with care), the timing from the word-timed ones (NetEase's
 // or Kugou's: exact to the syllable, but their words are often a little off — a misheard word, a credit or a singer's
 // name as a line, "'" for ","). The two are lined up word by word: the longest run of words they share, in order, each
-// pair within a few seconds of each other. Each of the lyrics' words takes its time from its match; the words between
-// matches are spread over the time between them. A line with no match at all keeps its own time, moved by how far the
-// two run apart. Too few matches (another version, or the same words in another script): the timed lyrics as they are.
+// pair within a few seconds of each other. Each of the lyrics' words takes its time from its match (the whole moved onto
+// the lyrics' own line timing, see sh); the words between matches are spread over the time between them. A line with no
+// match at all keeps its own time. Too few matches (another version, or the same words in another script): the timed lyrics as they are.
 function mergeTimed(timed, guide) {
   const A = guide ? parseLyrics(guide).filter(l => l.t !== null) : [];
   const aw = [], byLine = A.map(() => []);
@@ -3920,15 +3920,20 @@ function mergeTimed(timed, guide) {
   }
   if (matched < n * .5) return timed;
   const runs = aw.filter(x => x.first && x.b).map(x => x.b.t - x.t).sort((a, b) => a - b), off = runs[runs.length >> 1] || 0;
+  // The word timing, when it's out of line with the line-timed lyrics' (its lines' first words usually 0–0.4 s after
+  // their times), moved onto them, 0.2 s after: those agree with YouTube Music's own, hand-timed to the very upload —
+  // measured on rap songs, LRCLIB within ~0.2 s of it, while a word source ran 1.9 s late ("In Da Club", another
+  // release's timing). The words' own rhythm within each line is kept.
+  const sh = runs.length && (off > .45 || off < -.1) ? off - .2 : 0, moved = t => t == null ? t : t - sh;
   const out = A.map((l, li) => {
     const ws = byLine[li];
-    if (!ws.some(x => x.b)) return { t: l.t + off, text: l.text };
+    if (!ws.some(x => x.b)) return { t: l.t + off - sh, text: l.text };
     // the matched words' times; those between, spread evenly (before the first: from where the line would start)
-    const words = ws.map(x => ({ w: x.w, t: x.b?.t, e: x.b?.e }));
+    const words = ws.map(x => ({ w: x.w, t: moved(x.b?.t), e: moved(x.b?.e) }));
     for (let k = 0; k < words.length;) {
       if (words[k].t !== undefined) { k++; continue; }
       let z = k; while (z < words.length && words[z].t === undefined) z++;
-      const from = k ? words[k - 1].e : Math.min(l.t + off, words[z].t - .2 * z), to = z < words.length ? words[z].t : from + .35 * (z - k);
+      const from = k ? words[k - 1].e : Math.min(l.t + off - sh, words[z].t - .2 * z), to = z < words.length ? words[z].t : from + .35 * (z - k);
       for (let q = k; q < z; q++) { words[q].t = from + (to - from) * (q - k) / (z - k); words[q].e = from + (to - from) * (q - k + 1) / (z - k); }
       k = z;
     }
@@ -7747,6 +7752,7 @@ async function artistSongs(artist, signal) {
   const list = await itunes('search', { term: artist.artistName, entity: 'song', attribute: 'artistTerm', limit: 200 }, signal);
   const seen = new Set();
   return list.filter(s => playable(s) && s.artistId === artist.artistId)
+    .map((s, i) => [s, i + (isModded(s) ? 1e4 : 0)]).sort((a, b) => a[1] - b[1]).map(x => x[0]) // (a remix after its original: the one kept is the original)
     .filter(s => { const k = words(clean(s.trackName)).join(' '); return !seen.has(k) && seen.add(k); });
 }
 async function artistAlbums(artist, signal) {
@@ -7833,7 +7839,7 @@ function albumTile(a, open) {
 // the top result: a song (play it), the artist typed (their page) or the album typed (its page)
 function topHit(s, list, artist, term, album) {
   const b = el('button', 'top-hit' + (artist ? ' artist' : '')), img = el('img'), txt = el('span'), go = el('i', 'go');
-  img.alt = ''; img.src = artist ? artUrl(list[0], 300) : artUrl(album || s, 300);
+  img.alt = ''; img.onerror = () => { img.style.visibility = 'hidden'; }; img.src = artist ? artUrl(list[0], 300) : artUrl(album || s, 300); // (one that won't load: the plain square, not a broken picture)
   txt.append(el('b', '', artist ? artist.artistName : album ? album.collectionName : s.trackName),
     el('small', '', artist ? 'Artist · ' + (artist.primaryGenreName || 'top result') : album ? 'Album · ' + album.artistName : 'Song · ' + s.artistName));
   go.innerHTML = '<svg viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z"/></svg>';
@@ -7917,7 +7923,7 @@ async function runSearch(term) {
     let list = oneEach(originalsFirst(songs)).map((s, i) => [s, i]).sort((a, b) => rank(a[0]) - rank(b[0]) || a[1] - b[1]).map(x => x[0]), label = 'Songs';
     if (exact) { // (most played first: YouTube Music's own order for the artist, then the store's)
       const played = new Map(ytm.map((s, i) => [songKey(s), i]));
-      list = originalsFirst(all).map((s, i) => [s, played.get(songKey(s)) ?? 1e3 + i]).sort((a, b) => a[1] - b[1]).map(x => x[0]); label = `All songs by ${exact.artistName}`;
+      list = originalsFirst(all).map((s, i) => [s, (isModded(s) ? undefined : played.get(songKey(s))) ?? 1e3 + i]).sort((a, b) => a[1] - b[1]).map(x => x[0]); label = `All songs by ${exact.artistName}`;
     }
     // (albums by the artists of the songs found first; karaoke, tribute and cover albums left out)
     const by = new Set(list.slice(0, 10).map(s => s.artistId));
@@ -7967,7 +7973,6 @@ function showResults(R, filter, quick = false) {
   const songsHead = (head, n) => R.exact && head === R.label ? sectionHead(head, 'Artist page', () => openArtist(R.exact)) : sectionHead(head + (n ? ' · ' + n : ''));
   const albumsIn = cls => { const g = el('div', cls); for (const a of R.albums) g.append(albumTile(a, openAlbumPage)); return g; };
   if (filter === 'All') {
-    if (R.mine?.length) out.push(sectionHead('In your library'), ...songsOf(R.mine));
     const lead = main.list.slice(0, 4);
     if (R.top || lead.length) { // (the top result, and beside it the first four songs)
       const hero = el('div', 's-hero'), side = el('div', 's-four');
@@ -7975,6 +7980,7 @@ function showResults(R, filter, quick = false) {
       if (lead.length) { side.append(sectionHead(R.exact ? 'Popular' : 'Songs'), ...lead.map((s, i) => row(s, i, main.list))); hero.append(side); }
       out.push(hero);
     }
+    if (R.mine?.length) out.push(sectionHead('In your library'), ...songsOf(R.mine));
     if (R.artists?.length) out.push(sectionHead('Artists'), artistCards(R.artists, R.songsAll || []));
     if (R.albums?.length) out.push(sectionHead('Albums'), albumsIn('albums strip'));
     const rest = main.list.slice(4, 16);
@@ -12717,7 +12723,9 @@ console.assert(linkKey('https://open.spotify.com/playlist/x?si=1') === linkKey('
 { const g = "[00:01.00]I'm goin' down tonight\n[00:05.00]right words in here\n[00:20.00]oh";
   const y = mergeTimed(parseYrc("[1000,2000](1000,400,0)I'm (1400,400,0)going (1800,400,0)down (2200,600,0)tonite\n[5000,2000](5000,500,0)wrong (5500,500,0)words (6000,500,0)in (6500,500,0)hear\n[7000,900](7000,900,0)Vocals: Someone"), g);
   console.assert(y.length === 4 && y[0].text === "I'm goin' down tonight" && y[0].words[2].t === 1.8 && y[1].text === 'right words in here' && y[1].words[1].t === 5.5 &&
-    y[1].words[0].t < 5.5 && y[2].text === '' && y[3].t === 20 && !y[3].words, 'mergeTimed broken: ' + JSON.stringify(y)); }
+    y[1].words[0].t < 5.5 && y[2].text === '' && y[3].t === 20 && !y[3].words, 'mergeTimed broken: ' + JSON.stringify(y));
+  const late = mergeTimed(parseYrc("[2500,2000](2500,400,0)I'm (2900,400,0)going (3300,400,0)down (3700,600,0)tonite\n[6500,2000](6500,500,0)right (7000,500,0)words (7500,500,0)in (8000,500,0)hear"), g); // (the same, 1.5 s late)
+  console.assert(Math.abs(late[0].words[0].t - 1.2) < 1e-9 && Math.abs(late[0].words[2].t - 2) < 1e-9 && Math.abs(late[1].t - 5.2) < 1e-9, 'mergeTimed late source not moved: ' + JSON.stringify(late)); }
 console.assert(paceOf(Array.from({ length: 9 }, (_, i) => ({ t: i * 1.2, text: 'we go fast we go fast now' }))) < .2 && paceOf(Array.from({ length: 9 }, (_, i) => ({ t: i * 3, text: 'we go slow we go slow now' }))) > .28, 'paceOf broken');
 console.assert(CREDIT_LINE.test('Mastering Engineer: John Greenham') && !CREDIT_LINE.test("I'm the bad type: make your mama sad type"), 'credit lines broken');
 console.assert(artUrl({ artworkUrl100: 'https://is1-ssl.mzstatic.com/a/100x100bb.jpg' }, 600).endsWith('/600x600bb.jpg') && artUrl({ artworkUrl100: 'https://lh3.googleusercontent.com/x=w544-h544-l90-rj' }, 120).endsWith('=w120-h120-l90-rj')
