@@ -3926,13 +3926,15 @@ function parseYrc(raw, guide = '') {
 function mergeTimed(timed, guide) {
   const A = guide ? parseLyrics(guide).filter(l => l.t !== null) : [];
   const aw = [], byLine = A.map(() => []);
-  A.forEach((l, li) => l.text.split(' ').filter(Boolean).forEach((w, k) => { const x = { w, k: letters(w), li, t: l.t, first: !k }; aw.push(x); byLine[li].push(x); }));
-  const bw = timed.flatMap(l => l.words || []).map(w => ({ ...w, k: letters(w.w) }));
+  A.forEach((l, li) => l.text.split(' ').filter(Boolean).forEach((w, k) => { const x = { w, k: letters(w), li, t: l.t, first: !k }; x.bk = bones(x.k); aw.push(x); byLine[li].push(x); }));
+  const bw = timed.flatMap(l => l.words || []).map(w => { const k = letters(w.w); return { ...w, k, bk: bones(k) }; });
   const n = aw.length, m = bw.length;
   if (!n || !m) return timed;
-  // the same word: the same letters, or one the other plus a letter or two ("thing"/"things", "goin"/"going"), and near
-  // enough in time (near: a and b's times)
-  const word = (a, b) => !!a.k && !!b.k && (a.k === b.k || Math.min(a.k.length, b.k.length) >= 3 && Math.abs(a.k.length - b.k.length) <= 2 && (a.k.startsWith(b.k) || b.k.startsWith(a.k)));
+  // the same word: the same letters, or one the other plus a letter or two ("thing"/"things", "goin"/"going"), or the
+  // same skeleton (see bones: a song in another language written in Latin letters is spelt every which way — "tere" and
+  // "teray", "mera" and "meraa" — and too few words matched for the timing to be lined up), and near enough in time
+  const word = (a, b) => !!a.k && !!b.k && (a.k === b.k || Math.min(a.k.length, b.k.length) >= 3 && Math.abs(a.k.length - b.k.length) <= 2 && (a.k.startsWith(b.k) || b.k.startsWith(a.k))
+    || a.bk.length >= 2 && a.bk === b.bk);
   const L = new Uint16Array((n + 1) * (m + 1)), at = (i, j) => i * (m + 1) + j; // L: the longest shared run from (i, j) on
   const pair = near => {
     const same = (a, b) => near(a.t, b.t) && word(a, b);
@@ -3950,14 +3952,22 @@ function mergeTimed(timed, guide) {
   // paired within 12 s; then again within 2.5 s of how far the two run apart, so a chorus line isn't paired with its
   // next time round (measured: "Dynamite", "How You Like That" — half their lines 1.5–13 s off), unless that pairs
   // too few (a version that drifts)
-  if (pair((a, b) => Math.abs(b - a) < 12) < n * .5) return timed;
+  // (too few words shared — another version, or the same words spelt too differently: the word timing kept as it is only
+  // if its lines start where the lyrics' do; else the lyrics' own lines, their words spread by the song's pace — not a
+  // word timing nothing has checked)
+  const unpaired = () => {
+    const ds = timed.filter(l => l.text && l.t != null).map(l => { let b = null; for (const g of A) if (b === null || Math.abs(g.t - l.t) < Math.abs(b - l.t)) b = g.t; return l.t - b; }).sort((x, y) => x - y);
+    const mid = ds.length ? ds[ds.length >> 1] : 9, near = ds.filter(d => Math.abs(d - mid) < .6).length;
+    return ds.length >= 4 && mid > -.25 && mid < .65 && near >= ds.length * .6 ? timed : A.map(l => ({ t: l.t, text: l.text }));
+  };
+  if (pair((a, b) => Math.abs(b - a) < 12) < n * .5) return unpaired();
   const first = median().off;
   if (pair((a, b) => Math.abs(b - a - first) < 2.5) < n * .5) pair((a, b) => Math.abs(b - a) < 12);
   let { runs, off } = median();
-  // a line whose words came from more than 1.5 s off the rest of the song (a stretch of another arrangement — measured,
+  // a line whose words came from more than 1 s off the rest of the song (a stretch of another arrangement — measured,
   // "Dynamite"'s middle 13 s late in the word source): its words' timing dropped, the line at its own time, its words
   // spread by the song's pace (see paceOf) — not a minute of words lit up 13 s late
-  byLine.forEach(ws => { const k = ws.findIndex(x => x.b); if (k >= 0 && Math.abs(ws[k].b.t - ws[k].t - k * .25 - off) > 1.5) for (const x of ws) delete x.b; });
+  byLine.forEach(ws => { const k = ws.findIndex(x => x.b); if (k >= 0 && Math.abs(ws[k].b.t - ws[k].t - k * .25 - off) > 1) for (const x of ws) delete x.b; });
   ({ runs, off } = median());
   // The word timing, when it's out of line with the line-timed lyrics' (its lines' first words usually 0–0.4 s after
   // their times), moved onto them, 0.2 s after: those agree with YouTube Music's own, hand-timed to the very upload —
@@ -3990,6 +4000,9 @@ function mergeTimed(timed, guide) {
   return out;
 }
 
+// a word's skeleton: its Latin letters without vowels, h and doubled letters ("teray" → "tr", "dill" → "dl"); other
+// scripts' as they are
+const bones = k => k.replace(/[aeiouy]+/g, '').replace(/h/g, '').replace(/(.)\1+/g, '$1');
 // "Song (feat. X) - Remastered 2011" → "Song", so lyric search still hits
 const clean = s => s.replace(/\s*[([].*?[)\]]/g, '').replace(/\s+-\s+.*$/, '').trim();
 
@@ -4374,11 +4387,32 @@ function buildStage(idx) {
     return;
   }
   // No word timing available: estimate by syllables at the song's own pace (see paceOf).
-  const syl = words.map(w => Math.max(1, (w.toLowerCase().match(/[aeiouy]+/g) || []).length));
+  const syl = words.map(sylOf);
   const total = syl.reduce((a, b) => a + b, 0);
   const span = Math.min((end - line.t) * 0.85, total * sylPace + 0.2);
   let acc = 0;
   wordTimes = syl.map(n => { const t = line.t + span * acc / total; acc += n; return { t, e: line.t + span * acc / total }; });
+}
+// A word's syllables, in its own script: Latin, Cyrillic and Greek by their vowels; Devanagari, Gurmukhi, Bengali,
+// Gujarati, Odia, Tamil, Telugu, Kannada and Malayalam by their aksharas (each vowel, and each consonant not joined to
+// the next by a virama: their Unicode blocks share one layout); Hangul by its blocks, kana by its morae (the small ones
+// part of the one before), Chinese characters one each. It counted English vowels only: a Hindi word in its own
+// script was one syllable whatever its length, and its line's words lit up at the wrong pace.
+function sylOf(w) {
+  let n = 0;
+  const cs = [...w];
+  for (let i = 0; i < cs.length; i++) {
+    const c = cs[i].codePointAt(0);
+    if (c >= 0x900 && c <= 0xDFF) {
+      const o = c & 0x7F, nx = cs[i + 1]?.codePointAt(0) ?? 0;
+      if (o >= 0x05 && o <= 0x14 || o >= 0x60 && o <= 0x61) n++;
+      else if ((o >= 0x15 && o <= 0x39 || o >= 0x58 && o <= 0x5F) && !((nx & 0x7F) === 0x4D && nx >> 7 === c >> 7)) n++;
+    }
+    else if (c >= 0xAC00 && c <= 0xD7AF || c >= 0x4E00 && c <= 0x9FFF || c >= 0x3400 && c <= 0x4DBF) n++;
+    else if (c >= 0x3041 && c <= 0x30FF) { if (!'ぁぃぅぇぉゃゅょゎァィゥェォャュョヮ'.includes(cs[i])) n++; }
+  }
+  if (!n) n = (w.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').match(/[aeiouyаеёиоуыэюяіїєαεηιουω]+/g) || []).length;
+  return Math.max(1, n);
 }
 // A song's pace, from its own lines: the time a syllable takes, as the quicker of its lines are sung (a line's time to
 // the next one holds its breath and pauses too: the quicker third is closer to the words themselves) — a rapper's
@@ -4386,7 +4420,7 @@ function buildStage(idx) {
 // song: rap's words lit up behind the voice.
 function paceOf(ls) {
   const r = [];
-  for (let i = 0; i < ls.length - 1; i++) { const l = ls[i], gap = ls[i + 1].t - l.t, n = l.text ? l.text.toLowerCase().split(/\s+/).reduce((a, w) => a + Math.max(1, (w.match(/[aeiouy]+/g) || []).length), 0) : 0; if (n >= 4 && gap > 0 && gap < 12) r.push(gap / n); }
+  for (let i = 0; i < ls.length - 1; i++) { const l = ls[i], gap = ls[i + 1].t - l.t, n = l.text ? l.text.split(/\s+/).reduce((a, w) => a + sylOf(w), 0) : 0; if (n >= 4 && gap > 0 && gap < 12) r.push(gap / n); }
   r.sort((a, b) => a - b);
   return r.length >= 5 ? Math.min(.32, Math.max(.11, r[Math.floor(r.length / 3)])) : .24;
 }
@@ -12881,6 +12915,7 @@ console.assert(linkKey('https://open.spotify.com/playlist/x?si=1') === linkKey('
     y[1].words[0].t < 5.5 && y[2].text === '' && y[3].t === 20 && !y[3].words, 'mergeTimed broken: ' + JSON.stringify(y));
   const late = mergeTimed(parseYrc("[2500,2000](2500,400,0)I'm (2900,400,0)going (3300,400,0)down (3700,600,0)tonite\n[6500,2000](6500,500,0)right (7000,500,0)words (7500,500,0)in (8000,500,0)hear"), g); // (the same, 1.5 s late)
   console.assert(Math.abs(late[0].words[0].t - 1.2) < 1e-9 && Math.abs(late[0].words[2].t - 2) < 1e-9 && Math.abs(late[1].t - 5.2) < 1e-9, 'mergeTimed late source not moved: ' + JSON.stringify(late)); }
+console.assert(sylOf('song') === 1 && sylOf('beautiful') === 3 && sylOf('केसरिया') === 4 && sylOf('प्यार') === 2 && sylOf('ਪਿਆਰ') === 3 && sylOf('사랑해') === 3 && sylOf('きゅう') === 2 && sylOf('爱你') === 2 && sylOf('любовь') === 2, 'sylOf broken');
 console.assert(paceOf(Array.from({ length: 9 }, (_, i) => ({ t: i * 1.2, text: 'we go fast we go fast now' }))) < .2 && paceOf(Array.from({ length: 9 }, (_, i) => ({ t: i * 3, text: 'we go slow we go slow now' }))) > .28, 'paceOf broken');
 console.assert(CREDIT_LINE.test('Mastering Engineer: John Greenham') && !CREDIT_LINE.test("I'm the bad type: make your mama sad type"), 'credit lines broken');
 console.assert(artUrl({ artworkUrl100: 'https://is1-ssl.mzstatic.com/a/100x100bb.jpg' }, 600).endsWith('/600x600bb.jpg') && artUrl({ artworkUrl100: 'https://lh3.googleusercontent.com/x=w544-h544-l90-rj' }, 120).endsWith('=w120-h120-l90-rj')
