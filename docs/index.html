@@ -252,6 +252,9 @@ main { height: 1500vh; }
   .credit { margin-top: 8px; gap: 4px 14px; font-size: 12px; }
   .fine { margin-top: 8px; font-size: 11px; }
 }
+@media (max-width: 900px) and (max-height: 700px) {
+  .nw figcaption { display: none; }
+}
 /* short laptop screens: the downloads and the small print still fit */
 @media (min-width: 901px) and (max-height: 1000px) {
   .dl small { display: none; }
@@ -342,11 +345,11 @@ main { height: 1500vh; }
     </div>
   </section>
 
-  <section class="ch nw" id="new" data-a=".905" data-b=".948" aria-label="New in 1.5">
+  <section class="ch nw" id="new" data-a=".905" data-b=".948" aria-label="New in 1.5.1">
     <div>
-      <h2 class="h2">New in 1.5: NetherFlow's own player, and a much smaller app.</h2>
-      <p class="p">Songs start right away, and the next one is ready when you skip. The phone app is about 7 MB instead of 41. And on Android TV and Google TV, the whole app works with the remote.</p>
-      <p class="small also">Also in there: sound tools like Crossfeed, Night mode and 360 sound, a 10-band equalizer, Radio from any song or artist, a mix for the time of day, Shuffle, gapless albums, word-by-word lyrics for more songs, and Android Auto, with NetherFlow open on the phone. Plus everything from before: podcasts and free audiobooks (LibriVox), Explore, playlists you edit together, Listen together and NetherFlow on Linux.</p>
+      <h2 class="h2">New in 1.5.1: better search, playlists you can arrange, and a booster up to 300%.</h2>
+      <p class="p">Search works like the big music apps: the top result beside the first four songs, and artists and albums in rows. Find a song in a playlist as you type, sort it, or drag songs into your own order. And the volume booster goes up to 300% and stays loud without clipping.</p>
+      <p class="small also">Also in there: songs start sooner, lyrics in sync on rap songs, 360 sound that keeps the bass as it is, Play on to pick your speakers or headphones, Interface size, and four looks for the beat on the screen edges. Plus everything from 1.5: NetherFlow's own player, a phone app of about 7 MB, sound tools, Radio, Shuffle, word-by-word lyrics for more songs, and Android Auto, with NetherFlow open on the phone.</p>
     </div>
     <figure class="wide"><img src="media/tv.webp" alt="NetherFlow on a TV: the welcome screen, worked with the remote" width="960" height="622" loading="lazy"><figcaption>Grab the remote. The whole app works with it on Android TV and Google TV.</figcaption></figure>
   </section>
@@ -358,12 +361,12 @@ main { height: 1500vh; }
       <span class="sig" aria-label="Volodya.rua">Volodya.rua</span>
     </div>
     <div class="dls-wrap" style="width:100%;display:grid;justify-items:center">
-      <p class="small ver" id="ver">Version 1.5.0, out 17 October 2026</p>
+      <p class="small ver" id="ver">Version 1.5.1, out 18 October 2026</p>
       <div class="dls">
-        <a class="dl" id="dl-lite" href="https://github.com/volodya-rua/NetherFlow/releases/download/v1.5.0/NetherFlow-Lite-Setup-1.5.0.exe"><span><b>Windows</b><span class="pick">the one I'd pick</span></span><code>NetherFlow-Lite-Setup-1.5.0.exe</code><span class="sz">120 MB</span><small>Everything except the Extreme+ 3D races, which need a beefy graphics card anyway.</small></a>
-        <a class="dl" id="dl-full" href="https://github.com/volodya-rua/NetherFlow/releases/download/v1.5.0/NetherFlow-Setup-1.5.0.exe"><span><b>Windows, with the 3D races</b></span><code>NetherFlow-Setup-1.5.0.exe</code><span class="sz">137 MB</span><small>The full app, Redline and Extreme+ included.</small></a>
-        <a class="dl" id="dl-linux" href="https://github.com/volodya-rua/NetherFlow/releases/download/v1.5.0/NetherFlow-1.5.0-amd64.deb"><span><b>Linux</b></span><code>NetherFlow-1.5.0-amd64.deb</code><span class="sz">127 MB</span><small>Ubuntu, Debian, Mint and the like. On any other distro, the AppImage below.</small></a>
-        <a class="dl" id="dl-apk" href="https://github.com/volodya-rua/NetherFlow/releases/download/v1.5.0/NetherFlow-1.5.0.apk"><span><b>Android 7.0 and up</b></span><code>NetherFlow-1.5.0.apk</code><span class="sz">7 MB</span><small>Phones and Android TV. Signed, and it updates itself.</small></a>
+        <a class="dl" id="dl-lite" href="https://github.com/volodya-rua/NetherFlow/releases/download/v1.5.1/NetherFlow-Lite-Setup-1.5.1.exe"><span><b>Windows</b><span class="pick">the one I'd pick</span></span><code>NetherFlow-Lite-Setup-1.5.1.exe</code><span class="sz">120 MB</span><small>Everything except the Extreme+ 3D races, which need a beefy graphics card anyway.</small></a>
+        <a class="dl" id="dl-full" href="https://github.com/volodya-rua/NetherFlow/releases/download/v1.5.1/NetherFlow-Setup-1.5.1.exe"><span><b>Windows, with the 3D races</b></span><code>NetherFlow-Setup-1.5.1.exe</code><span class="sz">137 MB</span><small>The full app, Redline and Extreme+ included.</small></a>
+        <a class="dl" id="dl-linux" href="https://github.com/volodya-rua/NetherFlow/releases/download/v1.5.1/NetherFlow-1.5.1-amd64.deb"><span><b>Linux</b></span><code>NetherFlow-1.5.1-amd64.deb</code><span class="sz">127 MB</span><small>Ubuntu, Debian, Mint and the like. On any other distro, the AppImage below.</small></a>
+        <a class="dl" id="dl-apk" href="https://github.com/volodya-rua/NetherFlow/releases/download/v1.5.1/NetherFlow-1.5.1.apk"><span><b>Android 7.0 and up</b></span><code>NetherFlow-1.5.1.apk</code><span class="sz">7 MB</span><small>Phones and Android TV. Signed, and it updates itself.</small></a>
       </div>
     </div>
     <p class="credit"><span>made by <b>Volodya.rua</b> · a <a class="u" href="https://github.com/volodya-rua/NetherFlow#hucla">HuCla</a> build · GPL v3</span><a href="https://github.com/volodya-rua/NetherFlow/releases/latest">Portable builds, the AppImage and checksums</a><span>Music on this page: Retro Synths, Saturn and City In The Rearview by <a class="u" href="https://freemusicarchive.org/music/holiznacc0/">HoliznaCC0</a>, public domain (CC0)</span><a href="https://www.instagram.com/volodya.rua/">Instagram</a><a href="mailto:volodya.rua@gmail.com">Email</a><a href="legal.html#privacy">Privacy</a></p>
@@ -469,7 +472,7 @@ Sound.onSong = s => { songLabel = `${s.title} · HoliznaCC0`; if (snd.getAttribu
 snd.addEventListener('click', () => { const on = Sound.toggle(); snd.setAttribute('aria-pressed', on); sndT.textContent = on ? songLabel : 'Sound off'; skip.hidden = !on; });
 skip.addEventListener('click', () => Sound.next());
 
-// ============ downloads: the newest release, straight from GitHub (the 1.5.0 links stay if that fails) ============
+// ============ downloads: the newest release, straight from GitHub (the 1.5.1 links stay if that fails) ============
 fetch('https://api.github.com/repos/volodya-rua/NetherFlow/releases/latest').then(r => r.ok ? r.json() : null).then(rel => {
   if (!rel?.assets) return;
   const find = re => rel.assets.find(a => re.test(a.name));
