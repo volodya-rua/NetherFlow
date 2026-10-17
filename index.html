@@ -694,7 +694,9 @@ kbd { font: inherit; border: 1px solid currentColor; border-radius: 3px; padding
 .warn { color: var(--a); opacity: 1; max-width: 520px; line-height: 1.9; }
 
 /* ---------- song rows: a ⋯ button for the song's options sits at the row's right end ---------- */
-.ritem { position: relative; animation: fade .5s both; animation-delay: calc(min(var(--i), 12) * 35ms); } /* (the first rows cascade in; the rest of a long list is there at once) */
+.ritem { position: relative; animation: fade .5s both; animation-delay: calc(min(var(--i), 12) * 35ms); /* (the first rows cascade in; the rest of a long list is there at once) */
+  content-visibility: auto; contain-intrinsic-size: auto 77px; } /* (a row out of sight isn't laid out or drawn: a list of thousands scrolls as one of ten) */
+.ritem.far { animation: none; } /* (far down a long list: no fade of its own — thousands of them were the browser's work each frame) */
 .ritem .row { padding-right: 58px; animation: none; }
 .ritem .rmore { position: absolute; right: 10px; top: 50%; translate: 0 -50%; }
 .ritem:has(.row:hover, .row:focus-visible) .rmore { color: var(--bg); }
@@ -988,6 +990,7 @@ body.home .home-now { display: flex; }
   .time { grid-area: time; }
   .now-cover { width: 46px; height: 46px; margin-right: 8px; }
   .ritem .row { padding-right: 44px; }
+  .ritem { contain-intrinsic-size: auto 65px; } /* (a row's height here, for those not drawn yet) */
   .ritem .rmore { right: 2px; }
   .dlrow { grid-template-columns: 48px minmax(0, 1fr) auto; gap: 12px; padding: 8px 4px; }
   .dlrow img { width: 48px; height: 48px; }
@@ -7467,12 +7470,12 @@ function renderLibrary() {
     const rowOf = (s, i) => s.kind === 'episode' ? epRow(s, i, tracks) : row(s, i, tracks, opts); // (a saved episode or chapter: as on its show's page)
     if (!tracks.length) list.push(el('p', 'empty', v.kind === 'saved' ? 'Nothing saved yet. Tap ••• on any song, then Save for offline.' : 'No songs yet. Tap ••• on any song to add it here.'));
     list.push(...tracks.slice(0, 200).map(rowOf));
-    if (tracks.length > 200) more = { n: tracks.length, rows: k => tracks.slice(k, k + 400).map((s, i) => rowOf(s, k + i)) };
+    if (tracks.length > 200) more = { n: tracks.length, rows: k => tracks.slice(k, k + 120).map((s, i) => rowOf(s, k + i)) };
   }
   $('libActs').replaceChildren(...acts);
   $('libList').replaceChildren(...list);
   if (more) (async () => {
-    for (let k = 200; k < more.n; k += 400) { await new Promise(r => setTimeout(r, 16)); if (tok !== libTok) return; $('libList').append(...more.rows(k)); }
+    for (let k = 200; k < more.n; k += 120) { await new Promise(r => setTimeout(r, 16)); if (tok !== libTok) return; $('libList').append(...more.rows(k)); }
   })();
 }
 $('openLib').onclick = () => openLibrary();
@@ -7895,7 +7898,7 @@ function lyrPump() { while (lyrBusy < 3 && lyrWait.length) { lyrBusy++; lyrWait.
 const lyrIO = new IntersectionObserver(es => { for (const e of es) if (e.isIntersecting) { lyrIO.unobserve(e.target); lyrRows.get(e.target)(); } }, { rootMargin: '300px 0px' });
 const LYB = { synced: 'Lyrics', plain: 'Unsynced lyrics', none: 'No lyrics' };
 function row(s, i, list, from = {}) {
-  const wrap = el('div', 'ritem'), b = el('button', 'row'), more = el('button', 'icon-btn rmore');
+  const wrap = el('div', i > 40 ? 'ritem far' : 'ritem'), b = el('button', 'row'), more = el('button', 'icon-btn rmore');
   wrap.style.setProperty('--i', i);
   const img = el('img');
   img.alt = ''; img.loading = 'lazy';
