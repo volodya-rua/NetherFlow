@@ -1,0 +1,3 @@
+# Third-party libraries, left out of GitHub's language bar
+race/three/** linguist-vendored
+docs/vendor/** linguist-vendored
