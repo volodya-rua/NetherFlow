@@ -4049,7 +4049,7 @@ function buildStage(idx) {
     return;
   }
   if (line.words) { // timed in the lyric file (exact)
-    wordTimes = line.words.map((x, i) => ({ t: x.t, e: x.e ?? line.words[i + 1]?.t ?? Math.min(end, x.t + 0.6) }));
+    wordTimes = cleanWordTimes(line.words.map((x, i) => ({ t: x.t, e: x.e ?? line.words[i + 1]?.t ?? Math.min(end, x.t + 0.6) })), line.t, end);
     return;
   }
   // No word timing available: estimate by syllables at a natural singing pace.
@@ -4058,6 +4058,25 @@ function buildStage(idx) {
   const span = Math.min((end - line.t) * 0.85, total * 0.24 + 0.2);
   let acc = 0;
   wordTimes = syl.map(n => { const t = line.t + span * acc / total; acc += n; return { t, e: line.t + span * acc / total }; });
+}
+// Lyric word stamps (NetEase, Kugou) can be jittery: a word that ends before it starts, two at the same instant, or one
+// that jumps back. Left as they are, the fill flashes or runs backwards. This makes them clean: inside the line, each
+// word starting no earlier than the one before, and lasting at least a short moment (the eye needs it) — so the sweep
+// across the words is always smooth and forward.
+const WORD_MIN = 0.09;
+function cleanWordTimes(wt, lineStart, lineEnd) {
+  const n = wt.length, span = Math.max(lineEnd - lineStart, n * WORD_MIN);
+  let prev = lineStart;
+  for (let i = 0; i < n; i++) {
+    let t = wt[i].t; if (!isFinite(t)) t = prev; // (a missing stamp: carry on from the last)
+    t = Math.max(prev, Math.min(t, lineStart + span - (n - i) * WORD_MIN)); // (room for the words still to come)
+    const nextT = isFinite(wt[i + 1]?.t) ? wt[i + 1].t : lineStart + span;
+    let e = isFinite(wt[i].e) ? wt[i].e : nextT;
+    e = Math.max(t + WORD_MIN, Math.min(e, lineStart + span)); // (at least a moment, never past the line)
+    wt[i] = { t, e };
+    prev = t + WORD_MIN;
+  }
+  return wt;
 }
 
 const LEAD = 0.25; // seconds a line appears before it's sung, so it's readable in time
