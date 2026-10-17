@@ -2334,6 +2334,10 @@ body.classList.toggle('lyr-center', lalign === 'Center'); body.classList.toggle(
 // What the stage shows: the lyrics, or the cover on its spinning record with the beat ring
 // (also: the player's cover thumbnail, or V).
 let view = store.get('netherflow.view') === 'Cover' ? 'Cover' : 'Lyrics';
+// A song with no timed lyrics (only plain words, or none): its cover instead, by itself — the view chosen stays as it is.
+// Tapped (or V): its words after all, for this song (coverSkip).
+let autoCover = false, coverSkip = null;
+const coverShown = () => view === 'Cover' || autoCover;
 // how the beat ring round the record is drawn
 const BEATS = ['Wave', 'Silk', 'Aura', 'Petals', 'Liquid', 'Nova', 'Vortex', 'Flame'];
 let beatStyle = BEATS.includes(store.get('netherflow.beat')) ? store.get('netherflow.beat') : 'Wave';
@@ -2462,11 +2466,17 @@ if (native && !window.netherflowApp) addEventListener('orientationchange', () =>
 function setView(v) {
   view = v; store.set('netherflow.view', v === 'Cover' ? v : '');
   body.classList.remove('home');
-  body.classList.toggle('view-cover', v === 'Cover');
-  fitCover();
-  $('nowCover').setAttribute('aria-label', v === 'Cover' ? 'Show the lyrics (V)' : 'Show the cover (V)');
+  if (v === 'Lyrics' && autoCover) { autoCover = false; coverSkip = current; } // (the lyrics asked for: this song's words)
+  applyView();
   renderTextPanel();
 }
+function applyView() {
+  body.classList.toggle('view-cover', coverShown());
+  fitCover();
+  $('nowCover').setAttribute('aria-label', coverShown() ? 'Show the lyrics (V)' : 'Show the cover (V)');
+}
+// the cover thumbnail, or V: the other view — for a song whose words were asked for, its cover again (this song only)
+const flipView = () => view === 'Lyrics' && current && coverSkip === current && !synced ? (coverSkip = null, autoCover = true, applyView()) : setView(coverShown() ? 'Lyrics' : 'Cover');
 // ---------- updates (Settings › Update) ----------
 // Windows (the installed app): from the GitHub releases, by electron-updater (main.js) — only the parts of the installer
 // that changed come down, and a restart puts them in place. The portable app can't update itself: it's sent to the
@@ -2577,7 +2587,7 @@ function renderTextPanel() {
     ...(window.netherflowApp?.notify || upd.ours ? [settingRow('Update notifications', ['On', 'Off'], updNotify ? 'On' : 'Off', setUpdNotify,
       native ? 'A notification when a newer NetherFlow is out, even with the app closed (Android looks once a day).' : 'A notification when a newer NetherFlow is out, while NetherFlow is open but not in front (it looks once a day).')] : []),
     settingRow('Interface size', UI_SIZES, uiSize, setUiSize, 'Everything larger or smaller: the buttons, the text, the panels.'),
-    settingRow('Show', ['Lyrics', 'Cover'], view, setView, 'Cover: the record spinning, with a ring that moves to the beat. Tap the cover in the player to switch.'),
+    settingRow('Show', ['Lyrics', 'Cover'], view, setView, 'Cover: the record spinning, with a ring that moves to the beat. Tap the cover in the player to switch. A song with no timed lyrics shows its cover by itself: tap it for the words.'),
     settingRow('Lyrics animation', LANIMS, lanimPick, setLanim, 'How the lyrics move. 2D: Wave, Spiral, Shatter, Fireworks. 3D: Swarm, Black Hole, Cylinder, Globe, Helix, DNA, Tornado, Knot, Möbius, Ribbon, Orbit, Atom, Tunnel, Cube.' + (kin.on ? ' (Extreme lyrics are on, in the mood menu: this is for when they\x27re off.)' : '')),
     ...(skin ? [] : [fontRow()]), // (a theme brings its own font and timeline)
     settingRow('Beat style', BEATS, beatStyle, setBeat, 'The ring round the record, in the Cover view.'),
@@ -2674,7 +2684,7 @@ function fitDeck() {
 let disc = null;
 function fitCover() {
   disc = null;
-  if (view !== 'Cover') return;
+  if (!coverShown()) return;
   for (const el of [$('csTitle'), $('csLine')]) {
     el.style.fontSize = '';
     const max = parseFloat(getComputedStyle(el).fontSize);
@@ -4204,6 +4214,8 @@ function setLines(raw, { preview = '', note = 'no lyrics found for this one', yr
   synced = !preview && parsed.some(l => l.t !== null);
   parsed = synced ? parsed.filter(l => l.t !== null) : parsed.filter(l => l.text);
   if (synced && ref) alignTo(parsed, ref);
+  // (timed lyrics: the view chosen; none, or only plain words: the cover)
+  { const was = coverShown(); autoCover = !synced && coverSkip !== current; if (coverShown() !== was) applyView(); }
   if (!parsed.length) return message('No words', note);
   lines = parsed; activeIdx = -2; drift = !preview; sylPace = paceOf(lines);
   if (synced) labelSections(lines);
@@ -4519,7 +4531,7 @@ function syncLyrics() {
     const chs = curWords[i].chs;
     if (chs) chs.forEach((c, k) => c.classList.toggle('lit', p > 0 && (k + .5) / chs.length <= p));
   }
-  if (SELF_LAID.has(lanim) && view !== 'Cover') turnLyricShape(); // (not while the cover view hides it)
+  if (SELF_LAID.has(lanim) && !coverShown()) turnLyricShape(); // (not while the cover view hides it)
 }
 // The self-laid styles (SELF_LAID) place the line's letters (Cylinder: words) themselves, round the middle of the
 // stage: layoutLyricShape measures them, sized to the stage, and turnLyricShape places them every frame, following
@@ -7860,7 +7872,7 @@ $('closeLib').onclick = libBack;
 $('library').addEventListener('cancel', e => { if (libView) { e.preventDefault(); libBack(); } }); // Esc: back a step first
 $('library').addEventListener('close', () => body.classList.remove('lib-open'));
 $('likeBtn').onclick = () => current && toggleLike(current);
-$('nowCover').onclick = () => setView(view === 'Cover' ? 'Lyrics' : 'Cover');
+$('nowCover').onclick = flipView;
 $('nowMore').onclick = () => current && songMenu(current, $('nowMore'));
 
 // ---------- catalog: Apple's iTunes Search API ----------
@@ -8681,7 +8693,7 @@ addEventListener('keydown', e => {
   else if (e.code === 'KeyM') chooseMood(MOODS[(MOODS.indexOf(pal) + 1) % MOODS.length].name);
   else if (e.key === '[' || e.key === ']') setOffset(offset + (e.key === ']' ? 0.1 : -0.1));
   else if (e.code === 'KeyR') $('repeatBtn').click();
-  else if (e.code === 'KeyV') setView(view === 'Cover' ? 'Lyrics' : 'Cover');
+  else if (e.code === 'KeyV') flipView();
   else if (e.code === 'KeyL') openLibrary();
   else if (e.code === 'KeyQ') $('queuePanel').togglePopover();
   else if (e.code === 'Space') { e.preventDefault(); toggle(); }
@@ -10463,7 +10475,7 @@ function drawRing(now, dt, live, kick) {
   // centred on the record; in the lyrics view there's only the edges. Its place is measured when it may have moved (a new
   // line or title, the view or the window changed: see fitCover) and once a second besides — not every frame, where the
   // measuring would cost a layout — and its size grows with the beat as its own does (by --bass, see .cs-disc)
-  const ringOn = view === 'Cover';
+  const ringOn = coverShown();
   if (ringOn && (!disc || now - disc.at > 1000)) {
     const cr = c.getBoundingClientRect(), d0 = document.querySelector('.cs-disc'), dr = d0.getBoundingClientRect();
     disc = { cx: dr.left + dr.width / 2 - cr.left, cy: dr.top + dr.height / 2 - cr.top, r: d0.offsetWidth / 2, at: now };
@@ -12786,7 +12798,7 @@ const avg =(a, b) => { let s = 0; for (let i = a; i < b; i++) s += freq[i]; retu
 let bassS = 0, bassAvg = 0, midS = 0, highS = 0, fxT = 0, last = 0;
 // (the things the beat moves: the play button, the record, the cover background — set on them alone, not on the whole
 // page, and only while they're seen)
-const bassEls = [['.core', () => true], ['.cs-disc', () => view === 'Cover'], ['.cover-bg', () => theme === 'Cover']].map(([q, seen]) => ({ el: document.querySelector(q), seen, v: '' }));
+const bassEls = [['.core', () => true], ['.cs-disc', coverShown], ['.cover-bg', () => theme === 'Cover']].map(([q, seen]) => ({ el: document.querySelector(q), seen, v: '' }));
 const fullPages = [dlg, $('artistPage'), $('about')];
 let lastSeek = -1, lastCur = '', lastDur = '', looping = true, owed = 0, lastRun = 0, visN = 0, visDt = 0;
 let vsGap = [], vsTick = 0, vsN = 1; // (a computer: the gaps between the screen's frames, and every how many the work's done)
@@ -12850,7 +12862,7 @@ function frame(now) {
   visDt += dt;
   if (++visN % Q.every === 0) { // (the timeline and the beat ring: at the quality's pace — Low, every other frame)
     if (!covered) drawSpec(now, p, kick);
-    if (!covered && (view === 'Cover' || edges) && body.classList.contains('has-song') && !body.classList.contains('home')) drawRing(now, Math.min(.1, visDt), live, kick);
+    if (!covered && (coverShown() || edges) && body.classList.contains('has-song') && !body.classList.contains('home')) drawRing(now, Math.min(.1, visDt), live, kick);
     visDt = 0;
   }
 
@@ -12861,7 +12873,7 @@ function frame(now) {
   lyricKick = kick;
   syncLyrics();
   if (skin) skinTick(now, kick, t, dur);
-  const kinSeen = kin.on && !covered && view !== 'Cover' && body.classList.contains('has-song') && !body.classList.contains('home');
+  const kinSeen = kin.on && !covered && !coverShown() && body.classList.contains('has-song') && !body.classList.contains('home');
   if (kinSeen) drawKin(now, kick);
   vedFrame(now, kinSeen, kick);
   raceFrame(now, !covered, kick);
