@@ -54,10 +54,14 @@
     // 5 requests, and to 2 in 3 for what it hasn't answered lately (a song it hasn't been asked for: measured 2026-10; the
     // popular, answered from its cache, never are) — or an error page: asked again five times, a little later each time
     // (jittered, so many apps don't come back at once); still busy: thrown (.busy), kind 'lyrics busy' (asked again next
-    // time). No network: offline at once.
-    async lrclib(path, params) {
+    // time). No network: offline at once. until: a time (ms) not to keep asking past (a song's several lookups share one).
+    async lrclib(path, params, until = Infinity) {
       for (let k = 0; ; k++) {
-        if (k) await sleep(350 * k + Math.random() * 400);
+        if (k) { // (asked six times, or the next try past the time given: busy)
+          const pause = 350 * k + Math.random() * 400;
+          if (k > 5 || Date.now() + pause > until) throw Object.assign(new Error('the lyrics database is busy'), { busy: true });
+          await sleep(pause);
+        }
         // (the request itself failing is no network — offline at once, whatever the platform calls it: Android's HTTP
         // throws its own errors, which were taken for a busy server and asked three more times; only an answer that
         // isn't JSON, an error page, is asked again)
@@ -65,11 +69,10 @@
         let j = null; try { j = JSON.parse(text); } catch {}
         if (path === 'search' ? Array.isArray(j) : j && typeof j.id === 'number') return j;
         if (j?.statusCode === 404 || j?.name === 'TrackNotFound') return null;
-        if (k >= 5) throw Object.assign(new Error('the lyrics database is busy'), { busy: true });
       }
     }
     async byNameNow(artist, title, dur, alts) {
-      const api = (path, params) => this.lrclib(path, params);
+      const until = Date.now() + 15000, api = (path, params) => this.lrclib(path, params, until); // (a busy database: a song's lookups given 15 s in all, not each its own)
       const who = artist.split(/,|&| feat\.? | x /i)[0].trim();
       // Is a find this song? Only if it has the song's name (bracketed bits, "- Remastered…" tails, "feat." credits,
       // apostrophes and "&"/"and" aside) and one of its artists' names — or, under some other name, its very length. Never
@@ -283,5 +286,5 @@
   out.create = opts => new Engine(opts);
   out.krcToYrc = krcToYrc;
   out.ttmlToYrc = ttmlToYrc;
-  out.version = '0.5.2';
+  out.version = '0.5.3';
 })(typeof module === 'object' && module.exports ? module.exports : (globalThis.EndVerse = {}));

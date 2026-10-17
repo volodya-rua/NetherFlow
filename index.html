@@ -5028,6 +5028,7 @@ async function playTrack(t, term = '', queued = false, stay = false, mixed = nul
   // intro then). Only for the full song, at the length the lyrics were timed to.
   const full = !!(vid || au), playLen = au ? au.dur : vid?.dur;
   let early = null;
+  if (full) { status(`${source} · finding lyrics…`); message('Loading', 'finding the lyrics'); } // (the song's found and playing: only its lyrics to come)
   if (full) lyrics.early.then(l => {
     if (id !== loadId || early === false || !l?.exact || !/\[\d+:\d+/.test(l.raw || '') || (playLen && l.dur && Math.abs(playLen - l.dur) > 2)) return;
     early = l; status(`${source} · synced lyrics`); setLines(l.raw);
