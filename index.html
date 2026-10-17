@@ -5173,7 +5173,10 @@ async function playTrack(t, term = '', queued = false, stay = false, mixed = nul
   if (mixed) { [vid, ...ytQueue] = vids = mixed; fsVid = vid.id; fsLoud = mix.loud; source = '◆ full song · smooth mix'; } // (already playing: see Smooth mix)
   else if (fullSongs) {
     // the artist's own upload on Audius (320 kbps) when it's there, else YouTube's best — both looked for at once
-    [au, vids] = await Promise.all([audiusFor(t), videosFor(t).catch(e => { if (!noteLimited(e)) why = e.message; return []; })]); // (found on YouTube: that video)
+    // (Audius waited on only a moment past YouTube's upload being found — its lookup takes 0.6–1.5 s and finds the song
+    // rarely, and every first play waited on it, a song from the search ~1.3 s; found later, it's kept for the next time)
+    const vp = videosFor(t).catch(e => { if (!noteLimited(e)) why = e.message; return []; }), ap = audiusFor(t);
+    [au, vids] = await Promise.all([Promise.race([ap, vp.then(v => v.length ? new Promise(r => setTimeout(r, 250, null)) : ap)]), vp]); // (found on YouTube: that video)
     if (id !== loadId) return;
     if (!t.artworkUrl100 && vids[0]?.art) { t.artworkUrl100 = vids[0].art; setNow(t.trackName, t.artistName, artUrl(t, 600), t.collectionName); } // (an imported song with no cover yet: its YouTube Music one, at once)
     if (au) source = '◆ full song · Audius 320 kbps';
