@@ -2,6 +2,29 @@
 
 What changed in each NetherFlow release. The builds are on the [releases page](https://github.com/volodya-rua/NetherFlow/releases).
 
+## 1.5.1: Better search, playlists you can arrange, and a booster that never clips
+
+- **Search** works like the big music apps: All, Songs, Artists and Albums at the top, the top result beside the first
+  four songs, and artists and albums in rows. The page is there in under a second, and an artist's full list fills in
+  as you look. A song from the search starts without a second search of its own
+- **Playlists:** find a song in one as you type; sort by title, artist, newest added or length; Edit order to drag songs
+  (or move them with the arrow keys); and Add songs from the playlist itself. On a phone, a playlist's buttons sit across
+  under its name
+- **Songs start sooner:** about 0.7 s less wait on a first play, and the artist's own upload is preferred even when
+  YouTube Music doesn't answer
+- **Covers** in long lists load faster, and one that won't load is tried another way
+- **Lyrics in sync on rap songs:** word-by-word timing that's out of line with the song is lined up again, and words with
+  no timing follow the song's own pace
+- **A volume booster up to 300%,** through a new limiter: loud, with no clipping, and the bass and treble as they were
+- **360 sound** keeps the bass as it is and no longer muddies the low-mids
+- **Play on** (computers): pick the speakers or headphones it plays on
+- **Interface size** (Settings): everything larger or smaller, 80–150% on computers and 100–150% on phones
+- **Beat on the screen edges:** four looks (Wave, Bars, Neon, Glow) and four sizes
+- **Esc twice** (computers) goes to the home screen, as Back does on a phone
+- **No more freezes** picking Redline: the 3D race runs on its own, and Extreme lyrics turn on without a pause
+- No glow follows the cursor any more; Settings › Update always shows the version; lyrics not timed to the song are an
+  even column to read; on phones the Cover view keeps the next line clear of the timeline
+
 ## 1.5.0: NetherFlow's own player, and a much smaller app
 
 - **Sound tools** in the Equalizer panel: Crossfeed for headphones, Clarity, Loudness at low volume and Night mode, plus

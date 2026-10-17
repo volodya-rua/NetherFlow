@@ -44,29 +44,25 @@ need a powerful graphics card anyway), about 18 MB smaller, and it updates to Li
 
 <a id="whats-new"></a>
 
-## What's new in 1.5.0
+## What's new in 1.5.1
 
-- **NetherFlow's own player, FlowStream**, in place of a hidden YouTube player. Songs start right away, the next one is
-  ready when you skip, every song plays in the best sound YouTube has (usually Opus; a few songs only exist as AAC), and no hidden video drains the battery
-- **Sound tools** in the Equalizer panel: Crossfeed for headphones, Clarity, Loudness at low volume and Night mode, plus
-  360 sound (Around and Orbit). A "Playing now" line shows the format and quality of what's playing
-- **Faster and steadier:** lyrics appear almost at once, word-by-word timing from more sources, a quicker start, a
-  cleaner Android splash, and smooth even on long playlists
-- **Discovery:** Radio from any song or artist, a mix for the time of day in Explore, Follow artists with a note when
-  they release something, and Mix with a friend
-- **Shuffle** for playlists, Liked songs, mixes, artists and albums, and **gapless albums**
-- **Android Auto:** liked songs, recent plays and playlists on the car's screen, and voice search. NetherFlow has to be
-  open on the phone, and Android Auto lists apps from outside the Play Store only with its Unknown sources developer
-  setting on
-- **Every screen works with the TV remote**, from the queue to the terms
-- **Listen together and shared playlists go through NetherFlow's own relay**: it keeps no logs and, as before, can't
-  read anything (it's all end-to-end encrypted). The public relays stay as a backup for a while
-- **A much smaller app:** no more yt-dlp (or, on Android, a whole Python to run it). The phone app is about 7 MB instead
-  of 41, the Windows one about 17 MB lighter
+- **A new search**, laid out like the big music apps: the top result beside the first four songs, artists and albums in
+  rows, and All, Songs, Artists and Albums at the top. The page is there in under a second
+- **Playlists you can arrange:** find a song as you type, sort by title, artist, newest added or length, drag songs into
+  your own order, and Add songs from the playlist itself
+- **Songs start sooner,** and the artist's own upload is preferred
+- **Rap lyrics in sync:** word-by-word timing that's out of line with the song is lined up again
+- **A volume booster up to 300%** with no clipping, the bass and treble as they were, and **360 sound** that keeps the bass
+- **Play on** (pick the speakers or headphones), **Interface size**, four looks for the **beat on the screen edges**, and
+  **Esc twice** for the home screen
+- **No more freezes** picking Redline: the 3D race runs on its own
+
+1.5.0 brought NetherFlow's own player, FlowStream, the sound tools, Radio, Shuffle, gapless albums, Android Auto and a
+much smaller app: see the [changelog](CHANGELOG.md#150-netherflows-own-player-and-a-much-smaller-app).
 
 > [!NOTE]
-> Someone on 1.4.2 or older can't join a Listen together session started on 1.5.0, so update both sides. Shared
-> playlists keep working with older versions. The terms and privacy policy changed a little (which country's law
+> Someone on 1.4.2 or older can't join a Listen together session started on 1.5 or newer, so update both sides. Shared
+> playlists keep working with older versions. Coming from 1.4 or older: the terms and privacy policy changed a little (which country's law
 > applies, a note on flashing light, and the new relay), so you're asked to accept them again.
 
 The full notes for this release and every earlier one are in the [changelog](CHANGELOG.md).

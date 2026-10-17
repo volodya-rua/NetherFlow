@@ -10,7 +10,7 @@ body:
     attributes:
       label: NetherFlow version
       description: In Settings, under Update
-      placeholder: "1.5.0"
+      placeholder: "1.5.1"
     validations:
       required: true
   - type: dropdown
