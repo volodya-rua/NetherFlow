@@ -44,6 +44,7 @@ NetherFlow's own code in this repository, including:
 - the in-app updates and how they're checked and signed
 - the encryption of Listen together, phone and PC sync, and playlists you edit together
 - the app's local server, and anything that reaches the device from outside
+- the Android Auto media service the app exports (which apps may bind to it, and what the library it exposes lets them read)
 - the website (volodya-rua.github.io/NetherFlow) and its shared-playlist page
 
 Out of scope:
