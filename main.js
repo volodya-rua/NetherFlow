@@ -1,7 +1,7 @@
 // NetherFlow - Copyright (C) 2026 Volodya.rua - GNU GPL v3 only, with additional terms (credit, name and logo): see LICENSE and NOTICE.
 // NetherFlow desktop app: a window around the player page, served by the built-in server
 // (which also hands the page FlowStream's streams, from its own address, so the equalizer and visuals can hear them).
-const { app, BrowserWindow, shell, ipcMain, powerSaveBlocker, screen, powerMonitor } = require('electron');
+const { app, BrowserWindow, shell, ipcMain, powerSaveBlocker, screen, powerMonitor, Notification } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { execFileSync } = require('child_process');
@@ -225,10 +225,22 @@ function getUpdater() {
   } catch { updater = null; }
   return updater;
 }
+// a version newer than another ("1.10.0" over "1.9.3")
+const newer = (a, b) => { const x = a.split('.').map(Number), y = b.split('.').map(Number); for (let i = 0; i < 4; i++) if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0); return false; };
 ipcMain.handle('update-check', async e => {
   if (!win || e.sender !== win.webContents) return null;
   const u = getUpdater(), version = app.getVersion();
-  if (!u) return { version, can: false, portable: !!process.env.PORTABLE_EXECUTABLE_DIR, deb: app.isPackaged && DEB }; // (or run from the source: nothing to update)
+  if (!u) { // (or run from the source: nothing to update) — the portable app and the .deb can't update themselves, but
+    // they're told when there's a newer one: the latest release's version, from GitHub
+    const portable = !!process.env.PORTABLE_EXECUTABLE_DIR, deb = app.isPackaged && DEB;
+    let next = null;
+    if (portable || deb) try {
+      const r = await fetch('https://api.github.com/repos/volodya-rua/NetherFlow/releases/latest', { headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'NetherFlow' }, signal: AbortSignal.timeout(15000) });
+      const tag = r.ok ? String((await r.json()).tag_name || '').replace(/^v/, '') : '';
+      if (/^\d+(\.\d+){1,3}$/.test(tag) && newer(tag, version)) next = tag;
+    } catch {}
+    return { version, can: false, portable, deb, next };
+  }
   try { const r = await u.checkForUpdates(); return { version, can: true, next: r?.isUpdateAvailable ? r.updateInfo.version : null }; }
   catch (er) {
     const m = String(er.message || er).split('\n')[0];
@@ -240,6 +252,16 @@ ipcMain.handle('update-get', async e => {
   await getUpdater().downloadUpdate();
   return true;
 });
+// A notification from the page (a newer NetherFlow is out, when the window isn't in front): the system's own; clicked,
+// the window comes up and the page is told (it opens Settings › Update)
+const notes = new Set();
+ipcMain.on('notify', (e, n) => {
+  if (!win || e.sender !== win.webContents || !n || !Notification.isSupported()) return;
+  const note = new Notification({ title: String(n.title || 'NetherFlow').slice(0, 120), body: String(n.body || '').slice(0, 300), icon: path.join(__dirname, 'icon.png') });
+  notes.add(note); note.on('close', () => notes.delete(note));
+  note.on('click', () => { notes.delete(note); if (!win || win.isDestroyed()) return; if (win.isMinimized()) win.restore(); win.show(); win.focus(); win.webContents.send('notify-click', String(n.tag || '').slice(0, 40)); });
+  note.show();
+});
 ipcMain.on('update-install', e => { if (win && e.sender === win.webContents && getUpdater()) getUpdater().quitAndInstall(true, true); }); // (quietly, then open again)
 
 ipcMain.on('island-shape', (e, r) => {
@@ -249,6 +271,7 @@ ipcMain.on('island-shape', (e, r) => {
   if (islandShown) island.setShape([islandShape]);
 });
 
+if (process.platform === 'win32') app.setAppUserModelId(require('./package.json').build?.appId || 'io.github.volodya_rua.netherflow'); // (its notifications under its own name)
 app.whenReady().then(async () => {
   if (!first) return;
   // The fixed port: the page's library and settings belong to its address, port and all. Taken (a NetherFlow still

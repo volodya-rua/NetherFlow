@@ -34,11 +34,13 @@ import org.json.JSONObject;
 
 // Updates (the page's Settings › Update), for NetherFlow's own APK from its GitHub releases — not for one from an app store
 // (F-Droid builds and signs its own, and updates it itself): there, `ours` is false and nothing here runs.
-//   info() → { name, code (this APK's), web (the page's version in use), ours }
+//   info() → { name, code (this APK's), web (the page's version in use), ours, notes (notifications allowed) }
 //   web({ manifest, sig }) — a newer page: the manifest (signed by NetherFlow's developer: checked against KEY below)
 //     lists every file of it with its SHA-256; those unchanged are copied from the page in use, only the changed ones
 //     downloaded (each checked), into a folder of their own; the app then loads its page from there, from now on (till
 //     a newer APK is installed, which brings its own: Capacitor goes back to that by itself). Events "progress" { frac }.
+//   notifications({ on }) — Update notifications (UpdateCheckJob, daily) set or cancelled; launch() → { open: 'update' }
+//     when the app was opened from one (once), and the event "open" { open } when one's tapped while it's running.
 //   apk({ url, sha256 }) — a newer APK (when a release changed the app around the page): downloaded, checked, and handed
 //     to Android's installer (which only takes it if it's signed with the same key as this one).
 @CapacitorPlugin(name = "Updater")
@@ -51,25 +53,57 @@ public class UpdatePlugin extends Plugin {
 
     private SharedPreferences prefs() { return getContext().getSharedPreferences("nfUpdate", Context.MODE_PRIVATE); }
 
-    private PackageInfo pkg() throws Exception {
-        PackageManager pm = getContext().getPackageManager();
-        return pm.getPackageInfo(getContext().getPackageName(), Build.VERSION.SDK_INT >= 28 ? PackageManager.GET_SIGNING_CERTIFICATES : PackageManager.GET_SIGNATURES);
+    private static PackageInfo pkg(Context c) throws Exception {
+        PackageManager pm = c.getPackageManager();
+        return pm.getPackageInfo(c.getPackageName(), Build.VERSION.SDK_INT >= 28 ? PackageManager.GET_SIGNING_CERTIFICATES : PackageManager.GET_SIGNATURES);
     }
+    private PackageInfo pkg() throws Exception { return pkg(getContext()); }
 
     private static long code(PackageInfo p) { return Build.VERSION.SDK_INT >= 28 ? p.getLongVersionCode() : p.versionCode; }
 
-    private boolean ours(PackageInfo p) throws Exception {
-        if ((getContext().getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0) return true; // (a build of one's own, testing)
+    private boolean ours(PackageInfo p) throws Exception { return ours(getContext(), p); }
+    static boolean ours(Context c) { try { return ours(c, pkg(c)); } catch (Exception e) { return false; } }
+    private static boolean ours(Context c, PackageInfo p) throws Exception {
+        if ((c.getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0) return true; // (a build of one's own, testing)
         android.content.pm.Signature[] sigs = Build.VERSION.SDK_INT >= 28 ? p.signingInfo.getApkContentsSigners() : p.signatures;
         for (android.content.pm.Signature s : sigs) if (hex(MessageDigest.getInstance("SHA-256").digest(s.toByteArray())).equals(CERT)) return true;
         return false;
     }
 
     // the page in use: the one put in place by web(), while Capacitor still loads it; else the one in this APK
-    private File current() {
-        String path = getContext().getSharedPreferences(CAP_PREFS, Context.MODE_PRIVATE).getString(CAP_PATH, "");
-        String mine = prefs().getString("dir", "");
+    private File current() { return current(getContext()); }
+    private static File current(Context c) {
+        String path = c.getSharedPreferences(CAP_PREFS, Context.MODE_PRIVATE).getString(CAP_PATH, "");
+        String mine = c.getSharedPreferences("nfUpdate", Context.MODE_PRIVATE).getString("dir", "");
         return !path.isEmpty() && path.equals(mine) && new File(path).isDirectory() ? new File(path) : null;
+    }
+    // the page's version in use (a newer page put in place by web(), or this APK's own)
+    static String webVersion(Context c) {
+        try { PackageInfo p = pkg(c); return current(c) != null ? c.getSharedPreferences("nfUpdate", Context.MODE_PRIVATE).getString("web", p.versionName) : p.versionName; }
+        catch (Exception e) { return "0"; }
+    }
+
+    @PluginMethod
+    public void notifications(PluginCall call) {
+        UpdateCheckJob.schedule(getContext(), call.getBoolean("on", true) && ours(getContext()));
+        call.resolve();
+    }
+
+    @PluginMethod
+    public void launch(PluginCall call) {
+        JSObject r = new JSObject();
+        Intent i = getActivity().getIntent();
+        String open = i != null ? i.getStringExtra("nfOpen") : null;
+        if (open != null) { r.put("open", open); i.removeExtra("nfOpen"); } // (once: not again when the page reloads)
+        call.resolve(r);
+    }
+
+    @Override
+    protected void handleOnNewIntent(Intent intent) {
+        super.handleOnNewIntent(intent);
+        String open = intent.getStringExtra("nfOpen");
+        if (open == null) return;
+        JSObject ev = new JSObject(); ev.put("open", open); notifyListeners("open", ev, true); // (kept till the page listens: a tap that starts the app comes here too, before the page is up)
     }
 
     @PluginMethod
@@ -78,6 +112,7 @@ public class UpdatePlugin extends Plugin {
             PackageInfo p = pkg();
             JSObject r = new JSObject();
             r.put("name", p.versionName); r.put("code", code(p)); r.put("ours", ours(p));
+            r.put("notes", androidx.core.app.NotificationManagerCompat.from(getContext()).areNotificationsEnabled());
             r.put("web", current() != null ? prefs().getString("web", p.versionName) : p.versionName);
             call.resolve(r);
         } catch (Exception e) { call.reject(e.getMessage()); }

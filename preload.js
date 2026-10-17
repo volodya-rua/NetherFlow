@@ -31,4 +31,7 @@ contextBridge.exposeInMainWorld('netherflowApp', {
   updateGet: () => ipcRenderer.invoke('update-get'),
   onUpdateProgress: cb => ipcRenderer.on('update-progress', (_, f) => cb(f)),
   updateInstall: () => ipcRenderer.send('update-install'),
+  // a system notification ({ title, body, tag }), and its clicks (the tag back)
+  notify: n => ipcRenderer.send('notify', n),
+  onNotifyClick: cb => ipcRenderer.on('notify-click', (_, tag) => cb(tag)),
 });

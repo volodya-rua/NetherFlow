@@ -2487,7 +2487,7 @@ async function updCheck(quiet) {
     if (window.netherflowApp?.updateCheck) {
       const r = await netherflowApp.updateCheck();
       upd.version = r?.version || '';
-      Object.assign(upd, !r?.can ? { state: r?.portable ? 'portable' : r?.deb ? 'deb' : 'none' } : r.error ? { state: 'error', err: updErr(r.error) } : r.next ? { state: 'ready', next: r.next, kind: 'app' } : { state: 'none' });
+      Object.assign(upd, !r?.can ? { state: r?.portable ? 'portable' : r?.deb ? 'deb' : 'none', next: r?.next || '' } : r.error ? { state: 'error', err: updErr(r.error) } : r.next ? { state: 'ready', next: r.next, kind: 'app' } : { state: 'none' });
     } else if (Upd) {
       const i = await Upd.info();
       upd.version = i.web;
@@ -2503,7 +2503,11 @@ async function updCheck(quiet) {
   } catch (e) { Object.assign(upd, { state: 'error', err: updErr(e.message) }); }
   if (upd.state !== 'error') store.set('netherflow.updchecked', String(Date.now())); // (one that couldn't reach GitHub: asked again next start)
   updShow();
-  if (quiet && upd.state === 'ready' && store.get('netherflow.updtold') !== upd.next) { store.set('netherflow.updtold', upd.next); toast(`NetherFlow ${upd.next} is out · Settings › Update`); }
+  if (quiet && upd.next && /^(ready|portable|deb)$/.test(upd.state) && store.get('netherflow.updtold') !== upd.next) {
+    store.set('netherflow.updtold', upd.next);
+    if (updNotify && !document.hasFocus() && window.netherflowApp?.notify) netherflowApp.notify({ title: `NetherFlow ${upd.next} is out`, body: 'Click to see what\'s new and update', tag: 'update' });
+    else toast(`NetherFlow ${upd.next} is out · Settings › Update`);
+  }
 }
 async function updGet() {
   if (upd.state === 'portable' || upd.state === 'deb') return openExternal(RELEASES);
@@ -2520,9 +2524,20 @@ async function updGet() {
 window.netherflowApp?.onUpdateProgress?.(f => { upd.frac = f; updShow(); });
 // (the version, known at once — no check needed: the desktop app's from main.js, the phone's from its own plugin)
 upd.version = window.netherflowApp?.version || '';
-Upd?.info().then(i => { if (!upd.version) { upd.version = i.web; updShow(); } }).catch(() => {});
+Upd?.info().then(i => { upd.notes = i.notes; upd.ours = i.ours; if (!upd.version) upd.version = i.web; renderTextPanel(); }).catch(() => {}); // (its rows: Update notifications, for the APK that updates itself)
 Upd?.addListener('progress', m => { upd.frac = m.frac; updShow(); });
-setTimeout(() => { if (navigator.onLine && Date.now() - (+store.get('netherflow.updchecked') || 0) > 20 * 3600e3) updCheck(true); }, 12000); // (once a day at most, quietly; offline: not tried)
+// Update notifications (on unless turned off): the desktop app, while it runs, says a newer one's out in the system's
+// notification when its window isn't in front; the phone's own APK has Android look once a day, even with NetherFlow
+// closed (UpdateCheckJob) — so its page doesn't look as well, unless notifications are blocked. Tapped: Settings › Update.
+let updNotify = store.get('netherflow.updnotify') !== 'Off';
+function setUpdNotify(v) { updNotify = v === 'On'; store.set('netherflow.updnotify', updNotify ? '' : 'Off'); Upd?.notifications({ on: updNotify }).catch(() => {}); renderTextPanel(); }
+Upd?.notifications({ on: updNotify }).catch(() => {}); // (set again each start: a phone restarted drops it)
+function openUpdate() { const p = $('textPanel'); renderTextPanel(); if (!p.matches(':popover-open')) p.showPopover(); p.querySelector('.upd')?.scrollIntoView({ block: 'center' }); }
+Upd?.launch().then(r => { if (r?.open === 'update') openUpdate(); }).catch(() => {});
+Upd?.addListener('open', m => { if (m.open === 'update') openUpdate(); });
+window.netherflowApp?.onNotifyClick?.(t => { if (t === 'update') openUpdate(); });
+const updDaily = () => { if (navigator.onLine && !(Upd && updNotify && upd.notes) && Date.now() - (+store.get('netherflow.updchecked') || 0) > 20 * 3600e3) updCheck(true); }; // (once a day at most, quietly; offline: not tried)
+setTimeout(updDaily, 12000); setInterval(updDaily, 3 * 3600e3); // (and again in a day for an app left open)
 // its row in Settings (and kept up to date in place while it's open)
 function updRow() {
   const q = el('div', 'bgq lbl upd'), mb = n => (n / 1e6).toFixed(n > 1e7 ? 0 : 1) + ' MB', v = upd.version ? ` ${upd.version}` : '';
@@ -2534,8 +2549,8 @@ function updRow() {
       : 'Only the parts that changed come down; then NetherFlow restarts into it, keeping everything.'),
     getting: `Downloading NetherFlow ${upd.next}…`, got: 'Downloaded. Restart NetherFlow to finish: it opens again by itself.',
     store: has + 'Updates come from the app store NetherFlow was installed from.',
-    portable: has + 'This portable NetherFlow can\'t update itself. The installed one can, in place, downloading only what changed: get the installer.',
-    deb: has + 'NetherFlow installed from the .deb doesn\'t update itself: get the newest .deb from the release page (or the AppImage, which updates itself).',
+    portable: (upd.next ? `NetherFlow ${upd.next} is out (this is${v}). ` : has) + 'This portable NetherFlow can\'t update itself. The installed one can, in place, downloading only what changed: get the installer.',
+    deb: (upd.next ? `NetherFlow ${upd.next} is out (this is${v}). ` : has) + 'NetherFlow installed from the .deb doesn\'t update itself: get the newest .deb from the release page (or the AppImage, which updates itself).',
     error: `${has}Couldn't update: ${upd.err}.`,
   }[upd.state];
   const label = { '': 'Check for updates', checking: 'Checking…', none: 'Check again', ready: `Update to ${upd.next}`, getting: `Downloading… ${Math.round(upd.frac * 100)}%`,
@@ -2546,8 +2561,9 @@ function updRow() {
 }
 function updShow() { $('textPanel').querySelector('.upd')?.replaceWith(updRow()); }
 
+// (looked for again when Settings opens — only then: the panel's also drawn at start, unseen)
+$('textPanel').addEventListener('toggle', e => { if (e.newState === 'open' && (!upd.state || (upd.state === 'none' && Date.now() - (+store.get('netherflow.updchecked') || 0) > 3600e3))) setTimeout(() => updCheck(), 300); });
 function renderTextPanel() {
-  if (!upd.state || (upd.state === 'none' && Date.now() - (+store.get('netherflow.updchecked') || 0) > 3600e3)) setTimeout(() => updCheck(), 300); // (looked for again when Settings opens)
   $('textPanel').replaceChildren(
     settingRow('Theme', ['NetherFlow', ...SKIN_LIST], skin || 'NetherFlow', v => setSkin(v === 'NetherFlow' ? '' : v),
       'The whole look at once: every button and panel, the colours, the background, the timeline, the lyrics\' faces and the cursor. ' +
@@ -2556,6 +2572,8 @@ function renderTextPanel() {
     ...(skin === 'Tactical' ? [settingRow('Agent', ['Each song', ...AGENTS.map(a => a.name)], agentPick || 'Each song', setAgent,
       'The agent by the lyrics: a new one for each song, or always the one you pick.')] : []),
     updRow(),
+    ...(window.netherflowApp?.notify || upd.ours ? [settingRow('Update notifications', ['On', 'Off'], updNotify ? 'On' : 'Off', setUpdNotify,
+      native ? 'A notification when a newer NetherFlow is out, even with the app closed (Android looks once a day).' : 'A notification when a newer NetherFlow is out, while NetherFlow is open but not in front (it looks once a day).')] : []),
     settingRow('Interface size', UI_SIZES, uiSize, setUiSize, 'Everything larger or smaller: the buttons, the text, the panels.'),
     settingRow('Show', ['Lyrics', 'Cover'], view, setView, 'Cover: the record spinning, with a ring that moves to the beat. Tap the cover in the player to switch.'),
     settingRow('Lyrics animation', LANIMS, lanimPick, setLanim, 'How the lyrics move. 2D: Wave, Spiral, Shatter, Fireworks. 3D: Swarm, Black Hole, Cylinder, Globe, Helix, DNA, Tornado, Knot, Möbius, Ribbon, Orbit, Atom, Tunnel, Cube.' + (kin.on ? ' (Extreme lyrics are on, in the mood menu: this is for when they\x27re off.)' : '')),
