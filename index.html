@@ -6135,6 +6135,29 @@ $('qrSave').onclick = () => { // a card to post or send: the name, the code, how
 // the code (AES-GCM), so the relay passes on only noise, under a topic that doesn't give the code away. (A guest's pause is their own: Play catches up again.)
 const NF_RELAY = 'wss://netherflow-relay.netherflow.workers.dev/mqtt'; // (NetherFlow's own: see relay/worker.js)
 const TG_BROKERS = ['wss://broker.emqx.io:8084/mqtt', 'wss://broker.hivemq.com:8884/mqtt', 'wss://test.mosquitto.org:8081/mqtt'];
+// All the relays at once, but settled in the list's order so two people always meet on the same one: the lowest-numbered
+// relay that connects wins. A dead relay before it fails fast (no 7 s wait summed per relay as before), so a down relay
+// doesn't hold things up; a relay that's merely slow but up is still waited for, since both sides must choose it alike.
+// Resolves { conn, at } (at: which relay), or rejects when every one has failed. The losers are dropped.
+function tgFirst(urls, topic, onMsg, onDrop) {
+  return new Promise((res, rej) => {
+    const r = new Array(urls.length); let done = false, chosen = -1;
+    const pick = () => {
+      if (done) return;
+      for (let i = 0; i < urls.length; i++) {
+        if (r[i] === undefined) return; // a more-preferred relay hasn't settled yet: wait for it
+        if (r[i]) { done = true; chosen = i; for (let j = 0; j < urls.length; j++) if (j !== i && r[j]) r[j].close(); return res({ conn: r[i], at: i }); }
+      }
+      done = true; rej(new Error('no relay answered')); // (every one failed)
+    };
+    // messages from any relay are passed on (the same change merges idempotently, so a duplicate from a loser before it
+    // closes is harmless); but a loser's dropping is nothing to us — only the chosen relay's matters, so closing the
+    // losers starts no reconnect
+    urls.forEach((url, i) => tgMqtt(url, topic, onMsg, () => { if (i === chosen) onDrop(); }).then(
+      conn => { r[i] = conn; if (done && i !== chosen) conn.close(); else pick(); }, // (one came up after a more-preferred won: drop it)
+      () => { r[i] = null; pick(); }));
+  });
+}
 // the relays in the order to try: NetherFlow's own, then the public ones (a backup for now) in an order the code picks,
 // the order older NetherFlows try them in (ponytail: the public ones go once every NetherFlow out there knows ours)
 const relays = seed => [NF_RELAY, ...TG_BROKERS.map((_, i) => TG_BROKERS[(seed + i) % TG_BROKERS.length])];
@@ -6459,13 +6482,14 @@ async function collabConnect(code, from = 0) {
   const c = had || { ...(await collabKeys(code)), conn: null, sent: '', at: -1 };
   collab.set(code, c);
   const list = relays([...code].reduce((a, ch) => a + ch.charCodeAt(0), 0)), got = b => collabUnseal(c.key, b).then(s => s && collabGot(code, s));
-  for (let i = from; i < list.length && !c.conn; i++) {
-    try {
-      c.conn = await tgMqtt(list[i], c.topic, got,
-        () => { c.conn = null; c.sent = ''; if (library.playlists.some(p => p.collab === code)) setTimeout(() => collabConnect(code).then(() => collabSoon(code)).catch(() => {}), 8000); }); // (dropped: back in a while)
-      c.at = i;
-    } catch {}
-  }
+  // dropped: reconnect soon, the wait growing only if it keeps happening (1, 2, 4… up to 30 s), reset once it holds
+  const onDrop = () => { c.conn = null; c.sent = '';
+    if (!library.playlists.some(p => p.collab === code)) return;
+    const wait = Math.min(30000, 1000 * 2 ** (c.tries = (c.tries || 0) + 1));
+    setTimeout(() => collabConnect(code).then(() => { c.tries = 0; collabSoon(code); }).catch(() => {}), wait);
+  };
+  const first = await tgFirst(list.slice(from), c.topic, got, onDrop).catch(() => null);
+  if (first) { c.conn = first.conn; c.at = first.at + from; c.tries = 0; }
   if (!c.conn) throw new Error('no relay answered');
   // On ours: kept in step on the public relay too, where members still on an older NetherFlow are (their changes taken
   // in, ours sent there), till those have all updated (ponytail: goes with the public relays)
