@@ -328,7 +328,9 @@ export async function create(canvas, { palA = [1, .12, .18], palB = [.09, .78, 1
       const fx = c01((x - G.x0) / SX) * (G.nx - 1), fz = c01((z - G.z0) / SZ) * (G.nz - 1), i = Math.min(G.nx - 2, Math.floor(fx)), j = Math.min(G.nz - 2, Math.floor(fz)), u = fx - i, v = fz - j, H = (a, b) => G.h[b * G.nx + a] / 10;
       return mix(mix(H(i, j), H(i + 1, j), u), mix(H(i, j + 1), H(i + 1, j + 1), u), v);
     };
-    const ground = (x, z) => { const q = near(x, z, 120); return q ? mix(q.y - .35, dem(x, z), ss(VERGE + 2, 110, q.d)) : dem(x, z); };
+    // (over 110 m from the track it's the map's own height: far off by the distance grid — which reads up to ~25 m long
+    // there — the nearest-sample search, most of a circuit's building time, is skipped)
+    const ground = (x, z) => { if (away(x, z) > 140) return dem(x, z); const q = near(x, z, 120); return q ? mix(q.y - .35, dem(x, z), ss(VERGE + 2, 110, q.d)) : dem(x, z); };
     const uvw = (x, z) => [(x - X0) / SX, 1 - (z - Z0) / SZ];
     // the floodlights, and the light they put on the ground (worked out once: it's what most of the track's lit by)
     const P0 = [];

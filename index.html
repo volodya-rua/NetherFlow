@@ -5150,10 +5150,15 @@ const saveLib = (draw = true) => { // (draw: the Library and the home screen's f
 };
 libStore('readonly', kv => kv.get(LIB)).catch(() => null).then(s => {
   const old = s == null; // (first start with this version: what localStorage had)
+  // (what was done before it had loaded — a song liked at once, a playlist from the link the app was opened with — kept:
+  // the library read in took its place, and with it they were gone, unsaved)
+  const early = library;
   try { library = JSON.parse((old ? store.get(LIB) : s) || '{}') || {}; } catch { library = {}; }
   library.liked ||= []; library.playlists ||= [];
+  const liked = early.liked.filter(t => !library.liked.some(x => x.trackId === t.trackId)), lists = early.playlists.filter(p => !library.playlists.some(x => x.id === p.id));
+  library.liked.unshift(...liked); library.playlists.push(...lists);
   libReady = true;
-  if (old) saveLib(); else { renderFolders(); if ($('library').open) renderLibrary(); carLibrary(); }
+  if (old || liked.length || lists.length) saveLib(); else { renderFolders(); if ($('library').open) renderLibrary(); carLibrary(); }
   collabStart();
   updateLikeBtn?.();
 });
