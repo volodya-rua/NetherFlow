@@ -4373,7 +4373,7 @@ function buildStage(idx) {
   deck.append(p);
 
   const nx = lines[idx + 1];
-  deck.append(el('p', 'next', nx ? (nx.text || '♪') : ' '));
+  deck.append(el('p', 'next', nx ? (lyrDisp(nx).text || '♪') : ' '));
   if (lanim === 'Cube') { // the glass cube the line is on (all its faces), swaying in step with the one before
     const box = el('div', 'cubebox');
     for (const f of ['front', 'back', 'top', 'bottom', 'left', 'right']) box.append(el('i', 'f-' + f));
