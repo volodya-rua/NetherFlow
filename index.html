@@ -3392,14 +3392,14 @@ function videoMatch(v, artist, title, lang = '') {
 // caller then plays the 30s preview instead).
 // A song's uploads, kept for the session: a replay, or the next song looked up ahead, starts at once.
 const vidCache = new Map();
-// a song's uploads as found, kept on this device (the last 1,000 songs): one played again isn't searched for again — a
+// a song's uploads as found, kept on this device (the last 3,000 songs): one played again isn't searched for again — a
 // request saved, and a quicker start (cleared with the history; uploads that won't play any more: forgotten, found anew)
 const VIDS = 'netherflow.vids';
 const vidKept = (() => { try { return new Map(JSON.parse(store.get(VIDS) || '[]')); } catch { return new Map(); } })();
 let vidSave = 0;
 function keepVids(id, v) {
   vidKept.delete(String(id)); vidKept.set(String(id), v.slice(0, 3).map(x => ({ id: x.id, dur: x.dur, title: x.title, channel: x.channel })));
-  while (vidKept.size > 1000) vidKept.delete(vidKept.keys().next().value);
+  while (vidKept.size > 3000) vidKept.delete(vidKept.keys().next().value);
   clearTimeout(vidSave); vidSave = setTimeout(() => store.set(VIDS, JSON.stringify([...vidKept])), 2000);
 }
 function forgetVids(t) { vidCache.delete(t.trackId); if (vidKept.delete(String(t.trackId))) store.set(VIDS, JSON.stringify([...vidKept])); }
@@ -3483,12 +3483,16 @@ function prefetchNext() {
 }
 async function findVideos(artist, title, dur, album = '', lang = '') {
   const first = artist.split(/,|&| feat\.? | x /i)[0].trim();
-  // YouTube Music's songs too, first: the label's uploads of the album recordings (YouTube's own search leaves them out)
-  const [music, found] = await Promise.all([api.ytm(`${first} ${clean(title)} ${clean(album.replace(/ - (Single|EP)$/i, ''))}`).catch(() => []),
-    api.yt(`${artist} ${clean(title)} audio`)]);
-  found.unshift(...music.filter(v => !found.some(x => x.id === v.id)));
+  // YouTube Music's songs first: the label's uploads of the album recordings (YouTube's own search leaves them out). Most
+  // songs are there, and then that one search is all (a request a song, not two or three); YouTube's own search only
+  // when it hasn't the song for sure (YouTube Music not answering: said, as from YouTube's — FlowGuard, see lib.js)
   const sure = v => { const m = videoMatch(v, artist, title, lang); return m.named && m.byArtist && !m.other; };
-  if (!found.some(sure)) for (const v of await api.yt(`${first} ${clean(title)}`).catch(() => [])) if (!found.some(x => x.id === v.id)) found.push(v);
+  let musicErr = null;
+  const found = await api.ytm(`${first} ${clean(title)} ${clean(album.replace(/ - (Single|EP)$/i, ''))}`).catch(e => { musicErr = e; return []; });
+  if (!found.some(sure)) {
+    for (const v of await api.yt(`${artist} ${clean(title)} audio`).catch(e => { if (musicErr || /limited/.test(e.message)) throw e; return []; })) if (!found.some(x => x.id === v.id)) found.push(v);
+    if (!found.some(sure)) for (const v of await api.yt(`${first} ${clean(title)}`).catch(() => [])) if (!found.some(x => x.id === v.id)) found.push(v);
+  }
   const likely = v => { const m = videoMatch(v, artist, title, lang); return (m.named || m.byArtist) && !m.other && dur && Math.abs(v.dur - dur) <= 2; };
   // Lyrics are timed to the album recording, so rank uploads by how exactly they match it:
   // same length first (music videos with intros lose), then the label's own "Artist - Topic" audio, then the
@@ -4767,7 +4771,7 @@ async function playTrack(t, term = '', queued = false, stay = false, mixed = nul
   status(`${source} · ${full ? lyr.kind : lyr.kind.replace('synced ', '')}${lyr.credit ? ` by ${lyr.credit}` : ''}`
     + (Math.abs(gap) > 3 ? ` · this upload runs ${Math.abs(gap)}s ${gap > 0 ? 'longer' : 'shorter'}, nudge sync if off` : ''));
   setLines(lyr.raw, { preview: full ? '' : why, yrc: !!lyr.yrc, guide: lyr.guide, ref: lyr.ref, ...(lyr.instrumental && { note: 'an instrumental: no words to sing along to' }) });
-  setTimeout(() => id === loadId && prefetchNext(), 3000); // (once this one's going)
+  setTimeout(() => id === loadId && prefetchNext(), 15000); // (once it's been listened to a while: skipping on fast, nothing's looked up for nothing — and the next's still ready long before it's needed)
 }
 
 // A song saved on this device: plays from its recording (no network needed), with its saved lyrics if any.

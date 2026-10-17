@@ -47,7 +47,7 @@
   // then, to see if it's over — the rest refused at once, as 'limited', none kept waiting seconds for the same page.
   // Over when one's answered, or after two quiet minutes.
   //   const guard = lib.guard()   ·   guard.wrap(request) → that request (get or post), guarded   ·   guard.limited
-  lib.guard = ({ perMinute = 40, burst = 12, together = 3, probe = 8000, rest = 120e3 } = {}) => {
+  lib.guard = ({ perMinute = 60, burst = 20, together = 3, probe = 8000, rest = 120e3 } = {}) => {
     let tokens = burst, at = Date.now(), live = 0, until = 0, lastProbe = 0, timer = 0;
     const waiting = [], refused = () => Object.assign(new Error('limited: YouTube is limiting this connection for now'), { code: 'limited' });
     const pump = () => {
