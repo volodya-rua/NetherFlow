@@ -56,8 +56,11 @@
     async lrclib(path, params) {
       for (let k = 0; ; k++) {
         if (k) await sleep(500 * k + Math.random() * 300);
-        let j = null;
-        try { j = JSON.parse(await this.get('https://lrclib.net/api/' + path + (params ? '?' + new URLSearchParams(params) : ''))); } catch (e) { if (e instanceof TypeError || e?.name === 'AbortError' || e?.name === 'TimeoutError') throw e; }
+        // (the request itself failing is no network — offline at once, whatever the platform calls it: Android's HTTP
+        // throws its own errors, which were taken for a busy server and asked three more times; only an answer that
+        // isn't JSON, an error page, is asked again)
+        const text = await this.get('https://lrclib.net/api/' + path + (params ? '?' + new URLSearchParams(params) : ''));
+        let j = null; try { j = JSON.parse(text); } catch {}
         if (path === 'search' ? Array.isArray(j) : j && typeof j.id === 'number') return j;
         if (j?.statusCode === 404 || j?.name === 'TrackNotFound') return null;
         if (k >= 3) throw new Error('the lyrics database is busy');
@@ -278,5 +281,5 @@
   out.create = opts => new Engine(opts);
   out.krcToYrc = krcToYrc;
   out.ttmlToYrc = ttmlToYrc;
-  out.version = '0.5.0';
+  out.version = '0.5.1';
 })(typeof module === 'object' && module.exports ? module.exports : (globalThis.EndVerse = {}));
