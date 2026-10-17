@@ -254,6 +254,12 @@ async function handle(req, res) {
     try { return send(res, 200, JSON.stringify(await lib.ytmRadio(post, id))); }
     catch { return send(res, 200, '[]'); } // (none: the music stops at the end of the list, as it would without Autoplay)
   }
+  if (url.pathname === '/api/song') { // (a song's link: its name, artist, length and cover)
+    const id = url.searchParams.get('id') || '';
+    if (!/^[\w-]{11}$/.test(id)) return send(res, 400, 'null');
+    try { return send(res, 200, JSON.stringify(await lib.ytmSong(post, id))); }
+    catch (e) { return send(res, 502, JSON.stringify({ error: e.message })); }
+  }
   if (url.pathname === '/api/words') {
     const p = url.searchParams, artist = (p.get('artist') || '').slice(0, 200), title = (p.get('title') || '').slice(0, 200);
     try { return send(res, 200, JSON.stringify(artist && title ? await verse.words(artist, title, +p.get('dur') || 0) : {})); }

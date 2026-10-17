@@ -21,8 +21,33 @@ import java.io.OutputStream;
 // The page's story (a picture, or a video with the song): Sharing.share({ data: base64, name, mime }) opens Android's
 // share sheet with it (Instagram stories, WhatsApp…) and, on Android 10 and later, also keeps a copy in the gallery
 // (Pictures/NetherFlow or Movies/NetherFlow).
+// And shared to NetherFlow (Share › NetherFlow, in YouTube, YouTube Music, a chat: a song's or a playlist's link):
+// received() → { text } of the share it was opened with (once), and the event "received" { text } for one while it runs.
 @CapacitorPlugin(name = "Sharing")
 public class SharingPlugin extends Plugin {
+
+    @PluginMethod
+    public void received(PluginCall call) {
+        JSObject r = new JSObject();
+        Intent i = getActivity().getIntent();
+        String text = shared(i);
+        if (text != null) { r.put("text", text); i.setAction(Intent.ACTION_MAIN); i.removeExtra(Intent.EXTRA_TEXT); } // (once: not again when the page reloads)
+        call.resolve(r);
+    }
+
+    @Override
+    protected void handleOnNewIntent(Intent intent) {
+        super.handleOnNewIntent(intent);
+        String text = shared(intent);
+        if (text == null) return;
+        JSObject ev = new JSObject(); ev.put("text", text); notifyListeners("received", ev, true); // (kept till the page listens: a share that starts the app comes here too)
+    }
+
+    private static String shared(Intent i) {
+        if (i == null || !Intent.ACTION_SEND.equals(i.getAction()) || i.getType() == null || !i.getType().startsWith("text/")) return null;
+        CharSequence t = i.getCharSequenceExtra(Intent.EXTRA_TEXT);
+        return t == null || t.length() == 0 ? null : t.subSequence(0, Math.min(t.length(), 2000)).toString();
+    }
 
     @PluginMethod
     public void share(PluginCall call) {

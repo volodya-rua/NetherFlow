@@ -25,6 +25,12 @@
                 <!-- on a TV's home screen too (its banner: drawable/tv_banner) -->
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
             </intent-filter>
+            <!-- Share › NetherFlow: a song's (or a playlist's) link from YouTube, YouTube Music, a chat (SharingPlugin.received) -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
 
         </activity>
 

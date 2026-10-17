@@ -1732,6 +1732,8 @@ const api = {
     const r = await fetch('/api/playlist?' + new URLSearchParams({ url: link, ...(o.gentle ? { gentle: 1 } : {}), ...(o.first ? { first: o.first } : {}) })), j = await r.json(); if (!r.ok) throw new Error(j.error || 'couldn\'t read it'); return j; },
   // YouTube Music's radio for a song (what Autoplay picks from): [{ id, title, artist, album, year, dur, art }]
   radio: async id => native ? netherflowLib.ytmRadio(nativePost, id) : (await fetch('/api/radio?' + new URLSearchParams({ id }))).json(),
+  // a song by its YouTube video's id (a shared link): { id, title, artist, album, dur, art }, or null
+  song: async id => { if (native) return netherflowLib.ytmSong(nativePost, id); const r = await fetch('/api/song?' + new URLSearchParams({ id })), j = await r.json(); if (!r.ok) throw new Error(j?.error || 'YouTube Music didn\'t answer'); return j; },
   // Explore: YouTube Music's explore page, its charts, a mood's playlists, an album (see lib.ytmExplore…), for this country
   explore: kind => { const [what, arg] = kind.split(':'), gl = STORE;
     if (native) return what === 'explore' ? netherflowLib.ytmExplore(nativePost, gl) : what === 'charts' ? netherflowLib.ytmCharts(nativePost, gl)
@@ -6298,6 +6300,23 @@ const PLAYLIST_LINK = /^https?:\/\/((music\.youtube\.com|(www\.|m\.)?youtube\.co
 const linkIn = s => (String(s).match(/https?:\/\/[^\s<>"']+/) || [String(s).trim()])[0].replace(/[).,!?\]]+$/, '');
 // the same playlist's link, however it was shared: without Spotify's ?si=… (new at every share) and other trackers
 const linkKey = l => { try { const u = new URL(l), list = u.searchParams.get('list'); return u.hostname.replace(/^(www|m)\./, '') + u.pathname.replace(/\/+$/, '') + (list ? '?list=' + list : '') + u.hash; } catch { return l; } };
+// a YouTube (Music) song link's video: youtu.be/…, …/watch?…v=…, /shorts/…, /live/…, /embed/…
+const ytIdIn = l => (String(l).match(/^https?:\/\/(?:[\w-]+\.)?(?:youtu\.be\/|youtube\.com\/(?:watch\?(?:[^#\s]*&)?v=|shorts\/|live\/|embed\/))([\w-]{11})(?![\w-])/) || [])[1] || '';
+// A link shared to NetherFlow (Android's share sheet: Share › NetherFlow, in YouTube, YouTube Music, a chat…): a song's
+// plays at once, that very upload; any other (a playlist's, an album's, a NetherFlow playlist's) opens in the search,
+// with what can be done with it.
+async function openShared(text) {
+  if ($('consent')?.open) await new Promise(r => $('consent').addEventListener('close', r, { once: true })); // (a first start: the terms first)
+  const link = linkIn(text), id = ytIdIn(link);
+  if (id) return playLink(id);
+  openSearch(); $('q').value = link; runSearch(link);
+}
+async function playLink(id) {
+  toast('Opening the song…');
+  const v = await api.song(id).catch(() => null);
+  if (!v?.id) return toast('Couldn\'t open that song: YouTube didn\'t answer. Try again in a moment.');
+  playTrack(ytmToTrack(v));
+}
 const ytmToTrack = v => ({ kind: 'song', trackId: 'yt:' + v.id, ytId: v.id, ytTitle: v.title, trackName: v.title, artistName: v.artist, collectionName: v.album || 'YouTube Music', artworkUrl100: v.art, trackTimeMillis: v.dur * 1000 });
 // A song imported and not yet matched to its YouTube Music entry (trackId "q:…"): its name, artist, album, length and,
 // from a long Spotify list, its album's cover. It plays as one of Apple's does, its upload looked for as it starts
@@ -8029,7 +8048,13 @@ async function runSearch(term) {
   searchCtl?.abort();
   dlg.classList.toggle('typed', !!term.trim()); // (the search box smaller: room for the results)
   if (!term.trim()) return showHistory();
-  const lk = linkIn(term);
+  const lk = linkIn(term), sid = ytIdIn(lk);
+  if (sid) {
+    const b = el('button', 'pill', 'Play this song');
+    b.onclick = () => { dlg.close(); playLink(sid); };
+    $('sstat').textContent = 'A YouTube song link';
+    return $('results').replaceChildren(el('p', 'empty', 'That very upload, played here.'), b);
+  }
   if (COLLAB_LINK.test(lk)) {
     const b = el('button', 'pill', 'Join this playlist');
     b.onclick = () => { dlg.close(); collabJoin(lk.match(COLLAB_LINK)[1]); };
@@ -12949,6 +12974,10 @@ console.assert(artUrl({ artworkUrl100: 'https://is1-ssl.mzstatic.com/a/100x100bb
 { const ref = [10, 13, 16, 19, 22, 25].map((t, i) => ({ t, text: 'line ' + i })), ls = ref.map((r, i) => ({ t: r.t + 1.3 + (i === 2 ? .6 : 0), text: r.text }));
   alignTo(ls, ref);
   console.assert(ls.every((l, i) => Math.abs(l.t - ref[i].t) < .01), 'alignTo broken: ' + ls.map(l => l.t).join()); }
+// shared to NetherFlow from another app (Android's share sheet): the share it was opened with, and any while it runs
+if (native) { Capacitor.Plugins.Sharing.received?.().then(r => { if (r?.text) openShared(r.text); }).catch(() => {}); Capacitor.Plugins.Sharing.addListener?.('received', m => { if (m.text) openShared(m.text); }); }
+console.assert(['https://youtu.be/dQw4w9WgXcQ?si=Ab1', 'https://music.youtube.com/watch?v=dQw4w9WgXcQ&si=x', 'https://www.youtube.com/watch?app=desktop&v=dQw4w9WgXcQ&t=5', 'https://youtube.com/shorts/dQw4w9WgXcQ?si=1', 'Listen: https://m.youtube.com/watch?v=dQw4w9WgXcQ.']
+  .every(s => ytIdIn(linkIn(s)) === 'dQw4w9WgXcQ') && !ytIdIn('https://www.youtube.com/playlist?list=PLabc') && !ytIdIn('https://example.com/watch?v=dQw4w9WgXcQ') && !ytIdIn('https://youtu.be/dQw4w9WgXcQx'), 'ytIdIn broken');
 // the app's built. Android: its own splash may go now — it fades out over the app's first frame (MainActivity), so the
 // page's (only the background there) goes at once. Elsewhere the page's opening splash fades away, after two frames, so
 // the home screen is up first.

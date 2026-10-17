@@ -259,10 +259,10 @@
 
   // YouTube Music's radio for a song: what its Autoplay plays after it — songs alike in genre, mood, era and language, by
   // what listeners play together. Each { id (the label's own upload, an album recording), title, artist, album, year, dur,
-  // art, type }; the song itself left out.
-  lib.ytmRadio = async (post, id) => {
+  // art, type }; the song itself first (ytmRadio leaves it out; ytmSong is it alone).
+  const ytmNext = async (post, id) => {
     const json = await ytmPost(post, 'next', { context: WEB_MUSIC, videoId: id, playlistId: 'RDAMVM' + id, isAudioOnly: true });
-    const out = [], seen = new Set([id]);
+    const out = [], seen = new Set();
     (function walk(o) {
       if (!o || typeof o !== 'object') return;
       const v = o.playlistPanelVideoRenderer;
@@ -278,6 +278,9 @@
     })(json);
     return out;
   };
+  lib.ytmRadio = async (post, id) => (await ytmNext(post, id)).filter(v => v.id !== id);
+  // a song by its video's id (a link shared to NetherFlow): its name, artist, album, length and cover as above, or null
+  lib.ytmSong = async (post, id) => (await ytmNext(post, id)).find(v => v.id === id) || null;
 
   // Audius (an open music platform with a public API for apps): its tracks for a search, each { id, title, artist,
   // verified (the artist's own, checked account), dur, url (its full stream: 320 kbps MP3) }.
