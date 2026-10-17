@@ -110,7 +110,7 @@ async function keepHead(id, buf, s, total, era) {
   try {
     await fs.promises.mkdir(dir, { recursive: true });
     await fs.promises.writeFile(keptFile(id, '.head'), buf.subarray(0, HEAD)); // (then its description: there only once the start is whole)
-    await fs.promises.writeFile(keptFile(id, '.json'), JSON.stringify({ mime: s.mime.split(';')[0], total, itag: s.itag, loudnessDb: s.loudnessDb, duration: s.duration || 0 }));
+    await fs.promises.writeFile(keptFile(id, '.json'), JSON.stringify({ mime: s.mime.split(';')[0], total, itag: s.itag, bitrate: s.bitrate || 0, loudnessDb: s.loudnessDb, duration: s.duration || 0 }));
     const kept = (await fs.promises.readdir(dir)).filter(n => n.endsWith('.json'));
     if (kept.length <= KEPT + 10) return;
     const aged = await Promise.all(kept.map(async n => [n.slice(0, -5), (await fs.promises.stat(path.join(dir, n))).mtimeMs]));
@@ -166,7 +166,7 @@ async function handle(req, res) {
   if (url.pathname === '/api/fs/media') return flowMedia(req, res, url);
   if (url.pathname === '/api/fs/audio') { // a song's stream, described (the page then plays /api/fs/media)
     const id = url.searchParams.get('id') || '', kept = keptMeta(id);
-    if (kept) { flowAudio(id).catch(() => {}); return send(res, 200, JSON.stringify({ itag: kept.itag, mime: kept.mime, loudnessDb: kept.loudnessDb, duration: kept.duration, via: 'FlowStream', kept: true })); } // (its start kept here: at once, its address asked for meanwhile)
+    if (kept) { flowAudio(id).catch(() => {}); return send(res, 200, JSON.stringify({ itag: kept.itag, mime: kept.mime, bitrate: kept.bitrate || 0, loudnessDb: kept.loudnessDb, duration: kept.duration, via: 'FlowStream', kept: true })); } // (its start kept here: at once, its address asked for meanwhile)
     try { const s = await flowAudio(url.searchParams.get('id') || ''); return send(res, 200, JSON.stringify({ itag: s.itag, mime: s.mime, bitrate: s.bitrate || 0, loudnessDb: s.loudnessDb, duration: s.duration || 0, via: s.via, why: s.why || '' })); }
     catch (e) { return send(res, 502, JSON.stringify({ error: e.code || e.message })); }
   }

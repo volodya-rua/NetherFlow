@@ -1857,7 +1857,9 @@ function qualityNow() {
   if (!fsFmt) return '';
   // (its own average bitrate, as YouTube reports it — Opus 251 runs ~125–150 kbps, not the 160 it peaks at — or, for one
   // started from its kept start before its address came, the format's usual)
-  const codec = /opus/i.test(fsFmt.mime) ? 'Opus' : /mp4a|aac|audio\/mp4/i.test(fsFmt.mime) ? 'AAC' : 'audio', real = fsFmt.bitrate > 8000 ? Math.round(fsFmt.bitrate / 1000) : 0;
+  // (one started from its kept start: its type without its codecs — "audio/webm" — and, on a phone, no itag: YouTube's
+  // webm audio is always Opus, its mp4 AAC)
+  const codec = /opus|webm/i.test(fsFmt.mime) || [249, 250, 251].includes(fsFmt.itag) ? 'Opus' : /mp4a|aac|audio\/mp4/i.test(fsFmt.mime) || [139, 140, 141].includes(fsFmt.itag) ? 'AAC' : 'audio', real = fsFmt.bitrate > 8000 ? Math.round(fsFmt.bitrate / 1000) : 0;
   const kbps = real || KBPS[fsFmt.itag] || (codec === 'Opus' ? 160 : 128), best = fsFmt.itag === 251 || (!fsFmt.itag && codec === 'Opus');
   return `${codec} at ${real ? '' : 'up to '}${kbps} kbps${best ? ': the best YouTube has of this song' : ''}`;
 }
