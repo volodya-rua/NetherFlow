@@ -2882,6 +2882,7 @@ async function fsStream(vid) { // → { src (for a player, or a download), loudn
 async function fsPlay(v, id) {
   const s = await fsStream(v.id);
   if (id !== loadId) return;
+  if (v.cache && v.dur && s.dur && Math.abs(s.dur - v.dur) > 8) { cacheBad.add(v.key); forgetVids(current); throw new Error('shared match wrong length'); } // (don't trust it — search instead)
   useEngine('audio');
   fsVid = v.id; fsLoud = s.loudnessDb; fsFmt = s.fmt; // (fsFmt: its format, for the Equalizer panel's "playing now")
   audio.src = s.src;
@@ -3493,12 +3494,40 @@ function keepVids(id, v) {
   clearTimeout(vidSave); vidSave = setTimeout(() => store.set(VIDS, JSON.stringify([...vidKept])), 2000);
 }
 function forgetVids(t) { vidCache.delete(t.trackId); if (vidKept.delete(String(t.trackId))) store.set(VIDS, JSON.stringify([...vidKept])); }
+// NetherFlow's match cache (match/worker.js, on our own Cloudflare): the YouTube video others have already matched to a
+// song, so it needn't be searched for again. Empty = off (set to the deployed https URL + /m to turn it on). Only the
+// song key and the public video id ever go to it — no account, no identity, nothing about what's played.
+const MATCH_CACHE = '';
+// the song's key, the same shape the worker expects: "title words|first-artist words|seconds", lower-case ascii. A song
+// whose key isn't ascii (non-Latin titles) just isn't cached — it searches as before.
+const matchKey = (artist, title, dur) => { const t = words(clean(title)).join(' '), who = firstArtist(artist); return t && who && dur ? t + '|' + who + '|' + Math.round(dur) : ''; };
+const matchable = k => /^[a-z0-9]+( [a-z0-9]+)*\|[a-z0-9]+( [a-z0-9]+)*\|\d{1,4}$/.test(k);
+const cacheBad = new Set(); // keys whose shared id didn't fit this session: searched instead, not asked of the cache again
+async function matchGet(key) {
+  if (!MATCH_CACHE || !navigator.onLine || !matchable(key) || cacheBad.has(key)) return [];
+  try { const r = await fetch(MATCH_CACHE + '?k=' + encodeURIComponent(key), { signal: AbortSignal.timeout(4000) }); const j = await r.json();
+    return Array.isArray(j.ids) ? j.ids.filter(id => /^[\w-]{11}$/.test(id)).slice(0, 3) : []; } catch { return []; }
+}
+function matchPut(key, id) {
+  if (!MATCH_CACHE || !navigator.onLine || !matchable(key) || !/^[\w-]{11}$/.test(id)) return;
+  fetch(MATCH_CACHE, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ k: key, id }) }).catch(() => {});
+}
+// a song's uploads: the shared cache first (no search — its length is checked when it plays), else YouTube's search, and
+// a length-matched find shared back for the next person
+async function resolveVids(t, dur) {
+  const key = matchKey(t.artistName, t.trackName, dur);
+  const ids = await matchGet(key);
+  if (ids.length) return ids.map(id => ({ id, dur, cache: true, key })); // (trusted enough to try; proven by its length at play)
+  const vids = await findVideos(t.artistName, t.trackName, dur, t.collectionName || '', songLang(t));
+  if (vids.length && dur && vids[0].dur && Math.abs(vids[0].dur - dur) <= 8) matchPut(key, vids[0].id); // (share only a find that fits the length)
+  return vids;
+}
 function videosFor(t) {
   const dur = (t.trackTimeMillis || 0) / 1000;
   if (t.ytId) return Promise.resolve([{ id: t.ytId, dur }]); // (found on YouTube: that very video)
   const kept = vidKept.get(String(t.trackId));
-  if (!vidCache.has(t.trackId)) vidCache.set(t.trackId, kept ? Promise.resolve(kept) : findVideos(t.artistName, t.trackName, dur, t.collectionName || '', songLang(t))
-    .then(v => { if (!v.length) vidCache.delete(t.trackId); else keepVids(t.trackId, v); return v; }, e => { vidCache.delete(t.trackId); throw e; }));
+  if (!vidCache.has(t.trackId)) vidCache.set(t.trackId, kept ? Promise.resolve(kept) : resolveVids(t, dur)
+    .then(v => { if (!v.length) vidCache.delete(t.trackId); else if (!v[0].cache) keepVids(t.trackId, v); return v; }, e => { vidCache.delete(t.trackId); throw e; }));
   return vidCache.get(t.trackId);
 }
 // YouTube limiting this connection, a song picked: its preview at once, and its full song looked for meanwhile — every
@@ -4902,10 +4931,11 @@ async function playTrack(t, term = '', queued = false, stay = false, mixed = nul
     if (id !== loadId) return;
     if (au) source = '◆ full song · Audius 320 kbps';
     else if (vids.length) {
-      [vid, ...ytQueue] = vids;
-      // (one that won't play: the next upload found, three at most — YouTube limiting this connection: none, another
-      // would be refused the same way)
-      for (let v = vid, n = 0; v && !fsVid && id === loadId && n < 3; v = ytQueue.shift(), n++) { const e = await fsPlay(v, id).then(() => null, e => e); if (fsVid) { vid = v; break; } if (noteLimited(e)) break; }
+      // try the uploads in turn (three at most); one that won't play — or a shared id of the wrong length — gives way to
+      // the next. YouTube limiting this connection: stop (another would be refused the same way).
+      const tryList = async list => { let picked = null; ytQueue = list.slice(1); for (let v = list[0], n = 0; v && !fsVid && id === loadId && n < 3; v = ytQueue.shift(), n++) { const e = await fsPlay(v, id).then(() => null, e => e); if (fsVid) { picked = v; break; } if (noteLimited(e)) break; } return picked; };
+      vid = await tryList(vids);
+      if (!fsVid && vids[0]?.cache && !ytLimited() && id === loadId) { const real = await videosFor(t).catch(() => []); if (real[0] && !real[0].cache) vid = await tryList(real); } // (the shared id didn't fit: a real search, and that's remembered)
       if (id !== loadId) return;
       if (fsVid) source = '◆ full song';
       else if (ytLimited()) vid = null; // (not on to the next: it'd be refused the same way — see below)
