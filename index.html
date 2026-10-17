@@ -1852,8 +1852,11 @@ function qualityNow() {
   if (/audius\.co/.test(src)) return 'MP3 at 320 kbps: the artist\'s own upload, on Audius';
   if (/mzstatic|apple\.com/.test(src)) return 'a 30-second preview';
   if (!fsFmt) return '';
-  const codec = /opus/i.test(fsFmt.mime) ? 'Opus' : /mp4a|aac|audio\/mp4/i.test(fsFmt.mime) ? 'AAC' : 'audio', kbps = KBPS[fsFmt.itag] || (codec === 'Opus' ? 160 : 128);
-  return `${codec} at about ${kbps} kbps${kbps >= 160 ? ': the best YouTube has of this song' : ''}`;
+  // (its own average bitrate, as YouTube reports it — Opus 251 runs ~125–150 kbps, not the 160 it peaks at — or, for one
+  // started from its kept start before its address came, the format's usual)
+  const codec = /opus/i.test(fsFmt.mime) ? 'Opus' : /mp4a|aac|audio\/mp4/i.test(fsFmt.mime) ? 'AAC' : 'audio', real = fsFmt.bitrate > 8000 ? Math.round(fsFmt.bitrate / 1000) : 0;
+  const kbps = real || KBPS[fsFmt.itag] || (codec === 'Opus' ? 160 : 128), best = fsFmt.itag === 251 || (!fsFmt.itag && codec === 'Opus');
+  return `${codec} at ${real ? '' : 'up to '}${kbps} kbps${best ? ': the best YouTube has of this song' : ''}`;
 }
 // Sing mode's voice remover: the middle of the stereo picture between the
 // bass and the sizzle, where a singer's mixed, turned down by a (0…1); the sides and the middle's bass and top kept
@@ -2884,10 +2887,10 @@ async function fsStream(vid) { // → { src (for a player, or a download), loudn
     }
     const s = await flowPage.audio(vid);
     fsKeep(vid, s); // (the app keeps its start as it plays)
-    return { src: '/_fs/media?' + new URLSearchParams({ u: s.url, m: s.mime.split(';')[0], id: vid, g: keptG() }), loudnessDb: s.loudnessDb || 0, dur: s.duration || 0, fmt: { itag: s.itag, mime: s.mime } };
+    return { src: '/_fs/media?' + new URLSearchParams({ u: s.url, m: s.mime.split(';')[0], id: vid, g: keptG() }), loudnessDb: s.loudnessDb || 0, dur: s.duration || 0, fmt: { itag: s.itag, mime: s.mime, bitrate: s.bitrate || 0 } };
   }
   const s = await fetch('/api/fs/audio?' + new URLSearchParams({ id: vid })).then(async r => r.ok ? r.json() : Promise.reject(Object.assign(new Error('no stream'), { code: (await r.json().catch(() => ({}))).error })));
-  return { src: '/api/fs/media?' + new URLSearchParams({ id: vid, g: keptG() }), loudnessDb: s.loudnessDb || 0, dur: s.duration || 0, fmt: { itag: s.itag, mime: s.mime || '' } };
+  return { src: '/api/fs/media?' + new URLSearchParams({ id: vid, g: keptG() }), loudnessDb: s.loudnessDb || 0, dur: s.duration || 0, fmt: { itag: s.itag, mime: s.mime || '', bitrate: s.bitrate || 0 } };
 }
 async function fsPlay(v, id) {
   const s = await fsStream(v.id);
@@ -2980,7 +2983,7 @@ function initAudio() { // created lazily: browsers want a user gesture first
   applyEq();
 }
 
-// ---------- equalizer: 6 bands like Spotify's, ±12 dB, on every song, in this page's own sound graph. Settings are
+// ---------- equalizer: 10 bands an octave apart, ±12 dB, on every song, in this page's own sound graph. Settings are
 // kept on this device. ----------
 const EQ = {
   freqs: [32, 64, 125, 250, 500, 1000, 2000, 4000, 8000, 16000],
@@ -3141,7 +3144,7 @@ const SVGNS = 'http://www.w3.org/2000/svg';
 const svgEl = (tag, attrs, text) => { const e = document.createElementNS(SVGNS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; return e; };
 function drawEq() {
   const g = $('eqGraph'), pts = eqState.gains.map((v, i) => [EQX(i), EQY(v)]);
-  const line = smoothPath([[0, pts[0][1]], ...pts, [600, pts[5][1]]]);
+  const line = smoothPath([[0, pts[0][1]], ...pts, [600, pts[pts.length - 1][1]]]); // (out to the edges at the end bands' heights: it was the 6th band's, from when there were six)
   const kids = [svgEl('defs', {}), svgEl('path', { class: 'grid', d: 'M0,20H600M0,170H600' }), svgEl('path', { class: 'grid zero', d: 'M0,95H600' }),
     svgEl('text', { x: 4, y: 16 }, '+12'), svgEl('text', { x: 4, y: 91 }, '0'), svgEl('text', { x: 4, y: 166 }, '−12'),
     svgEl('path', { class: 'area', d: line + ' L600,210 L0,210 Z', fill: 'url(#eqFill)' }), ...(hp ? [svgEl('path', { class: 'hpcurve', d: hpCurve() })] : []), svgEl('path', { class: 'curve', d: line })];
@@ -3158,10 +3161,10 @@ function drawEq() {
   $('eqState').textContent = eqState.on ? 'On' : 'Off';
   for (const b of $('eqPresets').children) b.setAttribute('aria-pressed', b.textContent === eqState.preset);
 }
-function setBand(i, v, focus) {
+function setBand(i, v, focus, save = true) {
   const editing = document.activeElement?.classList?.contains('tv-edit'); // (a TV's band being changed: still, once drawn anew)
   eqState.gains[i] = v; eqState.preset = 'Custom'; eqState.on = true;
-  drawEq(); applyEq(true);
+  drawEq(); applyEq(save);
   if (!focus) return;
   const n = $('eqGraph').querySelector(`[data-band="${i}"]`);
   n.focus();
@@ -3177,12 +3180,14 @@ let eqDrag = -1;
 const eqPoint = e => { const r = $('eqGraph').getBoundingClientRect(); return [(e.clientX - r.left) / r.width * 600, (e.clientY - r.top) / r.height * 210]; };
 $('eqGraph').addEventListener('pointerdown', e => {
   const [x, y] = eqPoint(e);
-  eqDrag = Math.max(0, Math.min(5, Math.round((x - 50) / 100))); // the band whose column was pressed
+  // the band whose column was pressed: the nearest one (it was worked out for six bands, so the top four of ten couldn't
+  // be dragged at all, and the others took their neighbour's)
+  eqDrag = Math.max(0, Math.min(EQ_BANDS - 1, Math.round((x - EQX(0)) / (EQX(1) - EQX(0)))));
   $('eqGraph').setPointerCapture(e.pointerId);
-  setBand(eqDrag, EQG(y));
+  setBand(eqDrag, EQG(y), false, false);
 });
-$('eqGraph').addEventListener('pointermove', e => { if (eqDrag >= 0) setBand(eqDrag, EQG(eqPoint(e)[1])); });
-$('eqGraph').addEventListener('pointerup', () => { eqDrag = -1; });
+$('eqGraph').addEventListener('pointermove', e => { if (eqDrag >= 0) setBand(eqDrag, EQG(eqPoint(e)[1]), false, false); }); // (kept once it's let go)
+for (const ev of ['pointerup', 'pointercancel']) $('eqGraph').addEventListener(ev, () => { if (eqDrag >= 0) applyEq(true); eqDrag = -1; });
 $('eqGraph').addEventListener('keydown', e => {
   const i = +e.target.dataset?.band;
   if (!(i >= 0)) return;
@@ -4856,12 +4861,12 @@ for (const k in CURVES) PLACE[k] = curvePlace;
 function lyricsFor(t) {
   const dur = (t.trackTimeMillis || 0) / 1000, alts = lyricsAlts(t);
   const lyrics = fetchLyrics(t.artistName, t.trackName, dur, alts), timed = fetchWords(t.artistName, t.trackName, dur);
-  return async (playing, vid) => {
+  return Object.assign(async (playing, vid) => {
     // (asked alongside the others; given up on after 5 s, so it never holds the lyrics up for long)
     const ytm = vid?.id && fullSongs ? Promise.race([ytmLyricsFor(vid.id).catch(() => ({})), new Promise(r => setTimeout(r, 5000, {}))]) : {};
     const want = songLang(t) || tagLang(vid?.title); // (the song's language, as its names — or its upload's — say)
     return withYtm(await pick(playing, want), await ytm, vid, want);
-  };
+  }, { early: lyrics }); // (early: the open database's own answer, as soon as it's in — see playTrack)
   async function pick(playing, want) {
     // lyrics in another language than the song's (a translation, another language's version of a film song): not its
     const off = x => { const l = want && x?.raw && langOf(x.raw); return !!l && !sameLang(l, want); };
@@ -4966,6 +4971,14 @@ async function playTrack(t, term = '', queued = false, stay = false, mixed = nul
   if (ep) return playEpisode(t, id);
   audio.playbackRate = audio.defaultPlaybackRate = 1;
   if (kept) return playSaved(t, id);
+  // Offline, and this one isn't saved here: the list plays on from the next song that is (a song coming up by itself);
+  // one picked, or none saved after it: said so — not a preview that can't load either, and the music stopped.
+  if (!navigator.onLine && fullSongs) {
+    const after = [...queue.slice(qi + 1), ...(repeat === 'all' ? queue.slice(0, qi) : [])], later = after.find(x => saved.has(x.trackId) && x.trackId !== t.trackId);
+    if (later && stay) { toast(`Offline: ${t.trackName} isn't saved here, so on to ${later.trackName}`); return playTrack(later, '', false, true); }
+    useEngine('audio'); audio.pause(); audio.removeAttribute('src'); audio.load(); setPlaying(false); status('◇ offline');
+    return message('You\'re offline', later ? `${t.trackName} isn't saved on this device. ${later.trackName}, later in the list, is.` : 'this song isn\'t saved on this device: the songs you save play with no connection');
+  }
   message('Loading', fullSongs ? 'finding the full song' : 'finding a preview');
   status('● loading');
   const dur = (t.trackTimeMillis || 0) / 1000;
@@ -4988,7 +5001,7 @@ async function playTrack(t, term = '', queued = false, stay = false, mixed = nul
       if (fsVid) source = '◆ full song';
       else if (ytLimited()) vid = null; // (not on to the next: it'd be refused the same way — see below)
       else if (navigator.onLine && hasNext() && !stay) { forgetVids(t); toast(`Couldn't load ${t.trackName}: on to the next`); return nextTrack(); } // (as other players skip one that won't play)
-      else { forgetVids(t); why = 'couldn\'t load it'; vid = null; }
+      else { if (navigator.onLine) forgetVids(t); why = 'couldn\'t load it'; vid = null; } // (the connection gone mid-way: its uploads kept — they're fine, it's the connection)
     }
     // YouTube limiting this connection: the preview now, and the full song when it comes (see fullLater)
     if (!au && !fsVid && ytLimited()) { why = 'YouTube is limiting your connection: a preview, till the full song comes'; source = '◇ 30s preview · YouTube is limiting your connection, the full song when it comes'; fullLater(t, id, term, queued); }
@@ -5005,13 +5018,25 @@ async function playTrack(t, term = '', queued = false, stay = false, mixed = nul
     P.play();
   }
 
+  // The lyrics, quickly: the open database's own exact match (its name, artist and length) shows the moment it's in —
+  // ~0.2 s — rather than after every source has answered (word timing ~1 s, YouTube Music's up to 5); the full answer,
+  // word by word and checked against YouTube Music's, takes over when it's in (the same lines: it's usually still the
+  // intro then). Only for the full song, at the length the lyrics were timed to.
+  const full = !!(vid || au), playLen = au ? au.dur : vid?.dur;
+  let early = null;
+  if (full) lyrics.early.then(l => {
+    if (id !== loadId || early === false || !l?.exact || !/\[\d+:\d+/.test(l.raw || '') || (playLen && l.dur && Math.abs(playLen - l.dur) > 2)) return;
+    early = l; status(`${source} · synced lyrics`); setLines(l.raw);
+  }, () => {});
   // (Audius's: YouTube Music's lyrics of the label's upload for their words, not their timing)
-  const lyr = await lyrics(au ? au.dur : vid?.dur, au ? vids[0] && { ...vids[0], channel: 'Audius' } : vid);
+  const lyr = await lyrics(playLen, au ? vids[0] && { ...vids[0], channel: 'Audius' } : vid);
   if (id !== loadId) return;
-  const full = !!(vid || au), gap = vid && lyr.dur ? Math.round(vid.dur - lyr.dur) : 0;
+  const same = early && lyr.raw === early.raw && !lyr.yrc && !lyr.ref; // (the full answer is what's shown already: left as it is)
+  early = early || false;
+  const gap = vid && lyr.dur ? Math.round(vid.dur - lyr.dur) : 0;
   status(`${source} · ${full ? lyr.kind : lyr.kind.replace('synced ', '')}${lyr.credit ? ` by ${lyr.credit}` : ''}`
     + (Math.abs(gap) > 3 ? ` · this upload runs ${Math.abs(gap)}s ${gap > 0 ? 'longer' : 'shorter'}, nudge sync if off` : ''));
-  setLines(lyr.raw, { preview: full ? '' : why, yrc: !!lyr.yrc, guide: lyr.guide, ref: lyr.ref, ...(lyr.instrumental && { note: 'an instrumental: no words to sing along to' }) });
+  if (!same) setLines(lyr.raw, { preview: full ? '' : why, yrc: !!lyr.yrc, guide: lyr.guide, ref: lyr.ref, ...(lyr.instrumental && { note: 'an instrumental: no words to sing along to' }) });
   setTimeout(() => id === loadId && prefetchNext(), 15000); // (once it's been listened to a while: skipping on fast, nothing's looked up for nothing — and the next's still ready long before it's needed)
 }
 
@@ -5880,7 +5905,7 @@ async function fetchEpisode(job, onFrac) {
 }
 async function fetchCover(t) {
   const url = artUrl(t, 600);
-  try { const r = url && await fetch(url); return r?.ok ? await r.blob() : null; } catch { return null; }
+  try { const r = url && await fetch(url, { signal: AbortSignal.timeout(15000) }); return r?.ok ? await r.blob() : null; } catch { return null; } // (a cover that stops coming never holds the song's save up: saved without it)
 }
 
 // ---------- library screen: the front page (playlists), or one list (liked, downloads, a playlist) ----------
@@ -12363,6 +12388,8 @@ console.assert(JSON.stringify(parseLyrics('[00:01.50]hi\n[01:00]yo\nplain')) ===
   const got = [0, 2, 4, 6, 8, 10, 12].map(i => (ls[i].sec.name + ' ' + ls[i].sec.tag).trim()).join(', ');
   console.assert(got === 'Verse 1, Chorus, Verse 2, Chorus ×2, Bridge, Chorus ×3, Outro', 'labelSections broken: ' + got); }
 console.assert(clean('Song (feat. X) [Live] - Remastered 2011') === 'Song', 'clean broken');
+// (each of the ten EQ bands is the one pressed at its own column)
+console.assert(EQ.freqs.every((f, i) => Math.round((EQX(i) - EQX(0)) / (EQX(1) - EQX(0))) === i), 'EQ bands broken');
 // (a karaoke label's cover, the original for a remix, the studio take for a live one: not the song; the remix and the
 // live take themselves are; "Live" in a song's own name isn't a version)
 console.assert(videoMatch({ title: 'アイドル (原曲歌手:YOASOBI) - IDOL', channel: '歌っちゃ王 - Topic' }, 'YOASOBI', 'Idol').other

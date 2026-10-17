@@ -167,7 +167,7 @@ async function handle(req, res) {
   if (url.pathname === '/api/fs/audio') { // a song's stream, described (the page then plays /api/fs/media)
     const id = url.searchParams.get('id') || '', kept = keptMeta(id);
     if (kept) { flowAudio(id).catch(() => {}); return send(res, 200, JSON.stringify({ itag: kept.itag, mime: kept.mime, loudnessDb: kept.loudnessDb, duration: kept.duration, via: 'FlowStream', kept: true })); } // (its start kept here: at once, its address asked for meanwhile)
-    try { const s = await flowAudio(url.searchParams.get('id') || ''); return send(res, 200, JSON.stringify({ itag: s.itag, mime: s.mime, loudnessDb: s.loudnessDb, duration: s.duration || 0, via: s.via, why: s.why || '' })); }
+    try { const s = await flowAudio(url.searchParams.get('id') || ''); return send(res, 200, JSON.stringify({ itag: s.itag, mime: s.mime, bitrate: s.bitrate || 0, loudnessDb: s.loudnessDb, duration: s.duration || 0, via: s.via, why: s.why || '' })); }
     catch (e) { return send(res, 502, JSON.stringify({ error: e.code || e.message })); }
   }
   if (url.pathname === '/api/fs/kept' && req.method === 'DELETE') { // (Clear history: the kept starts go too)
