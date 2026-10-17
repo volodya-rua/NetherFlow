@@ -670,6 +670,19 @@ kbd { font: inherit; border: 1px solid currentColor; border-radius: 3px; padding
   color: var(--ink); caret-color: var(--a); font: 400 clamp(44px, 10vw, 160px)/1 var(--poster); text-transform: uppercase; letter-spacing: .01em;
   transition: border-color .3s; }
 .q:focus { border-color: var(--a); }
+.search.typed .q { margin-top: 1vh; font-size: clamp(30px, 5vw, 72px); } /* (typed: room for the results — it took a third of the screen) */
+.s-kinds { padding: 2px 12px 6px; }
+.s-kinds .chip { font-size: 15px; padding: 6px 14px; }
+.s-kinds .chip[aria-pressed=true] { border-color: var(--a); color: var(--bg); background: var(--a); }
+.s-hero { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 4px 18px; align-items: start; }
+.s-hero .top-hit { grid-template-columns: 1fr auto; grid-template-rows: auto auto; width: auto; margin: 44px 0 12px 12px; padding: 20px; }
+.s-hero .top-hit img { grid-column: 1 / -1; width: 120px; height: 120px; }
+.s-hero .top-hit .go { align-self: end; }
+.s-hero .s-four .hist-h { padding-top: 18px; }
+.s-hero:not(:has(.top-hit)) { grid-template-columns: minmax(0, 1fr); }
+@media (max-width: 900px) { .s-hero { grid-template-columns: minmax(0, 1fr); } .s-hero .top-hit { margin: 6px 12px 4px; } .s-hero .top-hit img { width: 96px; height: 96px; } }
+.artists.wrap { flex-wrap: wrap; overflow: visible; }
+.s-all { margin: 4px 12px 18px; }
 .q::placeholder { color: color-mix(in srgb, var(--ink) 16%, transparent); }
 .q::-webkit-search-cancel-button { display: none; }
 .sstat { color: var(--a); }
@@ -1707,7 +1720,7 @@ const api = {
     : (await fetch('/api/words?' + new URLSearchParams({ artist, title, dur }))).json(),
 };
 const FILE_NOTE = 'only 30-second previews · open the NetherFlow app for full songs';
-let lines = [], synced = false, drift = true, activeIdx = -2, curWords = [], wordTimes = [], curP = [];
+let lines = [], synced = false, drift = true, activeIdx = -2, curWords = [], wordTimes = [], curP = [], sylPace = .24;
 let loadId = 0, userScroll = 0, offset = 0, lastLyr = null, current = null;
 // A song saved for offline: where its file starts in the song (lyric time = file time + this), and its length.
 let songShift = 0, savedDur = 0;
@@ -1734,43 +1747,60 @@ function routeAudio() {
   routed = key;
   for (const n of [audioSrc, ...hpNodes, ...eqNodes, singNode.out, spaceNode.out, ...Object.values(toolNodes).map(t => t.out), analyser, boostNode, limiterNode]) n.disconnect();
   [audioSrc, ...hpNodes, ...(useEq ? eqNodes : []), ...(singing ? [singNode] : []), ...(spatial ? [spaceNode] : []), ...using.map(k => toolNodes[k]), analyser, ...(boosting ? [boostNode] : []),
-    ...(useEq || boosting || hpNodes.length || using.length ? [limiterNode] : []), ctx.destination].reduce((a, b) => (a.connect(b.inp || b), b.out || b));
+    ...(useEq || boosting || hpNodes.length || using.length || spatial ? [limiterNode] : []), ctx.destination].reduce((a, b) => (a.connect(b.inp || b), b.out || b));
 }
 // 360 sound (the Equalizer panel): the song set round the listener in 3D, as ears hear the world (HRTF). Around: its left
 // and right as two speakers wide either side and a little in front, with a little room round them. Orbit: the two
 // circling the head, opposite each other, once every 16 seconds (the "8D" sound), turned by two slow oscillators on the
 // audio thread itself, not by the page. Best on headphones. set(mode): 'Off' | 'Around' | 'Orbit', gliding over.
+// The browser's 3D filters colour the sound (measured: +6.5 dB round 200 Hz — muddy — the deep bass 7 dB under that,
+// the top 3–6 dB down, and peaks 4 dB over): so the bass below 200 Hz goes round them, as it is (it gives no direction
+// anyway), late as long as they take; what goes through them has their colour taken back out (eq: the dB round 230 Hz,
+// at 5 kHz and from 9 kHz up, and over all — measured, the middle of a song and its sides); and the room is fed no bass, its echo darker as it fades. All through the master after.
 const SPACES = ['Off', 'Around', 'Wide', 'Hall', 'Orbit'];
-// each mode: how far out the two ears sit, how far in front, and how much room (Orbit circles instead, see set)
-const SPACE_SET = { Around: { x: 1.7, z: -1, wet: .22 }, Wide: { x: 3, z: -.3, wet: .16 }, Hall: { x: 2.1, z: -1.1, wet: .45 } };
+// each mode: how far out the two ears sit, how far in front, how much room (Orbit circles instead, see set), its eq
+const SPACE_SET = { Around: { x: 1.7, z: -1, wet: .22, eq: [-6.5, -2, 4.5, 0] }, Wide: { x: 3, z: -.3, wet: .16, eq: [-6, -1.5, 1, 0] }, Hall: { x: 2.1, z: -1.1, wet: .45, eq: [-6.5, -1.5, 5, 0] },
+  Orbit: { wet: .12, eq: [-5.5, 0, 3, 0] } };
 let space = SPACES.includes(store.get('netherflow.space')) ? store.get('netherflow.space') : 'Off';
 function setSpace(v) { space = v; store.set('netherflow.space', v === 'Off' ? '' : v); spaceNode?.set(v); routeAudio(); renderLoud(); }
 function makeSpace(c) {
-  const g = v => { const n = c.createGain(); n.gain.value = v; return n; };
-  const inp = g(1), out = g(1), split = c.createChannelSplitter(2), room = c.createConvolver(), wet = g(0);
+  const g = v => { const n = c.createGain(); n.gain.value = v; return n; }, bq = (type, frequency, Q = -3.0103, gain = 0) => new BiquadFilterNode(c, { type, frequency, Q, gain }); // (a low or high pass's Q is in dB here: -3 dB is Butterworth's 0.707)
+  const inp = g(1), out = g(1), split = c.createChannelSplitter(2), room = c.createConvolver(), wet = g(0), ears3d = g(1);
   inp.channelCount = 2; inp.channelCountMode = 'explicit'; inp.channelInterpretation = 'speakers';
-  inp.connect(split);
-  // the room: a second and a half of soft, fading echo
-  const len = Math.round(c.sampleRate * 1.5), ir = c.createBuffer(2, len, c.sampleRate);
-  for (let ch = 0; ch < 2; ch++) { const d = ir.getChannelData(ch); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len) ** 3; }
-  room.buffer = ir; room.connect(wet); wet.connect(out);
+  // the crossover (two Butterworths a side: the halves add back up flat), the bass late by the 3D filters' own delay
+  const lo = [bq('lowpass', 200), bq('lowpass', 200)], hi = [bq('highpass', 200), bq('highpass', 200)], late = new DelayNode(c, { maxDelayTime: .1, delayTime: 305 / 48000 });
+  inp.connect(lo[0]); lo[0].connect(lo[1]); lo[1].connect(late); late.connect(out);
+  inp.connect(hi[0]); hi[0].connect(hi[1]); hi[1].connect(split);
+  // their delay, measured at this rate (it's the filters' block, so it changes with it), an impulse through a panner
+  const probe = new OfflineAudioContext(2, 4096, c.sampleRate), pp = new PannerNode(probe, { panningModel: 'HRTF', positionX: -1.7, positionZ: -1 }), one = probe.createBuffer(1, 4096, c.sampleRate), src = probe.createBufferSource();
+  one.getChannelData(0)[0] = 1; src.buffer = one; src.connect(pp); pp.connect(probe.destination); src.start();
+  probe.startRendering().then(b => { const d = b.getChannelData(0); let k = 0; for (let i = 1; i < d.length; i++) if (Math.abs(d[i]) > Math.abs(d[k])) k = i; late.delayTime.value = k / c.sampleRate; }).catch(() => {});
+  // their colour taken out
+  const eq = [bq('peaking', 230, .9), bq('peaking', 5000, 1), bq('highshelf', 9000)];
+  ears3d.connect(eq[0]); eq[0].connect(eq[1]); eq[1].connect(eq[2]); eq[2].connect(out);
+  // the room: a second and a half of echo, darker as it fades (each moment's noise smoothed more), after 15 ms; no bass in
+  const len = Math.round(c.sampleRate * 1.5), pre = Math.round(c.sampleRate * .015), ir = c.createBuffer(2, len, c.sampleRate);
+  for (let ch = 0; ch < 2; ch++) { const d = ir.getChannelData(ch); let y = 0; for (let i = pre; i < len; i++) { const t = (i - pre) / (len - pre), a = .9 * t; y = a * y + (1 - a) * (Math.random() * 2 - 1); d[i] = y * (1 - t) ** 3; } }
+  const send = bq('highpass', 300);
+  room.buffer = ir; ears3d.connect(send); send.connect(room); room.connect(wet); wet.connect(out);
   // the slow turn: sin and cos of the angle, once every 16 s
   const osc = wave => { const o = c.createOscillator(); o.frequency.value = 1 / 16; if (wave) o.setPeriodicWave(wave); o.start(); return o; };
   const sin = osc(), cos = osc(c.createPeriodicWave(new Float32Array([0, 1]), new Float32Array([0, 0])));
-  // left (0) and right (1): each its own point in space, its stereo sound (HRTF) into the mix and the room
+  // left (0) and right (1): each its own point in space, its stereo sound (HRTF)
   const ears = [0, 1].map(ch => {
     const p = new PannerNode(c, { panningModel: 'HRTF', distanceModel: 'linear', refDistance: 1, maxDistance: 10, rolloffFactor: 0 });
-    split.connect(p, ch); p.connect(out); p.connect(room);
+    split.connect(p, ch); p.connect(ears3d);
     const gx = g(0), gz = g(0); sin.connect(gx); cos.connect(gz); gx.connect(p.positionX); gz.connect(p.positionZ);
     return { p, gx, gz, side: ch ? 1 : -1 };
   });
   return { inp, out, set(mode) {
-    const t = c.currentTime, orbit = mode === 'Orbit', m = SPACE_SET[mode] || { x: 0, z: 0, wet: 0 };
+    const t = c.currentTime, orbit = mode === 'Orbit', m = SPACE_SET[mode] || { x: 0, z: 0, wet: 0, eq: [0, 0, 0] };
     for (const { p, gx, gz, side } of ears) {
       p.positionX.setTargetAtTime(orbit ? 0 : side * m.x, t, .08); p.positionZ.setTargetAtTime(orbit ? 0 : m.z, t, .08); // (Around/Wide/Hall: set out either side, a little in front)
       gx.gain.setTargetAtTime(orbit ? -side * 2 : 0, t, .3); gz.gain.setTargetAtTime(orbit ? side * 2 : 0, t, .3); // (Orbit: on a circle, opposite each other)
     }
-    wet.gain.setTargetAtTime(orbit ? .12 : m.wet, t, .1);
+    eq.forEach((f, i) => f.gain.setTargetAtTime(m.eq[i], t, .08)); ears3d.gain.setTargetAtTime(10 ** ((m.eq[3] || 0) / 20), t, .08);
+    wet.gain.setTargetAtTime(m.wet, t, .1);
   } };
 }
 // The sound tools (the Equalizer panel), each in the path only while it's on:
@@ -1830,6 +1860,51 @@ function makeNight(c) {
   squeeze.connect(up);
   return { inp: squeeze, out: up, set(v) { up.gain.setTargetAtTime(v === 'On' ? 1.8 : 1, c.currentTime, .1); } }; // (the quiet parts up: the limiter after it catches the peaks)
 }
+// The master, last before the speakers whenever anything can make the song louder (the booster, the equalizer, the
+// headphones' correction, the tools, 360 sound), on the sound's own thread: a limiter that never lets a peak past the
+// ceiling. The browser's own compressor, used before, let them through (its soft knee sits above its threshold) and
+// they were clipped at the speakers — measured on a loud song, 18% of the samples at 200%, 31% at 300%.
+// It looks 10 ms ahead: each peak's turn-down eased in over the 10 ms before it, let go over 150 ms — or 600 ms while
+// it's turning down often (a loud, dense song: the gain held steady, not pumping with each kick). All of the song
+// turned down alike, so its bass and its air stay as they were (three bands each their own, tried, shifted them by
+// 2 dB); and never fast enough to bend the bass's waves (a loud 50 Hz tone at 300%: 0.00% distortion, was 0.46%).
+// Ceiling: -1 dBFS while boosting, -0.3 otherwise. The port takes { boost } (the booster's gain, applied before).
+const MASTER_WORKLET = `class Master extends AudioWorkletProcessor {
+  constructor() {
+    super();
+    const sr = sampleRate, co = s => 1 - Math.exp(-1 / (s * sr));
+    // the signal 10 ms late; the gain each sample needs, its least over the next 10 ms (a queue of the least), eased in
+    this.D = Math.round(.01 * sr); this.W = this.D + 1;
+    this.dl = [new Float64Array(this.D), new Float64Array(this.D)]; this.di = 0;
+    this.qi = new Int32Array(this.W + 1); this.qv = new Float64Array(this.W + 1); this.qh = 0; this.qt = 0; this.n = 0;
+    this.box = new Float64Array(this.W).fill(1); this.bi = 0; this.sum = this.W;
+    this.g = 1; this.fast = co(.15); this.slow = co(.6); this.act = 0; this.actC = co(.8); // (how often it's been turning down)
+    this.ceil = Math.pow(10, -.3 / 20);
+    this.port.onmessage = e => { this.ceil = Math.pow(10, (e.data.boost > 1.001 ? -1 : -.3) / 20); };
+  }
+  process(ins, outs) {
+    const i = ins[0], o = outs[0], L = i[0], R = i[1] || i[0], oL = o[0], oR = o[1], n = oL.length;
+    const W = this.W, D = this.D, ceil = this.ceil, qi = this.qi, qv = this.qv, cap = W + 1, dL = this.dl[0], dR = this.dl[1];
+    for (let s = 0; s < n; s++) {
+      const l = L ? L[s] : 0, r = R ? R[s] : 0, p = Math.max(Math.abs(l), Math.abs(r)), need = p > ceil ? ceil / p : 1, at = this.n++;
+      while (this.qt !== this.qh && qi[this.qh] <= at - W) this.qh = (this.qh + 1) % cap; // (out of the window)
+      while (this.qt !== this.qh && qv[(this.qt - 1 + cap) % cap] >= need) this.qt = (this.qt - 1 + cap) % cap; // (no longer the least)
+      qi[this.qt] = at; qv[this.qt] = need; this.qt = (this.qt + 1) % cap;
+      const least = qv[this.qh];
+      this.sum += least - this.box[this.bi]; this.box[this.bi] = least; this.bi = (this.bi + 1) % W;
+      const eased = this.sum / W; // (each sample's least over the window, averaged over it: at the peak, never above what it needs)
+      this.act += ((eased < .999 ? 1 : 0) - this.act) * this.actC;
+      this.g = eased < this.g ? eased : this.g + (eased - this.g) * (this.fast + (this.slow - this.fast) * Math.min(1, this.act * 6));
+      const j = this.di, outL = dL[j] * this.g, outR = dR[j] * this.g;
+      dL[j] = l; dR[j] = r; this.di = (j + 1) % D;
+      oL[s] = outL > ceil ? ceil : outL < -ceil ? -ceil : outL; // (exactly at most the ceiling, whatever the sums' rounding)
+      if (oR) oR[s] = outR > ceil ? ceil : outR < -ceil ? -ceil : outR;
+    }
+    if (this.n > 1e9) { for (let m = this.qh; m !== this.qt; m = (m + 1) % cap) qi[m] -= this.n; this.n = 0; } // (the count kept small)
+    return true;
+  }
+}
+registerProcessor('nf-master', Master);`;
 // what's playing now, and at what quality (the Equalizer panel's first line)
 const KBPS = { 251: 160, 250: 70, 249: 50, 140: 128, 139: 48 };
 function qualityNow() {
@@ -2240,6 +2315,10 @@ let beatStyle = BEATS.includes(store.get('netherflow.beat')) ? store.get('nether
 function setBeat(name) { beatStyle = name; store.set('netherflow.beat', name === 'Wave' ? '' : name); renderTextPanel(); }
 // the wave along all four sides of the screen too (with the lyrics as well as the cover)
 let edges = store.get('netherflow.edges') === 'On';
+// its look (see drawEdges) and how far in from the sides it reaches
+const EDGE_STYLES = ['Wave', 'Bars', 'Neon', 'Glow'], EDGE_SIZES = { Small: .6, Medium: 1, Large: 1.5, Huge: 2.2 };
+let edgeStyle = EDGE_STYLES.includes(store.get('netherflow.edgestyle')) ? store.get('netherflow.edgestyle') : 'Wave';
+let edgeSize = EDGE_SIZES[store.get('netherflow.edgesize')] ? store.get('netherflow.edgesize') : 'Medium';
 // the background beating with the music too: it swells and brightens with the bass (the album cover background as well)
 let bgBeat = store.get('netherflow.bgbeat') === 'On', bgKick = 0;
 function setBgBeat(v) { bgBeat = v === 'On'; store.set('netherflow.bgbeat', bgBeat ? 'On' : ''); body.classList.toggle('bg-beat', bgBeat); renderMoodMenu(); }
@@ -2340,6 +2419,21 @@ function setBar(name) { barStyle = name; store.set('netherflow.bar', name === 'S
 let jump = Math.round(Math.min(60, Math.max(1, +store.get('netherflow.jump') || 10)));
 body.classList.toggle('edges', edges);
 function setEdges(v) { edges = v === 'On'; store.set('netherflow.edges', edges ? 'On' : ''); body.classList.toggle('edges', edges); renderTextPanel(); }
+function setEdgeStyle(v) { edgeStyle = v; store.set('netherflow.edgestyle', v === 'Wave' ? '' : v); renderTextPanel(); }
+function setEdgeSize(v) { edgeSize = v; store.set('netherflow.edgesize', v === 'Medium' ? '' : v); renderTextPanel(); }
+// ---------- the interface's size (Settings): the whole app larger or smaller, as a browser's zoom does it (its layout
+// follows: at 150% on a small window, a tablet's). On a computer, the window's own zoom; on a phone, the page laid out
+// that much narrower and scaled up to the screen.
+const UI_SIZES = window.netherflowApp?.zoom || !native ? ['80%', '90%', '100%', '110%', '125%', '150%'] : ['100%', '110%', '125%', '150%']; // (a phone's web view won't scale a page below its own size)
+let uiSize = UI_SIZES.includes(store.get('netherflow.uisize')) ? store.get('netherflow.uisize') : '100%';
+function applyUiSize() {
+  const f = parseInt(uiSize) / 100;
+  if (window.netherflowApp?.zoom) netherflowApp.zoom(f);
+  else if (native) document.querySelector('meta[name=viewport]').content = f === 1 ? 'width=device-width, initial-scale=1' : `width=${Math.round(screen.width / f)}, initial-scale=${f}, maximum-scale=${f}, user-scalable=no`;
+}
+function setUiSize(v) { uiSize = v; store.set('netherflow.uisize', v === '100%' ? '' : v); applyUiSize(); renderTextPanel(); }
+applyUiSize();
+if (native && !window.netherflowApp) addEventListener('orientationchange', () => setTimeout(applyUiSize, 300)); // (the screen's width turned with it)
 function setView(v) {
   view = v; store.set('netherflow.view', v === 'Cover' ? v : '');
   body.classList.remove('home');
@@ -2439,11 +2533,14 @@ function renderTextPanel() {
     ...(skin === 'Tactical' ? [settingRow('Agent', ['Each song', ...AGENTS.map(a => a.name)], agentPick || 'Each song', setAgent,
       'The agent by the lyrics: a new one for each song, or always the one you pick.')] : []),
     updRow(),
+    settingRow('Interface size', UI_SIZES, uiSize, setUiSize, 'Everything larger or smaller: the buttons, the text, the panels.'),
     settingRow('Show', ['Lyrics', 'Cover'], view, setView, 'Cover: the record spinning, with a ring that moves to the beat. Tap the cover in the player to switch.'),
     settingRow('Lyrics animation', LANIMS, lanimPick, setLanim, 'How the lyrics move. 2D: Wave, Spiral, Shatter, Fireworks. 3D: Swarm, Black Hole, Cylinder, Globe, Helix, DNA, Tornado, Knot, Möbius, Ribbon, Orbit, Atom, Tunnel, Cube.' + (kin.on ? ' (Extreme lyrics are on, in the mood menu: this is for when they\x27re off.)' : '')),
     ...(skin ? [] : [fontRow()]), // (a theme brings its own font and timeline)
     settingRow('Beat style', BEATS, beatStyle, setBeat, 'The ring round the record, in the Cover view.'),
-    settingRow('Beat on the screen edges', ['Off', 'On'], edges ? 'On' : 'Off', setEdges, 'The wave also runs along all four sides of the screen, with the lyrics too.'),
+    settingRow('Beat on the screen edges', ['Off', 'On'], edges ? 'On' : 'Off', setEdges, 'The beat also runs along all four sides of the screen, with the lyrics too.'),
+    ...(edges ? [settingRow('Edge look', EDGE_STYLES, edgeStyle, setEdgeStyle, 'Wave: a filled wave. Bars: the spectrum as bars. Neon: one glowing line. Glow: the sides light up on the bass.'),
+      settingRow('Edge size', Object.keys(EDGE_SIZES), edgeSize, setEdgeSize, 'How far in from the sides it reaches.')] : []),
     ...(skin ? [] : [settingRow('Timeline', BARS, barStyle, setBar, 'The bar under the lyrics that shows where the song is (drag it to move through the song).')]),
     settingRow('Lyrics size', Object.keys(LSIZE), lsize, setLsize, 'Long lines shrink just enough to stay on screen.'),
     settingRow('Lyrics alignment', ALIGNS, lalign, setAlign),
@@ -2958,6 +3055,7 @@ function useEngine(kind) {
 function initAudio() { // created lazily: browsers want a user gesture first
   if (ctx) return ctx.resume();
   ctx = new AudioContext({ latencyHint: 'playback' }); // (music's larger buffers: no cracks when the device is busy)
+  applySink(); // (on the speakers chosen)
   analyser = ctx.createAnalyser();
   analyser.fftSize = 1024; // ~47 Hz per bin: enough to tell the kick from the bass line
   analyser.smoothingTimeConstant = 0.55;
@@ -2975,7 +3073,10 @@ function initAudio() { // created lazily: browsers want a user gesture first
   boostNode = ctx.createGain(); limiterNode = ctx.createDynamicsCompressor(); singNode = makeSing(ctx); spaceNode = makeSpace(ctx); spaceNode.set(space);
   toolNodes = { cross: makeCross(ctx), clarity: makeClarity(ctx), lowvol: makeLowVol(ctx), night: makeNight(ctx) };
   for (const k in toolNodes) toolNodes[k].set(tools[k]);
-  limiterNode.knee.value = 10; limiterNode.ratio.value = 16; limiterNode.attack.value = 0.003; limiterNode.release.value = 0.16; // (soft knee, quick release: a boosted song stays full, not pumped)
+  limiterNode.knee.value = 10; limiterNode.ratio.value = 16; limiterNode.attack.value = 0.003; limiterNode.release.value = 0.16; // (till the master's loaded, or with none)
+  ctx.audioWorklet?.addModule(URL.createObjectURL(new Blob([MASTER_WORKLET], { type: 'text/javascript' }))).then(() => { // (the master in its place: see MASTER_WORKLET)
+    limiterNode.disconnect(); limiterNode = new AudioWorkletNode(ctx, 'nf-master', { outputChannelCount: [2] }); routed = null; applyBoost(boostLevel);
+  }).catch(e => console.warn('master:', e));
   applyBoost(boostLevel);
   freq = new Uint8Array(analyser.frequencyBinCount);
   applyEq();
@@ -3110,8 +3211,31 @@ function setSing(on) {
   applyEq();
   toast(on ? 'Sing: the voice turned down' : 'Sing off');
 }
+// The sound's output (computers): the speakers or headphones it plays on, kept by their id; one that's gone (unplugged)
+// is the computer's default till it's back. Its devices by their own names, the driver's part in brackets left off
+// ("Speakers (Realtek(R) Audio)": "Speakers") unless two would then read the same.
+let sinkId = store.get('netherflow.sink') || '', sinks = [];
+const canSink = !native && typeof HTMLMediaElement.prototype.setSinkId === 'function';
+async function applySink() {
+  if (!canSink) return;
+  sinks = (await navigator.mediaDevices.enumerateDevices().catch(() => [])).filter(d => d.kind === 'audiooutput' && d.deviceId !== 'default' && d.deviceId !== 'communications');
+  const id = sinks.some(d => d.deviceId === sinkId) ? sinkId : '';
+  for (const e of [audio, audioB, epAudio]) e.setSinkId(id).catch(() => {});
+  ctx?.setSinkId?.(id).catch(() => {});
+  if ($('eqLoud').childElementCount) renderLoud(); // (shown already: with the devices as they are now)
+}
+if (canSink) { navigator.mediaDevices.addEventListener('devicechange', applySink); applySink(); }
+function sinkRow() {
+  const short = d => d.label.replace(/\s*\((?:[^()]|\([^()]*\))*\)\s*$/, '') || 'Speakers';
+  const named = sinks.map(d => [sinks.filter(x => short(x) === short(d)).length > 1 ? d.label : short(d), d.deviceId]), DEF = 'Default';
+  const q = settingRow('Play on', [DEF, ...named.map(n => n[0])], named.find(n => n[1] === sinkId)?.[0] || DEF, v => {
+    sinkId = named.find(n => n[0] === v)?.[1] || ''; store.set('netherflow.sink', sinkId); applySink(); renderLoud();
+  }, 'The speakers or headphones it plays on. Default: whichever your computer is set to.');
+  q.classList.add('sink-row');
+  return q;
+}
 function renderLoud() {
-  $('eqLoud').replaceChildren(settingRow('Loudness', ['Original', 'Levelled'], loud, v => { loud = v; store.set('netherflow.loud', v === 'Original' ? '' : v); renderLoud(); applyEq(); setVolume(volume); },
+  $('eqLoud').replaceChildren(...(canSink && sinks.length > 1 ? [sinkRow()] : []), settingRow('Loudness', ['Original', 'Levelled'], loud, v => { loud = v; store.set('netherflow.loud', v === 'Original' ? '' : v); renderLoud(); applyEq(); setVolume(volume); },
     'Original: each song at its own original loudness. Levelled: loud songs turned down so all play at about one level.'),
     settingRow('360 sound', SPACES, space, setSpace, 'Around: the song set round you, like speakers either side. Wide: pushed further out, for a bigger stereo. Hall: a big soft room, like a concert hall. Orbit: it circles your head (the "8D" sound). Best on headphones.'),
     settingRow('Crossfeed', TOOLS.cross, tools.cross, v => setTool('cross', v), 'For headphones: a little of each side into the other, softened and a moment late, as speakers reach both ears. Easier on long listens.' + (space !== 'Off' ? ' (Not with 360 sound on: that places the song itself.)' : '')),
@@ -4004,7 +4128,7 @@ function setLines(raw, { preview = '', note = 'no lyrics found for this one', yr
   parsed = synced ? parsed.filter(l => l.t !== null) : parsed.filter(l => l.text);
   if (synced && ref) alignTo(parsed, ref);
   if (!parsed.length) return message('No words', note);
-  lines = parsed; activeIdx = -2; drift = !preview;
+  lines = parsed; activeIdx = -2; drift = !preview; sylPace = paceOf(lines);
   if (synced) labelSections(lines);
   buildMap();
   if (!synced) {
@@ -4205,12 +4329,22 @@ function buildStage(idx) {
     wordTimes = cleanWordTimes(line.words.map((x, i) => ({ t: x.t, e: x.e ?? line.words[i + 1]?.t ?? Math.min(end, x.t + 0.6) })), line.t, end);
     return;
   }
-  // No word timing available: estimate by syllables at a natural singing pace.
+  // No word timing available: estimate by syllables at the song's own pace (see paceOf).
   const syl = words.map(w => Math.max(1, (w.toLowerCase().match(/[aeiouy]+/g) || []).length));
   const total = syl.reduce((a, b) => a + b, 0);
-  const span = Math.min((end - line.t) * 0.85, total * 0.24 + 0.2);
+  const span = Math.min((end - line.t) * 0.85, total * sylPace + 0.2);
   let acc = 0;
   wordTimes = syl.map(n => { const t = line.t + span * acc / total; acc += n; return { t, e: line.t + span * acc / total }; });
+}
+// A song's pace, from its own lines: the time a syllable takes, as the quicker of its lines are sung (a line's time to
+// the next one holds its breath and pauses too: the quicker third is closer to the words themselves) — a rapper's
+// ~0.13 s, a ballad's ~0.3; the words of a line with no word timing spread at it. It was a singer's 0.24 for every
+// song: rap's words lit up behind the voice.
+function paceOf(ls) {
+  const r = [];
+  for (let i = 0; i < ls.length - 1; i++) { const l = ls[i], gap = ls[i + 1].t - l.t, n = l.text ? l.text.toLowerCase().split(/\s+/).reduce((a, w) => a + Math.max(1, (w.match(/[aeiouy]+/g) || []).length), 0) : 0; if (n >= 4 && gap > 0 && gap < 12) r.push(gap / n); }
+  r.sort((a, b) => a - b);
+  return r.length >= 5 ? Math.min(.32, Math.max(.11, r[Math.floor(r.length / 3)])) : .24;
 }
 // Lyric word stamps (NetEase, Kugou) can be jittery: a word that ends before it starts, two at the same instant, or one
 // that jumps back. Left as they are, the fill flashes or runs backwards. This makes them clean: inside the line, each
@@ -7711,6 +7845,7 @@ function topHit(s, list, artist, term, album) {
 function openAlbumPage(a) { apData = null; if (!$('artistPage').open) { $('artistPage').showModal(); placeWinctl(); } openAlbum(a); }
 async function runSearch(term) {
   searchCtl?.abort();
+  dlg.classList.toggle('typed', !!term.trim()); // (the search box smaller: room for the results)
   if (!term.trim()) return showHistory();
   const lk = linkIn(term);
   if (COLLAB_LINK.test(lk)) {
@@ -7730,7 +7865,13 @@ async function runSearch(term) {
   $('sstat').textContent = '● searching';
   searchFailed = false;
   try {
-    let [songs, artists, ytm, albums] = await Promise.all([searchSongs(term, ctl.signal), searchArtists(term, ctl.signal), searchYtm(term), searchAlbums(term, ctl.signal)]);
+    const pSongs = searchSongs(term, ctl.signal);
+    // (Apple's songs on screen the moment they're in — ~0.4 s — and the rest, YouTube Music's, the albums, the artist's,
+    // joining them when they come: it waited for all of it, 1–3 s with nothing to see)
+    let whole = false;
+    pSongs.then(l => { if (!whole && !ctl.signal.aborted && l.length) showResults({ list: oneEach(originalsFirst(l)), label: 'Songs', term }, 'All', true); }, () => {});
+    let [songs, artists, ytm, albums] = await Promise.all([pSongs, searchArtists(term, ctl.signal), searchYtm(term), searchAlbums(term, ctl.signal)]);
+    whole = true;
     if (ctl.signal.aborted) return;
     // A typo: Apple's search finds only the words as typed, YouTube Music's says what was meant ("levitatng" →
     // "levitating"). Apple's again, by that.
@@ -7765,10 +7906,7 @@ async function runSearch(term) {
     if (!all.length) exact = null;
     // artists: the one named, or ones whose songs came up ("weeknd": The Weeknd) — not just any whose name has the word in it
     artists = artists.filter(a => a === exact || songs.slice(0, 25).some(s => s.artistId === a.artistId));
-    const out = [], mine = searchLibrary(term);
-    if (mine.length) out.push(sectionHead('In your library'), ...mine.map((s, i) => row(s, i, mine)));
-    const topAt = out.length; // (the top result goes here, once it's known)
-    if (artists.length) out.push(sectionHead('Artists'), artistCards(artists, songs));
+    const R = { term, mine: searchLibrary(term), artists, songsAll: songs, albums, extra: [] };
     // (the songs YouTube Music also found for it — its search knows what's played — ahead of those it didn't; remixes,
     // live takes and covers still after the originals)
     // (then the other songs of the artists it found, then the rest, and last the ones found only by their album's name —
@@ -7777,17 +7915,19 @@ async function runSearch(term) {
     const named = s => words(s.trackName + ' ' + s.artistName).some(w => typed.includes(w));
     const rank = s => meant && isMeant(s) ? -1 : isModded(s) ? 4 : known.has(songKey(s)) ? 0 : knownBy.has(songKey(s).split('|')[1]) ? 1 : named(s) ? 2 : 3;
     let list = oneEach(originalsFirst(songs)).map((s, i) => [s, i]).sort((a, b) => rank(a[0]) - rank(b[0]) || a[1] - b[1]).map(x => x[0]), label = 'Songs';
-    if (exact) { list = originalsFirst(all); label = `All songs by ${exact.artistName}`; }
-    if (list.length) out.push(sectionHead(label, exact && 'Artist page', () => openArtist(exact)), ...list.map((s, i) => row(s, i, list)));
-    if (albums.length) out.push(sectionHead('Albums'), (g => { for (const a of albums) g.append(albumTile(a, openAlbumPage)); return g; })(el('div', 'albums strip')));
+    if (exact) { // (most played first: YouTube Music's own order for the artist, then the store's)
+      const played = new Map(ytm.map((s, i) => [songKey(s), i]));
+      list = originalsFirst(all).map((s, i) => [s, played.get(songKey(s)) ?? 1e3 + i]).sort((a, b) => a[1] - b[1]).map(x => x[0]); label = `All songs by ${exact.artistName}`;
+    }
+    // (albums by the artists of the songs found first; karaoke, tribute and cover albums left out)
+    const by = new Set(list.slice(0, 10).map(s => s.artistId));
+    R.albums = albums.filter(a => !isModded({ trackName: a.collectionName, artistName: a.artistName, collectionName: a.collectionName })).sort((a, b) => by.has(b.artistId) - by.has(a.artistId));
+    Object.assign(R, { list, label, exact });
     // other songs matching the words too (say, songs titled like the artist)
     const others = exact && label !== 'Songs' ? oneEach(originalsFirst(songs.filter(s => s.artistId !== exact.artistId))).slice(0, 10) : [];
-    if (others.length) out.push(sectionHead('Other songs'), ...others.map((s, i) => row(s, i, others)));
+    if (others.length) R.extra.push({ head: 'Other songs', list: others });
     // weak matches from Apple, better ones on YouTube Music or YouTube: those first
-    const add = (head, l, ahead) => {
-      const section = [sectionHead(head), ...l.map((s, i) => row(s, i, l))], at = out.findIndex(x => x.textContent === 'Songs');
-      if (ahead && at >= 0) out.splice(at, 0, ...section); else out.push(...section);
-    };
+    const add = (head, l, ahead) => R.extra[ahead ? 'unshift' : 'push']({ head, list: l, ahead });
     const yl = oneEach(originalsFirst(extra));
     if (meant) yl.sort((a, b) => isMeant(b) - isMeant(a)); // (the song meant first here too: not after songs that only have the word typed)
     if (yl.length && !exact) add(songs.length ? 'More on YouTube Music' : 'Found on YouTube Music', yl, extra.match > songs.match && songs.match < .6 || meant === top); // (the song meant: only there)
@@ -7804,12 +7944,51 @@ async function runSearch(term) {
     // (a song named exactly as typed beats an album of that name)
     const ytFirst = extra.match > songs.match && songs.match < .6, titled = !meant && list.find(s => !isModded(s) && core(clean(s.trackName)) === core(asked));
     const best = exact ? null : meant && [...list, ...yl].find(isMeant) || titled || (ytFirst ? yl[0] : list[0]) || yl[0] || more[0], album = !exact && !titled && !meant && albumHit;
-    if (exact || album || best) out.splice(topAt, 0, topHit(best, exact ? all : yl.includes(best) ? yl : more.includes(best) ? more : list.length ? list : yl.length ? yl : more, exact, term, album));
-    $('results').replaceChildren(...out);
-    $('results').scrollTop = 0;
+    if (exact || album || best) R.top = () => topHit(best, exact ? all : yl.includes(best) ? yl : more.includes(best) ? more : list.length ? list : yl.length ? yl : more, exact, term, album);
+    showResults(R, 'All');
     const note = fixed ? ` · showing results for “${fixed}”` : '';
     $('sstat').textContent = n ? `${n} songs${note} · ${fullSongs ? 'full songs' : FILE_NOTE}` : searchFailed ? "Couldn't reach the music catalog: check the connection." : `Nothing${note}. Try another spelling.`;
   } catch (e) { if (e.name !== 'AbortError') $('sstat').textContent = 'Search is offline. Songs you saved are in your Library.'; }
+}
+// The results, as the big music apps lay them out: what to show (All, Songs, Artists, Albums: the chips at the top);
+// in All, the top result beside the first four songs, then the artists, the albums, and the songs on (to the 16th —
+// "Show all" for the rest), then YouTube Music's and YouTube's. R: the sections (runSearch); quick: Apple's songs
+// alone, as they come in, till the rest is in.
+function showResults(R, filter, quick = false) {
+  const out = [], songsOf = l => l.map((s, i) => row(s, i, l)), extra = R.extra || [], first = extra.find(x => x.ahead && x.list.length);
+  const main = first && !R.exact ? first : { head: R.label, list: R.list || [] }; // (the songs to lead with: YouTube's when Apple's were weak)
+  const kinds = [['All', 1], ['Songs', (R.list?.length || 0) + extra.length], ['Artists', R.artists?.length], ['Albums', R.albums?.length]].filter(k => k[1]);
+  if (!quick && kinds.length > 2) {
+    const chips = el('div', 'chips s-kinds');
+    chips.setAttribute('role', 'group'); chips.setAttribute('aria-label', 'Show');
+    for (const [k] of kinds) { const b = el('button', 'chip', k); b.setAttribute('aria-pressed', k === filter); b.onclick = () => showResults(R, k); chips.append(b); }
+    out.push(chips);
+  }
+  const songsHead = (head, n) => R.exact && head === R.label ? sectionHead(head, 'Artist page', () => openArtist(R.exact)) : sectionHead(head + (n ? ' · ' + n : ''));
+  const albumsIn = cls => { const g = el('div', cls); for (const a of R.albums) g.append(albumTile(a, openAlbumPage)); return g; };
+  if (filter === 'All') {
+    if (R.mine?.length) out.push(sectionHead('In your library'), ...songsOf(R.mine));
+    const lead = main.list.slice(0, 4);
+    if (R.top || lead.length) { // (the top result, and beside it the first four songs)
+      const hero = el('div', 's-hero'), side = el('div', 's-four');
+      if (R.top) hero.append(R.top());
+      if (lead.length) { side.append(sectionHead(R.exact ? 'Popular' : 'Songs'), ...lead.map((s, i) => row(s, i, main.list))); hero.append(side); }
+      out.push(hero);
+    }
+    if (R.artists?.length) out.push(sectionHead('Artists'), artistCards(R.artists, R.songsAll || []));
+    if (R.albums?.length) out.push(sectionHead('Albums'), albumsIn('albums strip'));
+    const rest = main.list.slice(4, 16);
+    if (rest.length) {
+      out.push(songsHead(main.head), ...rest.map((s, i) => row(s, i + 4, main.list)));
+      if (main.list.length > 16) { const b = el('button', 'link s-all', 'Show all ' + main.list.length); b.onclick = () => showResults(R, 'Songs'); out.push(b); }
+    }
+    for (const x of main === first ? [{ head: R.label, list: R.list || [] }, ...extra.filter(x => x !== main)] : extra) if (x.list.length) out.push(sectionHead(x.head), ...songsOf(x.list.slice(0, 10)));
+  } else if (filter === 'Songs') {
+    for (const x of [...extra.filter(x => x.ahead), { head: R.label, list: R.list || [] }, ...extra.filter(x => !x.ahead)]) if (x.list.length) out.push(songsHead(x.head, x.list.length), ...songsOf(x.list));
+  } else if (filter === 'Artists') { const c = artistCards(R.artists, R.songsAll || []); c.classList.add('wrap'); out.push(c); }
+  else if (filter === 'Albums') out.push(albumsIn('albums'));
+  $('results').replaceChildren(...out);
+  if (!quick) $('results').scrollTop = 0;
 }
 function artistCards(artists, songs) {
   const box = el('div', 'artists');
@@ -8108,7 +8287,7 @@ let scrubTimer = 0;
 // ---------- volume (remembered on this device). The speaker button mutes on a computer, where the slider sits
 // beside it; on a phone (no room for the slider) it opens the slider in a small menu, and closes it again.
 // 0…100% is the player's own volume — on a phone, the phone's own media volume, the same as its volume keys (kept in
-// step both ways); 100…200% is the volume booster: extra gain after the equalizer, through a limiter.
+// step both ways); 100…300% is the volume booster: extra gain after the equalizer, through the master (MASTER_WORKLET).
 let volume = +store.get('netherflow.vol') || (store.get('netherflow.vol') === '0' ? 0 : 1), muted = false;
 const sysVol = native && Capacitor.Plugins.SystemVolume;
 let sysLink = false, sysSteps = 15; // (linked once the phone says its volume can be set)
@@ -8153,7 +8332,7 @@ if (window.netherflowApp?.island) {
     }
     netherflowApp.island({ title: curTitle, artist: $('artist').textContent, art: /^https?:/.test(curArt) ? curArt : artUrl(current, 300),
       // (playing: as the page has it — YouTube's brief "paused" while it buffers left out)
-      playing: body.classList.contains('playing'), t: P.t, dur: P.dur, vol: muted ? 0 : volume, repeat, liked: isLiked(current), next: hasNext(), bars, glow: islandGlow,
+      playing: body.classList.contains('playing'), t: P.t, dur: P.dur, vol: muted ? 0 : volAt(volume), repeat, liked: isLiked(current), next: hasNext(), bars, glow: islandGlow,
       pal: { bg: pal.bg, a: pal.a, b: pal.b, ink: pal.ink } });
   }, 33);
   netherflowApp.onIsland((cmd, v) => {
@@ -8161,7 +8340,7 @@ if (window.netherflowApp?.island) {
     else if (cmd === 'next') nextTrack();
     else if (cmd === 'prev') prevTrack();
     else if (cmd === 'seek' && P.dur) P.seek(Math.max(0, Math.min(P.dur - .5, +v || 0)));
-    else if (cmd === 'vol') setVolume(Math.max(0, Math.min(2, +v || 0)), false);
+    else if (cmd === 'vol') setVolume(volOf(Math.max(0, Math.min(2, +v || 0))), false); // (the island's slider as ours: see volAt)
     else if (cmd === 'repeat') setRepeat(REPEATS[(REPEATS.indexOf(repeat) + 1) % REPEATS.length]);
     else if (cmd === 'like' && current) toggleLike(current);
   });
@@ -8184,7 +8363,7 @@ function setPhoneVolume(level) {
 }
 function applyBoost(g) {
   boostLevel = g;
-  if (boostNode) { boostNode.gain.setTargetAtTime(g, ctx.currentTime, .015); limiterNode.threshold.setTargetAtTime(g > 1 ? -1 : 0, ctx.currentTime, .015); }
+  if (boostNode) { boostNode.gain.setTargetAtTime(g, ctx.currentTime, .015); limiterNode.port ? limiterNode.port.postMessage({ boost: g }) : limiterNode.threshold.setTargetAtTime(g > 1 ? -1 : 0, ctx.currentTime, .015); }
   routeAudio();
 }
 // The volume is applied before the analyser: shift its range to match, so the visuals don't shrink with it.
@@ -8193,9 +8372,12 @@ function levelAnalyser() {
   const g = 20 * Math.log10(Math.max(playerLevel(), 0.02));
   analyser.minDecibels = -92 + g; analyser.maxDecibels = -12 + g; // room above loud masters, so a kick stands out
 }
+// The volume sliders: their left half to 100%, the right half the booster on to 300% (100% still in the middle, and as
+// fine a hand below it as before). volAt: a volume's place on a slider (0–2); volOf: a place's volume.
+const volAt = v => v <= 1 ? v : 1 + (v - 1) / 2, volOf = s => s <= 1 ? s : 1 + (s - 1) * 2;
 const volPct = () => Math.round(volume * 100) + '%' + (volume > 1 ? ' boost' : '');
 function setVolume(v, mute = muted, fromPhone = false) {
-  volume = Math.min(2, Math.max(0, v)); muted = mute;
+  volume = Math.min(3, Math.max(0, v)); muted = mute;
   const boosted = !muted && volume > 1;
   audio.volume = playerLevel() * fsLevel(); epAudio.volume = playerLevel();
   levelAnalyser();
@@ -8203,7 +8385,7 @@ function setVolume(v, mute = muted, fromPhone = false) {
   if (boostLevel !== (boosted ? volume : 1)) applyBoost(boosted ? volume : 1);
   toolNodes?.lowvol.set(tools.lowvol); // (Loudness at low volume follows it)
   // (not the slider being dragged: setting its value under the pointer stops it following the drag)
-  for (const r of document.querySelectorAll('.vol')) { if (+r.value !== volume) r.value = volume; r.style.setProperty('--p', volume * 50 + '%'); }
+  for (const r of document.querySelectorAll('.vol')) { if (+r.value !== volAt(volume)) r.value = volAt(volume); r.style.setProperty('--p', volAt(volume) * 50 + '%'); r.setAttribute('aria-valuetext', volPct()); }
   $('volBtn').dataset.level = muted || !volume ? 'mute' : volume < .5 ? 'low' : 'high';
   $('volBtn').classList.toggle('boosted', boosted);
   $('volBtn').setAttribute('aria-label', muted ? 'Unmute' : `Volume ${volPct()}`);
@@ -8211,7 +8393,7 @@ function setVolume(v, mute = muted, fromPhone = false) {
   if (label) label.textContent = volPct();
   store.set('netherflow.vol', volume === 1 ? '' : String(volume));
 }
-$('vol').oninput = e => setVolume(+e.target.value, false);
+$('vol').oninput = e => setVolume(volOf(+e.target.value), false);
 const volMenuOpen = () => $('songMenu').matches(':popover-open') && $('songMenu').dataset.for === 'vol';
 let volMenuWas = false; // (a tap outside closes the menu before the click arrives: note whether it was open)
 $('volBtn').onpointerdown = () => { volMenuWas = volMenuOpen(); };
@@ -8219,9 +8401,9 @@ $('volBtn').onclick = () => {
   if (getComputedStyle($('vol')).display !== 'none') return setVolume(volume, !muted);
   if (volMenuWas || volMenuOpen()) { volMenuWas = false; return hideMenu(); } // tapped again: close it
   const r = el('input', 'range vol'), pctEl = el('b', '', volPct()), row = el('div', 'vol-row lbl');
-  Object.assign(r, { type: 'range', min: 0, max: 2, step: .01, value: volume });
+  Object.assign(r, { type: 'range', min: 0, max: 2, step: .01, value: volAt(volume) });
   r.setAttribute('aria-label', 'Volume (over 100%: boost)');
-  r.oninput = () => { setVolume(+r.value, false); pctEl.textContent = volPct(); };
+  r.oninput = () => { setVolume(volOf(+r.value), false); pctEl.textContent = volPct(); };
   row.append(ico('speaker'), r, pctEl);
   showMenu($('volBtn'), [row, el('div', 'mi-note lbl', sysLink ? 'Up to 100% this is your phone\'s volume; past it, the booster makes it louder still.' : 'Past 100% the booster makes it louder still.'),
     mi(muted ? 'speaker' : 'mute', muted ? 'Unmute' : 'Mute', () => { hideMenu(); setVolume(volume, !muted); })]);
@@ -8269,6 +8451,16 @@ addEventListener('keydown', e => {
   else if (e.code === 'ArrowRight') skipBy(jump);
   else if (e.code === 'ArrowLeft') skipBy(-jump);
 });
+
+// Esc twice, with nothing open for it to close: the home screen, as a phone's Back goes there — the song plays on (its
+// row there, or the cover, brings it back). (Seen as it's pressed, before an open panel takes it to close itself.)
+let escAt = 0;
+addEventListener('keydown', e => {
+  if (e.key !== 'Escape' || e.repeat) return;
+  if (topDialog() || document.querySelector(':popover-open:not(.toast)') || document.fullscreenElement) { escAt = 0; return; }
+  if (!body.classList.contains('has-song') || body.classList.contains('home')) return;
+  if (performance.now() - escAt < 600) { escAt = 0; goHome(true); } else escAt = performance.now();
+}, true);
 
 // ---------- full screen ----------
 const Immersive = native && Capacitor.Plugins.Immersive; // Android: hides the status and navigation bars
@@ -10225,7 +10417,7 @@ function drawRing(now, dt, live, kick) {
 // The wave along the four sides of the screen: the ring's Wave layers, mirrored on each side — the bass in the
 // middle of every side, the treble toward the corners — reaching in at most about a tenth of the screen.
 function drawEdges(g, W, H) {
-  const D = Math.min(W, H) * (W <= 720 ? .1 : .07);
+  const D = Math.min(W, H) * (W <= 720 ? .1 : .07) * EDGE_SIZES[edgeSize];
   const sides = [[W, (s, d) => [s, H - d]], [W, (s, d) => [W - s, d]], [H, (s, d) => [d, s]], [H, (s, d) => [W - d, s]]];
   // the curve along one side, d(k) in from it for band k; closed back along the edge for filling, or not, for lines
   const wave = (len, at, d, closed) => {
@@ -10239,7 +10431,34 @@ function drawEdges(g, W, H) {
   };
   const reach = (src, f) => k => D * (.04 + src[k] * .96) * f;
   g.lineJoin = g.lineCap = 'round';
+  if (edgeStyle === 'Glow') { // (each side lit from outside, deeper and brighter on the bass)
+    const bass = (ring.bands[0] + ring.bands[1] + ring.bands[2]) / 3, slow = ring.slow.reduce((a, b) => a + b, 0) / ring.slow.length, deep = D * (.5 + bass * 1.6);
+    for (const [x0, y0, x1, y1, w, h, x, y] of [[0, H, 0, H - deep, W, deep, 0, H - deep], [0, 0, 0, deep, W, deep, 0, 0], [0, 0, deep, 0, deep, H, 0, 0], [W, 0, W - deep, 0, deep, H, W - deep, 0]]) {
+      const gr = g.createLinearGradient(x0, y0, x1, y1);
+      gr.addColorStop(0, rgba(pal.a, .18 + bass * .5)); gr.addColorStop(.45, rgba(pal.b, .06 + slow * .14)); gr.addColorStop(1, rgba(pal.b, 0));
+      g.fillStyle = gr; g.fillRect(x, y, w, h);
+    }
+    return;
+  }
   for (const [len, at] of sides) {
+    if (edgeStyle === 'Bars') { // (the spectrum, bass in the middle of each side, as bars standing in from it)
+      const B = Math.max(24, Math.round(len / 15)), bw = Math.max(2, len / B * .34);
+      g.beginPath();
+      for (let i = 0; i < B; i++) { const s = (i + .5) / B * len, h = reach(ring.bands, 1)(Math.min(63, Math.round(Math.abs((i + .5) / B - .5) * 126))); g.moveTo(...at(s, 0)); g.lineTo(...at(s, h)); }
+      g.strokeStyle = rgba(pal.b, .1); g.lineWidth = bw * 4; g.stroke(); // (a soft glow round them, then each bar, a bright core in it)
+      g.strokeStyle = rgba(pal.a, .32); g.lineWidth = bw * 2; g.stroke();
+      g.strokeStyle = rgba(pal.a, .95); g.lineWidth = bw; g.stroke();
+      g.strokeStyle = rgba(pal.ink, .55); g.lineWidth = Math.max(1, bw * .3); g.stroke();
+      continue;
+    }
+    if (edgeStyle === 'Neon') { // (one line, glowing: no fill)
+      wave(len, at, reach(ring.bands, 1), false);
+      g.strokeStyle = rgba(pal.a, .12); g.lineWidth = 16; g.stroke();
+      g.strokeStyle = rgba(pal.a, .4); g.lineWidth = 6; g.stroke();
+      g.strokeStyle = rgba(pal.ink, .95); g.lineWidth = 1.6; g.stroke();
+      wave(len, at, reach(ring.slow, .7), false); g.strokeStyle = rgba(pal.b, .55); g.lineWidth = 2; g.stroke();
+      continue;
+    }
     wave(len, at, reach(ring.slow, 1.3), true); g.fillStyle = rgba(pal.b, .1); g.fill();
     wave(len, at, reach(ring.bands, 1), true); g.fillStyle = rgba(pal.a, .22); g.fill();
     wave(len, at, reach(ring.bands, 1), false);
@@ -12499,6 +12718,7 @@ console.assert(linkKey('https://open.spotify.com/playlist/x?si=1') === linkKey('
   const y = mergeTimed(parseYrc("[1000,2000](1000,400,0)I'm (1400,400,0)going (1800,400,0)down (2200,600,0)tonite\n[5000,2000](5000,500,0)wrong (5500,500,0)words (6000,500,0)in (6500,500,0)hear\n[7000,900](7000,900,0)Vocals: Someone"), g);
   console.assert(y.length === 4 && y[0].text === "I'm goin' down tonight" && y[0].words[2].t === 1.8 && y[1].text === 'right words in here' && y[1].words[1].t === 5.5 &&
     y[1].words[0].t < 5.5 && y[2].text === '' && y[3].t === 20 && !y[3].words, 'mergeTimed broken: ' + JSON.stringify(y)); }
+console.assert(paceOf(Array.from({ length: 9 }, (_, i) => ({ t: i * 1.2, text: 'we go fast we go fast now' }))) < .2 && paceOf(Array.from({ length: 9 }, (_, i) => ({ t: i * 3, text: 'we go slow we go slow now' }))) > .28, 'paceOf broken');
 console.assert(CREDIT_LINE.test('Mastering Engineer: John Greenham') && !CREDIT_LINE.test("I'm the bad type: make your mama sad type"), 'credit lines broken');
 console.assert(artUrl({ artworkUrl100: 'https://is1-ssl.mzstatic.com/a/100x100bb.jpg' }, 600).endsWith('/600x600bb.jpg') && artUrl({ artworkUrl100: 'https://lh3.googleusercontent.com/x=w544-h544-l90-rj' }, 120).endsWith('=w120-h120-l90-rj')
   && artUrl({ artworkUrl100: 'https://i.scdn.co/image/ab67616d0000b273f00d' }, 120).endsWith('ab67616d00001e02f00d') && artUrl({ artworkUrl100: 'https://i.scdn.co/image/ab67616d0000b273f00d' }, 600).endsWith('b273f00d')

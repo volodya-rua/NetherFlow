@@ -83,7 +83,7 @@ function makeIsland() {
   me.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   me.webContents.on('will-navigate', e => e.preventDefault());
   me.on('closed', () => { if (island === me) { island = null; islandShown = false; } });
-  me.loadURL(`http://localhost:${islandPort}/island.html`);
+  me.loadURL(`http://127.0.0.1:${islandPort}/island.html`); // (not the main window's address: its size, Settings › Interface size, is kept by address, and the island keeps its own)
 }
 function syncIsland() {
   if (!island || island.isDestroyed() || island.webContents.isLoading()) return;

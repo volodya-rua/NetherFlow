@@ -1,12 +1,13 @@
 // NetherFlow - Copyright (C) 2026 Volodya.rua - GNU GPL v3 only, with additional terms (credit, name and logo): see LICENSE and NOTICE.
 // Gives the page its window buttons (it draws its own; the native ones don't match the look).
-const { contextBridge, ipcRenderer } = require('electron');
+const { contextBridge, ipcRenderer, webFrame } = require('electron');
 contextBridge.exposeInMainWorld('netherflowApp', {
   lite: process.argv.includes('--nf-lite'), // NetherFlow Lite: no Extreme+ (see main.js)
   portMoved: process.argv.includes('--nf-port-moved'), // its usual port was taken: the library and settings kept there aren't here (see main.js)
   country: (process.argv.find(a => a.startsWith('--nf-country=')) || '').slice(13), // Windows' own region (its language often has none, or another country's)
   version: (process.argv.find(a => a.startsWith('--nf-version=')) || '').slice(13), // the app's version (Settings › Update says it)
   win: action => ipcRenderer.send('win', action), // 'min' | 'max' | 'close'
+  zoom: f => webFrame.setZoomFactor(f), // the interface's size (Settings › Interface size), as the browser's own zoom
   onMaximized: cb => ipcRenderer.on('maximized', (_, on) => cb(on)),
   awake: on => ipcRenderer.send('awake', !!on), // keep the screen on (while a song plays)
   onShown: cb => ipcRenderer.on('shown', (_, on) => cb(on)), // where the window is: 2 in front, 1 behind another app, 0 minimized / hidden
