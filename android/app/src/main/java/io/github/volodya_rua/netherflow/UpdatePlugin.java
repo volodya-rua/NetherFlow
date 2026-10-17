@@ -102,6 +102,7 @@ public class UpdatePlugin extends Plugin {
                 long total = 0, done = 0;
                 for (Iterator<String> it = files.keys(); it.hasNext(); ) total += files.getJSONArray(it.next()).getLong(1);
                 File root = new File(getContext().getFilesDir(), "web"), dir = new File(root, version), from = current();
+                if (dir.equals(from)) { call.resolve(); return; } // (this very version in use already: its files mustn't be cleared under it)
                 deleteAll(dir);
                 for (Iterator<String> it = files.keys(); it.hasNext(); ) {
                     String path = it.next();

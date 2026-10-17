@@ -51,6 +51,7 @@ public class FilesPlugin extends Plugin {
     public void file(PluginCall call) {
         String url = call.getString("url", ""), key = call.getString("key", "");
         if (!url.matches("https?://\\S+") || !key.matches("\\w+")) { call.reject("bad request"); return; }
+        cancelled.remove(key); // (a Stop that came after an earlier download of it had ended: not this one's)
         worker.execute(() -> {
             File out = new File(outDir(), key + ".audio");
             Listener tell = new Listener(key);

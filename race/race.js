@@ -232,6 +232,7 @@ const inPoly = (p, x, z) => { let k = false; for (let i = 0, j = p.length - 2; i
 
 export async function create(canvas, { palA = [1, .12, .18], palB = [.09, .78, 1], test = false, onCar = () => {} } = {}) {
   const renderer = new THREE.WebGLRenderer({ canvas, powerPreference: 'high-performance', antialias: false, stencil: false });
+  await new Promise(r => setTimeout(r, 0)); // (the page a frame between making the context, ~0.35 s, and the reflections' shaders, ~0.6 s)
   renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1;
   const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(55, 16 / 9, .1, 7000);
   const A = new THREE.Color().setRGB(...palA, THREE.SRGBColorSpace), B = new THREE.Color().setRGB(...palB, THREE.SRGBColorSpace);
@@ -606,7 +607,7 @@ export async function create(canvas, { palA = [1, .12, .18], palB = [.09, .78, 1
   trails.frustumCulled = false; scene.add(trails);
   const flat = new THREE.PlaneGeometry(1, 1); flat.rotateX(-Math.PI / 2); flat.translate(0, 0, .5);
   const wet = new THREE.InstancedMesh(flat, new THREE.MeshBasicMaterial({ map: streakTex(), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, polygonOffset: true, polygonOffsetFactor: -4 }), PACK * 4);
-  wet.frustumCulled = false; scene.add(wet);
+  wet.frustumCulled = false; wet.setColorAt(0, new THREE.Color()); scene.add(wet); // (its colours there from the start: they change its shader, made before it's drawn — see warm)
   // sparks from under the car (its floor on the track over a crest, on the beat)
   const SPARKS = 500, spP = new Float32Array(SPARKS * 3), spV = new Float32Array(SPARKS * 3), spL = new Float32Array(SPARKS);
   const sparkG = new THREE.BufferGeometry(); sparkG.setAttribute('position', new THREE.BufferAttribute(spP, 3));
@@ -840,8 +841,28 @@ export async function create(canvas, { palA = [1, .12, .18], palB = [.09, .78, 1
   function song(key) {
     let hsh = 0; for (const ch of String(key)) hsh = (hsh * 31 + ch.charCodeAt(0)) >>> 0;
     const want = KEYS[hsh % KEYS.length];
-    building = (want !== trackKey ? build(want) : Promise.resolve()).then(() => { place((hsh % 997) / 997 * S.len); clock = 0; });
+    building = (want !== trackKey ? build(want) : Promise.resolve()).then(warm).then(() => { place((hsh % 997) / 997 * S.len); clock = 0; });
     return { name: TRACKS[want].name, country: TRACKS[want].country, len: TRACKS[want].len };
+  }
+  // A circuit's shaders compiled before its first frame, alongside the page (KHR_parallel_shader_compile): drawn at once,
+  // they were compiled there and then, the page frozen for seconds (3.4 s measured, choosing Redline on Extreme+). Compiled
+  // as the composer's first pass draws them — into its own picture, so no tone mapping — or they'd be made again then.
+  // (a few at a time, a breath between: handing the graphics chip every shader at once was itself a third of a second)
+  let warming = false;
+  async function warm() {
+    warming = true;
+    try {
+      const one = new Map(); // (one thing of each kind: its material, and what changes its shader — instanced, coloured, points)
+      scene.traverse(o => { if (o.material) one.set([].concat(o.material).map(m => m.uuid).join() + (o.isInstancedMesh ? 'i' + !!o.instanceColor : '') + (o.isPoints ? 'p' : ''), o); }); // (a car's parts: several materials each)
+      const all = [...one.values()], waits = [];
+      for (let i = 0; i < all.length; i += 4) {
+        renderer.setRenderTarget(composer.readBuffer);
+        for (const o of all.slice(i, i + 4)) waits.push(renderer.compileAsync(o, camera, scene));
+        renderer.setRenderTarget(null);
+        await new Promise(r => setTimeout(r, 0));
+      }
+      await Promise.all(waits);
+    } finally { warming = false; }
   }
   // every frame (show: on screen; otherwise the race goes on unseen, the beat still followed)
   function frame(now, { show = true, kick = 0, energy = .5, playing = true, kind = 'flow' } = {}) {
@@ -852,7 +873,7 @@ export async function create(canvas, { palA = [1, .12, .18], palB = [.09, .78, 1
     const gaps = beatS.onsets.slice(1).map((x, i) => { let g = (x - beatS.onsets[i]) / 1000; while (g > .9) g /= 2; while (g < .33) g *= 2; return g; }).sort((a, b) => a - b);
     if (gaps.length >= 4) beatS.beat += (gaps[gaps.length >> 1] - beatS.beat) * .1;
     const into = kind === 'drop' && beatS.kind !== 'drop'; beatS.kind = kind;
-    if (!cars.length || !S || !cars[0].pace) return { onset };
+    if (!cars.length || !S || !cars[0].pace || warming) return { onset };
     // slow motion: as a chorus lands, and now and then on its beat
     if (into || (kind === 'drop' && onset && Math.random() < .08)) slowUntil = now + (into ? 1600 : 800);
     ts = mix(ts, !playing ? .06 : now < slowUntil ? .22 : 1, c01(dt * (now < slowUntil ? 12 : 3)));

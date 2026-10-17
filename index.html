@@ -2395,7 +2395,7 @@ async function updCheck(quiet) {
       }
     } else upd.state = 'none'; // (in a browser: always the latest)
   } catch (e) { Object.assign(upd, { state: 'error', err: updErr(e.message) }); }
-  store.set('netherflow.updchecked', String(Date.now()));
+  if (upd.state !== 'error') store.set('netherflow.updchecked', String(Date.now())); // (one that couldn't reach GitHub: asked again next start)
   updShow();
   if (quiet && upd.state === 'ready' && store.get('netherflow.updtold') !== upd.next) { store.set('netherflow.updtold', upd.next); toast(`NetherFlow ${upd.next} is out · Settings › Update`); }
 }
@@ -2413,7 +2413,7 @@ async function updGet() {
 }
 window.netherflowApp?.onUpdateProgress?.(f => { upd.frac = f; updShow(); });
 Upd?.addListener('progress', m => { upd.frac = m.frac; updShow(); });
-setTimeout(() => { if (Date.now() - (+store.get('netherflow.updchecked') || 0) > 20 * 3600e3) updCheck(true); }, 12000); // (once a day at most, quietly)
+setTimeout(() => { if (navigator.onLine && Date.now() - (+store.get('netherflow.updchecked') || 0) > 20 * 3600e3) updCheck(true); }, 12000); // (once a day at most, quietly; offline: not tried)
 // its row in Settings (and kept up to date in place while it's open)
 function updRow() {
   const q = el('div', 'bgq lbl upd'), mb = n => (n / 1e6).toFixed(n > 1e7 ? 0 : 1) + ' MB', v = upd.version ? ` ${upd.version}` : '';
@@ -6369,7 +6369,7 @@ function tgMqtt(url, topic, onMsg, onDrop) {
         const head = buf[0], type = head >> 4, body = buf.subarray(i, i + n); // (the header read before the buffer moves on: two packets in one frame)
         buf = buf.slice(i + n);
         if (type === 2) ws.send(pkt(0x82, [0, 1, ...str(topic), 0])); // connected: subscribe
-        else if (type === 9) { ok = true; clearTimeout(fail); ping = setInterval(() => ws.send(new Uint8Array([0xc0, 0])), 20000);
+        else if (type === 9) { ok = true; clearTimeout(fail); ping = setInterval(() => ws.readyState === 1 && ws.send(new Uint8Array([0xc0, 0])), 20000);
           res({ pub: (bytes, retain) => ws.readyState === 1 && ws.send(pkt(retain ? 0x31 : 0x30, [...str(topic), ...bytes])), close: () => { ok = false; ws.close(); } }); } // (retain: the relay keeps it for whoever comes next)
         else if (type === 3) { const tl = (body[0] << 8) | body[1], q = (head >> 1) & 3; onMsg(body.slice(2 + tl + (q ? 2 : 0))); }
       }

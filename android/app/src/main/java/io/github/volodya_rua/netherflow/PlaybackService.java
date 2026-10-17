@@ -234,7 +234,11 @@ public class PlaybackService extends MediaBrowserServiceCompat {
                 if (url.startsWith("data:")) { // (a saved song's own cover, sent as bytes: works with no network)
                     byte[] bytes = android.util.Base64.decode(url.substring(url.indexOf(',') + 1), android.util.Base64.DEFAULT);
                     bmp = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
-                } else try (InputStream in = new URL(url).openStream()) { bmp = BitmapFactory.decodeStream(in); }
+                } else { // (given up on in a while: a stalled connection mustn't keep a thread waiting for ever)
+                    java.net.HttpURLConnection c = (java.net.HttpURLConnection) new URL(url).openConnection();
+                    c.setConnectTimeout(10000); c.setReadTimeout(15000);
+                    try (InputStream in = c.getInputStream()) { bmp = BitmapFactory.decodeStream(in); } finally { c.disconnect(); }
+                }
             } catch (Exception ignored) {}
             Bitmap loaded = bmp;
             Bitmap little = loaded == null ? null : Bitmap.createScaledBitmap(loaded, 200, 200 * loaded.getHeight() / Math.max(1, loaded.getWidth()), true);

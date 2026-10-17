@@ -58,7 +58,9 @@ public class PlaybackPlugin extends Plugin {
         song.putString("lyric", call.getString("lyric", ""));
         getActivity().runOnUiThread(() -> {
             if (PlaybackService.instance != null) PlaybackService.instance.update(song);
-            else ContextCompat.startForegroundService(getContext(), new Intent(getContext(), PlaybackService.class).putExtras(song));
+            // (Android 12+ refuses a foreground service started from the background — the service ended while the app was
+            // away: no notification till the app's in front again, rather than the app crashing)
+            else try { ContextCompat.startForegroundService(getContext(), new Intent(getContext(), PlaybackService.class).putExtras(song)); } catch (RuntimeException ignored) {}
         });
         call.resolve();
     }
