@@ -1489,6 +1489,7 @@ body.fs.idle #curGlow { opacity: 0; }
       </button>
       <button id="nextBtn" class="skip" aria-label="Next" disabled><svg viewBox="0 0 24 24"><path d="M16.5 4H19v16h-2.5zM4 4.8v14.4a1 1 0 0 0 1.5.86l9.9-6.76a1.5 1.5 0 0 0 0-2.6L5.5 3.94A1 1 0 0 0 4 4.8z"/></svg></button>
       <button id="fwdBtn" class="skip jump" aria-label="Forward 10 seconds" disabled><svg viewBox="0 0 24 24"><path class="arc" d="M18.8 9.2A7.6 7.6 0 1 0 19.6 13"/><path class="tip" d="M19.8 4.6v4.9h-4.9"/><text x="12" y="15.6">10</text></svg></button>
+      <button id="shuffleBtn" class="icon-btn rep" aria-label="Shuffle: off" aria-pressed="false" data-mode="off"><svg viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round"><path d="M3.5 7.5h3.2c1.5 0 2.9.8 3.7 2l2.9 4.5c.8 1.2 2.2 2 3.7 2h2.5M17.5 13l3 3-3 3M3.5 16h3.2c1.1 0 2.1-.4 2.8-1.1M14.4 9.1c.7-.7 1.7-1.1 2.8-1.1h2.3M17.5 5l3 3-3 3"/></svg></button>
       <button id="repeatBtn" class="icon-btn rep" aria-label="Repeat: off" data-mode="off"><svg viewBox="0 0 24 24"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg><b>1</b></button>
       </div>
       <div class="now">
@@ -1543,7 +1544,7 @@ body.fs.idle #curGlow { opacity: 0; }
   <div class="ap-head">
     <div id="apArt" class="ap-art"></div>
     <div><div id="apSub" class="count lbl"></div><h2 id="apName" class="ap-name"></h2>
-      <div class="ap-acts lbl"><button id="apPlay" class="pill">Play all</button><button id="apRadio" class="pill ghost" hidden>Radio</button><button id="apFollow" class="pill ghost" hidden>Follow</button><span id="apStat"></span></div></div>
+      <div class="ap-acts lbl"><button id="apPlay" class="pill">Play all</button><button id="apShuffle" class="pill ghost" hidden>Shuffle</button><button id="apRadio" class="pill ghost" hidden>Radio</button><button id="apFollow" class="pill ghost" hidden>Follow</button><span id="apStat"></span></div></div>
   </div>
   <div id="apList" class="results"></div>
 </dialog>
@@ -3146,15 +3147,51 @@ epAudio.onerror = () => { if (engine === 'ep' && epAudio.getAttribute('src') && 
 let queue = [], qi = -1, upNext = [], fromUpNext = false;
 const REPEATS = ['off', 'all', 'one'];
 let repeat = REPEATS.includes(store.get('netherflow.repeat')) ? store.get('netherflow.repeat') : 'off';
-const hasNext = () => upNext.length > 0 || qi + 1 < queue.length || (repeat === 'all' && queue.length > 0);
+// Shuffle (the button by Repeat; a list's Shuffle): Next plays one of the list's songs not heard yet in this go round
+// it, at random — picked a song ahead (so it's readied, shown up next, and Smooth mix can blend into it); songs the list
+// gains meanwhile (a playlist still being imported: see queueFrom) are among them; Back, the one heard before. A go
+// round starts when a song's picked; all heard, Repeat all starts another. Talk (episodes, chapters) and Radio: in order.
+let shuffleOn = store.get('netherflow.shuffle') === 'On';
+const shuf = { heard: new Set(), trail: [], pick: null };
+const shuffling = () => shuffleOn && current?.kind !== 'episode' && radio !== queue;
+function shufflePick() {
+  const ok = t => t && t.trackId !== current?.trackId && !shuf.heard.has(t.trackId) && queue.some(x => x.trackId === t.trackId);
+  if (ok(shuf.pick)) return shuf.pick;
+  const left = queue.filter(t => t.trackId !== current?.trackId && !shuf.heard.has(t.trackId));
+  return shuf.pick = left.length ? left[Math.floor(Math.random() * left.length)] : null;
+}
+const hasNext = () => upNext.length > 0 || (shuffling() ? !!shufflePick() : qi + 1 < queue.length) || (repeat === 'all' && queue.length > 0);
 function nextTrack() {
   if (tgIntercept('next')) return;
   if (upNext.length) playTrack(upNext.shift(), '', true, true);
+  else if (shuffling()) { let n = shufflePick(); if (!n && repeat === 'all') { shuf.heard.clear(); n = shufflePick(); } if (n) playTrack(n, '', false, true); }
   else if (qi + 1 < queue.length) playTrack(queue[qi + 1], '', false, true);
   else if (repeat === 'all' && queue.length) playTrack(queue[0], '', false, true);
 }
-// (from a song added by hand, back is the list's song that played before it)
-function prevTrack() { const at = fromUpNext ? qi : qi - 1; if (P.t > 3 || !queue[at]) P.seek(0); else playTrack(queue[at], '', false, true); }
+// (from a song added by hand, back is the list's song that played before it; shuffling, the one heard before)
+function prevTrack() {
+  if (shuffling() && P.t <= 3 && shuf.trail.length > 1) { shuf.trail.pop(); const back = shuf.trail.pop(); shuf.heard.delete(back.trackId); return playTrack(back, '', false, true); }
+  const at = fromUpNext ? qi : qi - 1; if (P.t > 3 || !queue[at]) P.seek(0); else playTrack(queue[at], '', false, true);
+}
+function setShuffle(on, quiet = false) {
+  shuffleOn = on; store.set('netherflow.shuffle', on ? 'On' : ''); shuf.pick = null;
+  if (on && current) { shuf.heard = new Set([current.trackId]); shuf.trail = [current]; } // (from the song playing, a go round the rest)
+  paintShuffle();
+  if (!quiet) toast(on ? 'Shuffle on: the list in a random order' : 'Shuffle off: the list in its order');
+  queueChanged();
+}
+function paintShuffle() { const b = $('shuffleBtn'); b.dataset.mode = shuffleOn ? 'all' : 'off'; b.setAttribute('aria-pressed', shuffleOn); b.setAttribute('aria-label', `Shuffle: ${shuffleOn ? 'on' : 'off'}`); }
+// a list's Shuffle: Shuffle on, and the list from a song at random
+function shuffleList(tracks, p = null) {
+  const list = tracks.filter(t => t.kind !== 'episode');
+  if (!list.length) return;
+  setShuffle(true, true);
+  queue = list; queueFrom = p ? { p, queue } : null;
+  playTrack(list[Math.floor(Math.random() * list.length)]);
+}
+// the playlist the queue was taken from (its rows, Play all, Shuffle), while it's still that queue: songs it gains
+// (an import filling in) join the queue too
+let queueFrom = null;
 function songEnded() {
   if (tg.role === 'guest') return;
   if (repeat === 'one') { P.seek(0); P.play(); }
@@ -3294,6 +3331,8 @@ $('fwdBtn').onclick = () => skipBy(jump);
 $('prevBtn').onclick = prevTrack;
 $('nextBtn').onclick = nextTrack;
 $('repeatBtn').onclick = () => setRepeat(REPEATS[(REPEATS.indexOf(repeat) + 1) % 3]);
+$('shuffleBtn').onclick = () => setShuffle(!shuffleOn);
+paintShuffle(); // (as it was left)
 
 // ---------- Smooth mix (Settings): one song blending into the next, as Apple Music's AutoMix does ----------
 // 25 s before a song's end, the next one (both through FlowStream) is made ready in the second player: loaded, silent.
@@ -3311,7 +3350,8 @@ const mix = { for: null, next: null, fromUp: false, vids: null, ready: false, on
 // the next track on the same album (and disc), as the album has them
 const albumNext = (a, b) => !!(a && b && a.collectionName && a.collectionName === b.collectionName && a.trackNumber && b.trackNumber === a.trackNumber + 1 && (a.discNumber || 1) === (b.discNumber || 1));
 // the song to come after this one, as Next would play it (and whether it's from Play next / Add to queue)
-const nextUp = () => upNext.length ? [upNext[0], true] : qi + 1 < queue.length ? [queue[qi + 1], false] : repeat === 'all' && queue.length ? [queue[0], false] : [null, false];
+const nextUp = () => upNext.length ? [upNext[0], true] : shuffling() ? [shufflePick() || (repeat === 'all' ? queue.find(t => t.trackId !== current?.trackId) || null : null), false]
+  : qi + 1 < queue.length ? [queue[qi + 1], false] : repeat === 'all' && queue.length ? [queue[0], false] : [null, false];
 const mixReset = () => { clearTimeout(mix.timer); Object.assign(mix, { for: null, next: null, vids: null, ready: false, on: false, swapped: false, quiet: 0, loud: 0, outLevel: 1, fade: FADE, timer: 0 }); };
 const mixLevel = db => loud === 'Levelled' && db > 0 ? 10 ** (-db / 20) : 1; // (as fsLevel, for the song coming in)
 const mixClear = () => { audioB.oncanplay = null; audioB.pause(); audioB.removeAttribute('src'); audioB.load(); };
@@ -3475,7 +3515,7 @@ setInterval(() => {
 // While a song plays, the next one's upload and lyrics are looked up, so skipping to it (or its turn) starts at once.
 function prefetchNext() {
   if (ytLimited()) return; // (YouTube limiting this connection: only the song playing)
-  const n = upNext[0] || queue[qi + 1];
+  const n = nextUp()[0];
   if (!n || !fullSongs || saved.has(n.trackId)) return;
   videosFor(n).then(v => { if (!v[0]) return; ytmLyricsFor(v[0].id); native ? flowPage?.audio(v[0].id).then(s => { fsKeep(v[0].id, s); return fetch('/_fs/ahead?' + new URLSearchParams({ u: s.url, id: v[0].id, g: keptG() })); }).catch(() => {}) : fetch('/api/fs/ahead?' + new URLSearchParams({ ids: v[0].id, g: keptG() })).catch(() => {}); }).catch(() => {}); // (FlowStream: its stream looked up ahead too)
   audiusFor(n);
@@ -4715,6 +4755,8 @@ async function playTrack(t, term = '', queued = false, stay = false, mixed = nul
   if (!stay) goHome(false);
   fromUpNext = queued;
   if (!queued) { qi = queue.findIndex(x => x.trackId === t.trackId); if (qi < 0) { queue = [t]; qi = 0; } }
+  if (!queued && !stay) Object.assign(shuf, { heard: new Set(), trail: [], pick: null }); // (a song picked: a new go round the list)
+  if (shuffling()) { shuf.heard.add(t.trackId); if (shuf.trail.at(-1) !== t) shuf.trail.push(t); shuf.pick = null; }
   wantNext(); // (an imported playlist's songs coming up: matched now, so they start at once)
   if ($('queuePanel').matches(':popover-open')) renderQueue();
   const ep = t.kind === 'episode';
@@ -5070,10 +5112,15 @@ function qrow(t, play, remove, list, at) {
   return r;
 }
 function renderQueue() {
-  const out = [], rest = queue.slice(qi + 1, qi + 51), mine = rest.filter(t => !auto.items.has(t)), picked = rest.filter(t => auto.items.has(t));
+  const out = [], rest = shuffling() ? [] : queue.slice(qi + 1, qi + 51), mine = rest.filter(t => !auto.items.has(t)), picked = rest.filter(t => auto.items.has(t));
   if (current) out.push(sectionHead('Now playing'), qrow(current, () => $('queuePanel').hidePopover()));
   if (upNext.length) out.push(sectionHead('Next in queue', 'Clear', () => { upNext = []; queueChanged(); }),
     ...upNext.map((t, i) => qrow(t, () => { upNext.splice(i, 1); playTrack(t, '', true); }, () => { upNext.splice(i, 1); queueChanged(); }, upNext, i)));
+  if (shuffling()) { // (the song picked next, then the rest at random)
+    const n = shufflePick(), left = queue.filter(t => t.trackId !== current?.trackId && !shuf.heard.has(t.trackId)).length;
+    if (n) out.push(sectionHead('Next from the list · shuffled', 'Shuffle off', () => setShuffle(false)), qrow(n, () => playTrack(n, '', false, true)),
+      ...(left > 1 ? [el('p', 'q-empty lbl', `Then the other ${left - 1} at random`)] : []));
+  }
   if (mine.length) out.push(sectionHead('Next from the list'),
     ...mine.map(t => qrow(t, () => playTrack(t), () => { queue.splice(queue.indexOf(t), 1); queueChanged(); }, queue, queue.indexOf(t))));
   if (current && repeat === 'off') {
@@ -5083,7 +5130,7 @@ function renderQueue() {
     if (autoOn && !picked.length && !auto.more.length) out.push(el('p', 'q-empty lbl', mine.length || upNext.length ? 'When the list ends, songs like the last one carry on.' : 'Finding songs like this one…'));
   }
   if (!current) out.push(el('p', 'q-empty lbl', 'Nothing playing yet. On any song, ⋯ › Add to queue.'));
-  else if (!upNext.length && !rest.length && (!autoOn || repeat !== 'off')) out.push(el('p', 'q-empty lbl', 'Nothing up next. On any song, ⋯ › Add to queue.'));
+  else if (!upNext.length && !rest.length && !(shuffling() && shufflePick()) && (!autoOn || repeat !== 'off')) out.push(el('p', 'q-empty lbl', 'Nothing up next. On any song, ⋯ › Add to queue.'));
   $('queuePanel').replaceChildren(...out);
 }
 $('queuePanel').addEventListener('beforetoggle', e => { if (e.newState === 'open') renderQueue(); });
@@ -5777,7 +5824,7 @@ const importWant = [], importBulk = [], matchTried = new Set();
 let matchLive = 0, matchWait = 0, matchMiss = 0, matchSave = 0, matchLater = 0;
 const wantMatch = id => { importWant.push(id); if (importWant.length > 300) importWant.shift(); matchPump(); };
 const wantIO = new IntersectionObserver(es => { for (const e of es) if (e.isIntersecting) { wantIO.unobserve(e.target); wantMatch(e.target.dataset.tid); } }, { rootMargin: '400px 0px' });
-const wantNext = () => { for (const t of queue.slice(qi + 1, qi + 11).reverse()) if (isPending(t)) wantMatch(t.trackId); };
+const wantNext = () => { for (const t of (shuffling() ? [shufflePick()].filter(Boolean) : queue.slice(qi + 1, qi + 11)).reverse()) if (isPending(t)) wantMatch(t.trackId); };
 const firstArtist = a => words((a || '').split(/,|&| and | feat\.? | x /i)[0]).join(' '); // ("and" or "&": the same band)
 const fitsSong = (v, s) => { const a = words(clean(v.title)).join(' '), b = words(clean(s.trackName)).join(' '), who = firstArtist(s.artistName), dur = (s.trackTimeMillis || 0) / 1000;
   return !!a && (a === b || a.startsWith(b + ' ') || b.startsWith(a + ' ')) && (!who || words(v.artist).join(' ').includes(who)) && (!dur || !v.dur || Math.abs(v.dur - dur) <= 8); };
@@ -5894,6 +5941,10 @@ async function importPlaylistNow(link, { quiet = false, sync = false } = {}) {
     p ||= newPlaylist(pl.name);
     Object.assign(p, { tracks: t, src: link, store: pl.store }); // (its link kept: imported again, it's this one that's filled)
     delete p.left;
+    if (queueFrom?.p === p && queueFrom.queue === queue) { // (played from as it fills in: what's new joins the queue — shuffling, among the songs to pick)
+      const have = new Set(queue.map(x => String(x.trackId))), add = t.filter(x => !have.has(String(x.trackId)));
+      if (add.length) { queue = queueFrom.queue = [...queue, ...add]; queueChanged(); }
+    }
     saveLib();
     return waiting;
   };
@@ -6675,11 +6726,12 @@ function renderList(v, head, list, tok) {
     head(v.label || 'Playlist', d.name || v.title, d.sub || [`${d.tracks.length} songs`, mins && `${mins} min`].filter(Boolean).join(' · '), d.art || v.art ? coverTile(d.art || v.art, true) : mosaic(d.tracks, () => tile('note', v.title)));
     const acts = [];
     if (d.tracks.length) {
-      const play = el('button', 'pill', 'Play all'), save = el('button', 'pill ghost');
+      const play = el('button', 'pill', 'Play all'), mix = el('button', 'pill ghost', 'Shuffle'), save = el('button', 'pill ghost');
       play.onclick = () => { queue = d.tracks.slice(); playTrack(queue[0]); };
+      mix.onclick = () => shuffleList(d.tracks.slice());
       save.append(ico('plus'), 'Save to Library');
       save.onclick = () => { const p = newPlaylist(d.name || v.title); addToPlaylist(p, d.tracks); if (d.src) { p.src = d.src; saveLib(); } openLibrary({ kind: 'playlist', id: p.id }); };
-      acts.push(play, save);
+      acts.push(play, mix, save);
     }
     $('libActs').replaceChildren(...acts);
     $('libList').replaceChildren(...(d.tracks.length ? d.tracks.map((s, i) => row(s, i, d.tracks)) : [el('p', 'empty', d.empty || 'Nothing in it right now.')]));
@@ -7067,9 +7119,10 @@ function renderLibrary() {
       [...counted(tracks), tracks.length && `${mins} min`, v.kind === 'saved' && saved.size && mb(savedSize), p?.collab && (collab.get(p.collab)?.conn ? 'edited together · live' : 'edited together')].filter(Boolean).join(' · '),
       v.kind === 'liked' ? tile('heart', 'Liked songs', tracks.length) : v.kind === 'saved' ? tile('down', 'Saved offline', tracks.length) : mosaic(tracks, listTile(p)));
     if (tracks.length) {
-      const play = el('button', 'pill', 'Play all');
-      play.onclick = () => { queue = tracks.slice(); playTrack(queue[0]); };
-      acts.push(play);
+      const play = el('button', 'pill', 'Play all'), mix = el('button', 'pill ghost', 'Shuffle');
+      play.onclick = () => { queue = tracks.slice(); queueFrom = p ? { p, queue } : null; playTrack(queue[0]); };
+      mix.onclick = () => shuffleList(tracks.slice(), p || null);
+      acts.push(play, mix);
       if (v.kind !== 'saved') {
         const share = el('button', 'pill ghost');
         share.append(ico('qr'), 'Share');
@@ -7455,7 +7508,7 @@ function artistCards(artists, songs) {
 // ---------- artist page (songs + albums) and album page ----------
 let apLoad = 0, apData = null;
 function apHeader(kind, name, sub, art, round) {
-  $('apRadio').hidden = $('apFollow').hidden = true; // (an artist's own: see renderArtist)
+  $('apRadio').hidden = $('apFollow').hidden = $('apShuffle').hidden = true; // (an artist's own: see renderArtist; Shuffle with Play all)
   $('apKind').textContent = kind;
   $('apName').textContent = name;
   $('apSub').textContent = sub;
@@ -7487,6 +7540,7 @@ function renderArtist() {
   $('apStat').textContent = `${songs.length} songs · ${albums.length} albums & singles`;
   $('apPlay').hidden = !songs.length;
   $('apPlay').onclick = () => { queue = songs.slice(); playTrack(songs[0]); };
+  $('apShuffle').hidden = songs.length < 2; $('apShuffle').onclick = () => shuffleList(songs.slice());
   $('apRadio').hidden = !songs.length;
   $('apRadio').onclick = () => startRadio(songs[0], artist.artistName);
   const follow = $('apFollow'), paint = () => { follow.textContent = following(artist) ? 'Following' : 'Follow'; follow.setAttribute('aria-pressed', following(artist)); };
@@ -7525,6 +7579,7 @@ async function openAlbum(album) {
   $('apStat').textContent = `${songs.length} songs`;
   $('apPlay').hidden = !songs.length;
   $('apPlay').onclick = () => { queue = songs.slice(); playTrack(songs[0]); };
+  $('apShuffle').hidden = songs.length < 2; $('apShuffle').onclick = () => shuffleList(songs.slice());
   $('apList').replaceChildren(...songs.map((s, i) => row(s, i, songs)));
   $('apList').scrollTop = 0;
 }
@@ -7572,7 +7627,7 @@ function row(s, i, list, from = {}) {
   b.append(el('span', 'idx', pad(i + 1)), img, txt, el('span', 'len', s.trackTimeMillis ? fmt(s.trackTimeMillis / 1000) : ''));
   // (a copy: the queue changed — a song taken out of it, the rest dragged about — mustn't change the playlist or Liked songs
   // it came from, as it did, kept by the next save)
-  b.onclick = () => { queue = list.slice(); playTrack(s, dlg.open ? $('q').value.trim() : ''); };
+  b.onclick = () => { queue = list.slice(); queueFrom = from.playlist ? { p: from.playlist, queue } : null; playTrack(s, dlg.open ? $('q').value.trim() : ''); };
   b.onpointerdown = e => { if (e.pointerType === 'mouse' && fullSongs && !saved.has(s.trackId)) videosFor(s).catch(() => {}); };
   more.innerHTML = DOTS;
   more.setAttribute('aria-label', `Options for ${s.trackName}`);
@@ -8032,7 +8087,7 @@ function updateDrive() {
   const dur = P.dur, t = Math.min(P.t, dur || P.t);
   $('dvCur').textContent = fmt(t); $('dvLeft').textContent = '−' + fmt(Math.max(0, dur - t));
   $('dvBar').style.width = (dur ? t / dur * 100 : 0).toFixed(2) + '%';
-  const n = upNext[0] || queue[qi + 1] || (repeat === 'all' ? queue[0] : null);
+  const n = nextUp()[0];
   $('dvUpNext').replaceChildren(...(n ? ['Up next · ', el('b', '', n.trackName)] : []));
   $('dvLike').classList.toggle('on', isLiked(current));
 }

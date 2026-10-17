@@ -212,6 +212,8 @@ wants a workout. On a slower phone it steps down by itself, so it never lags.
 - **Autoplay**: when your list runs out it keeps going with songs like the one playing, in the same language and era, and
   it learns from what you skip, play through and like
 - **Radio**: start one from any song or artist, and songs like it keep coming
+- **Shuffle**: any playlist, your liked songs, an artist or an album in a random order, every song once. A playlist
+  still being imported shuffles in its new songs as they arrive
 - **Smooth mix**: songs blend into each other like a DJ set, right on the beat. And albums play **gapless**, straight
   through from one song into the next
 - **Explore**: charts, new releases, trending, moods and genres with their playlists, and **Your mix**, **Discover** and a
