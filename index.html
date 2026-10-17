@@ -1711,13 +1711,13 @@ let ctx, analyser, freq, boostNode = null, limiterNode = null, boostLevel = 1, a
 let hpNodes = [], hpSig = ''; // (the headphones' correction here: its preamp and filters, made again when they change)
 function routeAudio() {
   if (!audioSrc) return;
-  const sig = hp ? JSON.stringify([hp.pre, hp.filters]) : '';
+  const sig = hp ? JSON.stringify([hp.pre, hp.filters, hpStrength]) : '';
   if (sig !== hpSig) {
     for (const n of hpNodes) n.disconnect();
     hpSig = sig; routed = null;
     hpNodes = hp ? [ctx.createGain(), ...hp.filters.map(([type, f, g, q]) => {
-      const b = ctx.createBiquadFilter(); b.type = type; b.frequency.value = f; b.gain.value = g; b.Q.value = q; return b; })] : [];
-    if (hp) hpNodes[0].gain.value = Math.pow(10, hp.pre / 20);
+      const b = ctx.createBiquadFilter(); b.type = type; b.frequency.value = f; b.gain.value = g * hpStrength; b.Q.value = q; return b; })] : []; // (strength scales each filter)
+    if (hp) hpNodes[0].gain.value = Math.pow(10, hp.pre * hpStrength / 20); // (and the preamp)
   }
   const useEq = eqState.on, boosting = boostLevel > 1, singing = singAmount(), spatial = space !== 'Off';
   const using = Object.keys(TOOLS).filter(k => tools[k] !== 'Off' && !(k === 'cross' && spatial)); // (crossfeed: not with 360 sound, which places the song itself)
@@ -1733,7 +1733,9 @@ function routeAudio() {
 // and right as two speakers wide either side and a little in front, with a little room round them. Orbit: the two
 // circling the head, opposite each other, once every 16 seconds (the "8D" sound), turned by two slow oscillators on the
 // audio thread itself, not by the page. Best on headphones. set(mode): 'Off' | 'Around' | 'Orbit', gliding over.
-const SPACES = ['Off', 'Around', 'Orbit'];
+const SPACES = ['Off', 'Around', 'Wide', 'Hall', 'Orbit'];
+// each mode: how far out the two ears sit, how far in front, and how much room (Orbit circles instead, see set)
+const SPACE_SET = { Around: { x: 1.7, z: -1, wet: .22 }, Wide: { x: 3, z: -.3, wet: .16 }, Hall: { x: 2.1, z: -1.1, wet: .45 } };
 let space = SPACES.includes(store.get('netherflow.space')) ? store.get('netherflow.space') : 'Off';
 function setSpace(v) { space = v; store.set('netherflow.space', v === 'Off' ? '' : v); spaceNode?.set(v); routeAudio(); renderLoud(); }
 function makeSpace(c) {
@@ -1756,12 +1758,12 @@ function makeSpace(c) {
     return { p, gx, gz, side: ch ? 1 : -1 };
   });
   return { inp, out, set(mode) {
-    const t = c.currentTime, orbit = mode === 'Orbit';
+    const t = c.currentTime, orbit = mode === 'Orbit', m = SPACE_SET[mode] || { x: 0, z: 0, wet: 0 };
     for (const { p, gx, gz, side } of ears) {
-      p.positionX.setTargetAtTime(orbit ? 0 : side * 1.7, t, .08); p.positionZ.setTargetAtTime(orbit ? 0 : -1, t, .08); // (Around: wide, a little in front)
+      p.positionX.setTargetAtTime(orbit ? 0 : side * m.x, t, .08); p.positionZ.setTargetAtTime(orbit ? 0 : m.z, t, .08); // (Around/Wide/Hall: set out either side, a little in front)
       gx.gain.setTargetAtTime(orbit ? -side * 2 : 0, t, .3); gz.gain.setTargetAtTime(orbit ? side * 2 : 0, t, .3); // (Orbit: on a circle, opposite each other)
     }
-    wet.gain.setTargetAtTime(mode === 'Around' ? .22 : orbit ? .12 : 0, t, .1);
+    wet.gain.setTargetAtTime(orbit ? .12 : m.wet, t, .1);
   } };
 }
 // The sound tools (the Equalizer panel), each in the path only while it's on:
@@ -2940,7 +2942,7 @@ function initAudio() { // created lazily: browsers want a user gesture first
     const b = ctx.createBiquadFilter();
     b.type = i === 0 ? 'lowshelf' : i === EQ.freqs.length - 1 ? 'highshelf' : 'peaking';
     b.frequency.value = f;
-    b.Q.value = 1.1;
+    b.Q.value = 1.4; // (ten bands an octave apart: a touch tighter so neighbours don't pile up)
     return b;
   });
   audioSrc = ctx.createGain(); // (both songs' players into it: see Smooth mix)
@@ -2949,7 +2951,7 @@ function initAudio() { // created lazily: browsers want a user gesture first
   boostNode = ctx.createGain(); limiterNode = ctx.createDynamicsCompressor(); singNode = makeSing(ctx); spaceNode = makeSpace(ctx); spaceNode.set(space);
   toolNodes = { cross: makeCross(ctx), clarity: makeClarity(ctx), lowvol: makeLowVol(ctx), night: makeNight(ctx) };
   for (const k in toolNodes) toolNodes[k].set(tools[k]);
-  limiterNode.knee.value = 6; limiterNode.ratio.value = 20; limiterNode.attack.value = 0.004; limiterNode.release.value = 0.25; // (soft)
+  limiterNode.knee.value = 10; limiterNode.ratio.value = 16; limiterNode.attack.value = 0.003; limiterNode.release.value = 0.16; // (soft knee, quick release: a boosted song stays full, not pumped)
   applyBoost(boostLevel);
   freq = new Uint8Array(analyser.frequencyBinCount);
   applyEq();
@@ -2958,17 +2960,29 @@ function initAudio() { // created lazily: browsers want a user gesture first
 // ---------- equalizer: 6 bands like Spotify's, ±12 dB, on every song, in this page's own sound graph. Settings are
 // kept on this device. ----------
 const EQ = {
-  freqs: [60, 150, 400, 1000, 2400, 15000],
-  labels: ['60', '150', '400', '1K', '2.4K', '15K'],
+  freqs: [32, 64, 125, 250, 500, 1000, 2000, 4000, 8000, 16000],
+  labels: ['32', '64', '125', '250', '500', '1K', '2K', '4K', '8K', '16K'],
+  //           32  64 125 250 500  1k  2k  4k  8k 16k
   presets: {
-    'Flat': [0, 0, 0, 0, 0, 0], 'Bass boost': [6, 4, 1, 0, 0, 0], 'Vocal': [-2, -1, 2, 4, 3, 1], 'Pop': [-1, 2, 4, 3, 1, -1],
-    'Rock': [4, 2, -1, 1, 3, 4], 'Hip-hop': [5, 3, 0, -1, 1, 2], 'Electronic': [5, 3, 0, -1, 2, 4], 'Acoustic': [3, 2, 1, 2, 2, 2],
-    'Treble boost': [0, 0, 0, 1, 4, 6], 'Loudness': [5, 2, 0, 0, 2, 5], 'Night': [1, 1, 0, -1, -3, -5],
+    'Flat':         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    'Bass boost':   [7, 6, 4, 2, 0, 0, 0, 0, 0, 0],
+    'Vocal':        [-2, -2, -1, 1, 3, 4, 4, 2, 0, -1],
+    'Pop':          [-1, 0, 1, 3, 3, 2, 0, -1, 0, 1],
+    'Rock':         [5, 4, 2, 0, -1, 0, 1, 3, 4, 4],
+    'Hip-hop':      [6, 5, 3, 1, 0, -1, 0, 1, 2, 2],
+    'Electronic':   [6, 5, 2, 0, -1, -1, 0, 2, 4, 5],
+    'Acoustic':     [3, 3, 2, 1, 1, 2, 2, 3, 3, 2],
+    'Jazz':         [3, 2, 1, 2, 2, 1, 0, 1, 2, 3],
+    'Classical':    [4, 3, 2, 1, 0, 0, 0, 1, 2, 3],
+    'Treble boost': [0, 0, 0, 0, 0, 1, 2, 4, 5, 6],
+    'Loudness':     [6, 4, 2, 0, -1, -1, 0, 2, 4, 6],
+    'Night':        [2, 1, 1, 0, 0, -1, -2, -3, -4, -5],
   },
 };
+const EQ_BANDS = EQ.freqs.length;
 let eqNodes = null, eqState;
 try { eqState = JSON.parse(store.get('netherflow.eq')); } catch {}
-if (!eqState?.gains || eqState.gains.length !== 6) eqState = { on: false, preset: 'Flat', gains: [0, 0, 0, 0, 0, 0] };
+if (!eqState?.gains || eqState.gains.length !== EQ_BANDS) eqState = { on: false, preset: 'Flat', gains: new Array(EQ_BANDS).fill(0) }; // (a saved 6-band one: reset — pick the preset again)
 // Loudness: YouTube turns loud songs down to one level (by up to ~8 dB). Original plays a song as loud and full as it was
 // mastered (FlowStream's stream as it is, as a saved one); Levelled turns it down as YouTube would (fsLevel).
 let loud = store.get('netherflow.loud') === 'Levelled' ? 'Levelled' : 'Original';
@@ -2979,6 +2993,8 @@ const eqMsg = () => ({ on: eqState.on, gains: eqState.gains.slice(), boost: boos
 // to 10 filters), kept on this device, so it works offline. In the page's sound graph (routeAudio). ----------
 const AUTOEQ = 'https://raw.githubusercontent.com/jaakkopasanen/AutoEq/master/results/';
 let hp = null; try { hp = JSON.parse(store.get('netherflow.hp')); } catch {}
+let hpStrength = Math.max(0, Math.min(1, +store.get('netherflow.hpstrength') || 1)); // (1 = full; dial the evening-out back)
+function setHpStrength(pct) { hpStrength = Math.max(0, Math.min(1, pct / 100)); store.set('netherflow.hpstrength', hpStrength === 1 ? '' : String(hpStrength)); hpSig = ''; routeAudio(); }
 if (!hp?.filters?.length) hp = null;
 // a ParametricEQ.txt: "Preamp: -6.0 dB", then "Filter 1: ON PK Fc 105 Hz Gain 2.6 dB Q 0.70" (PK, LSC, HSC)
 function parseHp(txt) {
@@ -3027,6 +3043,7 @@ function renderHp() {
   if (hp) { const off = el('button', 'link', 'Off'); off.onclick = () => setHp(null); acts.append(off); }
   row.append(el('span', 'hp-k', 'Headphones'), name, acts);
   box.replaceChildren(row);
+  if (hp) box.append(stepperRow('Correction strength', 0, 100, Math.round(hpStrength * 100), setHpStrength, '%', 'How much of the evening-out to apply. 100%: the full AutoEQ correction. Lower it if it sounds too strong.'));
   if (!hpOpen) return;
   const q = el('input', 'hp-q'), list = el('div', 'hp-list'), note = el('p', 'hp-note lbl', 'Loading the list…');
   q.id = 'hpQ'; q.type = 'search'; q.placeholder = 'Your headphones (Sony WH-1000XM5, AirPods Pro…)'; q.autocomplete = 'off'; q.spellcheck = false; q.setAttribute('aria-label', 'Search headphones');
@@ -3072,7 +3089,7 @@ function setSing(on) {
 function renderLoud() {
   $('eqLoud').replaceChildren(settingRow('Loudness', ['Original', 'Levelled'], loud, v => { loud = v; store.set('netherflow.loud', v === 'Original' ? '' : v); renderLoud(); applyEq(); setVolume(volume); },
     'Original: each song as loud as it was mastered. Levelled: YouTube turns loud songs down so all play at about one level.'),
-    settingRow('360 sound', SPACES, space, setSpace, 'Around: the song set round you, like speakers wide either side, with a little room. Orbit: it circles your head (the "8D" sound). Best on headphones.'),
+    settingRow('360 sound', SPACES, space, setSpace, 'Around: the song set round you, like speakers either side. Wide: pushed further out, for a bigger stereo. Hall: a big soft room, like a concert hall. Orbit: it circles your head (the "8D" sound). Best on headphones.'),
     settingRow('Crossfeed', TOOLS.cross, tools.cross, v => setTool('cross', v), 'For headphones: a little of each side into the other, softened and a moment late, as speakers reach both ears. Easier on long listens.' + (space !== 'Off' ? ' (Not with 360 sound on: that places the song itself.)' : '')),
     settingRow('Clarity', TOOLS.clarity, tools.clarity, v => setTool('clarity', v), 'Brings back some of the airy top end that streaming squeezes out of a song.'),
     settingRow('Loudness at low volume', TOOLS.lowvol, tools.lowvol, v => setTool('lowvol', v), 'Ears hear less bass and treble when it\'s quiet: this turns them up as you turn the volume down, and leaves them be at full volume.'),
@@ -3088,7 +3105,7 @@ function applyEq(save = false) {
   if (save) store.set('netherflow.eq', JSON.stringify(eqState));
 }
 // the curve: x per band, y for gain (0 dB in the middle)
-const EQX = i => 50 + i * 100, EQY = g => 95 - g * 6.25, EQG = y => Math.max(-12, Math.min(12, Math.round((95 - y) / 6.25 * 2) / 2));
+const EQX = i => Math.round(44 + i * (512 / (EQ.freqs.length - 1))), EQY = g => 95 - g * 6.25, EQG = y => Math.max(-12, Math.min(12, Math.round((95 - y) / 6.25 * 2) / 2));
 function smoothPath(pts) { // Catmull-Rom through the points, as cubic Béziers
   let d = `M${pts[0][0]},${pts[0][1]}`;
   for (let i = 0; i < pts.length - 1; i++) {
