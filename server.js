@@ -261,10 +261,19 @@ async function handle(req, res) {
   fs.readFile(path.join(__dirname, f[0]), (err, data) => err ? send(res, 500, 'unreadable', 'text/plain') : send(res, 200, data, f[1]));
 }
 
-// Resolves with the port actually used (pass 0 for any free one). Only reachable from this machine.
+// Every request: anything that slipped past a route's own catch still gets an answer (never a hung request or a crash).
+const serve = (req, res) => handle(req, res).catch(() => { try { if (res.headersSent) res.destroy(); else send(res, 500, JSON.stringify({ error: 'server error' })); } catch {} });
+// Resolves with the port actually used (pass 0 for any free one). Only reachable from this machine — on both its loopback
+// addresses: "localhost" is tried as ::1 first, and with nothing there every new connection waited ~0.3 s before falling
+// back to 127.0.0.1 (measured: the page's first paint, and each song's first request). No IPv6 here, or ::1 taken: IPv4
+// alone, as before.
 const start = port => new Promise((resolve, reject) => {
-  const srv = http.createServer(handle).once('error', reject);
-  srv.listen(port, '127.0.0.1', () => resolve(srv.address().port));
+  const srv = http.createServer(serve).once('error', reject);
+  srv.listen(port, '127.0.0.1', () => {
+    const p = srv.address().port, v6 = http.createServer(serve);
+    v6.once('error', () => resolve(p));
+    v6.listen(p, '::1', () => resolve(p));
+  });
 });
 
 module.exports = { start, heads: null }; // (heads: main.js's folder for songs' starts)

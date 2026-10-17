@@ -82,6 +82,10 @@ public class ImmersivePlugin extends Plugin {
         call.resolve(r);
     }
 
+    // The page has built itself: the opening splash may go (see MainActivity).
+    @PluginMethod
+    public void splashDone(PluginCall call) { MainActivity.pageBuilt = true; call.resolve(); }
+
     // The screen stays on while a song plays (the page asks; only while the app is on screen, as Android does it).
     @PluginMethod
     public void keepAwake(PluginCall call) {

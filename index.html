@@ -1399,6 +1399,7 @@ body.fs.idle #curGlow { opacity: 0; }
 #splash b { font: italic 600 clamp(32px, 9vw, 46px)/1 var(--serif); color: var(--a); letter-spacing: .5px; animation: splashBeat 1.3s ease-in-out infinite; }
 @keyframes splashBeat { 0%, 100% { opacity: .5; transform: scale(.98); } 50% { opacity: 1; transform: scale(1.02); } }
 @media (prefers-reduced-motion: reduce) { #splash b { animation: none; opacity: .9; } }
+#splash.native b { display: none; } /* (Android: its own splash, the record, is over it till the page is built) */
 </style>
 </head>
 <body>
@@ -1608,7 +1609,11 @@ body.fs.idle #curGlow { opacity: 0; }
 if (!('showPopover' in HTMLElement.prototype)) document.addEventListener('DOMContentLoaded', function () {
   document.body.innerHTML = '<div style="padding:12vh 8vw;font:18px/1.5 sans-serif;color:#eee;background:#0b0503;min-height:100vh;box-sizing:border-box">'
     + '<b style="font-size:24px">NetherFlow needs a newer Android System WebView</b><p>Update <b>Android System WebView</b> (and Chrome) from your app store, then open NetherFlow again.</p></div>';
+  try { window.Capacitor.Plugins.Immersive.splashDone(); } catch (e) {} // (Android's splash waits for the page: let it go, so this shows)
 });
+/* Android: its own splash shows the record until the page is built (MainActivity), so this one is only the background
+   under it — not a second splash */
+if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) { var nfSplash = document.getElementById('splash'); if (nfSplash) nfSplash.className += ' native'; }
 </script>
 <div id="curGlow" popover="manual" aria-hidden="true"><i></i></div>
 <script src="lib.js"></script>
@@ -5388,7 +5393,7 @@ async function storyBase(t) {
   await document.fonts.ready;
   // the background: the app's own (its theme, drawn afresh at this size), or with the Cover theme the cover, blurred, or
   // the Gradient's own, as the page has it
-  const back = !PLAIN.has(theme) && backdropAt(W, H);
+  const back = !PLAIN.has(theme) && await backdropAt(W, H);
   if (back) g.drawImage(back, 0, 0);
   else if (theme === 'Gradient') {
     const mix = (a, b, t) => 'rgb(' + rgb(a).map((v, i) => Math.round((v * t + rgb(b)[i] * (1 - t)) * 255)).join() + ')';
@@ -8409,14 +8414,13 @@ function setCursors(accent, second = accent) { // (called as the first mood is s
 }
 
 // ---------- shader backdrop ----------
-// (opaque: nothing behind it is drawn at all — the page's own background)
-const fx = $('fx'), gl = fx.getContext('webgl', { antialias: false, alpha: false });
-let U = {};
+// (opaque: nothing behind it is drawn at all — the page's own background. Drawn by fxEngine, below: in a worker where it
+// can be.)
+let fx = $('fx');
 // One small program per background theme (STYLE = its place in THEMES), compiled the first time it's shown,
 // so the GPU only ever runs the one on screen. Colors: C0 background, C1 accent, C2 second accent.
 // F: zoom, swirl, (speed), glow · B / M / H: bass, mids, highs · G: dither · OCT: noise detail ·
 // QF: extra layers on better qualities (smoke: 1 silk threads, 2 light + dust)
-const FX_VS = 'attribute vec2 p;void main(){gl_Position=vec4(p,0,1);}';
 const themeNo = name => THEMES.indexOf(name); // (a theme's block in the shader below)
 const fxSource = style => `
 #ifdef GL_FRAGMENT_PRECISION_HIGH
@@ -9421,30 +9425,162 @@ void main(){
   col += (h(gl_FragCoord.xy + fract(T * 7.) * 91.) - .5) * G;
   gl_FragColor = vec4(col, 1.);
 }`;
-const fxProgs = {};
-let fxStyle = -1;
-function useStyle(style) {
-  if (!fxProgs[style]) {
-    const prog = gl.createProgram();
-    for (const [type, src] of [[gl.VERTEX_SHADER, FX_VS], [gl.FRAGMENT_SHADER, fxSource(style)]]) {
-      const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); gl.attachShader(prog, s);
-      if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) console.error('backdrop shader', style, gl.getShaderInfoLog(s));
-    }
-    gl.bindAttribLocation(prog, 0, 'p');
-    gl.linkProgram(prog);
-    const u = {};
-    for (const k of ['R', 'T', 'B', 'M', 'H', 'G', 'OCT', 'QF', 'K', 'GY', 'HM', 'C0', 'C1', 'C2', 'F']) u[k] = gl.getUniformLocation(prog, k);
-    fxProgs[style] = { prog, u };
+let fxStyle = -1; // (the theme whose backdrop is being drawn: its program ready)
+// The backdrop's drawing. Everything it needs is in this one function (nothing of the page's), so it runs as it is in a
+// worker — an OffscreenCanvas: the shader's compiling and every frame's drawing off the page's own thread, so no stall
+// when a theme compiles (at the start, on a change) and that thread free for the rest — or, where that can't be had, on
+// the page's thread. tell(msg, transfer) is what it reports: a theme's program ready ({ ready }), one that won't compile
+// ({ failed, log }), no WebGL at all ({ nogl }), the GPU lost and back ({ lost }, { back }), a picture ({ snap, bmp }).
+// worker: it may wait for a compile (only the worker waits); on the page's thread it never does unless asked to.
+function fxEngine(tell, worker) {
+  const VS = 'attribute vec2 p;void main(){gl_Position=vec4(p,0,1);}';
+  const NAMES = ['R', 'T', 'B', 'M', 'H', 'G', 'OCT', 'QF', 'K', 'GY', 'HM', 'C0', 'C1', 'C2', 'F'];
+  let cv = null, gl = null, psc = null, progs = {}, cur = -1, blocks = null, lost = false;
+  function setup() {
+    progs = {}; cur = -1; blocks = null;
+    gl = cv.getContext('webgl', { antialias: false, alpha: false });
+    if (!gl) return false;
+    psc = gl.getExtension('KHR_parallel_shader_compile');
+    gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+    gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+    return true;
   }
-  gl.useProgram(fxProgs[style].prog);
-  U = fxProgs[style].u; fxStyle = style;
+  // a theme's program, set compiling (on the graphics chip's own thread, where it can) — not waited for here
+  function compile(style, src) {
+    if (!gl || lost || progs[style]) return;
+    const prog = gl.createProgram(), shaders = [];
+    for (const [type, s] of [[gl.VERTEX_SHADER, VS], [gl.FRAGMENT_SHADER, src]]) { const sh = gl.createShader(type); gl.shaderSource(sh, s); gl.compileShader(sh); gl.attachShader(prog, sh); shaders.push(sh); }
+    gl.bindAttribLocation(prog, 0, 'p'); gl.linkProgram(prog);
+    progs[style] = { prog, shaders, u: null, since: performance.now() };
+  }
+  // Ready to draw? Asked of the chip only once it says it's done (KHR_parallel_shader_compile), or where it can't say,
+  // after a short grace: asked straight away, the whole thread waited for the compile (~0.3 s at a PC's cold start, ~2 s
+  // on a slow phone). wait: waited for now (in the worker; a story's picture).
+  function ready(style, wait) {
+    const p = progs[style];
+    if (!p || lost) return false;
+    if (p.u) return true;
+    if (p.u === false) return false; // (it didn't compile: said once, below)
+    if (!wait && (psc ? !gl.getProgramParameter(p.prog, psc.COMPLETION_STATUS_KHR) : performance.now() - p.since < 150)) return false;
+    if (!gl.getProgramParameter(p.prog, gl.LINK_STATUS)) {
+      if (gl.isContextLost()) return false;
+      p.u = false; tell({ failed: style, log: [...p.shaders.map(s => gl.getShaderInfoLog(s)), gl.getProgramInfoLog(p.prog)].join(' ') }); return false;
+    }
+    p.u = {}; for (const k of NAMES) p.u[k] = gl.getUniformLocation(p.prog, k);
+    tell({ ready: style });
+    return true;
+  }
+  // Blocks' world: the ground's height at every column of a 256×256 patch that repeats without a seam (its noise wraps
+  // round: 8, 24 and 3 cells across it), worked out once here rather than many times over for every pixel.
+  function blocksMap() {
+    if (blocks) return blocks;
+    const N = 256, data = new Uint8Array(N * N * 4);
+    const hash = (x, y, s) => { let h = Math.imul(x * 374761393 + y * 668265263 + s * 1442695041, 1274126177); h = Math.imul(h ^ (h >>> 13), 1103515245); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
+    const vn = (x, y, per, s) => {
+      const ix = Math.floor(x), iy = Math.floor(y), u = x - ix, v = y - iy, su = u * u * (3 - 2 * u), sv = v * v * (3 - 2 * v);
+      const g = (i, j) => hash((ix + i) % per, (iy + j) % per, s);
+      return (g(0, 0) * (1 - su) + g(1, 0) * su) * (1 - sv) + (g(0, 1) * (1 - su) + g(1, 1) * su) * sv;
+    };
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+      const h = 2 + vn(x * 8 / N, y * 8 / N, 8, 1) * 16 + vn(x * 24 / N, y * 24 / N, 24, 2) * 5 + vn(x * 3 / N, y * 3 / N, 3, 3) ** 3 * 9, i = (y * N + x) * 4;
+      data[i] = Math.floor(h); data[i + 1] = Math.round((h - Math.floor(h)) * 255); data[i + 3] = 255;
+    }
+    blocks = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, blocks);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, N, N, 0, gl.RGBA, gl.UNSIGNED_BYTE, data);
+    for (const [k, v] of [[gl.TEXTURE_MIN_FILTER, gl.NEAREST], [gl.TEXTURE_MAG_FILTER, gl.NEAREST], [gl.TEXTURE_WRAP_S, gl.REPEAT], [gl.TEXTURE_WRAP_T, gl.REPEAT]]) gl.texParameteri(gl.TEXTURE_2D, k, v);
+    return blocks;
+  }
+  // one drawing of a theme's backdrop at the canvas's size (v: fxUniforms)
+  function draw(style, v) {
+    if (!ready(style, worker)) return false;
+    const p = progs[style], U = p.u;
+    if (cur !== style) { gl.useProgram(p.prog); cur = style; }
+    gl.uniform2f(U.R, cv.width, cv.height); gl.uniform1f(U.T, v.T);
+    gl.uniform1f(U.B, v.B); gl.uniform1f(U.M, 0); gl.uniform1f(U.H, 0); gl.uniform1f(U.K, v.K); gl.uniform1f(U.GY, v.GY);
+    if (U.HM) { gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, blocksMap()); gl.uniform1i(U.HM, 0); }
+    gl.uniform1f(U.G, v.G); gl.uniform1f(U.OCT, v.OCT); gl.uniform1f(U.QF, v.QF);
+    gl.uniform3fv(U.C0, v.C0); gl.uniform3fv(U.C1, v.C1); gl.uniform3fv(U.C2, v.C2); gl.uniform4fv(U.F, v.F);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    return true;
+  }
+  const size = (w, h) => { if (!cv) return; cv.width = w; cv.height = h; if (gl && !lost) gl.viewport(0, 0, w, h); };
+  return {
+    canvas(c) {
+      cv = c;
+      // (the GPU reset — a driver update, waking from sleep, a phone short of memory: kept, and all of it made again when
+      // it's back, rather than a black backdrop till the app's opened again)
+      cv.addEventListener('webglcontextlost', e => { e.preventDefault(); lost = true; tell({ lost: true }); });
+      cv.addEventListener('webglcontextrestored', () => { lost = false; if (setup()) tell({ back: true }); });
+      if (!setup()) tell({ nogl: true });
+    },
+    size, compile, ready, draw,
+    clear(c) { if (!gl || lost) return; gl.clearColor(c[0], c[1], c[2], 1); gl.clear(gl.COLOR_BUFFER_BIT); },
+    // the backdrop drawn once at w×h (a story's picture), then the screen's own frame put back (after)
+    snap({ id, w, h, style, src, v, after }) {
+      compile(style, src);
+      let bmp = null;
+      if (gl && !lost && ready(style, true)) {
+        const ow = cv.width, oh = cv.height;
+        size(w, h); draw(style, v);
+        if (worker) bmp = cv.transferToImageBitmap();
+        else { bmp = document.createElement('canvas'); bmp.width = w; bmp.height = h; bmp.getContext('2d').drawImage(cv, 0, 0); } // (read in the same task it was drawn)
+        size(ow, oh); if (after) draw(after.style, after);
+      }
+      tell({ snap: id, bmp }, bmp && worker ? [bmp] : []);
+    },
+  };
 }
-if (gl) {
-  gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
-  gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
-  useStyle(0);
+// the worker: fxEngine as it is, driven by the page's messages. Frames come in as fast as the page makes them; only the
+// latest is drawn, once per screen frame (a worker busy compiling doesn't then draw a backlog of stale ones).
+const FX_WORKER = `const E = (${fxEngine})((m, t) => postMessage(m, t || []), true);
+let latest = null, queued = false;
+const next = self.requestAnimationFrame ? f => requestAnimationFrame(f) : f => setTimeout(f, 16);
+onmessage = ({ data: m }) => {
+  if (m.canvas) E.canvas(m.canvas);
+  if (m.size) E.size(m.size[0], m.size[1]);
+  if (m.src) { E.compile(m.style, m.src); E.ready(m.style, true); }
+  if (m.clear) { latest = null; E.clear(m.clear); }
+  if (m.paint) { latest = m.paint; if (!queued) { queued = true; next(() => { queued = false; const p = latest; latest = null; if (p) E.draw(p.style, p); }); } }
+  if (m.snap) E.snap(m.snap);
+};`;
+const fxReady = new Set(), fxAsked = new Set(), fxSnaps = new Map();
+let fxEng = null, fxWorker = null, fxGiven = false, fxOn = true, fxN = 0;
+function fxTold(m) {
+  if (m.ready !== undefined) { fxReady.add(m.ready); if (fx.style.opacity === '0') { fx.style.transition = 'opacity .6s ease'; fx.style.opacity = ''; } } // (the first backdrop: faded in)
+  if (m.failed !== undefined) console.error('backdrop shader', m.failed, m.log);
+  if (m.lost || m.back) { fxReady.clear(); fxAsked.clear(); fxStyle = -1; fxDirty = true; } // (back: every program compiled again — any asked for while it was gone couldn't be)
+  if (m.nogl) { if (fxWorker || fxGiven) fxOnPage(true); else fxOn = false; } // (no WebGL in a worker here: the page's own thread; none at all: no backdrop)
+  if (m.snap !== undefined) { fxSnaps.get(m.snap)?.(m.bmp || null); fxSnaps.delete(m.snap); }
 }
+// on the page's own thread: a fresh canvas in place of one handed to a worker that can't use it
+function fxOnPage(later) {
+  if (fxWorker) { fxWorker.terminate(); fxWorker = null; }
+  if (fxGiven) { const c = fx.cloneNode(); fx.replaceWith(c); fx = c; fxGiven = false; }
+  fxReady.clear(); fxAsked.clear(); fxStyle = -1;
+  fxEng = fxEngine(fxTold, false); fxEng.canvas(fx);
+  if (later) resize(); // (at the start, the page sizes it itself)
+}
+if (fx.transferControlToOffscreen && typeof Worker === 'function') try {
+  const off = fx.transferControlToOffscreen(); fxGiven = true;
+  fxWorker = new Worker(URL.createObjectURL(new Blob([FX_WORKER], { type: 'text/javascript' })));
+  fxWorker.onmessage = e => fxTold(e.data);
+  fxWorker.onerror = () => fxOnPage(true);
+  fxWorker.postMessage({ canvas: off }, [off]);
+} catch { fxWorker = null; }
+if (!fxWorker) fxOnPage(false);
+// ready to draw this theme? (its compile asked for, once)
+function fxUse(style) {
+  if (!fxAsked.has(style)) { fxAsked.add(style); const src = fxSource(style); if (fxWorker) fxWorker.postMessage({ style, src }); else fxEng.compile(style, src); }
+  return fxWorker ? fxReady.has(style) : fxEng.ready(style, false);
+}
+const fxPaint = (style, v) => fxWorker ? fxWorker.postMessage({ paint: { ...v, style } }) : fxEng.draw(style, v);
+const fxClear = c => fxWorker ? fxWorker.postMessage({ clear: c }) : fxEng.clear(c);
+const fxSize = (w, h) => fxWorker ? fxWorker.postMessage({ size: [w, h] }) : fxEng.size(w, h);
+const fxSnap = s => new Promise(r => { s.id = ++fxN; fxSnaps.set(s.id, r); if (fxWorker) fxWorker.postMessage({ snap: s }); else fxEng.snap(s); });
+// (the theme's own program starts compiling now, while the rest of the app is set up — it isn't waited for; the canvas is
+// clear till its backdrop is ready, and shown after 4 s whatever happens, so one that fails can never leave it hidden)
+if (fxOn && !PLAIN.has(theme)) { fx.style.opacity = '0'; fxUse(THEMES.indexOf(theme)); setTimeout(() => { fx.style.opacity = ''; }, 4000); }
 // The backdrop is soft smoke, so it renders below screen resolution (Balanced = half), per the quality setting.
 // (the heaviest backdrops drawn a little smaller on Balanced and Low: Blocks — a world traced block by block, pixel art
 // anyway — and Ops and Redline, their smoke and light trails soft anyway)
@@ -9455,8 +9591,7 @@ function resize() {
   fxScale = sceneScale();
   let w = innerWidth * dpr * Q.res * fxScale, h = innerHeight * dpr * Q.res * fxScale;
   const cap = Math.min(1, Math.sqrt(Q.maxPx / (w * h))); // very large screens: keep the GPU load sane
-  fx.width = Math.round(w * cap); fx.height = Math.round(h * cap);
-  gl?.viewport(0, 0, fx.width, fx.height);
+  fxSize(Math.round(w * cap), Math.round(h * cap));
   root.style.setProperty('--grain', Q.grain);
   document.body.classList.toggle('grain-still', !!Q.still || bgq === 'Low' || !motion); // (Low: for modest devices, the grain stays put too)
   fxDirty = true; // resizing clears the canvas
@@ -10025,55 +10160,24 @@ function drawEdges(g, W, H) {
   }
 }
 
-// One drawing of the backdrop at the canvas's size.
-function paintFx(Q, beat = 0, kick = 0) {
-  gl.uniform2f(U.R, fx.width, fx.height);
-  gl.uniform1f(U.T, fxT + 40);
-  // The backdrop reacts to the music only with the Background beat option (beat: the bass, smoothed), and then only to
-  // the bass; mids and highs stay at rest. (The themes' scenes: their figures and tracers on the kick, kick.)
-  gl.uniform1f(U.B, beat); gl.uniform1f(U.M, 0); gl.uniform1f(U.H, 0); gl.uniform1f(U.K, motion ? kick : 0);
+// What one drawing of the backdrop needs (fxEngine draws it). The backdrop reacts to the music only with the Background
+// beat option (beat: the bass, smoothed), and then only to the bass; mids and highs stay at rest. (The themes' scenes:
+// their figures and tracers on the kick, kick.)
+function fxUniforms(Q, beat = 0, kick = 0) {
   if (fxGround === null) { const r = spec.getBoundingClientRect(); fxGround = r.height ? .5 - (r.top + r.height / 2 + 7) / innerHeight : -.36; } // (Stickman's figures dance on its pencil line: see skinBar)
-  gl.uniform1f(U.GY, fxGround);
-  if (U.HM) { gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, blocksMap()); gl.uniform1i(U.HM, 0); }
-  // a hair of dither against color banding; the visible grain is its own layer — but on a touch screen, it's this: one
-  // full-screen layer fewer for a phone to blend every frame
-  gl.uniform1f(U.G, coarse ? Q.grain * .7 : 0.006);
-  gl.uniform1f(U.OCT, Q.oct); gl.uniform1f(U.QF, Q.fx);
-  gl.uniform3fv(U.C0, palette[0]); gl.uniform3fv(U.C1, palette[1]); gl.uniform3fv(U.C2, palette[2]); gl.uniform4fv(U.F, palette[3]);
-  gl.drawArrays(gl.TRIANGLES, 0, 3);
+  // G: a hair of dither against color banding; the visible grain is its own layer — but on a touch screen, it's this:
+  // one full-screen layer fewer for a phone to blend every frame
+  return { T: fxT + 40, B: beat, K: motion ? kick : 0, GY: fxGround, G: coarse ? Q.grain * .7 : 0.006, OCT: Q.oct, QF: Q.fx,
+    C0: palette[0], C1: palette[1], C2: palette[2], F: palette[3] };
 }
-// Blocks' world: the ground's height at every column of a 256×256 patch that repeats without a seam (its noise wraps
-// round: 8, 24 and 3 cells across it), worked out once here rather than many times over for every pixel.
-let blocksHM = null;
-function blocksMap() {
-  if (blocksHM) return blocksHM;
-  const N = 256, data = new Uint8Array(N * N * 4);
-  const hash = (x, y, s) => { let h = Math.imul(x * 374761393 + y * 668265263 + s * 1442695041, 1274126177); h = Math.imul(h ^ (h >>> 13), 1103515245); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
-  const vn = (x, y, per, s) => {
-    const ix = Math.floor(x), iy = Math.floor(y), u = x - ix, v = y - iy, su = u * u * (3 - 2 * u), sv = v * v * (3 - 2 * v);
-    const g = (i, j) => hash((ix + i) % per, (iy + j) % per, s);
-    return (g(0, 0) * (1 - su) + g(1, 0) * su) * (1 - sv) + (g(0, 1) * (1 - su) + g(1, 1) * su) * sv;
-  };
-  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
-    const h = 2 + vn(x * 8 / N, y * 8 / N, 8, 1) * 16 + vn(x * 24 / N, y * 24 / N, 24, 2) * 5 + vn(x * 3 / N, y * 3 / N, 3, 3) ** 3 * 9, i = (y * N + x) * 4;
-    data[i] = Math.floor(h); data[i + 1] = Math.round((h - Math.floor(h)) * 255); data[i + 3] = 255;
-  }
-  blocksHM = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, blocksHM);
-  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, N, N, 0, gl.RGBA, gl.UNSIGNED_BYTE, data);
-  for (const [k, v] of [[gl.TEXTURE_MIN_FILTER, gl.NEAREST], [gl.TEXTURE_MAG_FILTER, gl.NEAREST], [gl.TEXTURE_WRAP_S, gl.REPEAT], [gl.TEXTURE_WRAP_T, gl.REPEAT]]) gl.texParameteri(gl.TEXTURE_2D, k, v);
-  return blocksHM;
-}
-// The backdrop as it is right now, drawn once at w×h in full quality (for the story), then the screen's put back.
+const paintFx = (Q, beat = 0, kick = 0) => fxPaint(fxStyle, fxUniforms(Q, beat, kick));
+// The backdrop as it is right now, drawn once at w×h in full quality (for the story), then the screen's put back → a
+// picture (a canvas or an ImageBitmap), or null
 function backdropAt(w, h) {
-  if (!gl) return null;
-  const style = THEMES.indexOf(theme), ow = fx.width, oh = fx.height, out = document.createElement('canvas');
-  if (style !== fxStyle) useStyle(style);
-  fx.width = w; fx.height = h; gl.viewport(0, 0, w, h);
-  paintFx(BGQ.Ultra);
-  out.width = w; out.height = h; out.getContext('2d').drawImage(fx, 0, 0); // (read in the same task it was drawn)
-  fx.width = ow; fx.height = oh; gl.viewport(0, 0, ow, oh);
-  paintFx(BGQ[bgq]);
-  return out;
+  if (!fxOn) return Promise.resolve(null);
+  const style = THEMES.indexOf(theme);
+  fxAsked.add(style);
+  return fxSnap({ w, h, style, src: fxSource(style), v: fxUniforms(BGQ.Ultra), after: fxStyle >= 0 ? { ...fxUniforms(BGQ[bgq]), style: fxStyle } : null });
 }
 
 // ---------- Extreme lyrics: the music video (Extreme quality, computers only) ----------
@@ -12145,15 +12249,18 @@ function frame(now) {
   // Off (still): only redraw while the colors are changing, or after a resize; otherwise the last image stays.
   const settling = palette.some((c, i) => c.some((v, k) => Math.abs(target[i][k] - v) > 0.002));
   const style = THEMES.indexOf(theme), drawn = !PLAIN.has(theme); // Cover isn't drawn here: it's the blurred cover in front, on plain background; Gradient, CSS
-  if (gl && !covered && theme === 'Cover' && fxDirty) { fxDirty = false; gl.clearColor(...rgb(pal.bg), 1); gl.clear(gl.COLOR_BUFFER_BIT); }
-  const moving = gl && !covered && drawn && !Q.still;
-  if (gl && !covered && drawn && !race.show && ++fxFrame % Q.every === 0 && (!Q.still || settling || fxDirty)) { // lower qualities redraw less often (none under Redline's race)
+  if (fxOn && !covered && theme === 'Cover' && fxDirty) { fxDirty = false; fxClear(rgb(pal.bg)); }
+  const moving = fxOn && !covered && drawn && !Q.still;
+  if (fxOn && !covered && drawn && !race.show && ++fxFrame % Q.every === 0 && (!Q.still || settling || fxDirty)) { // lower qualities redraw less often (none under Redline's race)
     fxDirty = false;
-    if (style !== fxStyle) useStyle(style);
-    const ease = Math.min(1, 0.04 * Q.every);
-    for (let c = 0; c < 4; c++) for (let k = 0; k < palette[c].length; k++) palette[c][k] += (target[c][k] - palette[c][k]) * ease;
-    fxT += Q.still ? 0 : dt * Q.every * palette[3][2] * (motion ? (!P.paused ? 1 : 0.35) : 0); // steady: livelier while playing
-    paintFx(Q, bgKick, live ? kick : 0);
+    if (style !== fxStyle && fxUse(style)) fxStyle = style; // (not ready yet: the last theme's goes on meanwhile — see fxEngine)
+    if (fxStyle < 0) { fxClear(rgb(pal.bg)); fxDirty = true; } // (none ready yet: the plain background, and asked again next frame)
+    else {
+      const ease = Math.min(1, 0.04 * Q.every);
+      for (let c = 0; c < 4; c++) for (let k = 0; k < palette[c].length; k++) palette[c][k] += (target[c][k] - palette[c][k]) * ease;
+      fxT += Q.still ? 0 : dt * Q.every * palette[3][2] * (motion ? (!P.paused ? 1 : 0.35) : 0); // steady: livelier while playing
+      paintFx(Q, bgKick, live ? kick : 0);
+    }
   }
   checkSpeed(gap, moving);
 
@@ -12258,8 +12365,11 @@ console.assert(CREDIT_LINE.test('Mastering Engineer: John Greenham') && !CREDIT_
 { const ref = [10, 13, 16, 19, 22, 25].map((t, i) => ({ t, text: 'line ' + i })), ls = ref.map((r, i) => ({ t: r.t + 1.3 + (i === 2 ? .6 : 0), text: r.text }));
   alignTo(ls, ref);
   console.assert(ls.every((l, i) => Math.abs(l.t - ref[i].t) < .01), 'alignTo broken: ' + ls.map(l => l.t).join()); }
-// the app's built and painting now: fade the opening splash away (after two frames, so the home screen is up first)
-requestAnimationFrame(() => requestAnimationFrame(() => { const sp = document.getElementById('splash'); if (sp) { sp.classList.add('gone'); setTimeout(() => sp.remove(), 600); } }));
+// the app's built. Android: its own splash may go now — it fades out over the app's first frame (MainActivity), so the
+// page's (only the background there) goes at once. Elsewhere the page's opening splash fades away, after two frames, so
+// the home screen is up first.
+if (native) { document.getElementById('splash')?.remove(); Capacitor.Plugins.Immersive.splashDone().catch(() => {}); } // (an older app without it: its splash didn't wait)
+else requestAnimationFrame(() => requestAnimationFrame(() => { const sp = document.getElementById('splash'); if (sp) { sp.classList.add('gone'); setTimeout(() => sp.remove(), 600); } }));
 { const y = parseYrc('[1000,900](1000,200,0)empty（(1200,300,0) Oh）');
   console.assert(y[0].text === 'empty (Oh)' && y[0].words[1].t === 1.2, 'parseYrc brackets broken: ' + y[0].text); }
 </script>

@@ -12,8 +12,32 @@ import java.io.ByteArrayInputStream;
 // NetherFlow on Android: the same player page as the desktop app; FlowStream's streams through it (below).
 public class MainActivity extends BridgeActivity {
 
+    // The opening splash (res/values/styles.xml): Android's own, held until the page has built itself — the page says so
+    // (ImmersivePlugin.splashDone, at the end of its script) — so there's one splash, straight into the app, rather than
+    // the splash, then a blank screen, then the page's own. Then faded out. 5 s at most, whatever happens.
+    static volatile boolean pageBuilt = false;
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        androidx.core.splashscreen.SplashScreen splash = androidx.core.splashscreen.SplashScreen.installSplashScreen(this);
+        final long since = android.os.SystemClock.uptimeMillis();
+        pageBuilt = false;
+        splash.setKeepOnScreenCondition(() -> !pageBuilt && android.os.SystemClock.uptimeMillis() - since < 5000);
+        // (the page can't draw while the splash is held, so the splash stays up, over it, until the page's first frame is
+        // ready — then faded off the app itself, not off a blank screen; 0.7 s at most)
+        splash.setOnExitAnimationListener(view -> {
+            final boolean[] gone = { false };
+            Runnable fade = () -> {
+                if (gone[0]) return;
+                gone[0] = true;
+                android.view.View icon = view.getIconView();
+                if (icon != null) icon.animate().scaleX(1.06f).scaleY(1.06f).setDuration(280).start();
+                view.getView().animate().alpha(0f).setDuration(280).setInterpolator(new android.view.animation.DecelerateInterpolator()).withEndAction(view::remove).start();
+            };
+            WebView page = getBridge() != null ? getBridge().getWebView() : null;
+            if (page != null) page.postVisualStateCallback(0, new WebView.VisualStateCallback() { @Override public void onComplete(long id) { fade.run(); } });
+            new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(fade, 700);
+        });
         registerPlugin(ImmersivePlugin.class);
         registerPlugin(NetPlugin.class);
         registerPlugin(PlaybackPlugin.class);
