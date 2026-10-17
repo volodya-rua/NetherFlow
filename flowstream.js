@@ -101,7 +101,7 @@
           if (order === CLIENTS) this.misses = c === CLIENTS[0] ? 0 : (this.misses || 0) + 1;
           if (this.misses >= 3) { this.demoted = Date.now() + 30 * 60e3; this.misses = 0; }
           return a;
-        } catch (e) { if (e.code === 'network') throw e; first ||= e; }
+        } catch (e) { if (e.code === 'network' || e.code === 'limited') throw e; first ||= e; } // (YouTube limiting the connection: not asked again as the next client, right then)
       }
       throw first;
     }
@@ -146,5 +146,5 @@
 
   out.create = opts => new Engine(opts);
   out.Error = FlowError;
-  out.version = '0.3.1';
+  out.version = '0.3.2';
 })(typeof module === 'object' && module.exports ? module.exports : (globalThis.FlowStream = {}));

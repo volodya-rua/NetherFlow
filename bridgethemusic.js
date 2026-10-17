@@ -173,7 +173,8 @@
       })(j);
       // (its own clean name, apple:title; the page title's is "… by its curator - Apple Music")
       const name = (html.match(/<meta name="apple:title" content="([^"]*)"/)?.[1] || (html.match(/<title>([^<]*)<\/title>/)?.[1] || '').replace(/^‎/, '').replace(/\s+-\s+(Playlist|Album|Single|EP).*$/, ''))
-        .replace(/&amp;/g, '&').replace(/&#39;/g, "'").replace(/&quot;/g, '"') || 'Apple Music playlist';
+        .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(+d)).replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCodePoint(parseInt(h, 16)))
+        .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, '&').trim() || 'Apple Music playlist'; // (every entity: a name with "&#x27;" showed it as that)
       const pl = u.pathname.match(/^\/([a-z]{2})\/playlist\/(?:[^/]+\/)?(pl\.[\w.-]+)/);
       let partial = false;
       if (/\/album\//.test(u.pathname)) for (const t of tracks) t.album ||= name; // (an album's songs: its name)
@@ -215,5 +216,5 @@
     }
   }
   out.create = opts => new Engine(opts);
-  out.version = '0.5.0';
+  out.version = '0.5.1';
 })(typeof module === 'object' && module.exports ? module.exports : (globalThis.BridgeTheMusic = {}));
