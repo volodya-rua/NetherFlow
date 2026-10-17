@@ -36,7 +36,7 @@
     }
 
     // an answer remembered (and one on its way shared): the same song asked again, at once. Only one with lyrics in it is
-    // kept: none (it may come back later, or have been a blip), a failure or 'lyrics offline' is asked again next time
+    // kept: none (it may come back later, or have been a blip), a failure, 'lyrics offline' or 'lyrics busy' is asked again next time
     remember(key, ask) {
       if (this.kept.has(key)) return this.kept.get(key);
       const p = ask();
@@ -47,15 +47,17 @@
     }
 
     // The open lyrics database, by the song's name: synced lyrics at the song's length if it has them, else its words.
-    // alts: other ways its name may be written (tried when it isn't found by its own). A network failure: kind 'lyrics offline'.
+    // alts: other ways its name may be written (tried when it isn't found by its own). A network failure: kind 'lyrics offline';
+    // the database busy throughout: 'lyrics busy'.
     byName(artist, title, dur = 0, alts = []) { return this.remember(JSON.stringify(['n', artist, title, Math.round(dur), alts]), () => this.byNameNow(artist, title, dur, alts)); }
     // The open lyrics database's answer: a find, or null (not found). Busy — it says "retry in a moment", at times to 2 in
-    // 5 requests (measured 2026-10) — or an error page: asked again three times, a little later each time (jittered, so
-    // many apps don't come back at once); still busy: thrown, and the lyrics count as offline (asked again next time).
-    // No network: offline at once.
+    // 5 requests, and to 2 in 3 for what it hasn't answered lately (a song it hasn't been asked for: measured 2026-10; the
+    // popular, answered from its cache, never are) — or an error page: asked again five times, a little later each time
+    // (jittered, so many apps don't come back at once); still busy: thrown (.busy), kind 'lyrics busy' (asked again next
+    // time). No network: offline at once.
     async lrclib(path, params) {
       for (let k = 0; ; k++) {
-        if (k) await sleep(500 * k + Math.random() * 300);
+        if (k) await sleep(350 * k + Math.random() * 400);
         // (the request itself failing is no network — offline at once, whatever the platform calls it: Android's HTTP
         // throws its own errors, which were taken for a busy server and asked three more times; only an answer that
         // isn't JSON, an error page, is asked again)
@@ -63,7 +65,7 @@
         let j = null; try { j = JSON.parse(text); } catch {}
         if (path === 'search' ? Array.isArray(j) : j && typeof j.id === 'number') return j;
         if (j?.statusCode === 404 || j?.name === 'TrackNotFound') return null;
-        if (k >= 3) throw new Error('the lyrics database is busy');
+        if (k >= 5) throw Object.assign(new Error('the lyrics database is busy'), { busy: true });
       }
     }
     async byNameNow(artist, title, dur, alts) {
@@ -118,7 +120,7 @@
         if (hit?.instrumental) return { raw: '', dur: hit.duration || 0, src: hit.artistName + ' — ' + hit.trackName, exact, instrumental: true, kind: 'instrumental', id: hit.id || 0 };
         return { raw: hit?.syncedLyrics || hit?.plainLyrics || '', dur: hit?.duration || 0, src: hit ? hit.artistName + ' — ' + hit.trackName : '', exact,
                  kind: hit ? (hit.syncedLyrics ? 'synced lyrics' : 'plain lyrics') : 'no lyrics found', id: hit?.id || 0 };
-      } catch { return { raw: '', dur: 0, kind: 'lyrics offline', id: 0 }; }
+      } catch (e) { return { raw: '', dur: 0, kind: e?.busy ? 'lyrics busy' : 'lyrics offline', id: 0 }; }
     }
 
     // Word-by-word timing: the open AMLL TTML DB first (keyed by the NetEase id), then two public lyric services ("yrc", and "krc" turned into it). Each must be the same artist at
@@ -281,5 +283,5 @@
   out.create = opts => new Engine(opts);
   out.krcToYrc = krcToYrc;
   out.ttmlToYrc = ttmlToYrc;
-  out.version = '0.5.1';
+  out.version = '0.5.2';
 })(typeof module === 'object' && module.exports ? module.exports : (globalThis.EndVerse = {}));

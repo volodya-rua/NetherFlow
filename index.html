@@ -3830,7 +3830,8 @@ const memo = (fn, keep) => {
     return m.get(k);
   };
 };
-const fetchWords = memo(fetchWordsNow, v => !!v), fetchLyrics = memo(fetchLyricsNow, v => v.kind !== 'lyrics offline');
+const lyrUnsure = l => l?.kind === 'lyrics offline' || l?.kind === 'lyrics busy'; // (no answer, not "none": asked again)
+const fetchWords = memo(fetchWordsNow, v => !!v), fetchLyrics = memo(fetchLyricsNow, v => !lyrUnsure(v));
 async function fetchWordsNow(artist, title, dur) {
   if (!fullSongs) return null;
   try {
@@ -3924,7 +3925,7 @@ async function fetchLyricsNow(artist, title, dur = 0, alts = []) { // (used by t
     if (/^lrclib:\d{1,12}$/.test(lyr)) { const byId = await pageVerse.byId(+lyr.slice(7)).catch(() => null);
       if (byId?.raw && (!dur || !byId.dur || Math.abs(byId.dur - dur) <= 8)) return byId; } } // (verified by length; otherwise fall through to the name search)
   const res = await pageVerse.byName(artist, title, dur, alts);
-  if (key && res?.id && res.raw && res.kind !== 'lyrics offline') matchPut(key, { lyr: 'lrclib:' + res.id }); // (share the LRCLIB pointer for the next person)
+  if (key && res?.id && res.raw) matchPut(key, { lyr: 'lrclib:' + res.id }); // (share the LRCLIB pointer for the next person)
   return res;
 }
 
@@ -5029,14 +5030,24 @@ async function playTrack(t, term = '', queued = false, stay = false, mixed = nul
     early = l; status(`${source} · synced lyrics`); setLines(l.raw);
   }, () => {});
   // (Audius's: YouTube Music's lyrics of the label's upload for their words, not their timing)
-  const lyr = await lyrics(playLen, au ? vids[0] && { ...vids[0], channel: 'Audius' } : vid);
+  const lyrVid = au ? vids[0] && { ...vids[0], channel: 'Audius' } : vid, lyr = await lyrics(playLen, lyrVid);
   if (id !== loadId) return;
   const same = early && lyr.raw === early.raw && !lyr.yrc && !lyr.ref; // (the full answer is what's shown already: left as it is)
   early = early || false;
-  const gap = vid && lyr.dur ? Math.round(vid.dur - lyr.dur) : 0;
-  status(`${source} · ${full ? lyr.kind : lyr.kind.replace('synced ', '')}${lyr.credit ? ` by ${lyr.credit}` : ''}`
-    + (Math.abs(gap) > 3 ? ` · this upload runs ${Math.abs(gap)}s ${gap > 0 ? 'longer' : 'shorter'}, nudge sync if off` : ''));
-  if (!same) setLines(lyr.raw, { preview: full ? '' : why, yrc: !!lyr.yrc, guide: lyr.guide, ref: lyr.ref, ...(lyr.instrumental && { note: 'an instrumental: no words to sing along to' }) });
+  const show = (lyr, last) => {
+    const gap = vid && lyr.dur ? Math.round(vid.dur - lyr.dur) : 0, unsure = lyrUnsure(lyr) && !lyr.raw, online = navigator.onLine;
+    status(`${source} · ${unsure && online ? (last ? 'the lyrics site is busy' : 'lyrics site busy, trying again') : full ? lyr.kind : lyr.kind.replace('synced ', '')}${lyr.credit ? ` by ${lyr.credit}` : ''}`
+      + (Math.abs(gap) > 3 ? ` · this upload runs ${Math.abs(gap)}s ${gap > 0 ? 'longer' : 'shorter'}, nudge sync if off` : ''));
+    setLines(lyr.raw, { preview: full ? '' : why, yrc: !!lyr.yrc, guide: lyr.guide, ref: lyr.ref, ...(lyr.instrumental && { note: 'an instrumental: no words to sing along to' }),
+      ...(unsure && { note: !online ? 'you\'re offline: no lyrics till you\'re back' : last ? 'the lyrics site is busy: play it again in a while' : 'the lyrics site is busy: trying again in a moment' }) });
+  };
+  if (!same) show(lyr);
+  // (the lyrics site busy throughout, or the connection blipped: asked once more a little later, shown if found)
+  if (lyrUnsure(lyr) && !lyr.raw && navigator.onLine) setTimeout(async () => {
+    if (id !== loadId) return;
+    const l = await lyricsFor(t)(playLen, lyrVid).catch(() => null);
+    if (id === loadId && l) show(l, true);
+  }, 6000);
   setTimeout(() => id === loadId && prefetchNext(), 15000); // (once it's been listened to a while: skipping on fast, nothing's looked up for nothing — and the next's still ready long before it's needed)
 }
 
@@ -7065,7 +7076,8 @@ async function makeMix(kind) {
   const shuffled = (l, n) => l.slice(0, n).sort(() => Math.random() - .5).slice(0, 5);
   const pickFrom = kind === 'new' ? shuffled(seeds, 30) : kind === 'now' ? shuffled(learnt ? around : seeds, 10) : seeds.slice(0, 5);
   const radios = await Promise.all(pickFrom.map(async t => { const id = await seedFor(t).catch(() => ''); return id ? radioFor(id) : []; }));
-  const known = new Set([...seen, ...library.playlists.flatMap(p => p.tracks.map(songKey)), ...auto.mem.heard]), taken = new Set(), out = [];
+  const known = new Set([...seen, ...library.playlists.flatMap(p => p.tracks.map(songKey)), ...auto.mem.heard]), out = [];
+  const taken = new Set(kind !== 'new' ? pickFrom.map(songKey) : []); // (a radio starts with its own seed: put in once, below)
   const lists = radios.map(r => r.map(c => ytmToTrack({ id: c.id, title: c.title, artist: c.artist, album: c.album, dur: c.dur, art: c.art }))
     .filter(t => !isModded(t) && t.trackTimeMillis >= 60e3 && t.trackTimeMillis <= 600e3 && (kind !== 'new' || !known.has(songKey(t))))
     .sort((x, y) => (auto.mem.taste[artKey(y)] || 0) - (auto.mem.taste[artKey(x)] || 0)));
@@ -7277,8 +7289,9 @@ function renderPods(head, list, tok) {
   q.type = 'search'; q.placeholder = 'Find a show'; q.setAttribute('aria-label', 'Find a podcast'); q.autocomplete = 'off'; q.spellcheck = false;
   const card = p => libCard(coverTile(p.art), p.name, p.artist, () => openLibrary({ kind: 'show', from: libView, feed: p.feed, name: p.name, art: p.art, pod: p }));
   let qt = 0;
-  q.oninput = () => { clearTimeout(qt); qt = setTimeout(() => { if (!q.value.trim()) return found.replaceChildren(); found.replaceChildren(el('p', 'empty', 'Searching…'));
-    podSearch(q.value).then(l => q.isConnected && found.replaceChildren(...(l.length ? l.map(card) : [el('p', 'empty', 'No show of that name.')]))).catch(e => found.replaceChildren(xFail(e))); }, 350); };
+  q.oninput = () => { clearTimeout(qt); qt = setTimeout(() => { const term = q.value, now = () => q.isConnected && q.value === term; // (an older search answering late: not shown)
+    if (!term.trim()) return found.replaceChildren(); found.replaceChildren(el('p', 'empty', 'Searching…'));
+    podSearch(term).then(l => now() && found.replaceChildren(...(l.length ? l.map(card) : [el('p', 'empty', 'No show of that name.')]))).catch(e => now() && found.replaceChildren(xFail(e))); }, 350); };
   mine.append(...(pods.length ? pods.map(card) : [el('p', 'empty', 'Follow shows and they\'re here, with their new episodes below.')]));
   list.push(q, found, sectionHead('Your shows'), mine, ...(pods.length ? [sectionHead('New episodes'), fresh] : []), sectionHead(`Top podcasts · ${STORE}`), top);
   top.append(el('p', 'empty', 'Loading…'));
@@ -7299,7 +7312,7 @@ function renderShow(v, head, list, tok) {
   xGet('feed:' + v.feed, () => feedOf(v.feed, v.art || pods.find(p => p.feed === v.feed)?.art)).then(s => {
     if (tok !== libTok) return;
     const following = pods.some(x => x.feed === v.feed);
-    head('Podcast', s.name, [s.artist, `${s.episodes.length} episodes`].filter(Boolean).join(' · '), coverTile(s.art || v.art, true));
+    head('Podcast', s.name, [s.artist, `${s.episodes.length} episodes`].filter(Boolean).join(' · '), s.art || v.art ? coverTile(s.art || v.art, true) : tile('mic', s.name));
     const follow = el('button', following ? 'pill ghost' : 'pill', following ? 'Following' : 'Follow'), go = el('button', 'pill'), next = epNext(s.episodes);
     follow.onclick = () => { if (pods.some(x => x.feed === v.feed)) pods = pods.filter(x => x.feed !== v.feed); else pods.unshift({ ...p, name: s.name, art: s.art || p.art, artist: s.artist || p.artist }); store.set(PODS, JSON.stringify(pods)); renderLibrary(); };
     go.textContent = next && epPos[next.trackId] > 0 ? 'Continue' : 'Play latest';
@@ -7314,8 +7327,9 @@ function renderBooks(head, list, tok) {
   q.type = 'search'; q.placeholder = 'A book or an author'; q.setAttribute('aria-label', 'Find an audiobook'); q.autocomplete = 'off'; q.spellcheck = false;
   const card = b => libCard(coverTile(b.art), b.title, b.author, () => openLibrary({ kind: 'book', from: libView, id: b.id, title: b.title, art: b.art }));
   let qt = 0;
-  q.oninput = () => { clearTimeout(qt); qt = setTimeout(() => { if (!q.value.trim()) return found.replaceChildren(); found.replaceChildren(el('p', 'empty', 'Searching…'));
-    bookSearch(q.value).then(l => q.isConnected && found.replaceChildren(...(l.length ? l.map(card) : [el('p', 'empty', 'No book of that name.')]))).catch(e => found.replaceChildren(xFail(e))); }, 400); };
+  q.oninput = () => { clearTimeout(qt); qt = setTimeout(() => { const term = q.value, now = () => q.isConnected && q.value === term;
+    if (!term.trim()) return found.replaceChildren(); found.replaceChildren(el('p', 'empty', 'Searching…'));
+    bookSearch(term).then(l => now() && found.replaceChildren(...(l.length ? l.map(card) : [el('p', 'empty', 'No book of that name.')]))).catch(e => now() && found.replaceChildren(xFail(e))); }, 400); };
   mine.append(...(books.length ? books.map(card) : [el('p', 'empty', 'The books you start are kept here, where you left off.')]));
   list.push(q, found, sectionHead('Your books'), mine, sectionHead('Most listened'), top);
   top.append(el('p', 'empty', 'Loading…'));
@@ -7489,10 +7503,12 @@ const STORE = (/^[A-Za-z]{2}$/.test(window.netherflowApp?.country || '') ? nethe
 const STORES = STORE === 'US' ? ['US'] : [STORE, 'US'];
 // (answers kept for the session: typing a letter more and back again, or the same search later, is instant)
 const itCache = new Map();
+// a signal that also gives up after ms (a request a bad network leaves hanging; an older WebView: the signal as it is)
+const within = (signal, ms) => AbortSignal.any && AbortSignal.timeout ? AbortSignal.any([...(signal ? [signal] : []), AbortSignal.timeout(ms)]) : signal;
 async function itunes(path, params, signal) {
   const url = `https://itunes.apple.com/${path}?` + new URLSearchParams({ media: 'music', country: STORE, ...params });
   if (itCache.has(url)) return itCache.get(url);
-  const get = () => fetch(url, { signal }).then(r => r.json());
+  const get = () => fetch(url, { signal: within(signal, 12000) }).then(r => r.json());
   const out = (await get().catch(e => e.name === 'AbortError' ? Promise.reject(e) : get())).results || []; // one retry: phone networks hiccup
   if (itCache.size > 300) itCache.clear();
   itCache.set(url, out);
@@ -7793,11 +7809,13 @@ async function openArtist(who) {
     let artist = who.artistId ? who : null;
     if (!artist) artist = (await searchArtists(who.artistName)).find(a => sameWords(a.artistName, who.artistName)) || null;
     if (!artist) { if (id === apLoad) $('apStat').textContent = 'This artist isn\'t in the catalog'; return; }
-    const [songs, albums] = await Promise.all([artistSongs(artist).catch(() => []), artistAlbums(artist).catch(() => [])]);
+    let failed = false;
+    const [songs, albums] = await Promise.all([artistSongs(artist).catch(() => (failed = true, [])), artistAlbums(artist).catch(() => (failed = true, []))]);
     if (id !== apLoad) return;
+    if (failed && !songs.length && !albums.length) throw new Error('no answer');
     apData = { artist, songs, albums };
     renderArtist();
-  } catch { if (id === apLoad) $('apStat').textContent = 'Couldn\'t load this artist'; }
+  } catch { if (id === apLoad) $('apStat').textContent = navigator.onLine ? 'Couldn\'t load this artist: try again in a moment' : 'You\'re offline: artists need the internet'; }
 }
 function renderArtist() {
   const { artist, songs, albums } = apData;
@@ -7839,9 +7857,10 @@ async function openAlbum(album) {
   apHeader('Album', album.collectionName, [album.artistName, (album.releaseDate || '').slice(0, 4)].filter(Boolean).join(' · '), artUrl(album, 600), false);
   $('apStat').textContent = '● loading';
   $('apList').replaceChildren();
-  const songs = await albumSongs(album).catch(() => []);
+  let failed = false;
+  const songs = await albumSongs(album).catch(() => (failed = true, []));
   if (id !== apLoad) return;
-  $('apStat').textContent = `${songs.length} songs`;
+  $('apStat').textContent = failed ? (navigator.onLine ? 'Couldn\'t load this album: try again in a moment' : 'You\'re offline: albums need the internet') : `${songs.length} songs`;
   $('apPlay').hidden = !songs.length;
   $('apPlay').onclick = () => { queue = songs.slice(); playTrack(songs[0]); };
   $('apShuffle').hidden = songs.length < 2; $('apShuffle').onclick = () => shuffleList(songs.slice());
@@ -7859,9 +7878,11 @@ const lyrKnown = new Map(), lyrWait = [], lyrRows = new WeakMap();
 let lyrBusy = 0;
 function lyricsKind(s) {
   if (!lyrKnown.has(s.trackId)) lyrKnown.set(s.trackId, new Promise(res => { lyrWait.push(async () => {
-    const dur = (s.trackTimeMillis || 0) / 1000, l = await fetchLyrics(s.artistName, s.trackName, dur, lyricsAlts(s));
-    if (l.kind === 'lyrics offline') { lyrKnown.delete(s.trackId); return res(''); } // ask again next time
-    res(l.instrumental ? 'none' : l.kind === 'synced lyrics' || await fetchWords(s.artistName, s.trackName, dur) ? 'synced' : l.raw ? 'plain' : 'none');
+    try {
+      const dur = (s.trackTimeMillis || 0) / 1000, l = await fetchLyrics(s.artistName, s.trackName, dur, lyricsAlts(s));
+      if (lyrUnsure(l)) { lyrKnown.delete(s.trackId); return res(''); } // ask again next time
+      res(l.instrumental ? 'none' : l.kind === 'synced lyrics' || await fetchWords(s.artistName, s.trackName, dur) ? 'synced' : l.raw ? 'plain' : 'none');
+    } catch { lyrKnown.delete(s.trackId); res(''); } // (no badge, and asked again next time)
   }); lyrPump(); }));
   return lyrKnown.get(s.trackId);
 }
@@ -10409,6 +10430,12 @@ void main() {
 function kinInit() {
   const cv = kin.cv = $('kin'), gl = cv.getContext('webgl2', { premultipliedAlpha: true, alpha: true, antialias: false });
   if (!gl) return kin.gl = false;
+  if (!kin.watched) { // (the graphics chip reset — a driver update, a game taking it over: everything on it made again once it's back)
+    kin.watched = true;
+    cv.addEventListener('webglcontextlost', e => e.preventDefault());
+    cv.addEventListener('webglcontextrestored', () => { emoji.at.clear(); emoji.slots.length = 0; kin.coverSrc = null; cv.width = 1; kinInit(); if (kin.shot) kin.shot.lay = null; }); // (width: its layer sized again, see drawKin)
+    document.fonts.addEventListener('loadingdone', () => { if (kin.shot) kin.shot.lay = null; }); // (laid out in a stand-in face till then)
+  }
   const prog = (vs, fs, attrs, unis) => {
     const pr = gl.createProgram();
     for (const [type, src] of [[gl.VERTEX_SHADER, vs], [gl.FRAGMENT_SHADER, fs]]) {
@@ -10459,7 +10486,6 @@ function kinInit() {
   kin.mg = document.createElement('canvas').getContext('2d'); // (for measuring)
   kin.verts = new Float32Array(18 * 6 * 64);
   kin.gl = gl;
-  document.fonts.addEventListener('loadingdone', () => { if (kin.shot) kin.shot.lay = null; }); // (laid out in a stand-in face till then)
 }
 // A seeded random: the same shot's jitter is the same each time.
 const kinRand = s => () => ((s = Math.imul(s ^ (s >>> 15), 2246822507) ^ Math.imul(s ^ (s >>> 13), 3266489909)) >>> 0) / 4294967296;
@@ -11933,6 +11959,7 @@ let vedGl = null;
 function vedGlInit() {
   const cv = $('vedc'), g = cv.getContext('webgl2', { alpha: false, antialias: false });
   if (!g) return { off: true };
+  if (!cv.onwebglcontextrestored) { cv.onwebglcontextlost = e => e.preventDefault(); cv.onwebglcontextrestored = () => { vedGl = null; cv.width = 1; }; } // (made again on the next frame, its frames sized again)
   const sh = (type, src) => { const x = g.createShader(type); g.shaderSource(x, src); g.compileShader(x); return x; };
   const pr = g.createProgram();
   g.attachShader(pr, sh(g.VERTEX_SHADER, '#version 300 es\nin vec2 a; void main() { gl_Position = vec4(a, 0., 1.); }'));
