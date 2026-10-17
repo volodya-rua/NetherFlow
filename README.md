@@ -44,7 +44,7 @@ need a powerful graphics card anyway), about 18 MB smaller, and it updates to Li
 
 <a id="whats-new"></a>
 
-## What's new in 1.4.3
+## What's new in 1.5.0
 
 - **NetherFlow's own player, FlowStream**, in place of a hidden YouTube player. Songs start right away, the next one is
   ready when you skip, every song plays in the best sound YouTube has (usually Opus; a few songs only exist as AAC), and no hidden video drains the battery
@@ -65,7 +65,7 @@ need a powerful graphics card anyway), about 18 MB smaller, and it updates to Li
   of 41, the Windows one about 17 MB lighter
 
 > [!NOTE]
-> Someone on 1.4.2 or older can't join a Listen together session started on 1.4.3, so update both sides. Shared
+> Someone on 1.4.2 or older can't join a Listen together session started on 1.5.0, so update both sides. Shared
 > playlists keep working with older versions. The terms and privacy policy changed a little (which country's law
 > applies, a note on flashing light, and the new relay), so you're asked to accept them again.
 

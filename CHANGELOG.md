@@ -2,7 +2,7 @@
 
 What changed in each NetherFlow release. The builds are on the [releases page](https://github.com/volodya-rua/NetherFlow/releases).
 
-## 1.4.3: The whole app on your TV's remote
+## 1.5.0: NetherFlow's own player, and a much smaller app
 
 - **Sound tools** in the Equalizer panel: Crossfeed for headphones, Clarity, Loudness at low volume and Night mode, plus
   360 sound (Around and Orbit). A "Playing now" line says the format and quality of what's playing
@@ -16,6 +16,12 @@ What changed in each NetherFlow release. The builds are on the [releases page](h
 - **Android Auto:** liked songs, recent plays and playlists on the car's screen, and voice search. NetherFlow has to be
   open on the phone, and Android Auto lists apps from outside the Play Store only with its Unknown sources developer
   setting on
+- **A 10-band equalizer**, two more 360 modes, a strength setting for headphone correction, and a softer volume booster
+- **Romanized lyrics** (Settings): sing along in Latin letters, worked out on your device
+- **Word-by-word lyrics for more songs**, from the open AMLL lyrics database too, and smooth even where the timing is
+  uneven
+- **Carry on where you left off:** the last song is there when the app opens, and Play picks it up at the same moment
+- **A new cursor** on computers: a glowing arrow in the mood's colours, with a ring that glides after it
 
 - **Songs start right away, and the next one's already there when you skip.** NetherFlow plays through its own player
   now, FlowStream, in place of a hidden YouTube player: every song in the best sound YouTube has (usually Opus; a few songs only exist as AAC), and no hidden
@@ -25,8 +31,23 @@ What changed in each NetherFlow release. The builds are on the [releases page](h
 - **Saving for offline goes through FlowStream too:** the same best sound, a song saved in about 2 seconds
 - **A much smaller app:** NetherFlow no longer carries yt-dlp (or, on Android, a whole Python to run it): the phone
   app is about 7 MB instead of 41, the Windows one about 17 MB lighter
+- **The songs you played last start instantly:** their first moments are kept on your device (Settings › Instant start,
+  where you can also clear them)
+- **The right version of a song:** a remix finds the remix, a live take the live one, and the artist's own upload is
+  preferred. Imported playlists keep each song's version too
+- **Lyrics show much sooner:** the synced lines appear as soon as they're found, and the word-by-word timing takes over
+  when it arrives
+- **A quicker start**, a cleaner Android splash screen, and backgrounds drawn without holding the app up
+- **Smooth even on long playlists**, and the Redline races load without holding the app up
+- **Imports:** every song of a playlist is in at once, ready to play; a playlist imported again opens straight away;
+  long playlists read faster
+- **Offline:** a song that isn't saved gives way to the next one that is, and says so. Offline saves carry on after the app
+  closes, and resume when the internet comes back
+- **Playlists you edit together** connect faster and stay connected
 - YouTube Music's lyrics say who they come from
 - A song that won't load is tried a few ways, then skipped with a note saying which, so the music doesn't stop
+- When the lyrics site is busy, NetherFlow says so and tries again, rather than saying there are no lyrics
+- The quality line shows each song's real bitrate
 
 - **Every screen works with the remote.** Move songs in the queue (OK on a song's handle, then up and down), read the
   terms, and use the QR code, Rename and artist pages over the Library. Back always closes the screen on top
@@ -35,10 +56,23 @@ What changed in each NetherFlow release. The builds are on the [releases page](h
   motion, and NetherFlow tells you the first time
 - **Listen together and shared playlists go through NetherFlow's own relay now**: it keeps no logs and, as before, can't
   read anything (it's all end-to-end encrypted). The public relays stay as a backup for a while
-- Heads-up: someone on 1.4.2 or older can't join a Listen together session started on 1.4.3, so update both sides.
+- Heads-up: someone on 1.4.2 or older can't join a Listen together session started on 1.5.0, so update both sides.
   Shared playlists keep working with older versions
 - The terms and privacy policy changed a little (which country's law applies, a note on flashing light, and the new
   relay), so you're asked to accept them again
+
+**Fixes**
+
+- A song liked, or a playlist opened from a link, in the first moments after the app starts is no longer lost
+- The equalizer's top bands can be dragged again
+- Mixes no longer list the same song twice
+- Searching podcasts and audiobooks: a slow earlier search no longer replaces the results of a newer one
+- Artist and album pages say when they couldn't load, rather than showing no songs
+- The lyric video comes back by itself after the graphics card resets
+- Stories, and the stats and playlist pictures, are made without freezing the phone
+- Android: a cover that never arrives no longer holds the notification up, a podcast download stopped earlier no longer
+  stops the next one, and the app no longer closes when the notification can't restart
+- The update check tries again at the next start when it couldn't reach GitHub
 
 ## 1.4.2: Listen together and sync, locked down tighter
 

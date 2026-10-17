@@ -18,16 +18,23 @@ concurrency: mirror
 jobs:
   mirror:
     runs-on: ubuntu-24.04
+    env:
+      TOKEN: ${{ secrets.GITLAB_MIRROR_TOKEN }}
     steps:
+      # (till the token's set up — it needs GitLab's identity check first — a note, not a failure: a red cross on every
+      # commit reads as a broken build)
+      - name: Not set up yet
+        if: env.TOKEN == ''
+        run: echo "::notice::The secret GITLAB_MIRROR_TOKEN isn't set yet, so nothing was mirrored"
+
       - uses: actions/checkout@v7
+        if: env.TOKEN != ''
         with:
           fetch-depth: 0
 
       - name: Push main and the tags to GitLab
-        env:
-          TOKEN: ${{ secrets.GITLAB_MIRROR_TOKEN }}
+        if: env.TOKEN != ''
         run: |
-          [ -n "$TOKEN" ] || { echo "::error::The secret GITLAB_MIRROR_TOKEN isn't set"; exit 1; }
           url="https://oauth2:${TOKEN}@gitlab.com/Volodya.rua/NetherFlow.git"
           git push --force "$url" origin/main:refs/heads/main
           git push --force "$url" --tags

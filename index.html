@@ -3119,7 +3119,7 @@ function setSing(on) {
 }
 function renderLoud() {
   $('eqLoud').replaceChildren(settingRow('Loudness', ['Original', 'Levelled'], loud, v => { loud = v; store.set('netherflow.loud', v === 'Original' ? '' : v); renderLoud(); applyEq(); setVolume(volume); },
-    'Original: each song as loud as it was mastered. Levelled: YouTube turns loud songs down so all play at about one level.'),
+    'Original: each song at its own original loudness. Levelled: loud songs turned down so all play at about one level.'),
     settingRow('360 sound', SPACES, space, setSpace, 'Around: the song set round you, like speakers either side. Wide: pushed further out, for a bigger stereo. Hall: a big soft room, like a concert hall. Orbit: it circles your head (the "8D" sound). Best on headphones.'),
     settingRow('Crossfeed', TOOLS.cross, tools.cross, v => setTool('cross', v), 'For headphones: a little of each side into the other, softened and a moment late, as speakers reach both ears. Easier on long listens.' + (space !== 'Off' ? ' (Not with 360 sound on: that places the song itself.)' : '')),
     settingRow('Clarity', TOOLS.clarity, tools.clarity, v => setTool('clarity', v), 'Brings back some of the airy top end that streaming squeezes out of a song.'),
