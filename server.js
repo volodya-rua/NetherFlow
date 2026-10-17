@@ -41,12 +41,14 @@ if (fs.existsSync(path.join(__dirname, 'race'))) (function race(dir) {
 const guard = lib.guard();
 // politeFetch sits inside FlowGuard (which paces and gates the limit): the raw Response fetch, with coalescing, a short
 // GET cache and GET-only retry. GET goes through it; POST (search, player) is a read that passes straight through.
-const pf = lib.politeFetch((url, init) => fetch(url, init));
+// Both hedged (lib.hedged): an answer that hasn't come is asked for once more alongside, so a request left hanging —
+// YouTube Music's, about 1 in 7, for seconds, while the same one sent again answers in ~0.2 s — costs ~1 s, not 4–9.
+// (a GET's hedge is on its answer's start, before its body: a big page still coming in isn't asked for twice)
+const pf = lib.politeFetch(lib.hedged((url, init, signal) => fetch(url, { ...init, signal: init?.signal ? AbortSignal.any([init.signal, signal]) : signal }), { after: 1500, max: 8000 }));
 const get = guard.wrap((url, headers) => pf(url, { headers, signal: AbortSignal.timeout(8000) }).then(r => r.text()));
-// (YouTube Music's answers take ~0.3–1 s: one that hasn't come in 4 s now and then never does — asked again at once,
-// which answers; 8 s in all, as before)
-const post = guard.wrap((url, body, headers) => fetch(url, { method: 'POST', body, headers, signal: AbortSignal.timeout(4000) }).then(r => r.text())
-  .catch(e => e.name === 'TimeoutError' ? fetch(url, { method: 'POST', body, headers, signal: AbortSignal.timeout(4000) }).then(r => r.text()) : Promise.reject(e)));
+const read = (after, max) => lib.hedged((url, body, headers, signal) => fetch(url, { method: 'POST', body, headers, signal }).then(r => r.text()), { after, max });
+const ytmRead = read(1200, 8000), playerRead = read(900, 4500); // (YouTube Music answers in ~0.2–0.9 s; a stream's address in ~0.15–0.35 s)
+const post = guard.wrap(ytmRead);
 const verse = EndVerse.create({ get, post }), bridge = BridgeTheMusic.create({ get, post }); // (lyrics; playlists pasted in)
 const send = (res, code, body, type = 'application/json') => { res.writeHead(code, { 'Content-Type': type }); res.end(body); };
 // A podcast's addresses (its feed's, its episodes') are anyone's to write: only http(s), and never this computer or its
@@ -68,8 +70,9 @@ async function fetchOut(href, headers, signal) {
 // FlowStream (NetherFlow's playback engine, flowstream.js): a song's best public stream, played by the page's own player
 // through here (same origin, so the equalizer and visuals work on it as on a saved song). Straight from its source to
 // this computer: nothing passes through any other server.
-// (its own, shorter wait: an answer takes ~0.15 s, so one that hasn't come in 3.5 s is asked again, see flowstream.js)
-const flow = FlowStream.create({ post: guard.wrap((url, body, headers) => fetch(url, { method: 'POST', body, headers, signal: AbortSignal.timeout(url.includes('music.youtube.com') ? 8000 : 3500) }).then(r => r.text())) }); // (lyrics: no hurry)
+// (its own, shorter waits: an address answers in ~0.15–0.35 s, so one not in by 0.9 s is asked for alongside, 4.5 s in all,
+// and FlowStream itself asks once more after that — see flowstream.js; YouTube Music's, as above)
+const flow = FlowStream.create({ post: guard.wrap((url, body, headers) => (url.includes('music.youtube.com') ? ytmRead : playerRead)(url, body, headers)) });
 const flowAudio = id => flow.audio(id);
 // The next song's first 256 KB (about 15 s), fetched ahead into memory, so it starts the moment it's asked for (the
 // rest follows from its source as it plays). Two songs' at most.

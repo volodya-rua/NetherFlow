@@ -116,6 +116,38 @@
       return execute(url, init, key);
     };
   };
+  // Hedged requests. A read that hasn't answered in `after` ms is sent once more, alongside it: YouTube Music, the stream
+  // lookups and the lyric services now and then leave a request hanging for seconds while the same one sent again answers
+  // in ~0.2 s (measured 2026-10: about 1 in 7 of YouTube Music's). The first answer wins and the other is cancelled
+  // (where the platform can cancel). One that fails at once is sent again, once. All of it over by `max` ms (a
+  // TimeoutError). Only for reads — searches, lyrics, a stream's address — never a download. Inside FlowGuard it counts
+  // as the one request it is. On a slow line it waits longer before the second (3× the usual answer time of the last 20,
+  // `after` at least), so a slow but coming answer isn't sent for twice.
+  //   lib.hedged(request, { after, max }) → (...args) => request(...args, signal), hedged
+  lib.hedged = (request, { after = 1200, max = 8000 } = {}) => {
+    const took = [];
+    return (...args) => new Promise((resolve, reject) => {
+      const usual = took.length >= 5 ? [...took].sort((a, b) => a - b)[took.length >> 1] : 0, wait = Math.min(max / 2, Math.max(after, usual * 3));
+      let done = false, sent = 0, out = 0;
+      const ctrls = [];
+      // (the losers cancelled, never the winner: its answer may still be coming in — a fetch's body)
+      const end = (ok, v, won) => { if (done) return; done = true; clearTimeout(hedge); clearTimeout(cap); for (const c of ctrls) if (c !== won) c.abort(); (ok ? resolve : reject)(v); };
+      const send = () => {
+        if (done || sent >= 2) return;
+        sent++; out++;
+        const c = new AbortController(), t0 = Date.now(); ctrls.push(c);
+        Promise.resolve().then(() => request(...args, c.signal)).then(v => { if (!done) { took.push(Date.now() - t0); if (took.length > 20) took.shift(); } end(true, v, c); }, e => {
+          out--;
+          if (done) return;
+          if (e?.code === 'limited') return end(false, e); // (YouTube limiting this connection: never sent again)
+          if (sent < 2) send(); // (failed at once: sent again, now)
+          else if (!out) end(false, e); // (both failed)
+        });
+      };
+      const hedge = setTimeout(send, wait), cap = setTimeout(() => end(false, Object.assign(new Error('no answer in ' + max / 1000 + ' s'), { name: 'TimeoutError' })), max);
+      send();
+    });
+  };
   const ytmPost = (post, path, body, headers = {}) => post('https://music.youtube.com/youtubei/v1/' + path + '?prettyPrint=false', JSON.stringify(body),
     { 'Content-Type': 'application/json', 'User-Agent': UA, Origin: 'https://music.youtube.com', Referer: 'https://music.youtube.com/', ...headers }).then(limited).then(JSON.parse);
   lib.ytMusic = async (post, q) => {

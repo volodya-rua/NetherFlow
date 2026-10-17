@@ -23,6 +23,8 @@
   const clean = s => s.replace(/\s*[([].*?[)\]]/g, '').replace(/\s+-\s+.*$/, '').trim();
   const words = s => (s || '').toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/[^\p{L}\p{N}]+/gu, ' ').trim().split(' ').filter(Boolean);
   const TRANSLATED = /translat|traducci|tradu[cç][aã]o|übersetz|traduzione|terjemahan|перевод|翻[译譯]|english version|versi[oó]n en ingl/i;
+  // a recording's version, said in its name (a different recording of the same words: their timing differs)
+  const VERSION = /\b(live|remix(?:ed)?|acoustic|unplugged|instrumental|karaoke|slowed|sped up|reverb|nightcore|8d|orchestral|symphonic|reprise|lo-?fi|demo)\b/gi;
 
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   const KEEP = 200; // (answers remembered, at most: the oldest go first)
@@ -47,19 +49,22 @@
     // The open lyrics database, by the song's name: synced lyrics at the song's length if it has them, else its words.
     // alts: other ways its name may be written (tried when it isn't found by its own). A network failure: kind 'lyrics offline'.
     byName(artist, title, dur = 0, alts = []) { return this.remember(JSON.stringify(['n', artist, title, Math.round(dur), alts]), () => this.byNameNow(artist, title, dur, alts)); }
+    // The open lyrics database's answer: a find, or null (not found). Busy — it says "retry in a moment", at times to 2 in
+    // 5 requests (measured 2026-10) — or an error page: asked again three times, a little later each time (jittered, so
+    // many apps don't come back at once); still busy: thrown, and the lyrics count as offline (asked again next time).
+    // No network: offline at once.
+    async lrclib(path, params) {
+      for (let k = 0; ; k++) {
+        if (k) await sleep(500 * k + Math.random() * 300);
+        let j = null;
+        try { j = JSON.parse(await this.get('https://lrclib.net/api/' + path + (params ? '?' + new URLSearchParams(params) : ''))); } catch (e) { if (e instanceof TypeError || e?.name === 'AbortError' || e?.name === 'TimeoutError') throw e; }
+        if (path === 'search' ? Array.isArray(j) : j && typeof j.id === 'number') return j;
+        if (j?.statusCode === 404 || j?.name === 'TrackNotFound') return null;
+        if (k >= 3) throw new Error('the lyrics database is busy');
+      }
+    }
     async byNameNow(artist, title, dur, alts) {
-      // the database's answer: a find, or null (not found). Busy (it says so now and then) or an error page: asked again,
-      // twice, a little later each time; still busy: thrown, and the lyrics count as offline (asked again next time)
-      const api = async (path, params) => {
-        for (let wait = 0; ; wait += 700) {
-          if (wait) await sleep(wait);
-          let j = null;
-          try { j = JSON.parse(await this.get('https://lrclib.net/api/' + path + '?' + new URLSearchParams(params))); } catch (e) { if (e instanceof TypeError || e?.name === 'AbortError' || e?.name === 'TimeoutError') throw e; } // (no network: offline at once)
-          if (path === 'search' ? Array.isArray(j) : j && typeof j.id === 'number') return j;
-          if (path === 'get' && (j?.statusCode === 404 || j?.name === 'TrackNotFound')) return null;
-          if (wait >= 1400) throw new Error('the lyrics database is busy');
-        }
-      };
+      const api = (path, params) => this.lrclib(path, params);
       const who = artist.split(/,|&| feat\.? | x /i)[0].trim();
       // Is a find this song? Only if it has the song's name (bracketed bits, "- Remastered…" tails, "feat." credits,
       // apostrophes and "&"/"and" aside) and one of its artists' names — or, under some other name, its very length. Never
@@ -71,20 +76,29 @@
       const named = (h, name = title) => !!tn(name) && tn(h.trackName) === tn(name);
       const near = h => !dur || Math.abs(h.duration - dur) < 4;
       const own = h => !TRANSLATED.test(h.trackName + ' ' + h.artistName) || TRANSLATED.test(title); // (not a translation of it)
+      // The version the song is — its "(Live)", "- Remix", "Acoustic"…, outside its plain name: an entry of another version
+      // has its words but not its timing (a studio entry's timing on a live take was seconds out: measured).
+      const ver = s => (String(s || '').match(VERSION) || []).map(v => v.toLowerCase());
+      const wantVer = ver(title).filter(v => !ver(clean(title)).includes(v)), sameVer = h => wantVer.every(v => ver(h.trackName).includes(v));
+      const wordsOnly = h => ({ ...h, instrumental: false, syncedLyrics: null, plainLyrics: h.plainLyrics || h.syncedLyrics.replace(/^\[[^\]]*\]\s?/gm, '') });
       try {
         let hit = artist && dur ? await api('get', { artist_name: artist, track_name: title, duration: Math.round(dur) }) : null;
         if (hit && !own(hit)) hit = null;
         let exact = !!hit; // (the database's own exact match: name, artist and length)
-        if (!hit?.syncedLyrics && !hit?.instrumental) {
+        if (hit && !sameVer(hit)) { exact = false; hit = hit.syncedLyrics || hit.plainLyrics ? wordsOnly(hit) : null; } // (another version of it)
+        // An entry marked instrumental is someone's say-so, so the others are looked at too — measured: "Tum Hi Ho" under
+        // its composer's and its singer's names together was marked so, while eight entries of it have its lyrics.
+        if (!hit?.syncedLyrics) {
           let hits = ((await api('search', { track_name: clean(title), ...(who && { artist_name: who }) })) || []).filter(h => named(h) && byArtist(h) && own(h));
           // the artist unknown to the database (say, a video channel's name): the song's name at its very length
           if (!hits.length && dur) hits = ((await api('search', { q: clean(title) })) || []).filter(h => named(h) && own(h) && Math.abs(h.duration - dur) < 3);
-          const best = hits.find(h => (h.syncedLyrics || h.instrumental) && near(h));
+          const sung = hits.filter(h => !h.instrumental && (h.syncedLyrics || h.plainLyrics)).sort((a, b) => Math.abs(a.duration - dur) - Math.abs(b.duration - dur));
+          const best = sung.find(h => h.syncedLyrics && near(h) && sameVer(h));
           if (best) { hit = best; exact = true; }
-          else if (!hit?.plainLyrics) { // the same song at another length (an edit, a live take…): its words, not its timing
-            const other = hits.find(h => h.plainLyrics || h.syncedLyrics);
-            if (other) hit = { ...other, syncedLyrics: null, plainLyrics: other.plainLyrics || other.syncedLyrics.replace(/^\[[^\]]*\]\s?/gm, '') };
-          }
+          // the same song at another length (an edit, a live take…), or marked instrumental against all these: its words,
+          // not its timing
+          else if (sung.length && (!hit || hit.instrumental)) { hit = wordsOnly(sung[0]); exact = false; }
+          else if (!hit) { const inst = hits.find(h => h.instrumental && near(h)); if (inst) { hit = inst; exact = true; } }
         }
         // not found by its name: by its other names — a find with that name, kept only at the song's length, give or take
         // a few seconds (or by the same artist, give or take a minute: an upload with an intro or outro). Each searched with
@@ -95,7 +109,8 @@
           const names = [...by, ...alts.filter(a => a !== alt).map(flat).filter(a => a.length > 2)];
           const fits = h => named(h, alt) && own(h) && (Math.abs(h.duration - dur) < 4 || (names.some(a => flat(h.artistName).includes(a)) && Math.abs(h.duration - dur) < 60));
           const hs = ((await api('search', { q })) || []).filter(fits).sort((a, b) => Math.abs(a.duration - dur) - Math.abs(b.duration - dur)); // (closest length first)
-          if ((hit = hs.find(h => h.syncedLyrics || h.instrumental) || hs.find(h => h.plainLyrics) || null)) break search;
+          const h0 = hs.find(h => h.syncedLyrics && sameVer(h)) || hs.find(h => h.instrumental) || hs.find(h => h.plainLyrics || h.syncedLyrics);
+          if ((hit = h0 ? (h0.syncedLyrics && !sameVer(h0) ? wordsOnly(h0) : h0) : null)) break search; // (another version's: its words)
         }
         if (hit?.instrumental) return { raw: '', dur: hit.duration || 0, src: hit.artistName + ' — ' + hit.trackName, exact, instrumental: true, kind: 'instrumental', id: hit.id || 0 };
         return { raw: hit?.syncedLyrics || hit?.plainLyrics || '', dur: hit?.duration || 0, src: hit ? hit.artistName + ' — ' + hit.trackName : '', exact,
@@ -124,18 +139,20 @@
       return yrc.find(x => x.amll) || yrc[0] || found.filter(x => x.lrc).sort(fit)[0] || {}; // (AMLL preferred — open and hand-made)
     }
 
-    // The lyrics a music video's page lists: the lyrics tab's id from the video's "next" page, then the lyrics, asked as the
-    // music app that's given their timing. Who provides them (the page shows it): source. Not found: {}.
     // Lyrics straight from an LRCLIB entry by its id — the shared match cache points here (LRCLIB is open/CC0). The
-    // caller checks the entry fits the song (name/length) before trusting it. {} if there's nothing or the id's bad.
+    // caller checks the entry fits the song (name/length) before trusting it. {} if there's nothing, the id's bad or the
+    // database stays busy (then the caller looks by name).
     byId(id) { return /^\d+$/.test(String(id)) ? this.remember('i' + id, () => this.byIdNow(id)) : Promise.resolve({}); }
     async byIdNow(id) {
-      let j; try { j = JSON.parse(await this.get('https://lrclib.net/api/get/' + id)); } catch { return {}; }
-      if (!j || typeof j.id !== 'number') return {};
+      let j; try { j = await this.lrclib('get/' + id); } catch { return {}; }
+      if (!j) return {};
       if (j.instrumental) return { raw: '', dur: j.duration || 0, src: j.artistName + ' — ' + j.trackName, exact: true, instrumental: true, kind: 'instrumental', id: j.id };
       return { raw: j.syncedLyrics || j.plainLyrics || '', dur: j.duration || 0, src: j.artistName + ' — ' + j.trackName, exact: true,
                kind: j.syncedLyrics ? 'synced lyrics' : j.plainLyrics ? 'plain lyrics' : 'no lyrics found', id: j.id };
     }
+
+    // The lyrics a music video's page lists: the lyrics tab's id from the video's "next" page, then the lyrics, asked as the
+    // music app that's given their timing. Who provides them (the page shows it): source. Not found: {}.
     forVideo(id) { return this.remember('v' + id, () => this.forVideoNow(id)); }
     async forVideoNow(id) {
       if (!/^[\w-]{11}$/.test(String(id))) throw new TypeError('EndVerse: not a video id: ' + id);
@@ -248,13 +265,18 @@
   }
   async function amllYrc(get, ncmId) {
     if (!/^\d+$/.test(String(ncmId))) return '';
+    let yrc = '';
     try { const t = await get('https://raw.githubusercontent.com/amll-dev/amll-ttml-db/refs/heads/main/ncm-lyrics/' + ncmId + '.ttml', { 'User-Agent': UA });
-      return t && t.length <= 1e6 ? ttmlToYrc(t) : ''; } // (untrusted external file: cap the size, fail closed; a miss falls through to the next source)
+      yrc = t && t.length <= 1e6 ? ttmlToYrc(t) : ''; } // (untrusted external file: cap the size, fail closed; a miss falls through to the next source)
     catch { return ''; }
+    // (only an entry timed word by word: one with each line's words in one piece is timed by the line, and the next
+    // source's word timing is better then — measured: such an entry was also seconds off its song)
+    const lines = yrc.split('\n').filter(Boolean);
+    return lines.length && lines.filter(l => (l.match(/\(\d+,\d+,0\)/g) || []).length > 1).length >= lines.length / 2 ? yrc : '';
   }
 
   out.create = opts => new Engine(opts);
   out.krcToYrc = krcToYrc;
   out.ttmlToYrc = ttmlToYrc;
-  out.version = '0.4.0';
+  out.version = '0.5.0';
 })(typeof module === 'object' && module.exports ? module.exports : (globalThis.EndVerse = {}));

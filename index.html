@@ -1657,10 +1657,13 @@ const fullSongs = location.protocol.startsWith('http');
 const native = !!window.Capacitor?.isNativePlatform?.();
 // (to YouTube, on Android: at a listener's pace, through FlowGuard — see lib.js; the same guard round every request)
 const ytGuard = native ? netherflowLib.guard() : null, guarded = request => ytGuard ? ytGuard.wrap(request) : request;
-const nativeGet = guarded((url, headers) => Capacitor.Plugins.CapacitorHttp.get({ url, headers, responseType: 'text', connectTimeout: 8000, readTimeout: 8000 })
-  .then(r => typeof r.data === 'string' ? r.data : JSON.stringify(r.data)));
-const nativePost = guarded((url, body, headers) => Capacitor.Plugins.CapacitorHttp.post({ url, headers, data: JSON.parse(body), responseType: 'text', connectTimeout: 8000, readTimeout: 8000 })
-  .then(r => typeof r.data === 'string' ? r.data : JSON.stringify(r.data)));
+const capText = r => typeof r.data === 'string' ? r.data : JSON.stringify(r.data);
+const capGet = (url, headers) => Capacitor.Plugins.CapacitorHttp.get({ url, headers, responseType: 'text', connectTimeout: 8000, readTimeout: 8000 }).then(capText);
+const capPost = (url, body, headers) => Capacitor.Plugins.CapacitorHttp.post({ url, headers, data: JSON.parse(body), responseType: 'text', connectTimeout: 8000, readTimeout: 8000 }).then(capText);
+// the reads (searches, lyrics, the update's notes): hedged — one left hanging is asked for once more alongside, so it
+// costs ~1 s, not 8 (see lib.hedged; the phone's HTTP can't cancel the other, its answer is just let go)
+const nativeGet = guarded(netherflowLib.hedged(capGet, { after: 1500, max: 8000 }));
+const nativePost = guarded(netherflowLib.hedged(capPost, { after: 1200, max: 8000 }));
 // EndVerse (endverse.js, NetherFlow's lyrics finder) and BridgeTheMusic (bridgethemusic.js, its playlist importer): on
 // Android, asked from here over the phone's own HTTP; on a computer, through the app's server (the open lyrics database,
 // which lets a page ask, from here on both: pageVerse)
@@ -1674,12 +1677,15 @@ const nativePacked = async (method, url, headers = {}, body) => {
     const bytes = Uint8Array.from(atob(r.data), c => c.charCodeAt(0));
     return r.encoding === 'gzip' ? new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).text() : new TextDecoder().decode(bytes);
   } catch (e) { if (!/not implemented|unimplemented|is not a function/i.test(e?.message || '') && e?.code !== 'UNIMPLEMENTED') throw e; packedNo = true; }
-  return method === 'POST' ? nativePost(url, body, headers) : nativeGet(url, headers);
+  // (as it is: the caller's own FlowGuard is round it already — round it twice, three imports at once would each hold a
+  // turn while waiting for a second: stuck — and a page of megabytes isn't one to ask for twice)
+  return method === 'POST' ? capPost(url, body, headers) : capGet(url, headers);
 };
 const nativeVerse = native && EndVerse.create({ get: nativeGet, post: nativePost }),
   nativeImport = native && BridgeTheMusic.create({ get: guarded((url, headers) => nativePacked('GET', url, headers)), post: guarded((url, body, headers) => nativePacked('POST', url, headers, body)),
     keep: { get: k => store.get('netherflow.bridge.' + k), set: (k, v) => store.set('netherflow.bridge.' + k, v) } }); // (Spotify's query id: its 4 MB player not read again each start)
-const pageVerse = EndVerse.create({ get: (url, headers) => fetch(url, { headers }).then(r => r.text()) });
+// (hedged, and never left waiting for ever: a request with no answer was a lyrics panel that never filled)
+const pageVerse = EndVerse.create({ get: netherflowLib.hedged((url, headers, signal) => fetch(url, { headers, signal }).then(r => r.text()), { after: 1500, max: 9000 }) });
 const api = {
   yt: async q => {
     if (native) return netherflowLib.ytSearch(nativeGet, q);
@@ -2828,8 +2834,7 @@ const fsLevel = () => loud === 'Levelled' && fsVid && fsLoud > 0 ? 10 ** (-fsLou
 // Android: FlowStream runs here in the page (its requests through the phone, a short wait each), the stream through the
 // app itself (/_fs/media, see MainActivity)
 const flowPage = native && window.FlowStream ? FlowStream.create({ visitor: store.get('netherflow.fsvisitor') || '', saveVisitor: v => store.set('netherflow.fsvisitor', v),
-  post: guarded((url, body, headers) => Capacitor.Plugins.CapacitorHttp.post({ url, headers, data: JSON.parse(body), responseType: 'text', connectTimeout: 6000, readTimeout: 6000 })
-    .then(r => typeof r.data === 'string' ? r.data : JSON.stringify(r.data))) }) : null;
+  post: guarded(netherflowLib.hedged(capPost, { after: 900, max: 4500 })) }) : null; // (a stream's address answers in ~0.15–0.35 s: asked for alongside at 0.9 s)
 // Android: the songs whose start the app keeps on this phone (MainActivity: the last 100 played; Android may clear them)
 // and what the page needs to play one at once, before its address is found: its type, loudness and length. (One whose
 // start is gone after all is simply fetched as usual.)
@@ -3473,14 +3478,25 @@ const OTHER = new Set(['live', 'cover', 'covers', 'karaoke', 'slowed', 'sped', '
   'acoustic', 'unplugged', 'extended', 'loop', 'hour', 'hours', 'orchestral', 'symphonic', 'piano', 'guitar', 'drum', 'drums', 'lofi',
   'mashup', 'medley', 'megamix', 'reprise', 'teaser', 'trailer', 'shorts', 'reaction', 'reacts', 'tutorial', 'lesson', 'chords',
   'boosted', 'parody', 'choreography', 'female', 'male']);
+// (the same said in other words or scripts: a karaoke label's "原曲歌手: X" (original singer), "in the style of X", a
+// cover's "歌ってみた" — each names the real artist too, so "by the artist" alone let them through: measured, a karaoke
+// cover played for YOASOBI's "Idol")
+const OTHER_SAID = /原曲歌手|歌ってみた|弾いてみた|叩いてみた|カラオケ|カバー|オルゴール|伴奏|翻唱|纯音乐|純音樂|伴唱|커버|노래방|in the style of|made famous by|originally (performed|sung|recorded) by|as made famous|tribute to|backing track|min[uú]s one/i;
+// The versions a recording can be, said in its name: a song asked for as one ("Blinding Lights (Remix)", "Dynamite (Live)")
+// isn't an upload that doesn't say it — measured, the original played for the remix. ("Live" in a song's own name —
+// "Live Forever" — isn't a version.)
+const VERSIONS = new Set(['live', 'remix', 'acoustic', 'unplugged', 'instrumental', 'karaoke', 'slowed', 'sped', 'reverb', 'nightcore', '8d', 'orchestral', 'symphonic', 'reprise', 'lofi', 'demo']);
+const versionsOf = title => { const plain = new Set(words(clean(title))); return words(title).filter(w => VERSIONS.has(w) && !plain.has(w)); };
 function videoMatch(v, artist, title, lang = '') {
-  const have = new Set(words(v.title + ' ' + v.channel)), want = words(clean(title)), mine = new Set(words(title));
+  const have = new Set(words(v.title + ' ' + v.channel)), want = words(clean(title)), mine = new Set(words(title)), said = new Set(words(v.title));
   const missing = want.filter(w => !have.has(w)).length;
   const hay = words(v.title + ' ' + v.channel).join('');
   const film = /\(from\s+["“']?([^"”')]+)/i.exec(title)?.[1] || '';
   const artists = [...artist.split(/,|&| feat\.? | ft\.? | x | and /i), film].map(a => words(a).join('')).filter(a => a.length >= 2);
   return { named: want.length > 0 && missing <= (want.length >= 5 ? 1 : 0), byArtist: artists.some(a => hay.includes(a)),
-           other: words(v.title).some(w => OTHER.has(w) && !mine.has(w)) || (l => !!lang && !!l && !sameLang(l, lang))(tagLang(v.title)) }; // (or in another language)
+           other: words(v.title).some(w => OTHER.has(w) && !mine.has(w)) || (OTHER_SAID.test(v.title) && !OTHER_SAID.test(title))
+             || versionsOf(title).some(w => !said.has(w)) // (the version asked for, not said by the upload)
+             || (l => !!lang && !!l && !sameLang(l, lang))(tagLang(v.title)) }; // (or in another language)
 }
 // The YouTube uploads of a song, best first — only ones that really are it, so a song never plays some other video:
 // its name and its artist; or, failing any such upload, one of the two at the recording's exact length (a re-upload
@@ -3622,24 +3638,31 @@ async function findVideos(artist, title, dur, album = '', lang = '') {
   // YouTube Music's songs first: the label's uploads of the album recordings (YouTube's own search leaves them out). Most
   // songs are there, and then that one search is all (a request a song, not two or three); YouTube's own search only
   // when it hasn't the song for sure (YouTube Music not answering: said, as from YouTube's — FlowGuard, see lib.js)
-  const sure = v => { const m = videoMatch(v, artist, title, lang); return m.named && m.byArtist && !m.other; };
+  const seen = new Map(), match = v => seen.get(v.id) || seen.set(v.id, videoMatch(v, artist, title, lang)).get(v.id);
+  const sure = v => { const m = match(v); return m.named && m.byArtist && !m.other; };
+  // (the version asked for, in the searches too: "Blinding Lights (Remix)" searched as "Blinding Lights" found the original)
+  const ver = versionsOf(title).join(' '), name = (clean(title) + ' ' + ver).trim();
   let musicErr = null;
-  const found = await api.ytm(`${first} ${clean(title)} ${clean(album.replace(/ - (Single|EP)$/i, ''))}`).catch(e => { musicErr = e; return []; });
+  const found = await api.ytm(`${first} ${name} ${clean(album.replace(/ - (Single|EP)$/i, ''))}`).catch(e => { musicErr = e; return []; });
   if (!found.some(sure)) {
-    for (const v of await api.yt(`${artist} ${clean(title)} audio`).catch(e => { if (musicErr || /limited/.test(e.message)) throw e; return []; })) if (!found.some(x => x.id === v.id)) found.push(v);
-    if (!found.some(sure)) for (const v of await api.yt(`${first} ${clean(title)}`).catch(() => [])) if (!found.some(x => x.id === v.id)) found.push(v);
+    for (const v of await api.yt(`${artist} ${name} audio`).catch(e => { if (musicErr || /limited/.test(e.message)) throw e; return []; })) if (!found.some(x => x.id === v.id)) found.push(v);
+    if (!found.some(sure)) for (const v of await api.yt(`${first} ${name}`).catch(() => [])) if (!found.some(x => x.id === v.id)) found.push(v);
   }
-  const likely = v => { const m = videoMatch(v, artist, title, lang); return (m.named || m.byArtist) && !m.other && dur && Math.abs(v.dur - dur) <= 2; };
+  const likely = v => { const m = match(v); return (m.named || m.byArtist) && !m.other && dur && Math.abs(v.dur - dur) <= 2; };
   // Lyrics are timed to the album recording, so rank uploads by how exactly they match it:
-  // same length first (music videos with intros lose), then the label's own "Artist - Topic" audio, then the
+  // same length first (music videos with intros lose), then the artist's own "Artist - Topic" audio, then the
   // artist's or VEVO channel over re-uploads (those sometimes pad or trim the start by a second).
-  const flat = s => s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ''), who = flat(first);
+  const flat = s => s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ''), whose = artist.split(/,|&| feat\.? | ft\.? | x | and /i).map(flat).filter(a => a.length >= 2);
+  const theirs = v => whose.some(a => flat(v.channel).includes(a));
   // (lengths come to the second, and an album upload a moment longer is usually just a beat of silence at its end:
-  // within 3 s, the label's upload always wins)
-  const official = v => / - Topic$/.test(v.channel) ? 0 : /vevo$/i.test(v.channel) || (who && flat(v.channel).includes(who)) ? 2.5 : 3.5;
-  const score = v => Math.max(0, Math.abs(v.dur - dur) - .5) + official(v);
-  const best = list => list.sort((x, y) => score(x) - score(y));
-  return [...best(found.filter(sure)), ...best(found.filter(v => !sure(v) && likely(v)))];
+  // within 3 s, the artist's own upload always wins. A "Topic" is the artist's own only under the artist's name — a
+  // karaoke label has its Topic too.)
+  const official = v => / - Topic$/.test(v.channel) && theirs(v) ? 0 : /vevo$/i.test(v.channel) || theirs(v) ? 2.5 : 3.5;
+  // Its name matched, or not: the ones that aren't come after all that are — unless their title is in another script than
+  // the song's ("アイドル" for "Idol"), where a name can't be told apart: then the artist's own upload at its very length
+  // beats a fan's re-upload that spells it in Latin letters (measured: a fan's lyric video played for YOASOBI's "Idol").
+  const score = v => Math.max(0, Math.abs(v.dur - dur) - .5) + official(v) + (sure(v) ? 0 : !sameScript(v.title, title) ? 1.5 : 50);
+  return found.filter(v => sure(v) || likely(v)).sort((x, y) => score(x) - score(y));
 }
 
 function previewFallback(reason) {
@@ -12340,6 +12363,14 @@ console.assert(JSON.stringify(parseLyrics('[00:01.50]hi\n[01:00]yo\nplain')) ===
   const got = [0, 2, 4, 6, 8, 10, 12].map(i => (ls[i].sec.name + ' ' + ls[i].sec.tag).trim()).join(', ');
   console.assert(got === 'Verse 1, Chorus, Verse 2, Chorus ×2, Bridge, Chorus ×3, Outro', 'labelSections broken: ' + got); }
 console.assert(clean('Song (feat. X) [Live] - Remastered 2011') === 'Song', 'clean broken');
+// (a karaoke label's cover, the original for a remix, the studio take for a live one: not the song; the remix and the
+// live take themselves are; "Live" in a song's own name isn't a version)
+console.assert(videoMatch({ title: 'アイドル (原曲歌手:YOASOBI) - IDOL', channel: '歌っちゃ王 - Topic' }, 'YOASOBI', 'Idol').other
+  && videoMatch({ title: 'Blinding Lights', channel: 'The Weeknd - Topic' }, 'The Weeknd', 'Blinding Lights (Remix)').other
+  && !videoMatch({ title: 'Blinding Lights (Remix)', channel: 'The Weeknd' }, 'The Weeknd', 'Blinding Lights (Remix)').other
+  && !videoMatch({ title: 'Dynamite - Live', channel: 'BTS - Topic' }, 'BTS', 'Dynamite (Live)').other
+  && videoMatch({ title: 'Dynamite', channel: 'BTS - Topic' }, 'BTS', 'Dynamite (Live)').other
+  && !versionsOf('Live Forever').length && !videoMatch({ title: 'Live Forever', channel: 'Oasis - Topic' }, 'Oasis', 'Live Forever').other, 'videoMatch versions broken');
 console.assert(linkIn('Listen on Spotify: https://open.spotify.com/playlist/x?si=1.') === 'https://open.spotify.com/playlist/x?si=1' && linkIn(' hi ') === 'hi', 'linkIn broken');
 console.assert(isModded({ trackName: '강남스타일 (Inst.)' }) && isModded({ trackName: 'Song (MR)' }) && isModded({ trackName: '晴天 (伴奏)' }) && !isModded({ trackName: 'Song (feat. Mr. X)' })
   && !isModded({ trackName: 'Gangnam Style (강남스타일)' }), 'isModded broken');
