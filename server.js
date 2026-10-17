@@ -39,7 +39,10 @@ if (fs.existsSync(path.join(__dirname, 'race'))) (function race(dir) {
 })('race');
 // (to YouTube: at a listener's pace, through FlowGuard — see lib.js)
 const guard = lib.guard();
-const get = guard.wrap((url, headers) => fetch(url, { headers, signal: AbortSignal.timeout(8000) }).then(r => r.text()));
+// politeFetch sits inside FlowGuard (which paces and gates the limit): the raw Response fetch, with coalescing, a short
+// GET cache and GET-only retry. GET goes through it; POST (search, player) is a read that passes straight through.
+const pf = lib.politeFetch((url, init) => fetch(url, init));
+const get = guard.wrap((url, headers) => pf(url, { headers, signal: AbortSignal.timeout(8000) }).then(r => r.text()));
 // (YouTube Music's answers take ~0.3–1 s: one that hasn't come in 4 s now and then never does — asked again at once,
 // which answers; 8 s in all, as before)
 const post = guard.wrap((url, body, headers) => fetch(url, { method: 'POST', body, headers, signal: AbortSignal.timeout(4000) }).then(r => r.text())

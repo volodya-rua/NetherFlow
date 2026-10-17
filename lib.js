@@ -72,6 +72,50 @@
     };
     return guard;
   };
+  // A wrapper round a fetch that returns a Response (from the Senior Dev's polite-fetch): the same request made twice at
+  // once is sent only once (the callers share the one answer); a GET's answer is kept a short while and served again
+  // while a fresh one is fetched; a failed GET is tried again, backing off, honouring the server's Retry-After (capped at
+  // 15 s). A POST is never re-sent on its own (it may not be a plain read). Nothing here touches the address, the
+  // headers or the route — it only sends less and waits right. Sits inside FlowGuard, which does the pacing and the limit.
+  //   lib.politeFetch(fetchImpl, opts?) → a drop-in fetch (input, init) → Promise<Response>
+  lib.politeFetch = function politeFetch(fetchImpl, opts = {}) {
+    const D = { retry: 5, backoffBase: 400, backoffCap: 15000, retryOn: new Set([429, 500, 502, 503, 504]),
+      retryMethods: new Set(['GET']), cacheMs: 10 * 60 * 1000, staleMs: 60 * 60 * 1000, maxCache: 1000,
+      cacheKey: (url, init) => (init?.method || 'GET').toUpperCase() + ' ' + url,
+      shouldCache: (resp, init) => (init?.method || 'GET').toUpperCase() === 'GET' && resp.ok };
+    const cfg = { ...D, ...opts }, cache = new Map(), inflight = new Map();
+    const jitter = ms => ms * (0.5 + Math.random()), sleep = ms => new Promise(r => setTimeout(r, ms));
+    const retryAfter = resp => { const h = resp.headers?.get?.('Retry-After'); if (!h) return null;
+      const n = Number(h); if (Number.isFinite(n)) return Math.min(n * 1000, cfg.backoffCap);
+      const d = Date.parse(h); if (Number.isFinite(d)) return Math.min(Math.max(0, d - Date.now()), cfg.backoffCap); return null; };
+    const cachePut = (k, resp) => { if (cache.size >= cfg.maxCache) cache.delete(cache.keys().next().value); cache.set(k, { t: Date.now(), resp: resp.clone() }); };
+    const execute = async (url, init, key) => {
+      const method = (init?.method || 'GET').toUpperCase(), retryable = cfg.retryMethods.has(method);
+      let lastErr;
+      for (let attempt = 0; attempt <= cfg.retry; attempt++) {
+        try {
+          const resp = await fetchImpl(url, init);
+          if (retryable && cfg.retryOn.has(resp.status) && attempt < cfg.retry) { await sleep(retryAfter(resp) ?? Math.min(jitter(cfg.backoffBase * 2 ** attempt), cfg.backoffCap)); continue; }
+          if (cfg.shouldCache(resp, init)) cachePut(key, resp);
+          return resp;
+        } catch (err) { lastErr = err; if (!retryable || attempt >= cfg.retry) break; await sleep(Math.min(jitter(cfg.backoffBase * 2 ** attempt), cfg.backoffCap)); }
+      }
+      if (lastErr) throw lastErr;
+      throw new Error('polite-fetch: retries exhausted');
+    };
+    const revalidate = (url, init, key) => { if (inflight.has(key)) return; const p = execute(url, init, key).catch(() => {}); inflight.set(key, p); p.finally(() => inflight.delete(key)); };
+    return async function wrapped(input, init = {}) {
+      const url = typeof input === 'string' ? input : input.url, method = (init.method || 'GET').toUpperCase(), key = cfg.cacheKey(url, init);
+      if (method === 'GET') {
+        const hit = cache.get(key);
+        if (hit) { const age = Date.now() - hit.t; if (age < cfg.cacheMs) return hit.resp.clone(); if (age < cfg.staleMs) { revalidate(url, init, key); return hit.resp.clone(); } cache.delete(key); }
+        if (inflight.has(key)) return (await inflight.get(key)).clone();
+        const task = execute(url, init, key); inflight.set(key, task);
+        try { return (await task).clone(); } finally { inflight.delete(key); }
+      }
+      return execute(url, init, key);
+    };
+  };
   const ytmPost = (post, path, body, headers = {}) => post('https://music.youtube.com/youtubei/v1/' + path + '?prettyPrint=false', JSON.stringify(body),
     { 'Content-Type': 'application/json', 'User-Agent': UA, Origin: 'https://music.youtube.com', Referer: 'https://music.youtube.com/', ...headers }).then(limited).then(JSON.parse);
   lib.ytMusic = async (post, q) => {
