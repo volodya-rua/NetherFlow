@@ -5,7 +5,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>NetherFlow</title>
-<script type="importmap">{ "imports": { "three": "./race/three/three.module.js", "three/addons/": "./race/three/addons/" } }</script><!-- (Redline's 3D races: see race/race.js) -->
 <link rel="icon" href="logo.png">
 <link rel="stylesheet" href="fonts/pairs.css"> <!-- (the lyric font pairs: each loaded only once it's used) -->
 <link rel="stylesheet" href="fonts/fonts.css"> <!-- the typefaces, bundled: no request to Google, and they work offline -->
@@ -399,8 +398,9 @@ kbd { font: inherit; border: 1px solid currentColor; border-radius: 3px; padding
   -webkit-mask-image: linear-gradient(transparent, #000 18%, #000 82%, transparent);
           mask-image: linear-gradient(transparent, #000 18%, #000 82%, transparent); }
 .sheet::-webkit-scrollbar { display: none; }
-.sheet p { margin: 0; font: 400 calc(clamp(24px, 3.4vw, 48px) * var(--ls, 1))/1.12 var(--serif); letter-spacing: -.015em; max-width: 1100px; }
-.sheet p:nth-of-type(3n+2) { font-style: italic; color: var(--a); }
+/* (lyrics not timed to the song: an even, calm column to read along — no line picked out, since none is known to be sung) */
+.sheet p { margin: 0 0 .32em; font: 400 calc(clamp(20px, 2.6vw, 36px) * var(--ls, 1))/1.28 var(--serif); letter-spacing: -.01em; max-width: 1000px; color: color-mix(in srgb, var(--ink) 88%, transparent); }
+.sheet .count { margin-bottom: 1.4em; }
 
 /* YouTube player: keeps playing, parked out of sight behind the backdrop canvas */
 /* (hidden outright, as well as behind the backdrop: the player's own script then mostly rests — it plays on all the same) */
@@ -846,7 +846,8 @@ body.home .home-now { display: flex; }
 #viz { display: none; position: fixed; inset: 0; z-index: 2; width: 100%; height: 100%; pointer-events: none; transition: opacity .4s; }
 .view-cover.has-song #viz, .edges.has-song #viz { display: block; }
 .lib-open #viz { opacity: 0; }
-.cs-disc { --d: min(40cqh, 54cqw); position: relative; width: var(--d); height: var(--d); margin: calc(var(--d) * .38); /* room for the ring */
+.cs-disc { --d: calc(min(40cqh, 54cqw) * var(--fit, 1)); position: relative; /* (--fit: smaller when the words need the room: see fitCover) */
+  width: var(--d); height: var(--d); margin: calc(var(--d) * .38); /* room for the ring */
   scale: calc(1 + var(--bass) * .055); will-change: scale; }
 /* the record spins (its sheen shows it); the cover on it stays upright */
 .cs-spin { position: absolute; inset: 0; border-radius: 50%; background: var(--grooves); animation: spin 4s linear infinite paused;
@@ -863,7 +864,7 @@ body.home .home-now { display: flex; }
   letter-spacing: .02em; color: var(--a); text-shadow: 0 0 24px color-mix(in srgb, var(--a) 45%, transparent); }
 @container wrap (min-aspect-ratio: 5 / 4) { /* wide: the record on the left, the words beside it */
   .cover-stage { grid-template-columns: auto minmax(0, 1fr); align-items: center; justify-items: start; column-gap: 2cqw; }
-  .cs-disc { --d: min(54cqh, 32cqw); }
+  .cs-disc { --d: calc(min(54cqh, 32cqw) * var(--fit, 1)); }
   .cs-text { text-align: left; }
 }
 
@@ -1056,22 +1057,6 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
 .fs.idle .bottom { opacity: 0; transform: translateY(14px); pointer-events: none; }
 .fs.idle .map { opacity: 0; pointer-events: none; }
 .fs.idle, .fs.idle * { cursor: none !important; }
-/* the cursor's glow (computers): a ring in the mood's two colours, turning slowly, gliding after the pointer (see "the
-   cursor's glow"); in the top layer, over dialogs and menus */
-#curGlow { position: fixed; inset: auto; left: 0; top: 0; margin: 0; padding: 0; border: 0; background: none; overflow: visible;
-  width: 30px; height: 30px; pointer-events: none; opacity: 0; transition: opacity .25s, width .2s cubic-bezier(.3,1.4,.5,1), height .2s cubic-bezier(.3,1.4,.5,1);
-  filter: drop-shadow(0 0 5px var(--a)) drop-shadow(0 0 12px color-mix(in srgb, var(--b) 60%, transparent)); will-change: transform; }
-#curGlow.on { opacity: .95; }
-#curGlow i { position: absolute; inset: 0; border-radius: 50%; background: conic-gradient(from 0deg, var(--a), var(--b), #fff 50%, var(--b), var(--a));
-  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 1.5px)); mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 1.5px));
-  animation: curspin 2.8s linear infinite; }
-#curGlow.hit { width: 46px; height: 46px; }
-#curGlow.hit i { -webkit-mask: radial-gradient(farthest-side, color-mix(in srgb, #000 22%, transparent) calc(100% - 2.5px), #000 calc(100% - 2px)); mask: radial-gradient(farthest-side, color-mix(in srgb, #000 22%, transparent) calc(100% - 2.5px), #000 calc(100% - 2px)); }
-#curGlow.text { width: 12px; height: 12px; }
-#curGlow.text.on { opacity: .45; }
-@keyframes curspin { to { transform: rotate(1turn); } }
-@media (prefers-reduced-motion: reduce) { #curGlow i { animation: none; } }
-body.fs.idle #curGlow { opacity: 0; }
 .fs-btn svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.4; }
 .fs-btn .i-exit, .fs .fs-btn .i-enter { display: none; }
 .fs .fs-btn .i-exit { display: inline; }
@@ -1618,7 +1603,6 @@ if (!('showPopover' in HTMLElement.prototype)) document.addEventListener('DOMCon
    under it — not a second splash */
 if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) { var nfSplash = document.getElementById('splash'); if (nfSplash) nfSplash.className += ' native'; }
 </script>
-<div id="curGlow" popover="manual" aria-hidden="true"><i></i></div>
 <script src="lib.js"></script>
 <script src="flowstream.js"></script>
 <script src="endverse.js"></script>
@@ -2417,21 +2401,25 @@ async function updGet() {
   updShow();
 }
 window.netherflowApp?.onUpdateProgress?.(f => { upd.frac = f; updShow(); });
+// (the version, known at once — no check needed: the desktop app's from main.js, the phone's from its own plugin)
+upd.version = window.netherflowApp?.version || '';
+Upd?.info().then(i => { if (!upd.version) { upd.version = i.web; updShow(); } }).catch(() => {});
 Upd?.addListener('progress', m => { upd.frac = m.frac; updShow(); });
 setTimeout(() => { if (navigator.onLine && Date.now() - (+store.get('netherflow.updchecked') || 0) > 20 * 3600e3) updCheck(true); }, 12000); // (once a day at most, quietly; offline: not tried)
 // its row in Settings (and kept up to date in place while it's open)
 function updRow() {
   const q = el('div', 'bgq lbl upd'), mb = n => (n / 1e6).toFixed(n > 1e7 ? 0 : 1) + ' MB', v = upd.version ? ` ${upd.version}` : '';
+  const has = upd.version ? `You have NetherFlow ${upd.version}. ` : ''; // (the version always said: a bug report asks for it)
   const note = {
-    '': 'NetherFlow updates itself, downloading only what changed.', checking: 'Looking for a newer NetherFlow…', none: `NetherFlow${v} is the latest.`,
+    '': has + 'It updates itself, downloading only what changed.', checking: has + 'Looking for a newer one…', none: `NetherFlow${v} is the latest.`,
     ready: `NetherFlow ${upd.next} is out (this is${v}). ` + (upd.kind === 'web' ? 'Only the files that changed come down, and the app restarts with them.'
       : upd.kind === 'apk' ? `This one changes the app itself: the new app comes down (${mb(upd.size)}) and Android installs it over this one, keeping everything.`
       : 'Only the parts that changed come down; then NetherFlow restarts into it, keeping everything.'),
     getting: `Downloading NetherFlow ${upd.next}…`, got: 'Downloaded. Restart NetherFlow to finish: it opens again by itself.',
-    store: 'Updates come from the app store NetherFlow was installed from.',
-    portable: 'This portable NetherFlow can\'t update itself. The installed one can, in place, downloading only what changed: get the installer.',
-    deb: 'NetherFlow installed from the .deb doesn\'t update itself: get the newest .deb from the release page (or the AppImage, which updates itself).',
-    error: `Couldn't update: ${upd.err}.`,
+    store: has + 'Updates come from the app store NetherFlow was installed from.',
+    portable: has + 'This portable NetherFlow can\'t update itself. The installed one can, in place, downloading only what changed: get the installer.',
+    deb: has + 'NetherFlow installed from the .deb doesn\'t update itself: get the newest .deb from the release page (or the AppImage, which updates itself).',
+    error: `${has}Couldn't update: ${upd.err}.`,
   }[upd.state];
   const label = { '': 'Check for updates', checking: 'Checking…', none: 'Check again', ready: `Update to ${upd.next}`, getting: `Downloading… ${Math.round(upd.frac * 100)}%`,
     got: 'Restart now', portable: 'Get the installer', deb: 'Open the release page', error: 'Try again' }[upd.state];
@@ -2474,7 +2462,7 @@ function renderTextPanel() {
     ...(window.netherflowApp?.presence ? [settingRow('Discord status', ['Off', 'On'], discordOn ? 'On' : 'Off', setDiscord, 'The song you\'re playing on your Discord profile ("Listening to…", with its cover and a link to it), while the Discord app is open. Your friends there see it.')] : []),
     ...(window.netherflowApp?.island ? [settingRow('Island', ['On', 'Off'], islandOn ? 'On' : 'Off', setIsland, 'The song playing, in a small black island at the top middle of the screen, over every other app (hidden while NetherFlow itself is in front). Click it for the cover, the timeline, the volume and the controls.'),
       settingRow('Island glow', ['On', 'Off'], islandGlow ? 'On' : 'Off', setIslandGlow, 'A soft glow round the island in the mood\'s colour, swelling with the bass.')] : []),
-    ...(pcOnly ? [settingRow('Cursor', ['Glow', 'System'], cursorPref(), setCursorPref, 'Glow: an arrow in the mood\'s colours, and a ring that glides after it, opens out over anything you can click and swells with the beat. System: your computer\'s own pointer. (A theme keeps its own.)')] : []),
+    ...(pcOnly ? [settingRow('Cursor', ['Glow', 'System'], cursorPref(), setCursorPref, 'Glow: a glowing arrow in the mood\'s colours. System: your computer\'s own pointer. (A theme keeps its own.)')] : []),
     settingRow('Drive mode', ['Start'], '', () => { $('textPanel').hidePopover(); openDrive(); }, 'Big, simple controls for the road: play, pause, next and previous, and the song\'s name in large type. Swipe left or right to change songs.'));
 }
 // a labelled row of choices (the mood menu and the Settings panel)
@@ -2552,6 +2540,12 @@ function fitCover() {
     const max = parseFloat(getComputedStyle(el).fontSize);
     fitText(el, max, max * 2.45);
   }
+  // the record a little smaller while the words need the room (a long name or line wrapping, on a phone): at full size they
+  // ran down over the timeline
+  const st = document.querySelector('.cover-stage'), d = document.querySelector('.cs-disc'), tx = document.querySelector('.cs-text');
+  d.style.removeProperty('--fit');
+  const need = () => { const ring = d.offsetHeight * .76, wide = getComputedStyle(st).gridTemplateColumns.split(' ').length > 1; return wide ? Math.max(d.offsetHeight + ring, tx.offsetHeight) : d.offsetHeight + ring + tx.offsetHeight; };
+  for (let f = 1; f > .55 && need() > st.clientHeight - 24;) { f -= .07; d.style.setProperty('--fit', f.toFixed(2)); }
 }
 // The lyrics sized to the stage again: on resizing, and when the typefaces arrive (till then everything was measured in a
 // stand-in font of other widths, and the real one could spill past the edge).
@@ -2621,7 +2615,6 @@ function applyPalette(m) {
   pal = m;
   for (const k of ['bg', 'a', 'b', 'ink']) root.style.setProperty('--' + k, m[k]);
   setCursors(m.a, m.b);
-  if (glowReady) glowEnable(); // (a theme's own pointer: no glow ring with it)
   $('moodName').textContent = m.name;
   target = [rgb(m.bg), rgb(m.a), rgb(m.b), (m.fx || [1, 1, 1, 1]).slice()];
 }
@@ -3518,6 +3511,8 @@ const vidCache = new Map();
 // request saved, and a quicker start (cleared with the history; uploads that won't play any more: forgotten, found anew)
 const VIDS = 'netherflow.vids';
 const vidKept = (() => { try { return new Map(JSON.parse(store.get(VIDS) || '[]')); } catch { return new Map(); } })();
+// (once, after 1.5.0: songs kept with someone else's upload looked up again, as the search now goes on to the artist's own)
+if (!store.get(VIDS + '.own')) { for (const [k, v] of vidKept) if (!/ - Topic$|vevo$/i.test(v[0]?.channel || '')) vidKept.delete(k); store.set(VIDS, JSON.stringify([...vidKept])); store.set(VIDS + '.own', '1'); }
 let vidSave = 0;
 function keepVids(id, v) {
   vidKept.delete(String(id)); vidKept.set(String(id), v.slice(0, 3).map(x => ({ id: x.id, dur: x.dur, title: x.title, channel: x.channel })));
@@ -3563,6 +3558,9 @@ async function resolveVids(t, dur) {
   if (ids.length) return ids.map(id => ({ id, dur, cache: true, key })); // (trusted enough to try; proven by its length at play)
   const vids = await findVideos(t.artistName, t.trackName, dur, t.collectionName || '', songLang(t));
   if (vids.length && dur && vids[0].dur && Math.abs(vids[0].dur - dur) <= 8) matchPut(key, { id: vids[0].id }); // (share only a find that fits the length)
+  // (an imported song not matched yet, found by its own search: its YouTube Music entry put in its place — its cover in
+  // its list at once, and no second search by the matcher)
+  if (isPending(t) && vids[0]?.art && fitsSong(vids[0], t)) { matchTried.add(t.trackId); placeMatch(t.trackId, ytmToTrack(vids[0])); }
   return vids;
 }
 function videosFor(t) {
@@ -3652,13 +3650,6 @@ async function findVideos(artist, title, dur, album = '', lang = '') {
   const sure = v => { const m = match(v); return m.named && m.byArtist && !m.other; };
   // (the version asked for, in the searches too: "Blinding Lights (Remix)" searched as "Blinding Lights" found the original)
   const ver = versionsOf(title).join(' '), name = (clean(title) + ' ' + ver).trim();
-  let musicErr = null;
-  const found = await api.ytm(`${first} ${name} ${clean(album.replace(/ - (Single|EP)$/i, ''))}`).catch(e => { musicErr = e; return []; });
-  if (!found.some(sure)) {
-    for (const v of await api.yt(`${artist} ${name} audio`).catch(e => { if (musicErr || /limited/.test(e.message)) throw e; return []; })) if (!found.some(x => x.id === v.id)) found.push(v);
-    if (!found.some(sure)) for (const v of await api.yt(`${first} ${name}`).catch(() => [])) if (!found.some(x => x.id === v.id)) found.push(v);
-  }
-  const likely = v => { const m = match(v); return (m.named || m.byArtist) && !m.other && dur && Math.abs(v.dur - dur) <= 2; };
   // Lyrics are timed to the album recording, so rank uploads by how exactly they match it:
   // same length first (music videos with intros lose), then the artist's own "Artist - Topic" audio, then the
   // artist's or VEVO channel over re-uploads (those sometimes pad or trim the start by a second).
@@ -3668,6 +3659,16 @@ async function findVideos(artist, title, dur, album = '', lang = '') {
   // within 3 s, the artist's own upload always wins. A "Topic" is the artist's own only under the artist's name — a
   // karaoke label has its Topic too.)
   const official = v => / - Topic$/.test(v.channel) && theirs(v) ? 0 : /vevo$/i.test(v.channel) || theirs(v) ? 2.5 : 3.5;
+  // (searched on till the artist's own upload is found, not just any that's the song: measured, YouTube Music not
+  // answering, a fan's lyric re-upload played for "Tum Hi Ho" — the plainer search had the artist's Topic)
+  const own = v => sure(v) && official(v) < 3;
+  let musicErr = null;
+  const found = await api.ytm(`${first} ${name} ${clean(album.replace(/ - (Single|EP)$/i, ''))}`).catch(e => { musicErr = e; return []; });
+  if (!found.some(own)) {
+    for (const v of await api.yt(`${artist} ${name} audio`).catch(e => { if (musicErr || /limited/.test(e.message)) throw e; return []; })) if (!found.some(x => x.id === v.id)) found.push(v);
+    if (!found.some(own)) for (const v of await api.yt(`${first} ${name}`).catch(() => [])) if (!found.some(x => x.id === v.id)) found.push(v);
+  }
+  const likely = v => { const m = match(v); return (m.named || m.byArtist) && !m.other && dur && Math.abs(v.dur - dur) <= 2; };
   // Its name matched, or not: the ones that aren't come after all that are — unless their title is in another script than
   // the song's ("アイドル" for "Idol"), where a name can't be told apart: then the artist's own upload at its very length
   // beats a fan's re-upload that spells it in Latin letters (measured: a fan's lyric video played for YOASOBI's "Idol").
@@ -4008,7 +4009,7 @@ function setLines(raw, { preview = '', note = 'no lyrics found for this one', yr
   buildMap();
   if (!synced) {
     const s = el('div', 'sheet');
-    if (preview) s.append(el('div', 'count lbl', `30s clip, lyrics can't sync · ${preview}`));
+    s.append(el('div', 'count lbl', preview ? `30s clip, lyrics can't sync · ${preview}` : 'Lyrics · not timed to this song'));
     lines.forEach(l => s.append(el('p', '', lyrDisp(l).text)));
     s.onwheel = s.ontouchstart = () => { userScroll = performance.now(); };
     stage.replaceChildren(s);
@@ -4973,7 +4974,7 @@ async function playTrack(t, term = '', queued = false, stay = false, mixed = nul
   updateSkips(); updateLikeBtn();
   if (!stay) for (const d of [dlg, $('artistPage'), $('library')]) if (d.open) d.close();
   const kept = saved.get(t.trackId);
-  setNow(t.trackName, t.artistName, kept?.coverUrl || t.artworkUrl100?.replace('100x100bb', '600x600bb'), t.collectionName);
+  setNow(t.trackName, t.artistName, kept?.coverUrl || artUrl(t, 600), t.collectionName);
   if (ep) return playEpisode(t, id);
   audio.playbackRate = audio.defaultPlaybackRate = 1;
   if (kept) return playSaved(t, id);
@@ -4996,6 +4997,7 @@ async function playTrack(t, term = '', queued = false, stay = false, mixed = nul
     // the artist's own upload on Audius (320 kbps) when it's there, else YouTube's best — both looked for at once
     [au, vids] = await Promise.all([audiusFor(t), videosFor(t).catch(e => { if (!noteLimited(e)) why = e.message; return []; })]); // (found on YouTube: that video)
     if (id !== loadId) return;
+    if (!t.artworkUrl100 && vids[0]?.art) { t.artworkUrl100 = vids[0].art; setNow(t.trackName, t.artistName, artUrl(t, 600), t.collectionName); } // (an imported song with no cover yet: its YouTube Music one, at once)
     if (au) source = '◆ full song · Audius 320 kbps';
     else if (vids.length) {
       // try the uploads in turn (three at most); one that won't play — or a shared id of the wrong length — gives way to
@@ -6085,9 +6087,14 @@ const pendingTrack = s => ({ kind: 'song', trackId: 'q:' + hash36(`${s.title}|${
 // on screen) and its upload kept for when it plays; a song not found stays as it is, looked for more widely when played.
 const importWant = [], importBulk = [], matchTried = new Set();
 let matchLive = 0, matchWait = 0, matchMiss = 0, matchSave = 0, matchLater = 0;
-const wantMatch = id => { importWant.push(id); if (importWant.length > 300) importWant.shift(); matchPump(); };
-const wantIO = new IntersectionObserver(es => { for (const e of es) if (e.isIntersecting) { wantIO.unobserve(e.target); wantMatch(e.target.dataset.tid); } }, { rootMargin: '400px 0px' });
-const wantNext = () => { for (const t of (shuffling() ? [shufflePick()].filter(Boolean) : queue.slice(qi + 1, qi + 11)).reverse()) if (isPending(t)) wantMatch(t.trackId); };
+const wantMatch = (...ids) => { importWant.push(...ids); if (importWant.length > 300) importWant.splice(0, importWant.length - 300); matchPump(); };
+// (those with no cover yet, then those nearest the middle of the screen, last in — so first matched: a list opened had
+// the rows below the screen first)
+const wantIO = new IntersectionObserver(es => { const mid = innerHeight / 2, off = e => Math.abs(e.boundingClientRect.top - mid) + (e.target.querySelector('img')?.getAttribute('src') ? 1e5 : 0),
+  in_ = es.filter(e => e.isIntersecting).sort((a, b) => off(b) - off(a));
+  for (const e of in_) wantIO.unobserve(e.target);
+  if (in_.length) wantMatch(...in_.map(e => e.target.dataset.tid)); }, { rootMargin: '400px 0px' });
+const wantNext = () => { const ids = (shuffling() ? [shufflePick()].filter(Boolean) : queue.slice(qi + 1, qi + 11)).reverse().filter(isPending).map(t => t.trackId); if (ids.length) wantMatch(...ids); };
 const firstArtist = a => words((a || '').split(/,|&| and | feat\.? | x /i)[0]).join(' '); // ("and" or "&": the same band)
 // (and the same version — a remix for a remix, a live take for a live one, never a cover: as videoMatch)
 const fitsSong = (v, s) => { const a = words(clean(v.title)).join(' '), b = words(clean(s.trackName)).join(' '), who = firstArtist(s.artistName), dur = (s.trackTimeMillis || 0) / 1000;
@@ -6112,7 +6119,7 @@ function matchPump() {
 }
 function placeMatch(id, m) {
   const t = slim(m);
-  vidCache.set(id, Promise.resolve([{ id: m.ytId, dur: m.trackTimeMillis / 1000 }])); // (played as it is — in a queue already — its upload's found)
+  if (!vidCache.has(id)) vidCache.set(id, Promise.resolve([{ id: m.ytId, dur: m.trackTimeMillis / 1000 }])); // (played as it is — in a queue already — its upload's found; one found by its own search kept, with the others)
   if (saved.has(id)) return; // (saved offline as it is: left so)
   for (const l of [library.liked, ...library.playlists.map(p => p.tracks)]) if (!l.some(x => x.trackId === t.trackId)) for (let k = 0; k < l.length; k++) if (l[k].trackId === id) l[k] = t;
   // (on screen: its row put in place, the list left where it's scrolled to)
@@ -7548,7 +7555,10 @@ const words = s => (s || '').toLowerCase().normalize('NFKD').replace(/[\u0300-\u
 const sameWords = (a, b) => words(a).join(' ') === words(b).join(' ');
 const contains = (big, small) => { const w = words(big); return words(small).every(x => w.includes(x)); };
 const playable = s => s.kind === 'song' && (s.previewUrl || fullSongs);
-const artUrl = (x, size) => x?.artworkUrl100 ? x.artworkUrl100.replace('100x100bb', `${size}x${size}bb`) : '';
+// (at about the size it's shown: Apple's and YouTube Music's covers come at any size, Spotify's at 640 or 300 — a list's
+// 56 px row loaded a 640 px picture each, and a long list's covers came slowly; a YouTube video's, small, without its bars)
+const artUrl = (x, size) => (x?.artworkUrl100 || '').replace('100x100bb', `${size}x${size}bb`).replace(/=w\d+-h\d+/, `=w${size}-h${size}`)
+  .replace(/(\/\/i\.scdn\.co\/image\/ab67616d0000)b273/, (m, a) => size <= 300 ? a + '1e02' : m).replace(/\/hqdefault\.jpg$/, m => size <= 200 ? '/mqdefault.jpg' : m);
 
 async function searchSongs(term, signal) {
   flowPage?.visitor().catch(() => {}); // (FlowStream's visitor id, once and kept: so the first song doesn't wait for it)
@@ -7922,8 +7932,10 @@ function row(s, i, list, from = {}) {
   wrap.style.setProperty('--i', i);
   const img = el('img');
   img.alt = ''; img.loading = 'lazy';
-  const cover = saved.get(s.trackId)?.coverUrl || (s.artworkUrl100 && s.artworkUrl100.replace('100x100bb', '120x120bb'));
-  if (cover) img.src = cover;
+  // (one that won't load: the full-size one, then a YouTube song's own picture — not an empty square)
+  const covers = [saved.get(s.trackId)?.coverUrl || artUrl(s, 120), s.artworkUrl100, s.ytId && `https://i.ytimg.com/vi/${s.ytId}/mqdefault.jpg`].filter((u, k, a) => u && a.indexOf(u) === k);
+  img.onerror = () => { covers.shift(); if (covers[0]) img.src = covers[0]; };
+  if (covers[0]) img.src = covers[0];
   const txt = el('span'), sub = el('small');
   wrap.dataset.tid = s.trackId;
   if (isPending(s)) wantIO.observe(wrap); // (not matched yet, and on screen: matched first)
@@ -8077,7 +8089,7 @@ try {
   const l = JSON.parse(store.get(LAST) || 'null');
   if (l?.t?.trackId && !current) {
     lastSong = l; current = l.t; queue = [l.t]; qi = 0;
-    setNow(l.t.trackName, l.t.artistName, saved.get(l.t.trackId)?.coverUrl || l.t.artworkUrl100?.replace('100x100bb', '600x600bb'), l.t.collectionName);
+    setNow(l.t.trackName, l.t.artistName, saved.get(l.t.trackId)?.coverUrl || artUrl(l.t, 600), l.t.collectionName);
     updateSkips(); updateLikeBtn(); status(`▶ Play to carry on${l.at > 3 ? ` from ${Math.floor(l.at / 60)}:${String(l.at % 60).padStart(2, '0')}` : ''}`);
   }
 } catch {}
@@ -8270,7 +8282,7 @@ function toggleFull() {
 // Android back button: close what's open, leave full screen, leave the song for the home page (it keeps playing),
 // and from the home page, put the app in the background
 if (native) Capacitor.Plugins.App.addListener('backButton', () => {
-  const pop = document.querySelector(':popover-open:not(.toast, #curGlow)');
+  const pop = document.querySelector(':popover-open:not(.toast)');
   if (pop) pop.hidePopover();
   else if (topDialog()) { // the one on top
     const d = topDialog();
@@ -8297,7 +8309,7 @@ Immersive?.tv?.().then(r => {
 }).catch(() => {});
 const FOCUSABLE = 'button, a[href], input, select, textarea, summary, [tabindex]:not([tabindex="-1"])';
 function tvMove(dir) {
-  const pops = [...document.querySelectorAll(':popover-open:not(.toast, #curGlow)')];
+  const pops = [...document.querySelectorAll(':popover-open:not(.toast)')];
   const scope = pops.at(-1) || topDialog() || document, cur = document.activeElement;
   if (scope === $('about') && (dir === 'up' || dir === 'down')) { // (the terms, privacy, licenses: up and down read them; past either end, on to the buttons)
     const w = $('legalFrame').contentWindow, y = w?.scrollY;
@@ -8363,7 +8375,7 @@ addEventListener('focusin', e => { if (tv && e.target !== body) tvLast = tvKey(e
 function tvLand() {
   const cur = document.activeElement;
   if (cur && cur !== body && cur.isConnected) return;
-  const scope = [...document.querySelectorAll(':popover-open:not(.toast, #curGlow)')].at(-1) || topDialog() || document;
+  const scope = [...document.querySelectorAll(':popover-open:not(.toast)')].at(-1) || topDialog() || document;
   const all = [...scope.querySelectorAll(FOCUSABLE)].filter(e => !e.disabled && e.getClientRects().length && (!e.checkVisibility || e.checkVisibility({ checkVisibilityCSS: true })));
   const seen = e => { const r = e.getBoundingClientRect(); return r.bottom > 0 && r.top < innerHeight && r.right > 0 && r.left < innerWidth; };
   const to = all.find(e => tvKey(e) === tvLast) // the same one, drawn again
@@ -8437,46 +8449,9 @@ function wake() {
   body.classList.remove('idle');
   clearTimeout(idleTimer);
   if (body.classList.contains('fs')) idleTimer = setTimeout(() => {
-    if (!topDialog() && !document.querySelector(':popover-open:not(#curGlow)')) body.classList.add('idle');
+    if (!topDialog() && !document.querySelector(':popover-open')) body.classList.add('idle');
   }, 2600);
 }
-
-// ---------- the cursor's glow (computers; Settings: Cursor, Glow): a ring in the mood's colours gliding after the arrow,
-// opening out over anything clickable, tightening on a press and swelling with the beat; small over text. Only for a
-// mouse (not touch, not a TV's remote), not over a theme (their pointers are their own); with less motion asked for, it
-// follows without gliding or turning. In the top layer, raised again whenever a dialog or menu opens over it. ----------
-const glowEl = $('curGlow'), HIT = 'button:not(:disabled), a[href], [role="button"], summary, select, label, input[type="range"], input[type="checkbox"], .chip, .row, .card';
-let glowOn = false, glowRaf = 0, gx = -99, gy = -99, gtx = -99, gty = -99, gDown = false;
-function glowEnable() {
-  glowOn = pcOnly && !tv && cursorPref() === 'Glow' && !skin;
-  if (!glowOn) { cancelAnimationFrame(glowRaf); glowRaf = 0; glowEl.classList.remove('on'); if (glowEl.matches(':popover-open')) glowEl.hidePopover(); }
-}
-function glowRaise() { if (!glowOn) return; if (glowEl.matches(':popover-open')) glowEl.hidePopover(); glowEl.showPopover(); }
-function glowTick() {
-  glowRaf = 0;
-  const k = motion ? .3 : 1, beat = motion && !P.paused ? lyricKick * .2 : 0;
-  gx += (gtx - gx) * k; gy += (gty - gy) * k;
-  glowEl.style.transform = `translate3d(${gx.toFixed(1)}px, ${gy.toFixed(1)}px, 0) translate(-50%, -50%) scale(${((gDown ? .72 : 1) + beat).toFixed(3)})`;
-  if (Math.abs(gtx - gx) + Math.abs(gty - gy) > .3 || (beat > .005 && glowEl.classList.contains('on'))) glowRaf = requestAnimationFrame(glowTick);
-}
-const glowGo = () => { if (!glowRaf) glowRaf = requestAnimationFrame(glowTick); };
-addEventListener('pointermove', e => {
-  if (!glowOn || e.pointerType !== 'mouse') return;
-  if (!glowEl.matches(':popover-open')) glowRaise();
-  gtx = e.clientX; gty = e.clientY;
-  if (!glowEl.classList.contains('on')) { gx = gtx; gy = gty; glowEl.classList.add('on'); }
-  const t = e.target instanceof Element ? e.target : null, text = !!t?.closest('input:not([type="range"]):not([type="checkbox"]), textarea, [contenteditable]');
-  glowEl.classList.toggle('text', text); glowEl.classList.toggle('hit', !text && !!t?.closest(HIT));
-  glowGo();
-}, { passive: true });
-addEventListener('pointerdown', e => { if (glowOn && e.pointerType === 'mouse') { gDown = true; glowGo(); } }, { passive: true });
-addEventListener('pointerup', () => { if (glowOn) { gDown = false; glowGo(); } }, { passive: true });
-document.documentElement.addEventListener('pointerleave', () => glowEl.classList.remove('on'));
-addEventListener('blur', () => glowEl.classList.remove('on'));
-setInterval(() => { if (glowOn && glowEl.classList.contains('on') && !P.paused) glowGo(); }, 250); // (the beat, while it plays and the pointer's still)
-document.addEventListener('toggle', e => { if (e.target !== glowEl && e.newState === 'open') glowRaise(); }, true); // (a menu or dialog opened: over it)
-new MutationObserver(ms => { if (ms.some(m => m.target.tagName === 'DIALOG' && m.target.open)) glowRaise(); }).observe(body, { subtree: true, attributes: true, attributeFilter: ['open'] });
-var glowReady = true; glowEnable(); // (var: the first mood is set before this line is reached)
 
 // ---------- parallax: the lyrics tilt a little toward the mouse ----------
 addEventListener('pointermove', e => {
@@ -8491,7 +8466,7 @@ addEventListener('pointermove', e => {
 // tip is where it clicks. With the glow ring (see "the cursor's glow") gliding after it.
 // (read where it's needed: the first mood is set before this part of the page is reached)
 function cursorPref() { return store.get('netherflow.cursor') === 'System' ? 'System' : 'Glow'; }
-function setCursorPref(v) { store.set('netherflow.cursor', v === 'System' ? 'System' : ''); setCursors(pal.a, pal.b); glowEnable(); renderTextPanel(); }
+function setCursorPref(v) { store.set('netherflow.cursor', v === 'System' ? 'System' : ''); setCursors(pal.a, pal.b); renderTextPanel(); }
 function setCursors(accent, second = accent) { // (called as the first mood is set: everything it needs, inside it)
   if (cursorPref() === 'System') { for (const k of ['--cur', '--cur-hand', '--cur-text']) root.style.removeProperty(k); return; }
   const ARROW = 'M4.6 2.6v16.7c0 .5.6.8 1 .4l3.7-3.5 2.4 5.6c.2.5.8.7 1.3.5l1.5-.7c.5-.2.7-.8.5-1.3l-2.4-5.4h5.1c.5 0 .8-.6.4-1z';
@@ -10455,7 +10430,7 @@ void main() {
   P.rgb += gr * P.a; P.a = clamp(P.a, 0., 1.);
   o = vec4(clamp(P.rgb, 0., P.a), P.a);
 }`;
-function kinInit() {
+function kinInit(made) {
   const cv = kin.cv = $('kin'), gl = cv.getContext('webgl2', { premultipliedAlpha: true, alpha: true, antialias: false });
   if (!gl) return kin.gl = false;
   if (!kin.watched) { // (the graphics chip reset — a driver update, a game taking it over: everything on it made again once it's back)
@@ -10464,22 +10439,30 @@ function kinInit() {
     cv.addEventListener('webglcontextrestored', () => { emoji.at.clear(); emoji.slots.length = 0; kin.coverSrc = null; cv.width = 1; kinInit(); if (kin.shot) kin.shot.lay = null; }); // (width: its layer sized again, see drawKin)
     document.fonts.addEventListener('loadingdone', () => { if (kin.shot) kin.shot.lay = null; }); // (laid out in a stand-in face till then)
   }
-  const prog = (vs, fs, attrs, unis) => {
-    const pr = gl.createProgram();
-    for (const [type, src] of [[gl.VERTEX_SHADER, vs], [gl.FRAGMENT_SHADER, fs]]) {
-      const sh = gl.createShader(type); gl.shaderSource(sh, src); gl.compileShader(sh); gl.attachShader(pr, sh);
-      if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) console.error('music video shader', gl.getShaderInfoLog(sh));
-    }
-    attrs.forEach((a, i) => gl.bindAttribLocation(pr, i, a));
-    gl.linkProgram(pr);
-    if (!gl.getProgramParameter(pr, gl.LINK_STATUS)) return null;
+  // (its shaders compiled alongside the page — KHR_parallel_shader_compile — and the rest made once they're done: asking
+  // straight away if they'd compiled, the page waited on them, a fifth of a second, as Extreme lyrics came on)
+  if (!made) {
+    const par = gl.getExtension('KHR_parallel_shader_compile');
+    const progs = [[KIN_SPRITE_VS, KIN_SPRITE_FS, ['aP', 'aUV', 'aL', 'aFill', 'aLine', 'aM', 'aB']], [KIN_POST_VS, KIN_POST_FS, ['p']]].map(([vs, fs, attrs]) => {
+      const pr = gl.createProgram();
+      for (const [type, src] of [[gl.VERTEX_SHADER, vs], [gl.FRAGMENT_SHADER, fs]]) { const sh = gl.createShader(type); gl.shaderSource(sh, src); gl.compileShader(sh); gl.attachShader(pr, sh); }
+      attrs.forEach((a, i) => gl.bindAttribLocation(pr, i, a));
+      gl.linkProgram(pr);
+      return pr;
+    });
+    kin.gl = undefined; // (being made)
+    const ready = () => gl.isContextLost() ? null : !par || progs.every(p => gl.getProgramParameter(p, par.COMPLETION_STATUS_KHR)) ? kinInit(progs) : requestAnimationFrame(ready);
+    return ready();
+  }
+  const prog = (pr, unis) => {
+    if (!gl.getProgramParameter(pr, gl.LINK_STATUS)) { for (const sh of gl.getAttachedShaders(pr)) if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) console.error('music video shader', gl.getShaderInfoLog(sh)); return null; }
     const U = {};
     for (const u of unis) U[u] = gl.getUniformLocation(pr, u);
     return { pr, U };
   };
-  kin.sp = prog(KIN_SPRITE_VS, KIN_SPRITE_FS, ['aP', 'aUV', 'aL', 'aFill', 'aLine', 'aM', 'aB'], ['A', 'E', 'CV', 'R', 'time']);
-  kin.pp = prog(KIN_POST_VS, KIN_POST_FS, ['p'], ['T', 'R', 'C', 'time', 'kick', 'burst', 'ground', 'seed', 'ca', 'trk', 'scan', 'glow', 'halo', 'leak', 'invert', 'flash', 'cA', 'cB', 'vid', 'scr']);
-  if (!kin.sp || !kin.pp) return kin.gl = false;
+  kin.sp = prog(made[0], ['A', 'E', 'CV', 'R', 'time']);
+  kin.pp = prog(made[1], ['T', 'R', 'C', 'time', 'kick', 'burst', 'ground', 'seed', 'ca', 'trk', 'scan', 'glow', 'halo', 'leak', 'invert', 'flash', 'cA', 'cB', 'vid', 'scr']);
+  if (!kin.sp || !kin.pp) { kin.gl = false; return applyKin(); } // (the lyrics as they are)
   // the atlas: the shot's words and letters (with smaller levels, for a card seen far off)
   kin.AW = Math.min(4096, gl.getParameter(gl.MAX_TEXTURE_SIZE));
   kin.atlas = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, kin.atlas);
@@ -12061,7 +12044,7 @@ function raceLoad() {
   race.loading = true; race.status = 'Loading the race…'; raceStatus();
   if (race.tried) $('race').replaceWith(Object.assign(document.createElement('canvas'), { id: 'race' })); // (a fresh canvas: the last try's drawing state gone)
   race.tried = true;
-  import('./race/race.js').then(m => m.create($('race'), { palA: rgb(pal.a), palB: rgb(pal.b), onCar: (n, all) => { race.status = `Loading the cars: ${n} of ${all}…`; raceStatus(); } }))
+  raceMake($('race'), { palA: rgb(pal.a), palB: rgb(pal.b), onCar: (n, all) => { race.status = `Loading the cars: ${n} of ${all}…`; raceStatus(); } })
     .then(r => {
       if (!r.ready) throw new Error('the cars: ' + ([...new Set(r.errors.map(e => e.replace(/^[^:]*: /, '')))].join(' · ') || 'none listed')); // (the same reason for each said once)
       race.m = r; r.resize(innerWidth, innerHeight);
@@ -12069,6 +12052,28 @@ function raceLoad() {
     })
     .catch(e => { console.warn('race:', e); race.loading = false; race.retry = performance.now() + 20000; race.status = `Couldn't load: ${e.message || e}`; })
     .finally(raceStatus);
+}
+// The race in a worker of its own (race/worker.js), its canvas handed over: making it froze the page for a second (its
+// graphics context, its shaders), and each frame's work is off the page's thread too. Else here, as before.
+function raceMake(canvas, opts) {
+  if (!canvas.transferControlToOffscreen || typeof Worker !== 'function') return import('./race/race.js').then(m => m.create(canvas, opts));
+  return new Promise((ok, fail) => {
+    const w = new Worker('./race/worker.js', { type: 'module' }), off = canvas.transferControlToOffscreen(), size = () => [innerWidth, innerHeight, devicePixelRatio || 1];
+    let kmh;
+    const r = { frame: (now, o) => { w.postMessage({ frame: { now, ...o } }); return { kmh }; }, song: key => { w.postMessage({ song: key }); return null; }, resize: () => w.postMessage({ size: size() }) };
+    w.onmessage = ({ data: d }) => {
+      if (d.car) opts.onCar(...d.car);
+      else if (d.failed) { w.terminate(); fail(new Error(d.failed)); }
+      else if ('ready' in d) { if (!d.ready) w.terminate(); ok(Object.assign(r, d)); }
+      else if ('kmh' in d) kmh = d.kmh;
+      else if (d.key === race.key) race.info = d.info; // (its circuit's name: for the caption)
+    };
+    w.onerror = e => { // (the worker gone wrong, loading or since: loaded again in a while, on a new canvas)
+      w.terminate(); fail(new Error(e.message || "the race didn't start"));
+      if (race.m === r) { race.m = null; race.loading = false; raceShow(false); race.retry = performance.now() + 20000; race.status = `Stopped: ${e.message || 'an error'}`; raceStatus(); }
+    };
+    w.postMessage({ canvas: off, opts: { palA: opts.palA, palB: opts.palB }, size: size() }, [off]);
+  });
 }
 function raceRow() {
   const q = el('div', 'bgq lbl upd race-row');
@@ -12084,7 +12089,7 @@ function raceFrame(now, seen, kick) {
   const r = race.m.frame(now, { kick, energy: Math.min(1, bassS * 1.4), playing: !P.paused, kind: songPart().kind });
   race.kmh = r.kmh; // (the dash shows the car on screen's speed)
   if (r.kmh != null && !race.show) raceShow(true); // (once a race is drawn: till then, the motorway)
-  if (race.show && race.tagged !== race.key) { // (the circuit's name, as on television)
+  if (race.show && race.info && race.tagged !== race.key) { // (the circuit's name, as on television)
     race.tagged = race.key; const tag = $('raceTag'), I = race.info;
     tag.children[0].textContent = I.name; tag.children[1].textContent = `${I.country} · ${(I.len / 1000).toFixed(3)} km`;
     tag.classList.add('on'); clearTimeout(race.tagT); race.tagT = setTimeout(() => tag.classList.remove('on'), 4200);
@@ -12495,6 +12500,9 @@ console.assert(linkKey('https://open.spotify.com/playlist/x?si=1') === linkKey('
   console.assert(y.length === 4 && y[0].text === "I'm goin' down tonight" && y[0].words[2].t === 1.8 && y[1].text === 'right words in here' && y[1].words[1].t === 5.5 &&
     y[1].words[0].t < 5.5 && y[2].text === '' && y[3].t === 20 && !y[3].words, 'mergeTimed broken: ' + JSON.stringify(y)); }
 console.assert(CREDIT_LINE.test('Mastering Engineer: John Greenham') && !CREDIT_LINE.test("I'm the bad type: make your mama sad type"), 'credit lines broken');
+console.assert(artUrl({ artworkUrl100: 'https://is1-ssl.mzstatic.com/a/100x100bb.jpg' }, 600).endsWith('/600x600bb.jpg') && artUrl({ artworkUrl100: 'https://lh3.googleusercontent.com/x=w544-h544-l90-rj' }, 120).endsWith('=w120-h120-l90-rj')
+  && artUrl({ artworkUrl100: 'https://i.scdn.co/image/ab67616d0000b273f00d' }, 120).endsWith('ab67616d00001e02f00d') && artUrl({ artworkUrl100: 'https://i.scdn.co/image/ab67616d0000b273f00d' }, 600).endsWith('b273f00d')
+  && artUrl({ artworkUrl100: 'https://i.ytimg.com/vi/x/hqdefault.jpg' }, 120).endsWith('/mqdefault.jpg') && artUrl({ artworkUrl100: 'https://i.ytimg.com/vi/x/hqdefault.jpg' }, 600).endsWith('/hqdefault.jpg') && artUrl({}, 120) === '', 'cover sizes broken');
 { const got = [["I've been tryna call, I've been on my own for long enough, maybe you can show me how to love, maybe", 'en'],
     ['Hum tere bin ab reh nahi sakte, tere bina kya wajood mera, tujhse juda gar ho jaayenge', 'hi'],
     ['हम तेरे बिन अब रह नहीं सकते तेरे बिना क्या वजूद मेरा', 'hi'], ['Des-pa-cito, quiero respirar tu cuello despacito, deja que te diga cosas al oído', 'es'],

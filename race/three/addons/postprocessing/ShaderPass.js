@@ -1,7 +1,7 @@
 import {
 	ShaderMaterial,
 	UniformsUtils
-} from 'three';
+} from '../../three.module.js';
 import { Pass, FullScreenQuad } from './Pass.js';
 
 /**

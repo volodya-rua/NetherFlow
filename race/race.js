@@ -4,16 +4,17 @@
 // night under floodlights, with real cars (cars.json: CC-BY models from Sketchfab, credited in legal.html) racing each
 // other to the music: each driven by itself, braking for the corners by its own grip, slipstreaming, overtaking.
 // Filmed like a broadcast and cut on the beat (index.html: "Redline's races").
-// Drawn with three.js (MIT: three/).
-import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
-import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
-import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
-import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
-import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
-import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+// Drawn with three.js (MIT: three/), in a worker of its own (worker.js) — by their paths, not 'three': a worker has no
+// import map (npm run race:three copies the addons so).
+import * as THREE from './three/three.module.js';
+import { GLTFLoader } from './three/addons/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from './three/addons/libs/meshopt_decoder.module.js';
+import { mergeGeometries } from './three/addons/utils/BufferGeometryUtils.js';
+import { EffectComposer } from './three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from './three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from './three/addons/postprocessing/UnrealBloomPass.js';
+import { ShaderPass } from './three/addons/postprocessing/ShaderPass.js';
+import { OutputPass } from './three/addons/postprocessing/OutputPass.js';
 
 const V = THREE.Vector3, STEP = 3; // (metres between the track's samples)
 const HALF = 6.5, KERB = 7.7, WALL = 18, VERGE = 14; // (the road's half width; out to the kerbs, the barriers, the verge strip)
@@ -23,7 +24,7 @@ const rnd = s => () => (s = (s * 16807) % 2147483647) / 2147483647; // (a seeded
 
 // ---- textures, drawn here (nothing to download)
 function canvasTex(w, h, draw, repeat = true, color = false) {
-  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const c = new OffscreenCanvas(w, h);
   draw(c.getContext('2d'), w, h);
   const t = new THREE.CanvasTexture(c);
   if (repeat) t.wrapS = t.wrapT = THREE.RepeatWrapping;
@@ -643,7 +644,7 @@ export async function create(canvas, { palA = [1, .12, .18], palB = [.09, .78, 1
   // ---- the race: each car drives itself round at its own pace (a little quicker as the music's louder): off the
   // throttle behind a slower car in its line, in its slipstream on the straights, and past it on the other side when
   // it's quicker; the field kept together (the back markers a touch quicker, the leaders a touch slower)
-  let startN = 0, clock = 0, ts = 1, slowUntil = 0, last = 0, w = 0, h = 0, scale = 1, ema = 1 / 60, emaAt = 0;
+  let startN = 0, clock = 0, ts = 1, slowUntil = 0, last = 0, w = 0, h = 0, dpr = globalThis.devicePixelRatio || 1, scale = 1, ema = 1 / 60, emaAt = 0;
   const at = (s, k) => { const n = S.n, f = ((s / STEP) % n + n) % n, i = Math.floor(f), j = (i + 1) % n, t = f - i; return S[k][i] + (S[k][j] - S[k][i]) * t; };
   const paceAt = (c, s) => { const n = S.n, f = ((s / STEP) % n + n) % n, i = Math.floor(f), t = f - i; return c.pace[i] + (c.pace[(i + 1) % n] - c.pace[i]) * t; };
   const corner = s => Math.abs(at(s, 'k')) > 1 / 260;
@@ -834,8 +835,8 @@ export async function create(canvas, { palA = [1, .12, .18], palB = [.09, .78, 1
     sparkG.attributes.position.needsUpdate = true;
   }
 
-  function resize(W, H) {
-    w = W; h = H; const pr = Math.min(devicePixelRatio || 1, 1.5) * scale;
+  function resize(W, H, ratio = dpr) {
+    w = W; h = H; dpr = ratio; const pr = Math.min(dpr, 1.5) * scale;
     renderer.setPixelRatio(pr); renderer.setSize(W, H, false); composer.setPixelRatio(pr); composer.setSize(W, H);
     camera.aspect = W / H; camera.updateProjectionMatrix(); puffs.material.uniforms.scale.value = H * pr * .55;
   }
