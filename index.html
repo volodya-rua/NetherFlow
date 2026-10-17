@@ -712,6 +712,10 @@ kbd { font: inherit; border: 1px solid currentColor; border-radius: 3px; padding
 .ritem.far { animation: none; } /* (far down a long list: no fade of its own — thousands of them were the browser's work each frame) */
 .ritem .row { padding-right: 58px; animation: none; }
 .ritem .rmore { position: absolute; right: 10px; top: 50%; translate: 0 -50%; }
+.ritem.adding .row { padding-right: 104px; }
+.ritem .radd { position: absolute; right: 54px; top: 50%; translate: 0 -50%; border: 1px solid var(--hair); }
+.ritem .radd svg { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+.ritem .radd.on { color: var(--bg); background: var(--a); border-color: var(--a); }
 .lib-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; padding: 12px 12px 8px; }
 .lib-find { flex: 1 1 220px; min-width: 0; padding: 6px 0; background: none; border: 0; border-bottom: 1px solid var(--hair); outline: none;
   color: var(--ink); caret-color: var(--a); font: italic 400 19px/1.3 var(--serif); }
@@ -7623,6 +7627,12 @@ function renderLibrary() {
         }
       }
     }
+    if (p) { // Add songs: the search, each song found with a + to add it here (see addingTo)
+      const add = el('button', 'pill ghost');
+      add.append(ico('plus'), 'Add songs');
+      add.onclick = () => { addingTo = p; $('library').close(); openSearch(); if ($('q').value.trim()) runSearch($('q').value.trim()); else $('sstat').textContent = `Adding to ${p.name}: search, then + on any song`; };
+      acts.splice(2, 0, add);
+    }
     if (p?.left?.length) { // (an import YouTube cut short: the rest, on a tap)
       const more = el('button', 'pill finish-imp', `Finish import · ${p.left.length} left`);
       more.onclick = () => importPlaylist(p.src);
@@ -8045,9 +8055,10 @@ async function runSearch(term) {
         const played = new Map(ytm.map((s, i) => [songKey(s), i]));
         list = originalsFirst(all).map((s, i) => [s, (isModded(s) ? undefined : played.get(songKey(s))) ?? 1e3 + i]).sort((a, b) => a[1] - b[1]).map(x => x[0]); label = `All songs by ${ex.artistName}`;
       }
-      // (albums by the artists of the songs found first; karaoke, tribute and cover albums left out)
-      const by = new Set(list.slice(0, 10).map(s => s.artistId));
-      R.albums = albums.filter(a => !isModded({ trackName: a.collectionName, artistName: a.artistName, collectionName: a.collectionName })).sort((a, b) => by.has(b.artistId) - by.has(a.artistId));
+      // (albums by the artists of the songs found, in their songs' order — the top song's artist's first; karaoke, tribute and
+      // cover albums left out)
+      const by = new Map(); list.forEach((s, i) => by.has(s.artistId) || by.set(s.artistId, i));
+      R.albums = albums.filter(a => !isModded({ trackName: a.collectionName, artistName: a.artistName, collectionName: a.collectionName })).map((a, i) => [a, (by.get(a.artistId) ?? 1e3) * 100 + i]).sort((a, b) => a[1] - b[1]).map(x => x[0]);
       Object.assign(R, { list, label, exact: ex });
       // other songs matching the words too (say, songs titled like the artist)
       const others = ex && label !== 'Songs' ? oneEach(originalsFirst(songs.filter(s => s.artistId !== ex.artistId))).slice(0, 10) : [];
@@ -8073,7 +8084,7 @@ async function runSearch(term) {
       if (ex || album || best) R.top = () => topHit(best, ex ? all : yl.includes(best) ? yl : more.includes(best) ? more : list.length ? list : yl.length ? yl : more, ex, term, album);
       showResults(R, quick ? 'All' : shownFilter, false, !quick);
       const note = fixed ? ` · showing results for “${fixed}”` : '';
-      $('sstat').textContent = n ? `${n} songs${note} · ${fullSongs ? 'full songs' : FILE_NOTE}` : searchFailed ? "Couldn't reach the music catalog: check the connection." : `Nothing${note}. Try another spelling.`;
+      $('sstat').textContent = (addingTo ? `Adding to ${addingTo.name} · ` : '') + (n ? `${n} songs${note} · ${fullSongs ? 'full songs' : FILE_NOTE}` : searchFailed ? "Couldn't reach the music catalog: check the connection." : `Nothing${note}. Try another spelling.`);
     }
   } catch (e) { if (e.name !== 'AbortError') $('sstat').textContent = 'Search is offline. Songs you saved are in your Library.'; }
 }
@@ -8235,6 +8246,9 @@ function lyricsKind(s) {
 function lyrPump() { while (lyrBusy < 3 && lyrWait.length) { lyrBusy++; lyrWait.shift()().finally(() => { lyrBusy--; lyrPump(); }); } }
 const lyrIO = new IntersectionObserver(es => { for (const e of es) if (e.isIntersecting) { lyrIO.unobserve(e.target); lyrRows.get(e.target)(); } }, { rootMargin: '300px 0px' });
 const LYB = { synced: 'Lyrics', plain: 'Unsynced lyrics', none: 'No lyrics' };
+// a playlist songs are being added to from the search (its Add songs): null otherwise. The search closed, back to it.
+let addingTo = null;
+dlg.addEventListener('close', () => { const p = addingTo; addingTo = null; if (p && library.playlists.includes(p)) openLibrary({ kind: 'playlist', id: p.id }); });
 function row(s, i, list, from = {}) {
   const wrap = el('div', i > 40 ? 'ritem far' : 'ritem'), b = el('button', 'row'), more = el('button', 'icon-btn rmore');
   wrap.style.setProperty('--i', i);
@@ -8267,6 +8281,12 @@ function row(s, i, list, from = {}) {
   more.setAttribute('aria-label', `Options for ${s.trackName}`);
   more.onclick = () => songMenu(s, more, from);
   wrap.append(b, more);
+  if (addingTo && !from.playlist && s.kind !== 'episode') { // (adding songs to a playlist from the search: + adds it, ✓ takes it out again)
+    const p = addingTo, plus = el('button', 'icon-btn radd'), has = () => p.tracks.some(x => x.trackId === s.trackId);
+    const show = () => { plus.replaceChildren(ico(has() ? 'check' : 'plus')); plus.classList.toggle('on', has()); plus.setAttribute('aria-label', has() ? `Take ${s.trackName} out of ${p.name}` : `Add ${s.trackName} to ${p.name}`); };
+    plus.onclick = () => { has() ? removeFromPlaylist(p, s) : addToPlaylist(p, [s]); show(); };
+    show(); wrap.classList.add('adding'); wrap.append(plus);
+  }
   return wrap;
 }
 // Full-screen dialogs sit above everything, so the window buttons move into whichever one is on top: the last opened
