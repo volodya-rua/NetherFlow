@@ -8543,6 +8543,7 @@ function setVolume(v, mute = muted, fromPhone = false) {
   levelAnalyser();
   if (sysLink && !fromPhone && !muted) setPhoneVolume(Math.min(1, volume));
   if (boostLevel !== (boosted ? volume : 1)) applyBoost(boosted ? volume : 1);
+  if (boosted && volume > 2 && !store.get('netherflow.loudsaid')) { store.set('netherflow.loudsaid', '1'); toast('Past 200%: very loud. Go easy on your ears and your speakers, and keep it lower on headphones.', 7000); } // (once: the booster goes to 300%)
   toolNodes?.lowvol.set(tools.lowvol); // (Loudness at low volume follows it)
   // (not the slider being dragged: setting its value under the pointer stops it following the drag)
   for (const r of document.querySelectorAll('.vol')) { if (+r.value !== volAt(volume)) r.value = volAt(volume); r.style.setProperty('--p', volAt(volume) * 50 + '%'); r.setAttribute('aria-valuetext', volPct()); }
@@ -8565,7 +8566,7 @@ $('volBtn').onclick = () => {
   r.setAttribute('aria-label', 'Volume (over 100%: boost)');
   r.oninput = () => { setVolume(volOf(+r.value), false); pctEl.textContent = volPct(); };
   row.append(ico('speaker'), r, pctEl);
-  showMenu($('volBtn'), [row, el('div', 'mi-note lbl', sysLink ? 'Up to 100% this is your phone\'s volume; past it, the booster makes it louder still.' : 'Past 100% the booster makes it louder still.'),
+  showMenu($('volBtn'), [row, el('div', 'mi-note lbl', (sysLink ? 'Up to 100% this is your phone\'s volume; past it, the booster makes it louder still.' : 'Past 100% the booster makes it louder still.') + ' Go easy on your ears and your speakers.'),
     mi(muted ? 'speaker' : 'mute', muted ? 'Unmute' : 'Mute', () => { hideMenu(); setVolume(volume, !muted); })]);
   $('songMenu').dataset.for = 'vol';
   setVolume(volume); // paints the new slider

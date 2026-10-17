@@ -52,10 +52,10 @@ need a powerful graphics card anyway), about 18 MB smaller, and it updates to Li
   your own order, and Add songs from the playlist itself
 - **Songs start sooner,** and the artist's own upload is preferred
 - **Rap lyrics in sync:** word-by-word timing that's out of line with the song is lined up again
-- **A volume booster up to 300%** with no clipping, the bass and treble as they were, and **360 sound** that keeps the bass
+- **A volume booster up to 300%** that stays loud without clipping, and **360 sound** that keeps the bass
 - **Play on** (pick the speakers or headphones), **Interface size**, four looks for the **beat on the screen edges**, and
   **Esc twice** for the home screen
-- **No more freezes** picking Redline: the 3D race runs on its own
+- **No freeze when picking Redline:** the 3D race runs on its own
 
 1.5.0 brought NetherFlow's own player, FlowStream, the sound tools, Radio, Shuffle, gapless albums, Android Auto and a
 much smaller app: see the [changelog](CHANGELOG.md#150-netherflows-own-player-and-a-much-smaller-app).

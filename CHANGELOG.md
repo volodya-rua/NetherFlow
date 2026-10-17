@@ -2,7 +2,7 @@
 
 What changed in each NetherFlow release. The builds are on the [releases page](https://github.com/volodya-rua/NetherFlow/releases).
 
-## 1.5.1: Better search, playlists you can arrange, and a booster that never clips
+## 1.5.1: Better search, playlists you can arrange, and a booster up to 300%
 
 - **Search** works like the big music apps: All, Songs, Artists and Albums at the top, the top result beside the first
   four songs, and artists and albums in rows. The page is there in under a second, and an artist's full list fills in
@@ -15,13 +15,14 @@ What changed in each NetherFlow release. The builds are on the [releases page](h
 - **Covers** in long lists load faster, and one that won't load is tried another way
 - **Lyrics in sync on rap songs:** word-by-word timing that's out of line with the song is lined up again, and words with
   no timing follow the song's own pace
-- **A volume booster up to 300%,** through a new limiter: loud, with no clipping, and the bass and treble as they were
+- **A volume booster up to 300%,** through a new limiter, so it stays loud without clipping, the bass and treble as they
+  were (and a note to go easy on your ears)
 - **360 sound** keeps the bass as it is and no longer muddies the low-mids
 - **Play on** (computers): pick the speakers or headphones it plays on
 - **Interface size** (Settings): everything larger or smaller, 80–150% on computers and 100–150% on phones
 - **Beat on the screen edges:** four looks (Wave, Bars, Neon, Glow) and four sizes
 - **Esc twice** (computers) goes to the home screen, as Back does on a phone
-- **No more freezes** picking Redline: the 3D race runs on its own, and Extreme lyrics turn on without a pause
+- **No freeze when picking Redline:** the 3D race runs on its own, and Extreme lyrics turn on without a pause
 - No glow follows the cursor any more; Settings › Update always shows the version; lyrics not timed to the song are an
   even column to read; on phones the Cover view keeps the next line clear of the timeline
 
