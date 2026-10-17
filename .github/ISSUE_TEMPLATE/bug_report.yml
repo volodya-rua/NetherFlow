@@ -1,0 +1,42 @@
+name: Bug report
+description: Something in NetherFlow doesn't work as it should
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for reporting this. Please check that you're on the latest release first. Security problems go privately, as described in SECURITY.md.
+  - type: input
+    id: version
+    attributes:
+      label: NetherFlow version
+      description: In Settings, under Update
+      placeholder: "1.4.3"
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options: [Windows, Windows Lite, Linux (.deb), Linux (AppImage), Android, Android TV or Google TV, Android Auto]
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what happened, and what you expected instead
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open …
+        2. Tap …
+        3. See …
+  - type: textarea
+    id: more
+    attributes:
+      label: Screenshots or anything else
+      description: Screenshots, a screen recording, or the song it happened with

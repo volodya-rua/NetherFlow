@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security problem
+    url: https://github.com/volodya-rua/NetherFlow/security/advisories/new
+    about: Privately, never in a public issue
+  - name: Website
+    url: https://volodya-rua.github.io/NetherFlow/
+    about: Downloads, screenshots and the full privacy policy

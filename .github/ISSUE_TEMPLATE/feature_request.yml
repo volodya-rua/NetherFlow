@@ -1,0 +1,21 @@
+name: Feature request
+description: An idea for a feature, theme, background or lyric look
+labels: [enhancement]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: The idea
+      description: What you'd like NetherFlow to do or look like
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why it would help
+      description: The situation where you'd use it
+  - type: textarea
+    id: more
+    attributes:
+      label: Sketches or examples
+      description: A screenshot, a sketch, or another app that does something similar
