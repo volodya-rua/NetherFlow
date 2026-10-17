@@ -5530,6 +5530,23 @@ function storyLyricsBlock(info, i, top) {
   return c;
 }
 
+// A picture (a canvas, or an ImageBitmap) as a file — encoded in a worker where it can be: on a phone, canvas.toBlob held
+// the page still for a second (a story, measured); there it's a tenth of that, and the page goes on meanwhile.
+let encWorker = null;
+async function canvasBlob(c, type = 'image/jpeg', quality) {
+  if (typeof OffscreenCanvas === 'function') try {
+    encWorker ||= new Worker(URL.createObjectURL(new Blob([`onmessage = async ({ data: { id, b, type, quality } }) => {
+      try { const o = new OffscreenCanvas(b.width, b.height); o.getContext('2d').drawImage(b, 0, 0); b.close(); postMessage({ id, blob: await o.convertToBlob({ type, quality }) }); }
+      catch (e) { postMessage({ id, error: String(e) }); } };`], { type: 'text/javascript' })));
+    const b = c instanceof ImageBitmap ? c : await createImageBitmap(c), id = Math.random();
+    return await new Promise((ok, no) => {
+      const on = e => { if (e.data.id !== id) return; encWorker.removeEventListener('message', on); e.data.blob ? ok(e.data.blob) : no(new Error(e.data.error)); };
+      encWorker.addEventListener('message', on); encWorker.postMessage({ id, b, type, quality }, [b]);
+    });
+  } catch {}
+  if (c instanceof ImageBitmap) { const k = document.createElement('canvas'); k.width = c.width; k.height = c.height; k.getContext('2d').drawImage(c, 0, 0); c = k; } // (no worker: the page's own way)
+  return new Promise(r => c.toBlob(r, type, quality));
+}
 // The picture first (quick); the video with the song after it, in the background, while the picture shows.
 async function makeStory(t) {
   story?.stop?.();
@@ -5542,7 +5559,7 @@ async function makeStory(t) {
   c.width = 1080; c.height = 1920;
   g.drawImage(base.c, 0, 0);
   if (info.at >= 0) g.drawImage(storyLyricsBlock(info, info.at, base.y), 0, base.y);
-  job.img = await new Promise(r => c.toBlob(r, 'image/jpeg', .93));
+  job.img = await canvasBlob(c, 'image/jpeg', .93);
   if (!job.img) return toast('Couldn\'t make the story');
   const name = ('NetherFlow - ' + t.trackName + ' story').replace(/[\\/:*?"<>|]+/g, '');
   job.imgName = name + '.jpg';
@@ -5668,7 +5685,7 @@ $('storyImgBtn').onclick = () => story?.img && shareStory(story.img, story.imgNa
 $('storyShare').onclick = () => story?.video && shareStory(story.video, story.videoName);
 $('storyCopy').onclick = async () => {
   try { // (the clipboard takes PNG)
-    const png = await new Promise(async r => { const i = await createImageBitmap(story.img), c = document.createElement('canvas'); c.width = i.width; c.height = i.height; c.getContext('2d').drawImage(i, 0, 0); c.toBlob(r, 'image/png'); });
+    const png = await canvasBlob(await createImageBitmap(story.img), 'image/png'); // (one that fails: said so — it waited for ever)
     await navigator.clipboard.write([new ClipboardItem({ 'image/png': png })]); toast('Copied: paste it anywhere');
   }
   catch { toast('Couldn\'t copy it'); }
@@ -6029,7 +6046,7 @@ async function statsCard(S) {
   });
   g.font = `600 30px 'Martian Mono', monospace`; g.fillText('TOP ARTISTS', 84, 1530);
   S.artists.slice(0, 3).forEach(([n], i) => { g.font = `400 64px ${poster}`; g.fillText(cutText(g, `${i + 1}. ${n}`, 900), 84, 1610 + i * 84); });
-  c.toBlob(blob => blob && shareStory(blob, `netherflow-stats-${statsPeriod}.png`), 'image/png');
+  canvasBlob(c, 'image/png').then(blob => blob && shareStory(blob, `netherflow-stats-${statsPeriod}.png`));
 }
 const cutText = (g, s, w) => { if (g.measureText(s).width <= w) return s; while (s.length > 1 && g.measureText(s + '…').width > w) s = s.slice(0, -1); return s + '…'; };
 // ---------- import a playlist (Library › Import playlist, or its link pasted in the search) ----------
@@ -6315,7 +6332,7 @@ $('qrSave').onclick = () => { // a card to post or send: the name, the code, how
   g.drawImage(code, x0, y0);
   g.font = `500 28px 'Martian Mono', monospace`; g.globalAlpha = .7; g.textAlign = 'center';
   g.fillText('SCAN IT WITH YOUR PHONE CAMERA', W / 2, 1250); g.globalAlpha = 1;
-  c.toBlob(blob => blob && shareStory(blob, `netherflow-playlist.png`), 'image/png');
+  canvasBlob(c, 'image/png').then(blob => blob && shareStory(blob, `netherflow-playlist.png`));
 };
 // ---------- Listen together: up to 10 people hearing the same song at the same moment, each on their own device ----------
 // One starts a session and shares its code; the others join with it. Each plays the song themselves (from YouTube, as
