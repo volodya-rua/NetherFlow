@@ -2727,15 +2727,36 @@ const soundLag = () => ctx ? (ctx.baseLatency || 0) + (ctx.outputLatency || 0) :
 
 // Android: the song notification and lock-screen player (PlaybackService), kept in step with the player.
 let notifyTimer;
+// a saved song's cover is a blob: here, which the notification can't load — and offline its online address can't be
+// reached either. So its picture is read once from the saved file into a data: URL (kept by song), and handed to the
+// notification as the bytes themselves (PlaybackService decodes a data: URL). Online, a streamed song's own http cover
+// is sent as before.
+const coverData = new Map(); // trackId → data: URL of its saved cover
+async function coverDataFor(t) {
+  const id = t.trackId;
+  if (coverData.has(id)) return coverData.get(id);
+  const blob = (await idb.get(id).catch(() => null))?.cover;
+  const url = blob ? await new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.onerror = () => r(''); fr.readAsDataURL(blob); }) : '';
+  if (coverData.size > 50) coverData.delete(coverData.keys().next().value);
+  coverData.set(id, url);
+  return url;
+}
 function notifyNative() {
   if (!native || !current || !P.loaded) return;
   clearTimeout(notifyTimer);
-  notifyTimer = setTimeout(() => Capacitor.Plugins.Playback.update({
-    title: $('title').textContent, artist: $('artist').textContent, album: current.collectionName || '',
-    art: curArt.startsWith('blob:') ? artUrl(current, 600) : curArt, // the notification loads it natively: no blob: links
-    duration: Math.round(P.dur * 1000), position: Math.round(P.t * 1000), playing: !P.paused, hasNext: hasNext(),
-    lyric: lockLyrics && synced && lines[activeIdx]?.text?.trim() || '',
-  }), 150);
+  const t = current;
+  notifyTimer = setTimeout(async () => {
+    // the notification loads it natively, so never a blob: link — a saved song's own picture as bytes (works offline),
+    // else its http address (a streamed song's cover, or the online fallback)
+    const art = saved.has(t.trackId) ? (await coverDataFor(t)) || artUrl(t, 600) : curArt.startsWith('blob:') ? artUrl(t, 600) : curArt;
+    if (t !== current) return; // (the song changed while its cover was read)
+    Capacitor.Plugins.Playback.update({
+      title: $('title').textContent, artist: $('artist').textContent, album: current.collectionName || '',
+      art,
+      duration: Math.round(P.dur * 1000), position: Math.round(P.t * 1000), playing: !P.paused, hasNext: hasNext(),
+      lyric: lockLyrics && synced && lines[activeIdx]?.text?.trim() || '',
+    });
+  }, 150);
 }
 // Android Auto (and a car's own media screen, the phone's assistant): the library as the car shows it — liked songs,
 // recently played and the playlists, 500 songs of each at most, each [id, title, artist] — sent to the app when it

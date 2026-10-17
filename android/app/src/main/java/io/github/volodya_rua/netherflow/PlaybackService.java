@@ -230,7 +230,12 @@ public class PlaybackService extends MediaBrowserServiceCompat {
     private void loadArt(String url) {
         new Thread(() -> {
             Bitmap bmp = null;
-            try (InputStream in = new URL(url).openStream()) { bmp = BitmapFactory.decodeStream(in); } catch (Exception ignored) {}
+            try {
+                if (url.startsWith("data:")) { // (a saved song's own cover, sent as bytes: works with no network)
+                    byte[] bytes = android.util.Base64.decode(url.substring(url.indexOf(',') + 1), android.util.Base64.DEFAULT);
+                    bmp = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
+                } else try (InputStream in = new URL(url).openStream()) { bmp = BitmapFactory.decodeStream(in); }
+            } catch (Exception ignored) {}
             Bitmap loaded = bmp;
             Bitmap little = loaded == null ? null : Bitmap.createScaledBitmap(loaded, 200, 200 * loaded.getHeight() / Math.max(1, loaded.getWidth()), true);
             main.post(() -> { if (url.equals(artUrl)) { art = loaded; small = little; publish(); } });

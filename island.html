@@ -24,9 +24,9 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 .isl.instant { transition: none; }
 /* away (NetherFlow in front, or nothing playing): faded and shrunk; coming back, it springs in */
 body.away .isl { opacity: 0; scale: .8; pointer-events: none; }
-/* the glow (an option): soft, in the mood's colour, swelling with the bass — within 30 px of the island (the window's
-   shape leaves 40: nothing of it is ever cut off) */
-.glow .isl { box-shadow: 0 0 calc(10px + var(--kick) * 16px) calc(var(--kick) * 2px) color-mix(in srgb, var(--a) calc(28% + var(--kick) * 47%), transparent), 0 4px 12px rgba(0,0,0,.45); }
+/* the glow (an option): soft, in the mood's colour, swelling with the bass — kept within ~16 px of the island, inside
+   the clickable region's 18 px pad, so it's never cut off and never widens where clicks are caught */
+.glow .isl { box-shadow: 0 0 calc(7px + var(--kick) * 9px) 0 color-mix(in srgb, var(--a) calc(28% + var(--kick) * 47%), transparent), 0 4px 12px rgba(0,0,0,.45); }
 /* ---- compact ---- */
 .pill { position: absolute; inset: 0; display: flex; align-items: center; gap: 10px; padding: 0 15px 0 8px; transition: opacity .2s, filter .25s; }
 .open .pill { opacity: 0; filter: blur(6px); pointer-events: none; }
@@ -120,7 +120,9 @@ const set = (k, v, fn) => { if (was[k] !== v) { was[k] = v; fn(v); } }; // (only
 // grows into it), shrunk once the island has. Compact: as wide as the song needs (150–340 px).
 const OPEN_W = 380, OPEN_H = 212, TOP = 8;
 let compactW = 180, shapeW = 0, shapeH = 0, shrinkTimer = 0;
-const pad = () => document.body.classList.contains('glow') ? 40 : 18;
+// the clickable region round the island (clicks outside it go through to what's under it). The glow is a soft shadow
+// that stays within this, so the glow never widens the clickable region — with glow on, a wide halo used to eat clicks.
+const pad = () => 18;
 function sendShape(w, h) { window.islandApp?.shape({ x: Math.round((innerWidth - w) / 2 - pad()), y: 0, width: Math.round(w + pad() * 2), height: Math.round(TOP + h + pad()) }); }
 function resize() {
   const w = isOpen ? OPEN_W : compactW, h = isOpen ? OPEN_H : 36;
