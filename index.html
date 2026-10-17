@@ -3503,23 +3503,35 @@ const MATCH_CACHE = '';
 const matchKey = (artist, title, dur) => { const t = words(clean(title)).join(' '), who = firstArtist(artist); return t && who && dur ? t + '|' + who + '|' + Math.round(dur) : ''; };
 const matchable = k => /^[a-z0-9]+( [a-z0-9]+)*\|[a-z0-9]+( [a-z0-9]+)*\|\d{1,4}$/.test(k);
 const cacheBad = new Set(); // keys whose shared id didn't fit this session: searched instead, not asked of the cache again
-async function matchGet(key) {
-  if (!MATCH_CACHE || !navigator.onLine || !matchable(key) || cacheBad.has(key)) return [];
-  try { const r = await fetch(MATCH_CACHE + '?k=' + encodeURIComponent(key), { signal: AbortSignal.timeout(4000) }); const j = await r.json();
-    return Array.isArray(j.ids) ? j.ids.filter(id => /^[\w-]{11}$/.test(id)).slice(0, 3) : []; } catch { return []; }
+const matchMemo = new Map(); // key → { at, p } : one lookup shared between a song's video and lyrics (2 min)
+function matchGet(key) {
+  const empty = { ids: [], lyr: '' };
+  if (!MATCH_CACHE || !navigator.onLine || !matchable(key) || cacheBad.has(key)) return Promise.resolve(empty);
+  const had = matchMemo.get(key); if (had && Date.now() - had.at < 120000) return had.p;
+  const p = (async () => {
+    try { const r = await fetch(MATCH_CACHE + '?k=' + encodeURIComponent(key), { signal: AbortSignal.timeout(4000) }); const j = await r.json();
+      return { ids: Array.isArray(j.ids) ? j.ids.filter(id => /^[\w-]{11}$/.test(id)).slice(0, 3) : [], lyr: /^lrclib:\d{1,12}$/.test(j.lyr || '') ? j.lyr : '' };
+    } catch { return empty; }
+  })();
+  matchMemo.set(key, { at: Date.now(), p }); if (matchMemo.size > 300) matchMemo.delete(matchMemo.keys().next().value);
+  return p;
 }
-function matchPut(key, id) {
-  if (!MATCH_CACHE || !navigator.onLine || !matchable(key) || !/^[\w-]{11}$/.test(id)) return;
-  fetch(MATCH_CACHE, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ k: key, id }) }).catch(() => {});
+// contribute the video id and/or the LRCLIB lyrics pointer for a song
+function matchPut(key, { id, lyr } = {}) {
+  if (!MATCH_CACHE || !navigator.onLine || !matchable(key)) return;
+  const body = { k: key };
+  if (/^[\w-]{11}$/.test(id || '')) body.id = id;
+  if (/^lrclib:\d{1,12}$/.test(lyr || '')) body.lyr = lyr;
+  if (body.id || body.lyr) { matchMemo.delete(key); fetch(MATCH_CACHE, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).catch(() => {}); }
 }
 // a song's uploads: the shared cache first (no search — its length is checked when it plays), else YouTube's search, and
 // a length-matched find shared back for the next person
 async function resolveVids(t, dur) {
   const key = matchKey(t.artistName, t.trackName, dur);
-  const ids = await matchGet(key);
+  const { ids } = await matchGet(key);
   if (ids.length) return ids.map(id => ({ id, dur, cache: true, key })); // (trusted enough to try; proven by its length at play)
   const vids = await findVideos(t.artistName, t.trackName, dur, t.collectionName || '', songLang(t));
-  if (vids.length && dur && vids[0].dur && Math.abs(vids[0].dur - dur) <= 8) matchPut(key, vids[0].id); // (share only a find that fits the length)
+  if (vids.length && dur && vids[0].dur && Math.abs(vids[0].dur - dur) <= 8) matchPut(key, { id: vids[0].id }); // (share only a find that fits the length)
   return vids;
 }
 function videosFor(t) {
@@ -3873,7 +3885,15 @@ function lyricsAlts(t) {
   return [...out].slice(0, 6);
 }
 // the open lyrics database, by the song's name (EndVerse: { raw, dur, src, exact, instrumental?, kind })
-function fetchLyricsNow(artist, title, dur = 0, alts = []) { return pageVerse.byName(artist, title, dur, alts); } // (a declaration: memo above takes it before this line)
+async function fetchLyricsNow(artist, title, dur = 0, alts = []) { // (used by the memo above)
+  const key = matchKey(artist, title, dur);
+  if (key) { const { lyr } = await matchGet(key); // (a pointer others matched: fetch that LRCLIB entry straight, no name search)
+    if (/^lrclib:\d{1,12}$/.test(lyr)) { const byId = await pageVerse.byId(+lyr.slice(7)).catch(() => null);
+      if (byId?.raw && (!dur || !byId.dur || Math.abs(byId.dur - dur) <= 8)) return byId; } } // (verified by length; otherwise fall through to the name search)
+  const res = await pageVerse.byName(artist, title, dur, alts);
+  if (key && res?.id && res.raw && res.kind !== 'lyrics offline') matchPut(key, { lyr: 'lrclib:' + res.id }); // (share the LRCLIB pointer for the next person)
+  return res;
+}
 
 function message(big, small) {
   lines = []; synced = false;

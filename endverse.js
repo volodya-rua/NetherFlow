@@ -8,8 +8,9 @@
 //   get(url, headers) → Promise<string>  ·  post(url, body, headers) → Promise<string>
 //
 //   const ev = EndVerse.create({ get, post })
-//   await ev.byName(artist, title, dur, alts)   { raw (LRC or plain), dur, src, exact, instrumental?, kind }
-//   await ev.words(artist, title, dur)          { yrc (word-timed), dur, src } or { lrc, dur, src } or {}
+//   await ev.byName(artist, title, dur, alts)   { raw (LRC or plain), dur, src, exact, instrumental?, kind, id (LRCLIB) }
+//   await ev.byId(lrclibId)                     the lyrics of one LRCLIB entry: { raw, dur, src, kind, id } or {}
+//   await ev.words(artist, title, dur)          { yrc (word-timed), dur, src } or { lrc, dur, src } or {}  (AMLL first, then NetEase, Kugou)
 //   await ev.forVideo(id)                       { lines: [{ t, end, text }], source } or { plain, source } or {}
 (function (out) {
   'use strict';
@@ -96,13 +97,13 @@
           const hs = ((await api('search', { q })) || []).filter(fits).sort((a, b) => Math.abs(a.duration - dur) - Math.abs(b.duration - dur)); // (closest length first)
           if ((hit = hs.find(h => h.syncedLyrics || h.instrumental) || hs.find(h => h.plainLyrics) || null)) break search;
         }
-        if (hit?.instrumental) return { raw: '', dur: hit.duration || 0, src: hit.artistName + ' — ' + hit.trackName, exact, instrumental: true, kind: 'instrumental' };
+        if (hit?.instrumental) return { raw: '', dur: hit.duration || 0, src: hit.artistName + ' — ' + hit.trackName, exact, instrumental: true, kind: 'instrumental', id: hit.id || 0 };
         return { raw: hit?.syncedLyrics || hit?.plainLyrics || '', dur: hit?.duration || 0, src: hit ? hit.artistName + ' — ' + hit.trackName : '', exact,
-                 kind: hit ? (hit.syncedLyrics ? 'synced lyrics' : 'plain lyrics') : 'no lyrics found' };
-      } catch { return { raw: '', dur: 0, kind: 'lyrics offline' }; }
+                 kind: hit ? (hit.syncedLyrics ? 'synced lyrics' : 'plain lyrics') : 'no lyrics found', id: hit?.id || 0 };
+      } catch { return { raw: '', dur: 0, kind: 'lyrics offline', id: 0 }; }
     }
 
-    // Word-by-word timing from two public lyric services ("yrc", and "krc" turned into it). Each must be the same artist at
+    // Word-by-word timing: the open AMLL TTML DB first (keyed by the NetEase id), then two public lyric services ("yrc", and "krc" turned into it). Each must be the same artist at
     // the same length (±3 s), so the timing matches the recording being played; both are asked, the one closest in length
     // wins. Neither with word timing: line-timed lyrics if one has them ({ lrc }), for songs the database doesn't have.
     // (both asked at once, 6 s each at most; once one has answered word-timed at the song's very length, the other gets
@@ -119,11 +120,22 @@
         });
       });
       const fit = (a, b) => Math.abs(a.dur - dur) - Math.abs(b.dur - dur);
-      return found.filter(x => x.yrc).sort(fit)[0] || found.filter(x => x.lrc).sort(fit)[0] || {};
+      const yrc = found.filter(x => x.yrc).sort(fit);
+      return yrc.find(x => x.amll) || yrc[0] || found.filter(x => x.lrc).sort(fit)[0] || {}; // (AMLL preferred — open and hand-made)
     }
 
     // The lyrics a music video's page lists: the lyrics tab's id from the video's "next" page, then the lyrics, asked as the
     // music app that's given their timing. Who provides them (the page shows it): source. Not found: {}.
+    // Lyrics straight from an LRCLIB entry by its id — the shared match cache points here (LRCLIB is open/CC0). The
+    // caller checks the entry fits the song (name/length) before trusting it. {} if there's nothing or the id's bad.
+    byId(id) { return /^\d+$/.test(String(id)) ? this.remember('i' + id, () => this.byIdNow(id)) : Promise.resolve({}); }
+    async byIdNow(id) {
+      let j; try { j = JSON.parse(await this.get('https://lrclib.net/api/get/' + id)); } catch { return {}; }
+      if (!j || typeof j.id !== 'number') return {};
+      if (j.instrumental) return { raw: '', dur: j.duration || 0, src: j.artistName + ' — ' + j.trackName, exact: true, instrumental: true, kind: 'instrumental', id: j.id };
+      return { raw: j.syncedLyrics || j.plainLyrics || '', dur: j.duration || 0, src: j.artistName + ' — ' + j.trackName, exact: true,
+               kind: j.syncedLyrics ? 'synced lyrics' : j.plainLyrics ? 'plain lyrics' : 'no lyrics found', id: j.id };
+    }
     forVideo(id) { return this.remember('v' + id, () => this.forVideoNow(id)); }
     async forVideoNow(id) {
       if (!/^[\w-]{11}$/.test(String(id))) throw new TypeError('EndVerse: not a video id: ' + id);
@@ -166,6 +178,8 @@
       (x.ar || []).some(a => a.name?.length > 1 && (who.includes(a.name.toLowerCase()) || a.name.toLowerCase().includes(who))) &&
       sameSong(x.name, title) && (!dur || Math.abs(x.dt / 1000 - dur) < 3));
     if (!hit) return null;
+    const amll = await amllYrc(get, hit.id).catch(() => ''); // (prefer the open, hand-made AMLL word timing when it has this song)
+    if (amll) return { yrc: amll, dur: hit.dt / 1000, src: (hit.ar || []).map(a => a.name).join(', ') + ' — ' + hit.name + ' (AMLL)', amll: true };
     const l = await json(`https://music.163.com/api/song/lyric/v1?id=${hit.id}&lv=0&yv=0`);
     const src = (hit.ar || []).map(a => a.name).join(', ') + ' — ' + hit.name + ' (NetEase)'; // (what it matched)
     if (l.yrc?.lyric) return { yrc: l.yrc.lyric, dur: hit.dt / 1000, src };
@@ -205,7 +219,42 @@
     }).filter(Boolean).join('\n');
   }
 
+  // ---- AMLL TTML DB: open (CC0), hand-made word-by-word lyrics, keyed by platform id ----
+  // one TTML entry → "yrc" word timing (the same shape NetEase gives). Each sung word is a <span begin end>; background
+  // vocals (ttm:role="x-bg", a span of word spans) and translations (x-translation, no timing) are left out. A per-device
+  // fetch for the song being played — never mirrored or hosted, no id kept in the shared cache (Legal: can't prove an entry CC0).
+  const ttmlTime = t => { let n = 0; for (const x of String(t).trim().split(':')) n = n * 60 + parseFloat(x || 0); return Math.round(n * 1000); };
+  const unent = x => x.replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(+d)).replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCodePoint(parseInt(h, 16)))
+    .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, '&');
+  function ttmlToYrc(ttml) {
+    if (!/<tt[\s>]/.test(ttml || '')) return ''; // (a 404 page, not a TTML)
+    const out = [];
+    for (const p of ttml.matchAll(/<p\b([^>]*)>([\s\S]*?)<\/p>/g)) {
+      const ls = ttmlTime((/\bbegin="([^"]+)"/.exec(p[1]) || [])[1]), le = ttmlTime((/\bend="([^"]+)"/.exec(p[1]) || [])[1]);
+      if (!(le > ls)) continue;
+      const body = p[2].replace(/<span\b[^>]*ttm:role="x-bg"[^>]*>(?:<span\b[^>]*>[^<]*<\/span>|[^<])*<\/span>/g, ''); // (drop background vocals, a nested span of spans)
+      const words = [];
+      for (const sp of body.matchAll(/<span\b([^>]*)>([\s\S]*?)<\/span>/g)) {
+        if (/ttm:role=/.test(sp[1])) continue; // (translation etc. — not a sung word)
+        const b = /\bbegin="([^"]+)"/.exec(sp[1]), e = /\bend="([^"]+)"/.exec(sp[1]);
+        if (!b || !e) continue;
+        const text = unent(sp[2].replace(/<[^>]+>/g, '')); if (!text) continue;
+        const ws = ttmlTime(b[1]), we = ttmlTime(e[1]);
+        words.push(`(${ws},${Math.max(0, we - ws)},0)${text}`);
+      }
+      if (words.length) out.push(`[${ls},${le - ls}]` + words.join(''));
+    }
+    return out.join('\n');
+  }
+  async function amllYrc(get, ncmId) {
+    if (!/^\d+$/.test(String(ncmId))) return '';
+    try { const t = await get('https://raw.githubusercontent.com/amll-dev/amll-ttml-db/refs/heads/main/ncm-lyrics/' + ncmId + '.ttml', { 'User-Agent': UA });
+      return t && t.length <= 1e6 ? ttmlToYrc(t) : ''; } // (untrusted external file: cap the size, fail closed; a miss falls through to the next source)
+    catch { return ''; }
+  }
+
   out.create = opts => new Engine(opts);
   out.krcToYrc = krcToYrc;
-  out.version = '0.2.0';
+  out.ttmlToYrc = ttmlToYrc;
+  out.version = '0.4.0';
 })(typeof module === 'object' && module.exports ? module.exports : (globalThis.EndVerse = {}));
