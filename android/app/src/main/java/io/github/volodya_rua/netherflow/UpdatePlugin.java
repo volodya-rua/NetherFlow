@@ -77,6 +77,18 @@ public class UpdatePlugin extends Plugin {
         String mine = c.getSharedPreferences("nfUpdate", Context.MODE_PRIVATE).getString("dir", "");
         return !path.isEmpty() && path.equals(mine) && new File(path).isDirectory() ? new File(path) : null;
     }
+    // An APK installed since the page in use was put in place by web(): its own page from now on. Capacitor goes back to an
+    // APK's own page only when the APK's version differs; one with the same version (a test build, a reinstall) kept the
+    // page downloaded for the one before it. A page put in place by an older NetherFlow, which didn't note which install it
+    // came with: an APK installed since, too (it's this one running). Called before the page loads (MainActivity).
+    static void forgetOld(Context c) {
+        try {
+            SharedPreferences p = c.getSharedPreferences("nfUpdate", Context.MODE_PRIVATE);
+            if (p.getString("dir", "").isEmpty() || p.getLong("apk", -1) == pkg(c).lastUpdateTime) return;
+            p.edit().remove("dir").remove("web").remove("apk").apply();
+            c.getSharedPreferences(CAP_PREFS, Context.MODE_PRIVATE).edit().remove(CAP_PATH).apply();
+        } catch (Exception ignored) {}
+    }
     // the page's version in use (a newer page put in place by web(), or this APK's own)
     static String webVersion(Context c) {
         try { PackageInfo p = pkg(c); return current(c) != null ? c.getSharedPreferences("nfUpdate", Context.MODE_PRIVATE).getString("web", p.versionName) : p.versionName; }
@@ -157,7 +169,7 @@ public class UpdatePlugin extends Plugin {
                     JSObject ev = new JSObject(); ev.put("frac", total > 0 ? (double) done / total : 1); notifyListeners("progress", ev);
                 }
                 // in place: the page from this folder from now on (the next start, and right now)
-                prefs().edit().putString("web", version).putString("dir", dir.getAbsolutePath()).apply();
+                prefs().edit().putString("web", version).putString("dir", dir.getAbsolutePath()).putLong("apk", p.lastUpdateTime).apply(); // (and with which install of the APK: see forgetOld)
                 getContext().getSharedPreferences(CAP_PREFS, Context.MODE_PRIVATE).edit().putString(CAP_PATH, dir.getAbsolutePath()).apply();
                 File[] old = root.listFiles();
                 if (old != null) for (File o : old) if (!o.equals(dir)) deleteAll(o);
