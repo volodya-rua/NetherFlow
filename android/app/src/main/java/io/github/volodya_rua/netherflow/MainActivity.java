@@ -49,6 +49,9 @@ public class MainActivity extends BridgeActivity {
         super.onCreate(savedInstanceState);
 
         WebView web = getBridge().getWebView();
+        // Its page kept as much as the app itself, with the app away too (the music notification keeps the app): not let go
+        // first when Android wants memory back.
+        if (android.os.Build.VERSION.SDK_INT >= 26) web.setRendererPriorityPolicy(WebView.RENDERER_PRIORITY_IMPORTANT, false);
         // The phone's text size, up to 1.3×: larger than that, the page's big type and its player bar run into each other.
         web.getSettings().setTextZoom(Math.min(130, Math.round(getResources().getConfiguration().fontScale * 100)));
         getBridge().setWebViewClient(new BridgeWebViewClient(getBridge()) {
@@ -61,13 +64,30 @@ public class MainActivity extends BridgeActivity {
                 if ("localhost".equals(q.getHost()) && "/_fs/clear".equals(q.getPath())) return forgetKept(q.getQueryParameter("g"));
                 return super.shouldInterceptRequest(view, request);
             }
+            // The page's process gone (Android took its memory back with the app away — Instagram, a game, the camera — or
+            // it crashed): the app built again, its page with it, and the song it was playing carried on from where it
+            // was (nfResume: see UpdatePlugin.launch) — where a web view's page gone otherwise took the whole app down, the
+            // music stopped, and the app opened again with nothing playing.
+            @Override
+            public boolean onRenderProcessGone(WebView view, android.webkit.RenderProcessGoneDetail detail) {
+                runOnUiThread(() -> { getIntent().putExtra("nfResume", true); recreate(); });
+                return true;
+            }
         });
         keptDir = new java.io.File(getCacheDir(), "heads");
     }
 
+    // (a test build only — never NetherFlow's own APKs, which aren't debuggable: `am start … --ez nfTestKill true` kills the
+    // page's process as Android does when it takes the memory back, to test onRenderProcessGone)
+    @Override
+    protected void onNewIntent(android.content.Intent intent) {
+        super.onNewIntent(intent);
+        if ((getApplicationInfo().flags & android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0 && intent.getBooleanExtra("nfTestKill", false)) getBridge().getWebView().loadUrl("chrome://kill");
+    }
+
     @Override
     public void onDestroy() {
-        stopService(new android.content.Intent(this, PlaybackService.class)); // app closed: drop the notification
+        if (!isChangingConfigurations()) stopService(new android.content.Intent(this, PlaybackService.class)); // app closed: drop the notification (not when it's only built again: see onRenderProcessGone)
         super.onDestroy();
     }
 

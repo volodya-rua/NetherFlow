@@ -40,7 +40,8 @@ import org.json.JSONObject;
 //     downloaded (each checked), into a folder of their own; the app then loads its page from there, from now on (till
 //     a newer APK is installed, which brings its own: Capacitor goes back to that by itself). Events "progress" { frac }.
 //   notifications({ on }) — Update notifications (UpdateCheckJob, daily) set or cancelled; launch() → { open: 'update' }
-//     when the app was opened from one (once), and the event "open" { open } when one's tapped while it's running.
+//     when the app was opened from one (once), and the event "open" { open } when one's tapped while it's running;
+//     resume: true when the app was built again because its page was lost (MainActivity.onRenderProcessGone).
 //   apk({ url, sha256 }) — a newer APK (when a release changed the app around the page): downloaded, checked, and handed
 //     to Android's installer (which only takes it if it's signed with the same key as this one).
 @CapacitorPlugin(name = "Updater")
@@ -107,6 +108,7 @@ public class UpdatePlugin extends Plugin {
         Intent i = getActivity().getIntent();
         String open = i != null ? i.getStringExtra("nfOpen") : null;
         if (open != null) { r.put("open", open); i.removeExtra("nfOpen"); } // (once: not again when the page reloads)
+        if (i != null && i.getBooleanExtra("nfResume", false)) { r.put("resume", true); i.removeExtra("nfResume"); } // (the page was lost: see MainActivity)
         call.resolve(r);
     }
 

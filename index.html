@@ -2545,7 +2545,11 @@ let updNotify = store.get('netherflow.updnotify') !== 'Off';
 function setUpdNotify(v) { updNotify = v === 'On'; store.set('netherflow.updnotify', updNotify ? '' : 'Off'); Upd?.notifications({ on: updNotify }).catch(() => {}); renderTextPanel(); }
 Upd?.notifications({ on: updNotify }).catch(() => {}); // (set again each start: a phone restarted drops it)
 function openUpdate() { const p = $('textPanel'); renderTextPanel(); if (!p.matches(':popover-open')) p.showPopover(); p.querySelector('.upd')?.scrollIntoView({ block: 'center' }); }
-Upd?.launch().then(r => { if (r?.open === 'update') openUpdate(); }).catch(() => {});
+Upd?.launch().then(r => {
+  if (r?.open === 'update') openUpdate();
+  // (the app built again because Android took its page away while it played: the song carried on from where it was)
+  if (r?.resume && lastSong && Date.now() - (+store.get('netherflow.playingat') || 0) < 30000) resumeLast();
+}).catch(() => {});
 Upd?.addListener('open', m => { if (m.open === 'update') openUpdate(); });
 window.netherflowApp?.onNotifyClick?.(t => { if (t === 'update') openUpdate(); });
 const updDaily = () => { if (navigator.onLine && !(Upd && updNotify && upd.notes) && Date.now() - (+store.get('netherflow.updchecked') || 0) > 20 * 3600e3) updCheck(true); }; // (once a day at most, quietly; offline: not tried)
@@ -3053,6 +3057,26 @@ async function fsPlay(v, id) {
   P.play();
 }
 const A = () => engine === 'ep' ? epAudio : audio; // (the <audio> playing: songs' or talk's)
+// Playing, but not moving on: its stream stopped coming with nothing said (the network changed, or slept, with the app
+// away; an address ran out), or the sound engine stopped (another app took the sound; Android stops a page's now and
+// then): the song looked to be playing, and nothing was heard. Every 2 s while one plays — the timers run with the app
+// away too — the engine is started again, and a song stuck 8 s is picked up afresh from where it was, as a stream's
+// error is (a fresh address, the same moment). Coming back to the app: looked at at once.
+const stuck = { t: -1, at: 0 };
+function checkPlaying() {
+  const el = A();
+  if (ctx && ctx.state !== 'running' && ctx.state !== 'closed' && !el.paused) ctx.resume().catch(() => {});
+  if (el.paused || !el.getAttribute('src') || el.currentTime < .5 || mix.on || !navigator.onLine) { stuck.t = -1; return; } // (not started yet: loading, not stuck)
+  if (el.currentTime !== stuck.t) { stuck.t = el.currentTime; stuck.at = Date.now(); return; }
+  if (Date.now() - stuck.at < 8000) return;
+  stuck.at = Date.now(); restartStream();
+}
+function restartStream() {
+  const el = A(), at = el.currentTime, id = loadId;
+  if (engine === 'audio' && fsVid && el.src.includes('fs/media')) { const vid = fsVid; flowPage?.forget(vid); return fsPlay({ id: vid }, id).then(() => { if (id === loadId && at > 1) P.seek(at); }).catch(() => {}); }
+  if (/^https?:/.test(el.src)) { const src = el.src; el.src = src; el.addEventListener('loadedmetadata', () => { if (id === loadId) el.currentTime = at; }, { once: true }); el.play().catch(() => {}); }
+}
+setInterval(checkPlaying, 2000);
 const P = {
   get paused() { return A().paused; },
   get t() { return A().currentTime || 0; },
@@ -3092,9 +3116,10 @@ function setPlace(v) {
   if (v > 0 && !looping) { looping = true; requestAnimationFrame(frame); }
 }
 window.netherflowApp?.onShown?.(v => setPlace(+v));
-if (native) Capacitor.Plugins.App.addListener('appStateChange', ({ isActive }) => setPlace(isActive ? 2 : 0));
+if (native) Capacitor.Plugins.App.addListener('appStateChange', ({ isActive }) => { setPlace(isActive ? 2 : 0); if (isActive) setTimeout(checkPlaying, 800); }); // (back: the song looked at at once)
 function setPlaying(on) {
   body.classList.toggle('playing', on);
+  if (!on) store.set('netherflow.playingat', ''); // (stopped: nothing to carry on by itself)
   keepAwake();
   notifyNative(); // Android: the notification also keeps the app (and the song) alive in the background
   updateSkips();
@@ -8702,7 +8727,7 @@ $('play').onclick = toggle;
 const LAST = 'netherflow.last';
 let lastSong = null; // ({ t, at }: shown, not loaded yet)
 function keepLast() { if (current && current.kind !== 'episode' && P.loaded && !lastSong) store.set(LAST, JSON.stringify({ t: slim(current), at: Math.round(P.t) })); }
-setInterval(() => { if (!P.paused) keepLast(); }, 5000);
+setInterval(() => { if (!P.paused) { keepLast(); store.set('netherflow.playingat', String(Date.now())); } }, 5000); // (playing at: see the page lost, below)
 addEventListener('pagehide', keepLast);
 function resumeLast() {
   const { t, at } = lastSong;
