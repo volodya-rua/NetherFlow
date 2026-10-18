@@ -3742,7 +3742,7 @@ async function resolveVids(t, dur) {
 }
 function videosFor(t) {
   const dur = (t.trackTimeMillis || 0) / 1000;
-  if (t.ytId) return Promise.resolve([{ id: t.ytId, dur }]); // (found on YouTube: that very video)
+  if (t.ytId) return Promise.resolve([{ id: t.ytId, dur, video: !!t.ytVideo }]); // (found on YouTube: that very video — a music video's, its lyrics not timed to it)
   const kept = vidKept.get(String(t.trackId));
   if (!vidCache.has(t.trackId)) vidCache.set(t.trackId, kept ? Promise.resolve(kept) : resolveVids(t, dur)
     .then(v => { if (!v.length) vidCache.delete(t.trackId); else if (!v[0].cache) keepVids(t.trackId, v); return v; }, e => { vidCache.delete(t.trackId); throw e; }));
@@ -5210,7 +5210,8 @@ const lrcOf = ls => ls.map(l => `[${pad(Math.floor(l.t / 60))}:${(l.t % 60).toFi
 // Ours the same words: ours stay (often word by word), with theirs as the timing to line ours up to (ref: see alignTo),
 // and as the guide to word timing that had none. Ours only plain, or none, or another song's words: theirs.
 function withYtm(lyr, y, vid, want = '') {
-  const lrc = y.lines?.length ? lrcOf(y.lines) : '', text = lrc || y.plain || '';
+  // (a music video known to be one — a shared link's with no song of it found: their timing is the song's, not its own)
+  const lrc = y.lines?.length && !vid?.video ? lrcOf(y.lines) : '', text = lrc || y.plain || (y.lines || []).map(l => l.text).join('\n');
   if (!text) return lyr;
   const theirs = { raw: text, dur: vid?.dur || 0, src: 'YouTube Music', credit: y.source || '', exact: true, kind: lrc ? 'synced lyrics' : 'plain lyrics' }; // (credit: who provides them, shown with them)
   const ours = lyr.instrumental ? '' : lyr.raw;
@@ -6383,7 +6384,11 @@ async function playLink(id) {
   toast('Opening the song…');
   const v = await api.song(id).catch(() => null);
   if (!v?.id) return toast('Couldn\'t open that song: YouTube didn\'t answer. Try again in a moment.');
-  playTrack(ytmToTrack(v));
+  // A music video, or anyone's upload (most links shared from YouTube are): the song itself instead, its album recording,
+  // as YouTube Music plays it — the lyrics are timed to that, while a video runs to its own cut (an intro, a scene, a
+  // longer ending), and it's the best sound. None found: the upload as it is, without lyric timing that isn't its own.
+  const song = v.type !== 'ATV' && await api.ytm(`${v.artist} ${clean(v.title)}`.trim()).then(l => l.find(x => fitsSong(x, { trackName: v.title, artistName: v.artist })), () => null);
+  playTrack(song ? ytmToTrack(song) : { ...ytmToTrack(v), ytVideo: v.type !== 'ATV' });
 }
 const ytmToTrack = v => ({ kind: 'song', trackId: 'yt:' + v.id, ytId: v.id, ytTitle: v.title, trackName: v.title, artistName: v.artist, collectionName: v.album || 'YouTube Music', artworkUrl100: v.art, trackTimeMillis: v.dur * 1000 });
 // A song imported and not yet matched to its YouTube Music entry (trackId "q:…"): its name, artist, album, length and,
