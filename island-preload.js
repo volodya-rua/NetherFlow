@@ -7,4 +7,5 @@ contextBridge.exposeInMainWorld('islandApp', {
   cmd: (c, v) => ipcRenderer.send('island-cmd', c, v),
   shape: r => ipcRenderer.send('island-shape', r),
   onVisible: cb => ipcRenderer.on('island-visible', (_, on) => cb(!!on)), // (the island there, or away)
+  onMove: cb => ipcRenderer.on('island-move', (_, on) => cb(!!on)), // (being moved: dragged anywhere, till Done)
 });

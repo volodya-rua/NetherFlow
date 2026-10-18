@@ -2611,7 +2611,9 @@ function renderTextPanel() {
     settingRow('Folders on the home screen', ['Off', 'On'], folders ? 'On' : 'Off', setFolders, 'Liked songs, downloads and your playlists, under the buttons at the top of the home screen. Hidden while a song plays.'),
     ...(window.netherflowApp?.presence ? [settingRow('Discord status', ['Off', 'On'], discordOn ? 'On' : 'Off', setDiscord, 'The song you\'re playing on your Discord profile ("Listening to…", with its cover and a link to it), while the Discord app is open. Your friends there see it.')] : []),
     ...(window.netherflowApp?.island ? [settingRow('Island', ['On', 'Off'], islandOn ? 'On' : 'Off', setIsland, 'The song playing, in a small black island at the top middle of the screen, over every other app (hidden while NetherFlow itself is in front). Click it for the cover, the timeline, the volume and the controls.'),
-      settingRow('Island glow', ['On', 'Off'], islandGlow ? 'On' : 'Off', setIslandGlow, 'A soft glow round the island in the mood\'s colour, swelling with the bass.')] : []),
+      settingRow('Island glow', ['On', 'Off'], islandGlow ? 'On' : 'Off', setIslandGlow, 'A soft glow round the island in the mood\'s colour, swelling with the bass.'),
+      settingRow('Island position', [islandMoving ? 'Done' : 'Move it', 'Top middle'], '', v => netherflowApp.islandPlace(v === 'Top middle' ? 'reset' : 'move'),
+        'Drag the island anywhere on your screen, and it stays there. Ctrl+Alt+I moves it from any app; press it again, or Done on the island, when it\'s where you want it.')] : []),
     ...(pcOnly ? [settingRow('Cursor', ['Glow', 'System'], cursorPref(), setCursorPref, 'Glow: a glowing arrow in the mood\'s colours. System: your computer\'s own pointer. (A theme keeps its own.)')] : []),
     settingRow('Drive mode', ['Start'], '', () => { $('textPanel').hidePopover(); openDrive(); }, 'Big, simple controls for the road: play, pause, next and previous, and the song\'s name in large type. Swipe left or right to change songs.'));
 }
@@ -3073,7 +3075,7 @@ const P = {
 let place = 2;
 // the island (desktop, Settings › Island): the song playing, over every other app — its beat from this page's analyser
 // while this window's not in front
-let islandOn = store.get('netherflow.island') !== 'Off', islandGlow = store.get('netherflow.islandglow') !== 'Off';
+let islandOn = store.get('netherflow.island') !== 'Off', islandGlow = store.get('netherflow.islandglow') !== 'Off', islandMoving = false; // (moving: being dragged, see main.js)
 let discordOn = store.get('netherflow.discord') === 'On'; // (Discord status: see setDiscord)
 let lockLyrics = store.get('netherflow.locklyrics') === 'On', likedOffline = store.get('netherflow.likedoff') === 'On'; // (Android extras: see setLockLyrics)
 const vizWanted = () => place > 0 || (islandOn && !!window.netherflowApp?.island);
@@ -8620,6 +8622,7 @@ function presence() {
     start, end: start + Math.round(P.dur * 1000), url: vid ? 'https://www.youtube.com/watch?v=' + vid : '' });
 }
 setInterval(presence, 2000);
+window.netherflowApp?.onIslandMoving?.(on => { islandMoving = on; if ($('textPanel').matches(':popover-open')) renderTextPanel(); });
 function setIsland(v) { islandOn = v === 'On'; store.set('netherflow.island', islandOn ? '' : 'Off'); renderTextPanel(); }
 function setIslandGlow(v) { islandGlow = v === 'On'; store.set('netherflow.islandglow', islandGlow ? '' : 'Off'); renderTextPanel(); }
 if (window.netherflowApp?.island) {

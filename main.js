@@ -1,7 +1,7 @@
 // NetherFlow - Copyright (C) 2026 Volodya.rua - GNU GPL v3 only, with additional terms (credit, name and logo): see LICENSE and NOTICE.
 // NetherFlow desktop app: a window around the player page, served by the built-in server
 // (which also hands the page FlowStream's streams, from its own address, so the equalizer and visuals can hear them).
-const { app, BrowserWindow, shell, ipcMain, powerSaveBlocker, screen, powerMonitor, Notification } = require('electron');
+const { app, BrowserWindow, shell, ipcMain, powerSaveBlocker, screen, powerMonitor, Notification, globalShortcut } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { execFileSync } = require('child_process');
@@ -56,8 +56,30 @@ const ISLAND_W = 600, ISLAND_H = 260;
 let islandShape = { x: 170, y: 0, width: 260, height: 84 }; // (the island's shape, as it last sent it; till then the compact pill's)
 const NOWHERE = { x: 0, y: 0, width: 1, height: 1 }; // (away: a single pixel of the window there for the mouse)
 let island = null, islandState = null, islandShown = false, islandPort = 0;
+// Where it is (Settings › Island position, or Ctrl+Alt+I from anywhere): the top middle, or where it was dragged to —
+// kept in island.json in the app's own folder, and put back on the screen it was on, inside it, with room to open out.
+// Moving: the island shown (even over NetherFlow, and with nothing playing) and held by the pointer anywhere on it —
+// the system's own window dragging (island.html) — till Done, or the keys again.
+const ISLAND_FILE = path.join(app.getPath('userData'), 'island.json');
+let islandAt = null, islandMoving = false;
+try { const p = JSON.parse(fs.readFileSync(ISLAND_FILE, 'utf8')); if (Number.isFinite(p?.x) && Number.isFinite(p?.y)) islandAt = p; } catch {}
+const keepIslandAt = () => fs.writeFile(ISLAND_FILE, JSON.stringify(islandAt), () => {});
+function islandMove(on) {
+  if (!island || island.isDestroyed() || islandMoving === !!on) return;
+  islandMoving = !!on;
+  island.setMovable(islandMoving);
+  island.webContents.send('island-move', islandMoving);
+  if (win && !win.isDestroyed()) win.webContents.send('island-moving', islandMoving);
+  syncIsland();
+}
 function placeIsland() {
   if (!island || island.isDestroyed()) return;
+  if (islandAt) { // (the open island, 380 wide in the middle of its window, kept on the screen: the window may hang a little off its sides)
+    const b = screen.getDisplayMatching({ x: islandAt.x, y: islandAt.y, width: ISLAND_W, height: ISLAND_H }).bounds, side = (ISLAND_W - 380) / 2;
+    const x = Math.max(b.x - side, Math.min(b.x + b.width - ISLAND_W + side, islandAt.x)), y = Math.max(b.y, Math.min(b.y + b.height - ISLAND_H, islandAt.y));
+    const now = island.getBounds(); if (now.x !== Math.round(x) || now.y !== Math.round(y) || now.width !== ISLAND_W || now.height !== ISLAND_H) island.setBounds({ x: Math.round(x), y: Math.round(y), width: ISLAND_W, height: ISLAND_H });
+    return;
+  }
   const b = screen.getPrimaryDisplay().bounds;
   island.setBounds({ x: Math.round(b.x + (b.width - ISLAND_W) / 2), y: b.y, width: ISLAND_W, height: ISLAND_H });
 }
@@ -82,13 +104,14 @@ function makeIsland() {
   });
   me.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   me.webContents.on('will-navigate', e => e.preventDefault());
-  me.on('closed', () => { if (island === me) { island = null; islandShown = false; } });
+  me.on('closed', () => { if (island === me) { island = null; islandShown = false; islandMoving = false; } });
+  me.on('moved', () => { if (island !== me || !islandMoving) return; const [x, y] = me.getPosition(); islandAt = { x, y }; placeIsland(); [islandAt.x, islandAt.y] = me.getPosition(); keepIslandAt(); }); // (dragged: inside the screen, and kept)
   me.loadURL(`http://127.0.0.1:${islandPort}/island.html`); // (not the main window's address: its size, Settings › Interface size, is kept by address, and the island keeps its own)
 }
 function syncIsland() {
   if (!island || island.isDestroyed() || island.webContents.isLoading()) return;
   const front = win && !win.isDestroyed() && win.isVisible() && !win.isMinimized() && win.isFocused();
-  const want = !!islandState && !front;
+  const want = islandMoving || (!!islandState && !front);
   // the window: always shown (asked of it, not remembered: something else may have hidden it — Show desktop, say)
   if (!island.isVisible() || island.isMinimized()) { placeIsland(); if (island.isMinimized()) island.restore(); island.showInactive(); island.setAlwaysOnTop(true, 'screen-saver'); }
   // the island in it: there or away (and for the mouse, its shape or nothing)
@@ -108,6 +131,7 @@ ipcMain.on('island-state', (e, st) => {
 ipcMain.on('island-cmd', (e, cmd, v) => {
   if (!island || e.sender !== island.webContents || !win || win.isDestroyed()) return;
   if (cmd === 'open') { if (win.isMinimized()) win.restore(); win.show(); win.focus(); }
+  else if (cmd === 'move-done') islandMove(false);
   else if (['toggle', 'next', 'prev', 'seek', 'vol', 'repeat', 'like'].includes(cmd)) win.webContents.send('island-cmd', cmd, typeof v === 'number' && isFinite(v) ? v : undefined);
 });
 // Discord "Now playing" (Settings: Discord status): the song on your Discord profile while it plays — "Listening to" it,
@@ -167,6 +191,7 @@ ipcMain.on('presence', (e, w) => {
   rpcSend();
 });
 app.on('before-quit', () => { if (rpc.sock) rpc.sock.destroy(); });
+app.on('will-quit', () => globalShortcut.unregisterAll());
 
 // Phone ↔ PC sync (Settings: Sync with phone): while the page asks (5 minutes at most), a small server on the local network
 // that the phone app finds and swaps libraries with. What passes is encrypted by the page with a key made from the code on
@@ -264,6 +289,12 @@ ipcMain.on('notify', (e, n) => {
 });
 ipcMain.on('update-install', e => { if (win && e.sender === win.webContents && getUpdater()) getUpdater().quitAndInstall(true, true); }); // (quietly, then open again)
 
+// Settings › Island position: move it (or done), or back to the top middle
+ipcMain.on('island-place', (e, what) => {
+  if (!win || e.sender !== win.webContents) return;
+  if (what === 'move') islandMove(!islandMoving);
+  else if (what === 'reset') { islandAt = null; keepIslandAt(); placeIsland(); }
+});
 ipcMain.on('island-shape', (e, r) => {
   if (!island || e.sender !== island.webContents || !r || ![r.x, r.y, r.width, r.height].every(Number.isFinite)) return;
   const c = (v, max) => Math.max(0, Math.min(max, Math.round(v)));
@@ -313,7 +344,7 @@ app.whenReady().then(async () => {
 
   // (Windows only. ponytail: Linux would need a compositor for the see-through window, and Wayland ignores always-on-top
   // and placing; try it there on X11 if people ask)
-  islandPort = port; if (process.platform === 'win32') makeIsland();
+  islandPort = port; if (process.platform === 'win32') { makeIsland(); globalShortcut.register('CommandOrControl+Alt+I', () => islandMove(!islandMoving)); } // (moving the island, from any app)
   for (const ev of ['focus', 'blur', 'minimize', 'restore', 'show', 'hide']) win.on(ev, syncIsland);
   win.on('closed', () => { if (island && !island.isDestroyed()) island.destroy(); });
   for (const ev of ['display-metrics-changed', 'display-added', 'display-removed']) screen.on(ev, placeIsland);

@@ -16,6 +16,8 @@ contextBridge.exposeInMainWorld('netherflowApp', {
   ...(process.platform === 'win32' ? {
     island: state => ipcRenderer.send('island-state', state),
     onIsland: cb => ipcRenderer.on('island-cmd', (_, cmd, v) => cb(cmd, v)),
+    islandPlace: what => ipcRenderer.send('island-place', what), // ('move': moving it, or done; 'reset': the top middle)
+    onIslandMoving: cb => ipcRenderer.on('island-moving', (_, on) => cb(!!on)),
   } : {}),
   // Discord "Now playing" (see main.js): the song as it plays ({ title, artist, album, art, start, end, url }), or null
   presence: w => ipcRenderer.send('presence', w),

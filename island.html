@@ -81,6 +81,12 @@ input[type=range]:hover::-webkit-slider-runnable-track, input[type=range]:active
 .vol svg { width: 16px; height: 16px; fill: var(--dim); }
 .name { margin-left: 6px; font-size: 11px; font-weight: 600; letter-spacing: .02em; color: var(--dim); transition: color .2s; }
 .name:hover { color: #fff; }
+/* being moved (Settings › Island position, or Ctrl+Alt+I): held anywhere on it — the system's own window dragging —
+   with a ring in the mood's colour, and Done */
+.mover { position: absolute; inset: 0; display: none; align-items: center; justify-content: space-between; gap: 10px; padding: 0 5px 0 16px; background: #000; font-weight: 600; }
+.moving .isl { -webkit-app-region: drag; box-shadow: 0 0 0 2px var(--a), 0 4px 12px rgba(0,0,0,.45); }
+.moving .mover { display: flex; }
+.mover button { -webkit-app-region: no-drag; padding: 6px 13px; border-radius: 13px; background: var(--a); color: #000; font-size: 12px; font-weight: 700; cursor: pointer; }
 </style>
 </head>
 <body class="away">
@@ -108,6 +114,7 @@ input[type=range]:hover::-webkit-slider-runnable-track, input[type=range]:active
       <button id="openApp" class="name" title="Open NetherFlow">NetherFlow</button>
     </div>
   </div>
+  <div class="mover"><span>Drag me anywhere</span><button id="moveDone">Done</button></div>
 </div>
 <script>
 const $ = id => document.getElementById(id), isl = $('isl'), root = document.documentElement;
@@ -119,13 +126,13 @@ const set = (k, v, fn) => { if (was[k] !== v) { was[k] = v; fn(v); } }; // (only
 // ---- size and shape: the island's size, eased (CSS), and the window's shape round it: grown at once (so the island
 // grows into it), shrunk once the island has. Compact: as wide as the song needs (150–340 px).
 const OPEN_W = 380, OPEN_H = 212, TOP = 8;
-let compactW = 180, shapeW = 0, shapeH = 0, shrinkTimer = 0;
+let compactW = 180, shapeW = 0, shapeH = 0, shrinkTimer = 0, moving = false;
 // the clickable region round the island (clicks outside it go through to what's under it). The glow is a soft shadow
 // that stays within this, so the glow never widens the clickable region — with glow on, a wide halo used to eat clicks.
 const pad = () => 18;
 function sendShape(w, h) { window.islandApp?.shape({ x: Math.round((innerWidth - w) / 2 - pad()), y: 0, width: Math.round(w + pad() * 2), height: Math.round(TOP + h + pad()) }); }
 function resize() {
-  const w = isOpen ? OPEN_W : compactW, h = isOpen ? OPEN_H : 36;
+  const w = isOpen ? OPEN_W : moving ? Math.max(230, compactW) : compactW, h = isOpen ? OPEN_H : 36;
   isl.style.width = w + 'px'; isl.style.height = h + 'px'; isl.style.borderRadius = (isOpen ? 42 : 18) + 'px';
   clearTimeout(shrinkTimer);
   sendShape(Math.max(w, shapeW), Math.max(h, shapeH));
@@ -140,6 +147,10 @@ window.islandApp?.onVisible?.(on => {
   document.body.classList.toggle('away', !on);
   if (on) { shapeW = shapeH = 0; resize(); }
 });
+
+// being moved (main.js): closed, its words and Done; then as it was
+window.islandApp?.onMove?.(on => { moving = on; if (on && isOpen) open(false); document.body.classList.toggle('moving', on); resize(); });
+$('moveDone').onclick = () => send('move-done');
 
 // ---- what's playing, from the page (~30 times a second while the island's out)
 // What the island itself changes (play or pause, position, volume, like) shows at once, and is held on screen until
