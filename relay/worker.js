@@ -10,7 +10,7 @@
 const TOPIC = /^(nf2\/[0-9a-f]{32}|nf1\/l[0-9a-f]{32})$/;
 const KEEP = 365 * 864e5; // a kept copy, after its last change
 const LIMITS = { // per topic: people at once, the biggest message, and messages a person may send (a burst, then per second)
-  nf2: { conns: 12, size: 16384, burst: 40, rate: 6 },
+  nf2: { conns: 32, size: 16384, burst: 40, rate: 6 }, // (Listen together: up to 30, and room for one on its way out)
   nf1: { conns: 50, size: 262144, burst: 10, rate: 0.5 },
 };
 

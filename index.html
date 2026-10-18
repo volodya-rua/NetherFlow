@@ -60,6 +60,10 @@ kbd { font: inherit; border: 1px solid currentColor; border-radius: 3px; padding
 .tg-code { display: flex; align-items: baseline; justify-content: space-between; padding: 6px 14px; }
 .tg-code b { font: 400 46px/1 var(--poster); letter-spacing: .08em; color: var(--a); white-space: nowrap; } /* (smaller when a theme's type is too wide: fitCode) */
 .tg-mem { padding: 9px 14px; border-bottom: 1px solid var(--hair); font-size: 14px; }
+.tg-chat { max-height: 190px; overflow-y: auto; padding: 4px 14px 8px; }
+.tg-chat p { margin: 5px 0; font-size: 14px; line-height: 1.35; overflow-wrap: anywhere; }
+.tg-chat b { margin-right: 7px; font-weight: 600; }
+.tg-chat .me b { color: var(--a); }
 .tg-reacts { display: flex; gap: 4px; padding: 10px 8px; }
 .tg-reacts .icon-btn { font-size: 22px; width: 44px; height: 44px; }
 .tg-btn { position: relative; }
@@ -4899,7 +4903,7 @@ function curveTable(shape, len, closed, t = 0) {
 }
 function curveAt(s, x) {
   const tb = s.tab;
-  let f = x / tb.len * tb.M;
+  let f = tb.len ? x / tb.len * tb.M : 0; // (a line laid out unseen — behind the home screen: no length — at the curve's start, not NaN)
   f = tb.closed ? ((f % tb.M) + tb.M) % tb.M : Math.max(0, Math.min(tb.M - 1e-6, f));
   const i = Math.floor(f), g = f - i, a = tb.P[i], b = tb.P[i + 1], T = unit3([b[0] - a[0], b[1] - a[1], b[2] - a[2]]);
   const U = CURVES[s.kind].up(T, tb.u[i] + (tb.u[i + 1] - tb.u[i]) * g);
@@ -5391,7 +5395,7 @@ let hist;
 try { hist = JSON.parse(store.get(HIST) || '{}'); } catch { hist = {}; }
 hist.tracks ||= []; hist.terms ||= [];
 // what's kept of a song (history, playlists, saved songs): enough to show it and play it again
-const TRACK_KEYS = ['trackId', 'trackName', 'artistId', 'artistName', 'collectionName', 'trackNumber', 'discNumber', 'artworkUrl100', 'trackTimeMillis', 'previewUrl', 'releaseDate', 'primaryGenreName', 'kind', 'ytId', 'ytTitle', 'epUrl', 'epShow', 'epBook', 'epAbout'];
+const TRACK_KEYS = ['trackId', 'trackName', 'artistId', 'artistName', 'collectionName', 'trackNumber', 'discNumber', 'artworkUrl100', 'trackTimeMillis', 'previewUrl', 'releaseDate', 'primaryGenreName', 'kind', 'ytId', 'ytTitle', 'epUrl', 'epShow', 'epBook', 'epAbout', 'epLive', 'epNoSave'];
 const slim = t => Object.fromEntries(TRACK_KEYS.map(k => [k, t[k]]));
 function remember(t, term) {
   hist.tracks = [slim(t), ...hist.tracks.filter(x => x.trackId !== t.trackId)].slice(0, 12);
@@ -6106,7 +6110,7 @@ function resumeDownloads() {
 addEventListener('online', () => { if (dl.waiting.length) { dl.queue.push(...dl.waiting.splice(0)); dlChanged(); pumpDl(); } });
 const pct = j => j.dur ? Math.min(99, Math.round(j.at / j.dur * 100)) + '%' : '';
 function saveOffline(tracks, withLyrics, upgrade = false) {
-  const fresh = tracks.filter(t => (upgrade || !saved.has(t.trackId)) && !dlJob(t.trackId));
+  const fresh = tracks.filter(t => (upgrade || !saved.has(t.trackId)) && !dlJob(t.trackId) && !t.epNoSave); // (a concert kept for streaming only: not saved)
   for (const t of fresh) dl.queue.push({ t: slim(t), withLyrics, upgrade, at: 0, dur: (t.trackTimeMillis || 0) / 1000 });
   navigator.storage?.persist?.().catch(() => {}); // ask the browser not to clear them when space runs low
   if (!upgrade) toast(!fresh.length ? 'Already saved' : fresh.length > 1 ? `Downloading ${fresh.length} songs` : `Downloading ${fresh[0].trackName}`);
@@ -6669,10 +6673,10 @@ $('qrSave').onclick = () => { // a card to post or send: the name, the code, how
   g.fillText('SCAN IT WITH YOUR PHONE CAMERA', W / 2, 1250); g.globalAlpha = 1;
   canvasBlob(c, 'image/png').then(blob => blob && shareStory(blob, `netherflow-playlist.png`));
 };
-// ---------- Listen together: up to 10 people hearing the same song at the same moment, each on their own device ----------
+// ---------- Listen together: up to 30 people hearing the same song at the same moment, each on their own device ----------
 // One starts a session and shares its code; the others join with it. Each plays the song themselves (from YouTube, as
 // ever); the one who started it keeps everyone on the same song at the same moment, playing or paused. Anyone can add a
-// song (it plays next), skip, and send a reaction. The messages go through NetherFlow's own relay (relay/worker.js, on
+// song (it plays next), skip, send a reaction, and chat. The messages go through NetherFlow's own relay (relay/worker.js, on
 // Cloudflare: it keeps no logs) or, if it can't be reached, a public MQTT relay, end-to-end encrypted with a key made from
 // the code (AES-GCM), so the relay passes on only noise, under a topic that doesn't give the code away. (A guest's pause is their own: Play catches up again.)
 const NF_RELAY = 'wss://netherflow-relay.netherflow.workers.dev/mqtt'; // (NetherFlow's own: see relay/worker.js)
@@ -6703,9 +6707,9 @@ function tgFirst(urls, topic, onMsg, onDrop) {
 // the relays in the order to try: NetherFlow's own, then the public ones (a backup for now) in an order the code picks,
 // the order older NetherFlows try them in (ponytail: the public ones go once every NetherFlow out there knows ours)
 const relays = seed => [NF_RELAY, ...TG_BROKERS.map((_, i) => TG_BROKERS[(seed + i) % TG_BROKERS.length])];
-const TG_MAX = 10, TG_ABC = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+const TG_MAX = 30, TG_ABC = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 const tg = { role: null, code: '', key: null, topic: '', conn: null, me: Math.random().toString(36).slice(2, 10), host: '', members: new Map(), state: null,
-  offs: [], offset: 0, applying: false, held: false, last: '', lastAt: 0, timers: [], status: '' };
+  offs: [], offset: 0, applying: false, held: false, last: '', lastAt: 0, timers: [], status: '', chat: [], draft: '', chatAt: 0 };
 let tgName = store.get('netherflow.tgname') || 'Listener ' + (10 + Math.floor(Math.random() * 90));
 const tgEnc = s => new TextEncoder().encode(s);
 // a minimal MQTT 3.1.1 client over a WebSocket (connect, subscribe, publish and receive at QoS 0, keep-alive)
@@ -6817,7 +6821,7 @@ function tgEvery(fn, ms) { tg.timers.push(setInterval(fn, ms)); }
 function tgLeave(quiet) {
   if (tg.role) tgSend({ k: tg.role === 'host' ? 'end' : 'bye' }).finally(() => setTimeout(() => tg.conn?.close(), 300));
   for (const t of tg.timers) clearInterval(t);
-  Object.assign(tg, { role: null, timers: [], members: new Map(), state: null, host: '', held: false });
+  Object.assign(tg, { role: null, timers: [], members: new Map(), state: null, host: '', held: false, chat: [], draft: '' }); // (the chat: gone with the session)
   if (!quiet) tgSetStatus('');
   tgRender();
 }
@@ -6865,10 +6869,24 @@ async function tgOnMsg(m) {
     } else if (m.k === 'state' && m.s && (!tg.host || m.f === tg.host)) { const tr = tgTrack(m.s.track); if (tr) tg.state = { id: tr.trackId, track: tr, vid: /^[\w-]{11}$/.test(m.s.vid || '') ? m.s.vid : '', pos: +m.s.pos || 0, playing: !!m.s.playing, at: +m.s.at || Date.now() }; }
     else if (m.k === 'pong' && m.to === tg.me) { // (the host's clock − ours, from the round trip: the middle of the last few)
       const t1 = Date.now(); tg.offs = [...tg.offs, m.th + (t1 - m.t0) / 2 - t1].slice(-7); tg.offset = [...tg.offs].sort((a, b) => a - b)[tg.offs.length >> 1];
-    } else if (m.k === 'full' && m.to === tg.me) { tgSetStatus('That session is full (10 people)'); tgLeave(true); }
+    } else if (m.k === 'full' && m.to === tg.me) { tgSetStatus('That session is full'); tgLeave(true); }
     else if (m.k === 'end' && m.f === tg.host) { toast('The session ended'); tgLeave(); }
   }
   if (m.k === 'react' && typeof m.e === 'string') tgFloat(m.e.slice(0, 8), (who?.name || '').slice(0, 30));
+  if (m.k === 'chat' && typeof m.t === 'string' && m.t.trim()) tgHeard(m.f, m.t.trim().slice(0, 300));
+}
+// The chat: a line from anyone in the session to everyone in it, end-to-end encrypted like the rest, and kept only while
+// the session lasts (the last 50). Shown in the panel; with it closed, for a moment as a note. One a second at most.
+function tgChat(text) {
+  const t = String(text || '').trim().slice(0, 300);
+  if (!t || !tg.role || Date.now() - tg.chatAt < 1000) return false;
+  tg.chatAt = Date.now(); tgSend({ k: 'chat', t }); tgHeard(tg.me, t);
+  return true;
+}
+function tgHeard(f, t) {
+  const name = f === tg.me ? 'You' : (tg.members.get(f)?.name || 'Someone');
+  tg.chat = [...tg.chat, { name, t, me: f === tg.me }].slice(-50);
+  if ($('togetherPanel').matches(':popover-open')) tgRender(); else if (f !== tg.me) toast(`${name}: ${t}`, 5000);
 }
 function tgMembers() { tgSend({ k: 'members', list: [...tg.members].map(([id, x]) => ({ id, name: x.name })) }); tgRender(); }
 // A song (or an episode) as someone else in the session sends it, as edit-together takes one (collabTrack): only a song's
@@ -6907,7 +6925,7 @@ function tgRender() {
   if (!$('togetherPanel').matches(':popover-open')) return;
   const out = [sectionHead('Listen together')];
   if (!tg.role) {
-    out.push(el('p', 'q-empty lbl', `Up to ${TG_MAX} people hear the same song at the same moment, each on their own device. Anyone in it can add songs, skip and react.`));
+    out.push(el('p', 'q-empty lbl', `Up to ${TG_MAX} people hear the same song at the same moment, each on their own device. Anyone in it can add songs, skip, react and chat.`));
     const name = el('input', 'name-in'); name.value = tgName; name.maxLength = 30; name.placeholder = 'Your name'; name.setAttribute('aria-label', 'Your name');
     name.onchange = () => { tgName = name.value.trim() || tgName; store.set('netherflow.tgname', tgName); };
     const start = el('button', 'pill', 'Start a session'); start.onclick = () => tgStart();
@@ -6923,7 +6941,15 @@ function tgRender() {
     out.push(sectionHead(`Listening · ${tg.members.size} of ${TG_MAX}`), ...[...tg.members].map(([id, m]) => el('div', 'tg-mem', m.name + (id === tg.me ? ' (you)' : '') + (id === (tg.role === 'host' ? tg.me : tg.host) ? ' · started it' : ''))));
     const reacts = box('tg-reacts'); for (const e of TG_REACTS) { const b = el('button', 'icon-btn', e); b.onclick = () => tgReact(e); reacts.append(b); }
     const leave = el('button', 'pill ghost', tg.role === 'host' ? 'End the session' : 'Leave'); leave.onclick = () => tgLeave();
-    out.push(reacts, box('tg-row', leave));
+    // the chat: what's been said, and a line to say (what's typed kept, and the typing carried on, as the panel's drawn again)
+    const log = el('div', 'tg-chat'), say = el('input', 'name-in'), send = el('button', 'pill', 'Send'), was = document.activeElement?.id === 'tgSay';
+    for (const c of tg.chat) { const p = el('p', c.me ? 'me' : ''); p.append(el('b', '', c.name), el('span', '', c.t)); log.append(p); }
+    say.id = 'tgSay'; say.value = tg.draft; say.maxLength = 300; say.placeholder = 'Say something to everyone'; say.setAttribute('aria-label', 'Chat message');
+    say.oninput = () => { tg.draft = say.value; };
+    const go = () => { const t = say.value; tg.draft = say.value = ''; if (!tgChat(t)) tg.draft = say.value = t; }; // (emptied first: sending draws the panel again)
+    send.onclick = go; say.onkeydown = e => { if (e.key === 'Enter') go(); };
+    out.push(reacts, sectionHead('Chat'), ...(tg.chat.length ? [log] : [el('p', 'q-empty lbl', 'Goes to everyone in the session, end-to-end encrypted, and isn\'t kept after it ends.')]), box('tg-row', say, send), box('tg-row', leave));
+    setTimeout(() => { log.scrollTop = log.scrollHeight; if (was) $('tgSay')?.focus(); });
   }
   if (tg.status) out.push(el('p', 'q-empty lbl tg-status', tg.status));
   $('togetherPanel').replaceChildren(...out); fitCode($('togetherPanel'));
@@ -7385,6 +7411,10 @@ function renderExplore(head, list, tok) {
     libCard(tile('heart', 'Your mix'), 'Your mix', 'Your most played, and more like them', () => openList({ key: 'mix:mine', label: 'Made for you', title: 'Your mix', load: () => makeMix('mine') })),
     libCard(tile('compass', 'Discover'), 'Discover', 'Songs new to you, like the ones you love', () => openList({ key: 'mix:new', label: 'Made for you', title: 'Discover', load: () => makeMix('new') })),
     libCard(tile('clock', mixName('now')), mixName('now'), 'What you play at this time of day', () => openList({ key: 'mix:now:' + daypart(), label: 'Made for you', title: mixName('now'), load: () => makeMix('now') })),
+    libCard(tile('compass', 'Discover Weekly'), 'Discover Weekly', 'Songs new to you · new every Monday', () => openList({ key: 'made:weekly:' + weekFrom(1), label: 'Made for you', title: 'Discover Weekly', load: discoverWeekly })),
+    libCard(tile('radio', 'New this week'), 'New this week', 'From your artists · new every Friday', () => openList({ key: 'made:fresh:' + weekFrom(5), label: 'Made for you', title: 'New this week', load: newThisWeek })),
+    ...tasteKinds().map(([kind, songs], i) => libCard(tile('radio', `Daily mix ${i + 1}`), `Daily mix · ${kind}`, `${kind} · new every day`,
+      () => openList({ key: 'made:daily:' + kind + ':' + dayKey(), label: 'Made for you', title: `Daily mix · ${kind}`, load: () => dailyMix(kind, songs) }))),
     libCard(tile('together', 'Mix with a friend'), 'Mix with a friend', 'Your taste and a friend\'s, in one playlist', blendInvite));
   list.push(sectionHead('Made for you'), mine, sectionHead(follows.length ? 'New from artists you follow and play' : 'New from artists you play'), fresh, sectionHead('Charts'), charts, sectionHead('New albums & singles'), albums, sectionHead('Trending'), trend, sectionHead('Moods & genres'), moods);
   const live = () => tok === libTok;
@@ -7431,11 +7461,12 @@ function playedAround(part) {
   return [...m.values()].sort((x, y) => y[1] - x[1]).map(x => x[0]).filter(t => t?.trackName);
 }
 const mixName = kind => kind === 'now' ? `${DAYPARTS[daypart()]} mix` : kind === 'mine' ? 'Your mix' : 'Discover';
-async function makeMix(kind) {
-  const seeds = myTaste(), seen = new Set(seeds.map(songKey)), around = kind === 'now' ? playedAround(daypart()) : [], learnt = around.length >= 3;
+// (only: the songs to make it from — a Daily mix's, of one kind of music — in place of all of your taste)
+async function makeMix(kind, only) {
+  const seeds = only || myTaste(), seen = new Set(seeds.map(songKey)), around = kind === 'now' ? playedAround(daypart()) : [], learnt = around.length >= 3;
   if (!seeds.length) return { name: mixName(kind), tracks: [], empty: 'Play and like some songs first: your mixes are made from them.' };
   const shuffled = (l, n) => l.slice(0, n).sort(() => Math.random() - .5).slice(0, 5);
-  const pickFrom = kind === 'new' ? shuffled(seeds, 30) : kind === 'now' ? shuffled(learnt ? around : seeds, 10) : seeds.slice(0, 5);
+  const pickFrom = kind === 'new' ? shuffled(seeds, 30) : kind === 'now' ? shuffled(learnt ? around : seeds, 10) : kind === 'daily' ? shuffled(seeds, 12) : seeds.slice(0, 5);
   const radios = await Promise.all(pickFrom.map(async t => { const id = await seedFor(t).catch(() => ''); return id ? radioFor(id) : []; }));
   const known = new Set([...seen, ...library.playlists.flatMap(p => p.tracks.map(songKey)), ...auto.mem.heard]), out = [];
   const taken = new Set(kind !== 'new' ? pickFrom.map(songKey) : []); // (a radio starts with its own seed: put in once, below)
@@ -7448,6 +7479,38 @@ async function makeMix(kind) {
   return { name: mixName(kind), tracks: out.slice(0, 40), sub: kind === 'now' ? (learnt ? 'What you play around this time of day, and more like it' : 'Your most played for now: it learns what you play at this time of day')
     : kind === 'mine' ? 'Your most played, and more like them' : 'Songs you haven\'t played, like the ones you love' };
 }
+// Made for you, and kept: Discover Weekly (songs new to you, like the ones you love: new every Monday), New this week
+// (the latest songs of the artists you follow and play: new every Friday) and the Daily mixes (one for each kind of music
+// you play most, your own songs among more like them: new every day). Each made once for its week or day and kept on
+// this device, the same list all week (or day) as the big apps keep theirs, and made again when its time comes round.
+const MADE = 'netherflow.made';
+let made = (() => { try { return JSON.parse(store.get(MADE) || '{}') || {}; } catch { return {}; } })();
+const weekFrom = wd => { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - (d.getDay() - wd + 7) % 7); return dayKey(d); }; // (the last Monday, wd 1, or Friday, 5)
+async function keptMix(key, at, make) {
+  if (made[key]?.at === at && made[key].list?.tracks?.length) return made[key].list;
+  const list = await make();
+  if (list.tracks?.length) { made[key] = { at, list: { ...list, tracks: list.tracks.map(slim) } }; store.set(MADE, JSON.stringify(made)); }
+  return list;
+}
+const discoverWeekly = () => keptMix('weekly', weekFrom(1), async () => ({ ...(await makeMix('new')), name: 'Discover Weekly', sub: 'Songs new to you, like the ones you love · new every Monday' }));
+async function newThisWeek() {
+  return keptMix('fresh', weekFrom(5), async () => {
+    const since = new Date(Date.now() - 14 * 864e5).toISOString(), albums = (await xGet('fresh', newFromArtists)).filter(a => (a.releaseDate || '') > since).slice(0, 12);
+    const lists = await Promise.all(albums.map(a => albumSongs(a).catch(() => [])));
+    const tracks = lists.flatMap(l => l.slice(0, 3)).filter(t => !isModded(t)).slice(0, 30); // (a few from each: a single whole, an album's first songs)
+    return { name: 'New this week', sub: 'The latest from the artists you follow and play · new every Friday', tracks,
+      empty: 'Nothing new from your artists in the last two weeks. Play, like and follow artists: their new songs land here.' };
+  });
+}
+// the kinds of music you play most: each song's genre (the store's), or its language where that's all it says
+const LANG_NAME = { hi: 'Hindi', pa: 'Punjabi', ta: 'Tamil', te: 'Telugu', kn: 'Kannada', ml: 'Malayalam', bn: 'Bengali', mr: 'Marathi', gu: 'Gujarati', ko: 'Korean', ja: 'Japanese',
+  zh: 'Chinese', es: 'Spanish', pt: 'Portuguese', fr: 'French', ar: 'Arabic', ru: 'Russian' };
+function tasteKinds() {
+  const g = new Map();
+  for (const t of myTaste().slice(0, 300)) { const k = (t.primaryGenreName !== 'Music' && t.primaryGenreName) || LANG_NAME[songLang(t)] || ''; if (k) g.set(k, [...(g.get(k) || []), t]); }
+  return [...g].filter(([, l]) => l.length >= 3).sort((a, b) => b[1].length - a[1].length).slice(0, 3);
+}
+const dailyMix = (kind, songs) => keptMix('daily:' + kind, dayKey(), async () => ({ ...(await makeMix('daily', songs)), name: `Daily mix · ${kind}`, sub: `${kind}: your own and more like them · new every day` }));
 // Artists you follow (an artist's page: Follow): their new albums and singles first in Explore, and said when they come
 // out — a message here, and the system's notification on a computer; looked for a little after the app starts and twice
 // a day (one request per artist, to Apple's catalog), kept on this device
@@ -7520,7 +7583,7 @@ let pods = jsonOr(PODS, []), books = jsonOr(BOOKS, []), epPos = jsonOr(EPPOS, {}
 // where each was left (seconds, -1 played to the end): the latest 600
 function epKeep(done) {
   const t = current;
-  if (!t || t.kind !== 'episode' || engine !== 'ep') return;
+  if (!t || t.kind !== 'episode' || engine !== 'ep' || t.epLive) return; // (a concert's songs: from their start each time)
   const at = done ? -1 : Math.floor(epAudio.currentTime || 0);
   if (!done && (at < 5 || epPos[t.trackId] === -1 && at < 30)) return;
   delete epPos[t.trackId]; epPos[t.trackId] = at;
@@ -7534,25 +7597,29 @@ async function playEpisode(t, id) {
   if (id !== loadId) return;
   if (epAudio.src.startsWith('blob:')) URL.revokeObjectURL(epAudio.src);
   epAudio.src = kept?.audio ? URL.createObjectURL(kept.audio) : native && /^http:/.test(t.epUrl) ? t.epUrl.replace(/^http:/, 'https:') : t.epUrl; // (a phone's app may not load plain http)
-  epAudio.playbackRate = epAudio.defaultPlaybackRate = epSpeed;
+  const speed = t.epLive ? 1 : epSpeed; // (a concert's songs at their own speed, from their start)
+  epAudio.playbackRate = epAudio.defaultPlaybackRate = speed;
   savedDur = (t.trackTimeMillis || 0) / 1000;
-  const at = epPos[t.trackId];
+  const at = t.epLive ? 0 : epPos[t.trackId];
   if (at > 0) epAudio.addEventListener('loadedmetadata', () => { if (id === loadId && at < (epAudio.duration || Infinity) - 15) epAudio.currentTime = at; }, { once: true });
   P.play();
-  status(`◆ ${t.epBook ? 'audiobook' : 'podcast'}${kept?.audio ? ' · saved' : ''}${epSpeed !== 1 ? ' · ' + epSpeed + '×' : ''}${at > 0 ? ' · from ' + fmt(at) : ''}`);
+  status(`◆ ${epKind(t)}${kept?.audio ? ' · saved' : ''}${speed !== 1 ? ' · ' + speed + '×' : ''}${at > 0 ? ' · from ' + fmt(at) : ''}`);
   epStage(t);
   if (t.epBook && !books.some(b => b.id === t.epShow)) { books.unshift({ id: t.epShow, title: t.collectionName, author: t.artistName, art: t.artworkUrl100 }); store.set(BOOKS, JSON.stringify(books.slice(0, 50))); } // (a book begun: in Your books)
+  if (t.epLive && lives[0]?.id !== t.epShow) { lives = [{ id: t.epShow, band: t.artistName, venue: t.collectionName, art: t.artworkUrl100 }, ...lives.filter(c => c.id !== t.epShow)].slice(0, 30); store.set(LIVES, JSON.stringify(lives)); } // (a show played: in Your concerts)
 }
+const epKind = t => t.epBook ? 'audiobook' : t.epLive ? 'live concert · from ' + LMA : 'podcast';
 // the stage while talk plays: what it is, its name large, what it's about
 function epStage(t) {
   lines = []; synced = false; lastLyr = null;
   $('csLine').textContent = '';
   buildMap();
   const d = el('div', 'deck ep-stage');
-  d.append(el('div', 'count lbl', (t.epBook ? 'Audiobook · ' : 'Podcast · ') + (t.epBook ? t.collectionName : t.artistName)), el('p', 'ep-title', t.trackName), ...(t.epAbout ? [el('p', 'ep-about', t.epAbout)] : []));
+  d.append(el('div', 'count lbl', t.epBook ? 'Audiobook · ' + t.collectionName : t.epLive ? 'Live · ' + t.artistName : 'Podcast · ' + t.artistName), el('p', 'ep-title', t.trackName),
+    ...(t.epLive ? [el('p', 'ep-about', `${t.collectionName} · from ${LMA}`)] : t.epAbout ? [el('p', 'ep-about', t.epAbout)] : []));
   stage.replaceChildren(d);
 }
-function setEpSpeed(v) { epSpeed = v; store.set('netherflow.epspeed', v === 1 ? '' : String(v)); epAudio.playbackRate = epAudio.defaultPlaybackRate = v; if (engine === 'ep') status(`◆ ${current?.epBook ? 'audiobook' : 'podcast'}${v !== 1 ? ' · ' + v + '×' : ''}`); }
+function setEpSpeed(v) { epSpeed = v; store.set('netherflow.epspeed', v === 1 ? '' : String(v)); if (current?.epLive) return; epAudio.playbackRate = epAudio.defaultPlaybackRate = v; if (engine === 'ep') status(`◆ ${epKind(current || {})}${v !== 1 ? ' · ' + v + '×' : ''}`); }
 // what a show or book is about: four lines, all of it on a tap (or Enter)
 const aboutEl = s => { const p = el('p', 'x-about', s); p.tabIndex = 0; p.title = 'Show all'; p.onclick = () => p.classList.toggle('open'); p.onkeydown = e => { if (e.key === 'Enter') p.click(); }; return p; };
 const speedBtn = () => { const b = el('button', 'pill ghost', `Speed ${epSpeed}×`); b.onclick = () => { setEpSpeed(SPEEDS[(SPEEDS.indexOf(epSpeed) + 1) % SPEEDS.length]); b.textContent = `Speed ${epSpeed}×`; }; return b; };
@@ -7621,6 +7688,67 @@ async function bookOf(id) {
     chapters: ch.map((x, i) => ({ kind: 'episode', epBook: true, trackId: 'bk:' + epHash(id + '/' + x.name), trackName: plainText(x.title) || `Chapter ${i + 1}`, artistName: author, collectionName: title,
       artworkUrl100: art, trackTimeMillis: Math.round(hms(x.length) * 1000), epUrl: `${ARCHIVE}/download/${encodeURIComponent(id)}/${x.name.split('/').map(encodeURIComponent).join('/')}`, epShow: id })) };
 }
+// Live concerts: the Internet Archive's Live Music Archive (its collection etree: bands that let their shows be taped
+// and shared, recorded by fans, kept by the Archive). A show's songs play here as an audiobook's chapters do (epAudio),
+// each with its band, venue and date, and where it's from: "from the Internet Archive Live Music Archive" (Legal's
+// condition). A show the Archive keeps for streaming only (some bands' soundboards) isn't saved for offline. No covers:
+// a show's picture is the Archive's own logo, mostly, from an address a page can't read (for the mood's colours).
+const LMA = 'the Internet Archive Live Music Archive', LIVES = 'netherflow.lives';
+let lives = jsonOr(LIVES, []);
+const liveText = x => plainText([].concat(x || '')[0] || '');
+const liveWhere = c => [c.venue, c.place, c.date].filter(Boolean).join(' · ');
+async function liveSearch(q, rows = 40) {
+  const terms = String(q || '').replace(/[^\p{L}\p{N} ]/gu, ' ').trim();
+  const query = 'collection:etree AND mediatype:etree' + (terms ? ` AND creator:(${terms})` : '');
+  const url = `${ARCHIVE}/advancedsearch.php?q=${encodeURIComponent(query)}&fl[]=identifier&fl[]=creator&fl[]=date&fl[]=venue&fl[]=coverage&sort[]=downloads+desc&rows=${rows}&output=json`;
+  const j = await fetch(url).then(r => { if (!r.ok) throw new Error('the Internet Archive answered ' + r.status); return r.json(); });
+  return (j.response?.docs || []).filter(d => d.identifier).map(d => ({ id: d.identifier, band: liveText(d.creator), date: String(d.date || '').slice(0, 10), venue: liveText(d.venue),
+    place: liveText(d.coverage), art: '' }));
+}
+async function concertOf(id) {
+  const j = await fetch(`${ARCHIVE}/metadata/${encodeURIComponent(id)}`).then(r => { if (!r.ok) throw new Error('the Internet Archive answered ' + r.status); return r.json(); });
+  const m = j.metadata || {}, files = j.files || [], form = ['VBR MP3', 'MP3', 'Ogg Vorbis'].find(f => files.some(x => x.format === f));
+  const num = x => parseInt(String(x.track || '').split('/')[0], 10) || 1e6;
+  const songs = form ? files.filter(x => x.format === form).sort((a, b) => num(a) - num(b) || a.name.localeCompare(b.name)) : [];
+  const c = { id, band: liveText(m.creator), date: liveText(m.date).slice(0, 10), venue: liveText(m.venue), place: liveText(m.coverage), art: '',
+    about: plainText([].concat(m.description || '')[0]).slice(0, 500), streamOnly: String(m['access-restricted-item']) === 'true' };
+  const where = liveWhere(c);
+  c.tracks = songs.map(x => ({ kind: 'episode', epLive: true, ...(c.streamOnly && { epNoSave: true }), trackId: 'lv:' + epHash(id + '/' + x.name),
+    trackName: plainText(x.title) || x.name.replace(/\.\w+$/, ''), artistName: c.band, collectionName: where || 'Live', artworkUrl100: c.art,
+    trackTimeMillis: Math.round(hms(x.length) * 1000), epUrl: `${ARCHIVE}/download/${encodeURIComponent(id)}/${x.name.split('/').map(encodeURIComponent).join('/')}`, epShow: id }));
+  return c;
+}
+// a show's card (from the search too: it opens over it)
+const concertCard = c => libCard(c.art ? coverTile(c.art) : tile('speaker', c.band), c.band, liveWhere(c), () => { if (dlg.open) dlg.close(); openLibrary({ kind: 'concert', from: libView, id: c.id, band: c.band, art: c.art }); });
+function renderLives(v, head, list, tok) {
+  head('Live concerts', 'Live concerts', `Free, taped by fans · from ${LMA}`, tile('speaker', 'Live concerts'));
+  const q = el('input', 'hp-q x-q'), found = el('div', 'albums strip'), mine = el('div', 'albums strip'), top = el('div', 'albums strip'), live = () => tok === libTok;
+  q.type = 'search'; q.placeholder = 'A band or an artist'; q.setAttribute('aria-label', 'Find live concerts'); q.autocomplete = 'off'; q.spellcheck = false;
+  const find = () => { const term = q.value, now = () => q.isConnected && q.value === term;
+    if (!term.trim()) return found.replaceChildren(); found.replaceChildren(el('p', 'empty', 'Searching…'));
+    liveSearch(term).then(l => now() && found.replaceChildren(...(l.length ? l.map(concertCard) : [el('p', 'empty', 'No concerts by that name.')]))).catch(e => now() && found.replaceChildren(xFail(e))); };
+  let qt = 0;
+  q.oninput = () => { clearTimeout(qt); qt = setTimeout(find, 400); };
+  if (v.q) { q.value = v.q; find(); }
+  mine.append(...(lives.length ? lives.map(concertCard) : [el('p', 'empty', 'The concerts you play are kept here.')]));
+  list.push(q, found, sectionHead('Your concerts'), mine, sectionHead('Most listened'), top);
+  top.append(el('p', 'empty', 'Loading…'));
+  xGet('lives:top', () => liveSearch('', 30)).then(l => live() && top.replaceChildren(...l.map(concertCard))).catch(e => live() && top.replaceChildren(xFail(e)));
+}
+function renderConcert(v, head, list, tok) {
+  head('Live concert', v.band || 'Live concert', 'Loading…', v.art ? coverTile(v.art, true) : tile('speaker', 'Live'));
+  list.push(el('p', 'empty', 'Loading…'));
+  xGet('concert:' + v.id, () => concertOf(v.id)).then(c => {
+    if (tok !== libTok) return;
+    const mins = Math.round(c.tracks.reduce((a, t) => a + t.trackTimeMillis, 0) / 60000);
+    head('Live concert', c.band || 'Live concert', [liveWhere(c), `${c.tracks.length} songs`, mins && (mins >= 60 ? `${Math.floor(mins / 60)} h ${mins % 60} min` : `${mins} min`)].filter(Boolean).join(' · '), c.art ? coverTile(c.art, true) : tile('speaker', c.band));
+    const go = el('button', 'pill', 'Play the show');
+    go.onclick = () => { queue = c.tracks.slice(); playTrack(c.tracks[0]); };
+    $('libActs').replaceChildren(...(c.tracks.length ? [go] : []));
+    $('libList').replaceChildren(el('p', 'x-about lbl', `From ${LMA}` + (c.streamOnly ? ' · streaming only: the band keeps it off downloads' : '')), ...(c.about ? [aboutEl(c.about)] : []),
+      ...(c.tracks.length ? c.tracks.map((t, i) => epRow(t, i, c.tracks)) : [el('p', 'empty', 'No recording of it that plays here.')]));
+  }).catch(e => { if (tok === libTok) { $('libSub').textContent = ''; $('libList').replaceChildren(xFail(e)); } });
+}
 // an episode's or chapter's row: its name; when, and how long (left), or played
 function epRow(t, i, list) {
   const r = el('div', 'ritem'), b = el('button', 'row ep-row'), img = el('img'), txt = el('span'), pos = epPos[t.trackId], total = (t.trackTimeMillis || 0) / 1000;
@@ -7639,7 +7767,7 @@ function epRow(t, i, list) {
   sv.setAttribute('aria-label', (job ? 'Stop saving ' : kept ? 'Remove from this device: ' : 'Save for offline: ') + t.trackName);
   sv.title = job ? 'Stop saving' : kept ? 'Saved on this device (tap to remove)' : 'Save for offline';
   sv.onclick = () => job ? cancelSave(t.trackId) : kept ? removeSaved(t.trackId) : saveOffline([t], false);
-  r.append(b, sv);
+  r.append(b, ...(t.epNoSave ? [] : [sv])); // (a show kept for streaming only: no saving it)
   return r;
 }
 // the first not yet played to the end: where to carry on
@@ -7738,7 +7866,8 @@ function renderLibrary() {
     const discover = el('div', 'albums');
     discover.append(libCard(tile('compass', 'Explore'), 'Explore', 'Charts, new music, moods, your mixes', () => openLibrary({ kind: 'explore' })),
       libCard(tile('mic', 'Podcasts', pods.length || null), 'Podcasts', pods.length ? `${pods.length} followed` : 'Shows, from where you left off', () => openLibrary({ kind: 'pods' })),
-      libCard(tile('book', 'Audiobooks', books.length || null), 'Audiobooks', 'Free classics, read by volunteers', () => openLibrary({ kind: 'books' })));
+      libCard(tile('book', 'Audiobooks', books.length || null), 'Audiobooks', 'Free classics, read by volunteers', () => openLibrary({ kind: 'books' })),
+      libCard(tile('speaker', 'Live concerts', lives.length || null), 'Live concerts', 'Free shows, taped by fans', () => openLibrary({ kind: 'lives' })));
     list.push(sectionHead('Discover'), discover, sectionHead('Playlists'), grid);
     if (dl.cur.length || dl.queue.length) list.push(sectionHead('Downloading'), ...dlRows());
   } else if (v.kind === 'explore') renderExplore(head, list, tok);
@@ -7748,6 +7877,8 @@ function renderLibrary() {
   else if (v.kind === 'show') renderShow(v, head, list, tok);
   else if (v.kind === 'books') renderBooks(head, list, tok);
   else if (v.kind === 'book') renderBook(v, head, list, tok);
+  else if (v.kind === 'lives') renderLives(v, head, list, tok);
+  else if (v.kind === 'concert') renderConcert(v, head, list, tok);
   else if (v.kind === 'stats') renderStats(head, list, acts);
   else {
     const p = v.kind === 'playlist' && library.playlists.find(x => x.id === v.id);
@@ -8145,6 +8276,11 @@ async function runSearch(term) {
   const ctl = searchCtl = new AbortController();
   $('sstat').textContent = '● searching';
   searchFailed = false;
+  // (the band's live concerts at the Internet Archive, when it has them: in at the end, whenever they come — the search
+  // waits for nothing of theirs)
+  const flat = x => words(x).filter(w => w !== 'the').join(' ');
+  let lastR = null, liveNow = [];
+  liveSearch(term, 12).then(l => { liveNow = l.filter(c => flat(c.band) === flat(term)); if (lastR && liveNow.length && !ctl.signal.aborted) { lastR.live = liveNow; showResults(lastR, shownFilter, false, true); } }, () => {});
   try {
     const pSongs = searchSongs(term, ctl.signal);
     // (Apple's songs on screen the moment they're in — ~0.4 s — and the rest, YouTube Music's, the albums, the artist's,
@@ -8243,6 +8379,7 @@ async function runSearch(term) {
       // (a song named exactly as typed beats an album of that name)
       const ytFirst = extra.match > songs.match && songs.match < .6, titled = !meant && list.find(s => !isModded(s) && core(clean(s.trackName)) === core(asked));
       const best = ex ? null : meant && [...list, ...yl].find(isMeant) || titled || (ytFirst ? yl[0] : list[0]) || yl[0] || more[0], album = !ex && !titled && !meant && albumHit;
+      R.live = liveNow; lastR = R;
       if (ex || album || best) R.top = () => topHit(best, ex ? all : yl.includes(best) ? yl : more.includes(best) ? more : list.length ? list : yl.length ? yl : more, ex, term, album);
       showResults(R, quick ? 'All' : shownFilter, false, !quick);
       const note = fixed ? ` · showing results for “${fixed}”` : '';
@@ -8285,6 +8422,7 @@ function showResults(R, filter, quick = false, again = false) {
       if (main.list.length > 16) { const b = el('button', 'link s-all', 'Show all ' + main.list.length); b.onclick = () => showResults(R, 'Songs'); out.push(b); }
     }
     for (const x of main === first ? [{ head: R.label, list: R.list || [] }, ...extra.filter(x => x !== main)] : extra) if (x.list.length) out.push(sectionHead(x.head), ...songsOf(x.list.slice(0, 10)));
+    if (R.live?.length) out.push(sectionHead('Live concerts · Internet Archive', 'All', () => { dlg.close(); openLibrary({ kind: 'lives', q: R.term }); }), (g => { g.append(...R.live.map(concertCard)); return g; })(el('div', 'albums strip')));
   } else if (filter === 'Songs') {
     for (const x of [...extra.filter(x => x.ahead), { head: R.label, list: R.list || [] }, ...extra.filter(x => !x.ahead)]) if (x.list.length) out.push(songsHead(x.head, x.list.length), ...songsOf(x.list));
   } else if (filter === 'Artists') { const c = artistCards(R.artists, R.songsAll || []); c.classList.add('wrap'); out.push(c); }
