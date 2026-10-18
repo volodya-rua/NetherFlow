@@ -2597,7 +2597,7 @@ function renderTextPanel() {
     ...(skin ? [] : [settingRow('Timeline', BARS, barStyle, setBar, 'The bar under the lyrics that shows where the song is (drag it to move through the song).')]),
     settingRow('Lyrics size', Object.keys(LSIZE), lsize, setLsize, 'Long lines shrink just enough to stay on screen.'),
     settingRow('Lyrics alignment', ALIGNS, lalign, setAlign),
-    settingRow('Romanize lyrics', ['Off', 'On'], romanizeOn ? 'On' : 'Off', setRomanize, 'Show lyrics in another script (Korean, Russian, Greek, Japanese kana) in Latin letters, so you can sing along. On the device, instantly. Chinese and Japanese kanji stay as they are.'),
+    settingRow('Romanize lyrics', ['Off', 'On'], romanizeOn ? 'On' : 'Off', setRomanize, 'Show lyrics in another script (Hindi, Punjabi and India\'s other scripts, Korean, Russian, Greek, Japanese kana) in Latin letters, so you can sing along. On the device, instantly. Chinese and Japanese kanji stay as they are.'),
     stepperRow('Skip back / forward', 1, 60, jump, setJump, ' s', 'The ⟲ ⟳ buttons by the player, and the ← → keys. Hold − or + to count faster.'),
     settingRow('Autoplay', ['On', 'Off'], autoOn ? 'On' : 'Off', setAutoplay, 'When the list runs out, songs like the one playing carry on, as on YouTube Music: from its radio for the song, ranked to what you\'re listening to — the same language and era, songs that fit the last few, more of the artists you play through or like and less of those you skip, never one you just heard.'),
     settingRow('Instant start', ['On', 'Off'], instantOn ? 'On' : 'Off', setInstant, 'The first few seconds of the last 100 songs you played are kept on this device (about 25 MB, never synced), so they start the moment you press play. Off: they\'re deleted, and nothing more is kept.'),
@@ -2928,7 +2928,7 @@ function notifyNative() {
       title: $('title').textContent, artist: $('artist').textContent, album: current.collectionName || '',
       art,
       duration: Math.round(P.dur * 1000), position: Math.round(P.t * 1000), playing: !P.paused, hasNext: hasNext(),
-      lyric: lockLyrics && synced && lines[activeIdx]?.text?.trim() || '',
+      lyric: lockLyrics && synced && lyrDisp(lines[activeIdx]).text.trim() || '',
     });
   }, 150);
 }
@@ -4192,9 +4192,65 @@ const ROMAN = (() => {
     return out;
   };
   const isKana = ch => { const c = kataToHira(ch).codePointAt(0); return (c >= 0x3041 && c <= 0x3096) || ch === 'ー'; };
+  // India's scripts — Devanagari (Hindi, Marathi), Bengali, Gurmukhi (Punjabi), Gujarati, Odia, Tamil, Telugu, Kannada,
+  // Malayalam: Unicode lays the nine out alike (a block of 128 each, the same letter at the same place), so one table
+  // serves them all, in the everyday spelling songs are written in ("pyaar", "teri", "mein", "dilbar"). A consonant
+  // carries an "a" unless a sign silences it or a vowel sign takes its place; in Hindi, Punjabi and Gujarati that "a"
+  // isn't said at a word's end, nor after a vowel when a consonant with its own vowel follows (dil·bar, samajh·na) —
+  // left out there too (a rule of thumb: a few words come out a little off, "kesriya" for kesariya).
+  const IN = { 0x0900: 'hi', 0x0980: 'bn', 0x0A00: 'pa', 0x0A80: 'gu', 0x0B00: 'or', 0x0B80: 'ta', 0x0C00: 'te', 0x0C80: 'kn', 0x0D00: 'ml' };
+  const IN_C = 'k kh g gh n ch chh j jh n t th d dh n t th d dh n n p ph b bh m y r r l l zh v sh sh s h'.split(' '); // (0x15–0x39)
+  const IN_V = ['a', 'aa', 'i', 'ee', 'u', 'oo', 'ri', 'li', 'e', 'e', 'e', 'ai', 'o', 'o', 'o', 'au']; // (0x05–0x14: a vowel of its own)
+  const IN_M = { 0x3E: 'aa', 0x3F: 'i', 0x40: 'ee', 0x41: 'u', 0x42: 'oo', 0x43: 'ri', 0x44: 'ri', 0x45: 'e', 0x46: 'e', 0x47: 'e', 0x48: 'ai', 0x49: 'o', 0x4A: 'o', 0x4B: 'o', 0x4C: 'au', 0x62: 'li', 0x63: 'li' }; // (a consonant's vowel sign)
+  const IN_DOT = { k: 'q', g: 'gh', j: 'z', ph: 'f' }; // (a dot under: क़ ग़ ज़ फ़)
+  const IN_X = { 0x58: 'q', 0x59: 'kh', 0x5A: 'gh', 0x5B: 'z', 0x5C: 'd', 0x5D: 'dh', 0x5E: 'f', 0x5F: 'y' }; // (the same, as one letter: ड़ ਫ਼ য়…)
+  const SHORT = { aa: 'a', ee: 'i', oo: 'u' };
+  const indic = word => {
+    const t = []; let sc = '';
+    for (const ch of word) {
+      const c = ch.codePointAt(0), last = t[t.length - 1];
+      if (c === 0x200C || c === 0x200D) continue; // (joiners: how it's drawn, not said)
+      if (c < 0x0900 || c > 0x0D7F) { t.push({ o: ch }); continue; }
+      const o = c & 0x7F; sc = IN[c - o];
+      if (o >= 0x15 && o <= 0x39) t.push({ c: sc === 'ta' && o === 0x24 ? 'th' : IN_C[o - 0x15], a: true });
+      else if (o >= 0x58 && o <= 0x5F) t.push({ c: o === 0x5C && sc !== 'hi' ? 'r' : IN_X[o], a: true });
+      else if (sc === 'ml' && o >= 0x7A) t.push({ c: ['n', 'n', 'r', 'l', 'l', 'k'][o - 0x7A], a: false }); // (Malayalam's consonants with no vowel)
+      else if (o === 0x3C) { if (last?.c) last.c = IN_DOT[last.c] || last.c; }
+      else if (o === 0x4D) { if (last?.c) last.a = false; }
+      else if (IN_M[o]) { if (last?.c) last.a = false; t.push({ v: IN_M[o] }); }
+      else if (o >= 0x05 && o <= 0x14) t.push({ v: IN_V[o - 5] });
+      else if (o === 0x01 || o === 0x02 || (sc === 'pa' && o === 0x70)) t.push({ n: o });
+      else if (sc === 'pa' && o === 0x71) t.push({ dbl: true }); // (Punjabi's addak: the next consonant doubled)
+      else if (o === 0x03) t.push({ o: 'h' });
+      else if (o >= 0x66 && o <= 0x6F) t.push({ o: String(o - 0x66) });
+      else if (o === 0x50) t.push({ o: 'om' }); // (dandas, the signs that only carry a vowel…: nothing said)
+    }
+    const drops = sc === 'hi' || sc === 'pa' || sc === 'gu', letter = x => x.c != null || x.v != null;
+    const L = t.filter(letter), end = L[L.length - 1];
+    if ((drops || sc === 'bn') && L.length > 1 && end.c != null) end.a = false; // (the word's last "a", unsaid)
+    if (drops) for (let j = t.length - 2; j > 0; j--) { // (and between, right to left: "a" after a vowel, before a consonant that has its own)
+      const x = t[j], p = t[j - 1], n = t[j + 1];
+      if (x.c != null && x.a && (p.v != null || (p.c != null && p.a)) && n.c != null && (n.a || t[j + 2]?.v != null)) x.a = false;
+    }
+    let out = '', dbl = false;
+    t.forEach((x, k) => {
+      if (x.o != null) out += x.o;
+      else if (x.dbl) dbl = true;
+      else if (x.n) { const nx = t.slice(k + 1).find(letter); out += sc === 'bn' && x.n === 2 ? 'ng' : /^[pbm]/.test(nx?.c || '') || (!nx && /^(ta|te|kn|ml)$/.test(sc)) ? 'm' : 'n'; } // ("ambar", "rang", "bangla", "malayalam")
+      else if (x.c != null) { out += (dbl ? x.c[0] : '') + x.c + (x.a ? (sc === 'bn' ? 'o' : 'a') : ''); dbl = false; }
+      else {
+        const after = t.slice(k + 1).filter(letter).length, nasal = t[k + 1]?.n && !t.slice(k + 2).some(letter);
+        out += sc === 'bn' ? SHORT[x.v] || x.v // (Bengali: one length)
+          : drops && !after && !nasal && L.length > 1 ? SHORT[x.v] || x.v // ("tera", "teri", "tu"; a vowel that's the whole word, "aa", as it is)
+          : drops && nasal ? { ee: 'i', e: 'ei' }[x.v] || x.v : x.v; // ("nahin", "mein", "hoon", "yahaan")
+      }
+    });
+    return out;
+  };
   return {
-    has: text => /[\uAC00-\uD7A3\u0400-\u04FF\u0370-\u03FF\u3040-\u30FF]/.test(text),
+    has: text => /[\uAC00-\uD7A3\u0400-\u04FF\u0370-\u03FF\u3040-\u30FF\u0900-\u0D7F]/.test(text),
     word: w => {
+      if (/[\u0900-\u0D7F]/.test(w)) return indic(w);
       if ([...w].some(isKana)) return jp(w);
       let out = ''; for (const ch of w) { const r = one(ch); out += r == null ? ch : r; } return out;
     },
@@ -4351,7 +4407,7 @@ function buildIntro(deck) {
     el('p', 'it-meta lbl', [$('artist').textContent, t.collectionName, t.releaseDate?.slice(0, 4), t.primaryGenreName].filter(Boolean).join(' · ')), foot);
   const wrap = el('div', 'it-wrap');
   wrap.append(sleeve, text);
-  deck.append(wrap, el('p', 'next', lines[0]?.text || ' '));
+  deck.append(wrap, el('p', 'next', lyrDisp(lines[0]).text || ' '));
   stage.replaceChildren(deck);
   fitDeck();
   introDeck = deck; lastCd = null;
@@ -4655,7 +4711,7 @@ function layoutLyricShape(p) {
     if (s.L > room) lay(s.fs * room / s.L); // (a long line: smaller letters, to go round once at most)
     s.rings = [{ items: s.items, L: s.L, fs: s.fs, roll: atom ? 0 : -.16, dir: -1 }];
     if (atom) for (const [i, roll, dir] of [[activeIdx - 1, 1.05, 1], [activeIdx + 1, -1.05, -1]])
-      if (lines[i]?.text) s.rings.push({ ...ghost(lines[i].text, s.fs * .85, room), roll, dir });
+      if (lines[i]?.text) s.rings.push({ ...ghost(lyrDisp(lines[i]).text, s.fs * .85, room), roll, dir });
     for (const r of s.rings) { r.stretch = Math.min(1.8, Math.max(1, room * .6 / r.L)); r.spin = Math.random() * 6.28; } // (a short line: spread round more of its ring)
     s.big = p.appendChild(el('span', 'orb')); s.bigI = -2; s.bigFs = Math.min(H * .24, 170) * ls; s.W = W;
   } else if (kind === 'Swarm') {
@@ -5768,16 +5824,16 @@ async function storyBase(t) {
 function storyLyricsBlock(info, i, top) {
   const W = 1080, c = document.createElement('canvas'), g = c.getContext('2d'), f = storyFont(), room = 1880 - top;
   c.width = W; c.height = room;
-  const ls = info.ls, cur = ls[i]?.text;
+  const ls = info.ls, cur = ls[i] && lyrDisp(ls[i]).text;
   if (!cur) return c;
   g.textAlign = 'center'; g.textBaseline = 'alphabetic';
   let L;
   for (let max = 84; max >= 40; max -= 4) { L = storyFit(g, cur.toUpperCase(), f.poster, max, 40, 940, 3); if (44 + 8 + L[1].length * L[0] * 1.06 + 66 <= room) break; }
   let y = 44;
-  g.font = f.serif(36); g.fillStyle = rgba(pal.ink, .5); if (ls[i - 1]) g.fillText(storyOne(g, ls[i - 1].text, g.font, 940), W / 2, y);
+  g.font = f.serif(36); g.fillStyle = rgba(pal.ink, .5); if (ls[i - 1]) g.fillText(storyOne(g, lyrDisp(ls[i - 1]).text, g.font, 940), W / 2, y);
   y += 8; g.font = f.poster(L[0]); g.fillStyle = pal.a;
   for (const l of L[1]) { y += L[0] * 1.06; g.fillText(l, W / 2, y); }
-  y += 66; g.font = f.poster(32); g.fillStyle = rgba(pal.ink, .45); if (ls[i + 1]) g.fillText(storyOne(g, ls[i + 1].text.toUpperCase(), g.font, 940), W / 2, y);
+  y += 66; g.font = f.poster(32); g.fillStyle = rgba(pal.ink, .45); if (ls[i + 1]) g.fillText(storyOne(g, lyrDisp(ls[i + 1]).text.toUpperCase(), g.font, 940), W / 2, y);
   return c;
 }
 
@@ -12295,10 +12351,11 @@ function kinShot(now) {
     if (kin.shot?.key !== 'b' + activeIdx) kin.shot = { key: 'b' + activeIdx, look: 'break', ground: 'night', seed: Math.random(), t0: now, cut: now };
     return;
   }
-  if (kin.lineIdx !== activeIdx || kin.lineTxt !== line.text) {
-    kin.lineIdx = activeIdx; kin.lineTxt = line.text;
+  const shown = lyrDisp(line); // (romanized, when that's on)
+  if (kin.lineIdx !== activeIdx || kin.lineTxt !== shown.text) {
+    kin.lineIdx = activeIdx; kin.lineTxt = shown.text;
     const list = [];
-    (line.words ? line.words.map(x => x.w) : line.text.split(/\s+/)).forEach((w, i) => {
+    (shown.words || shown.text.split(/\s+/)).forEach((w, i) => {
       const em = (w.match(/\p{Extended_Pictographic}(\u200d\p{Extended_Pictographic}|\ufe0f)*/u) || [''])[0], t = kinWord(w.replace(/[\p{Extended_Pictographic}\u200d\ufe0f]/gu, ''));
       if (/[\p{L}\p{N}]/u.test(t)) list.push({ t, i, em: em ? emojiCode(em) : emojiFor(t) });
       else if (em && list.length) list[list.length - 1].em ||= emojiCode(em);
@@ -12988,6 +13045,11 @@ console.assert(artUrl({ artworkUrl100: 'https://is1-ssl.mzstatic.com/a/100x100bb
   console.assert(ls.every((l, i) => Math.abs(l.t - ref[i].t) < .01), 'alignTo broken: ' + ls.map(l => l.t).join()); }
 // shared to NetherFlow from another app (Android's share sheet): the share it was opened with, and any while it runs
 if (native) { Capacitor.Plugins.Sharing.received?.().then(r => { if (r?.text) openShared(r.text); }).catch(() => {}); Capacitor.Plugins.Sharing.addListener?.('received', m => { if (m.text) openShared(m.text); }); }
+{ const on = romanizeOn; romanizeOn = true;
+  const got = [['तेरा इश्क़ है पिया', 'tera ishq hai piya'], ['मैं नहीं हूँ', 'main nahin hoon'], ['ज़िंदगी में', 'zindagi mein'], ['प्यार दिलबर समझना', 'pyaar dilbar samajhna'],
+    ['अंबर रंग यहाँ', 'ambar rang yahaan'], ['तुम ही हो', 'tum hi ho'], ['ਤੇਰੇ ਬਿਨਾ ਸੱਚ ਜੱਟ', 'tere bina sacch jatt'], ['நான் உன்னை', 'naan unnai'], ['আমার ভালোবাসি বাংলা', 'amar bhalobasi bangla'], ['నాటు', 'naatu'], ['ਆ ਜਾ ਗਿਆ', 'aa ja gia'], ['മലയാളം', 'malayaalam']]
+    .filter(([a, b]) => lyrDisp({ text: a }).text !== b).map(([a, b]) => a + ' → ' + lyrDisp({ text: a }).text + ' (not ' + b + ')');
+  romanizeOn = on; console.assert(!got.length, 'romanize (India\'s scripts) broken: ' + got.join('; ')); }
 console.assert(['https://youtu.be/dQw4w9WgXcQ?si=Ab1', 'https://music.youtube.com/watch?v=dQw4w9WgXcQ&si=x', 'https://www.youtube.com/watch?app=desktop&v=dQw4w9WgXcQ&t=5', 'https://youtube.com/shorts/dQw4w9WgXcQ?si=1', 'Listen: https://m.youtube.com/watch?v=dQw4w9WgXcQ.']
   .every(s => ytIdIn(linkIn(s)) === 'dQw4w9WgXcQ') && !ytIdIn('https://www.youtube.com/playlist?list=PLabc') && !ytIdIn('https://example.com/watch?v=dQw4w9WgXcQ') && !ytIdIn('https://youtu.be/dQw4w9WgXcQx'), 'ytIdIn broken');
 // the app's built. Android: its own splash may go now — it fades out over the app's first frame (MainActivity), so the
