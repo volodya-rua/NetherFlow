@@ -122,7 +122,7 @@ The full notes for this release and every earlier one are in the [changelog](CHA
   rename, live. End-to-end encrypted, no account
 - **Mix with a friend**: your taste and a friend's in one playlist. Send them your link; they open it
 - **Phone ↔ PC sync**: liked songs, playlists, history and stats over your own Wi-Fi with a 12-number code
-- **Discord status** (Windows): your song on your Discord profile, with its cover and progress
+- **Discord status** (Windows and Linux): your song on your Discord profile, with its cover and progress
 
 ### On every screen
 
