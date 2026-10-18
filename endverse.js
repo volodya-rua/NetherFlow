@@ -27,6 +27,9 @@
   const VERSION = /\b(live|remix(?:ed)?|acoustic|unplugged|instrumental|karaoke|slowed|sped up|reverb|nightcore|8d|orchestral|symphonic|reprise|lo-?fi|demo)\b/gi;
 
   const sleep = ms => new Promise(r => setTimeout(r, ms));
+  // an entry with a line or two of words for a whole song ("probe": someone's test), or none and not marked instrumental:
+  // not the song's lyrics — passed over, as if it weren't there (the others, or another source, found instead)
+  const real = h => !!h.instrumental || String(h.syncedLyrics || h.plainLyrics || '').split('\n').filter(l => l.replace(/^\s*\[[^\]]*\]/, '').trim()).length >= 3;
   const KEEP = 200; // (answers remembered, at most: the oldest go first)
 
   class Engine {
@@ -67,7 +70,7 @@
         // isn't JSON, an error page, is asked again)
         const text = await this.get('https://lrclib.net/api/' + path + (params ? '?' + new URLSearchParams(params) : ''));
         let j = null; try { j = JSON.parse(text); } catch {}
-        if (path === 'search' ? Array.isArray(j) : j && typeof j.id === 'number') return j;
+        if (path === 'search' ? Array.isArray(j) : j && typeof j.id === 'number') return path === 'search' ? j.filter(real) : real(j) ? j : null;
         if (j?.statusCode === 404 || j?.name === 'TrackNotFound') return null;
       }
     }
