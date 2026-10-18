@@ -66,6 +66,10 @@ kbd { font: inherit; border: 1px solid currentColor; border-radius: 3px; padding
 .tg-btn.on svg { stroke: var(--a); filter: drop-shadow(0 0 5px var(--a)); }
 .tg-count { position: absolute; top: -4px; right: -6px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: var(--a); color: var(--bg); font-size: 10px; line-height: 16px; text-align: center; }
 .tg-count[hidden] { display: none; }
+.cast-dev { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; width: 100%; padding: 11px 14px; border: 0; border-bottom: 1px solid var(--hair); background: none; color: inherit; font: inherit; font-size: 14px; text-align: left; cursor: pointer; }
+.cast-dev small { flex: none; opacity: .6; }
+.cast-dev:hover { background: rgba(255,255,255,.04); }
+.cast-dev.on { color: var(--a); }
 .tg-float { position: fixed; bottom: 130px; z-index: 70; pointer-events: none; text-align: center; translate: -50% 0; animation: tg-up 2.6s cubic-bezier(.2,.7,.3,1) forwards; }
 .tg-float b { display: block; font-size: 46px; filter: drop-shadow(0 6px 14px rgba(0,0,0,.5)); }
 .tg-float small { font-size: 10px; opacity: .8; }
@@ -1442,6 +1446,7 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
 <div id="textPanel" class="moods textp" popover aria-label="Settings"></div>
 <div id="queuePanel" class="moods textp qpanel" popover aria-label="Queue"></div>
 <div id="togetherPanel" class="moods textp qpanel" popover aria-label="Listen together"></div>
+<div id="castPanel" class="moods textp qpanel" popover aria-label="Play on a TV or speaker"></div>
 <div id="syncPanel" class="moods textp qpanel" popover aria-label="Sync"></div>
 <div id="songMenu" class="smenu lbl" popover aria-label="Song options"></div>
 <div id="toast" class="toast" popover="manual" role="status"></div>
@@ -1468,6 +1473,8 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
       <button id="openSearch" class="link hot nav-ico" aria-label="Search (/)" title="Search (/)"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="7"/><path d="M15.6 15.6L21 21M7.5 9.5v2M10.5 7.5v6M13.5 9v3"/></svg></button>
       <button id="openLib" class="link nav-ico" aria-label="Library (L)" title="Library (L)"><svg viewBox="0 0 24 24"><path d="M14.5 5.16a7 7 0 0 1 0 13.68M14.5 7.76a4.5 4.5 0 0 1 0 8.48"/><rect x="2.5" y="4.5" width="12" height="15" rx="1.5"/><path d="M6 15.5h5"/></svg><span id="dlCount" class="dl-count" hidden></span></button>
       <button id="togetherBtn" class="link nav-ico tg-btn" popovertarget="togetherPanel" aria-label="Listen together" title="Listen together"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3 19.5c.6-3.3 3-5.2 6-5.2s5.4 1.9 6 5.2"/><circle cx="17" cy="9" r="2.5"/><path d="M16.5 14.3c2.4.2 4.1 1.9 4.6 4.7"/></svg><b id="tgCount" class="tg-count" hidden></b></button>
+      <!-- Play on a TV or speaker: a screen with sound coming from it -->
+      <button id="castBtn" class="link nav-ico tg-btn" popovertarget="castPanel" aria-label="Play on a TV or speaker" title="Play on a TV or speaker" hidden><svg viewBox="0 0 24 24"><rect x="2.5" y="4" width="19" height="13" rx="1.5"/><path d="M8 20.5h8M10 8.6a3.2 3.2 0 0 1 0 3.8M13 7a6 6 0 0 1 0 7"/></svg></button>
       <button id="textBtn" class="link nav-ico" popovertarget="textPanel" aria-label="Settings" title="Settings"><svg viewBox="0 0 24 24"><path d="M10.11 4.95 L10.65 2.39 A9.7 9.7 0 0 1 13.35 2.39 L13.89 4.95 A7.3 7.3 0 0 1 15.65 5.68 L17.84 4.25 A9.7 9.7 0 0 1 19.75 6.16 L18.32 8.35 A7.3 7.3 0 0 1 19.05 10.11 L21.61 10.65 A9.7 9.7 0 0 1 21.61 13.35 L19.05 13.89 A7.3 7.3 0 0 1 18.32 15.65 L19.75 17.84 A9.7 9.7 0 0 1 17.84 19.75 L15.65 18.32 A7.3 7.3 0 0 1 13.89 19.05 L13.35 21.61 A9.7 9.7 0 0 1 10.65 21.61 L10.11 19.05 A7.3 7.3 0 0 1 8.35 18.32 L6.16 19.75 A9.7 9.7 0 0 1 4.25 17.84 L5.68 15.65 A7.3 7.3 0 0 1 4.95 13.89 L2.39 13.35 A9.7 9.7 0 0 1 2.39 10.65 L4.95 10.11 A7.3 7.3 0 0 1 5.68 8.35 L4.25 6.16 A9.7 9.7 0 0 1 6.16 4.25 L8.35 5.68 A7.3 7.3 0 0 1 10.11 4.95Z"/><circle cx="12" cy="12" r="3"/></svg></button>
       <button id="eqBtn" class="link fs-btn" popovertarget="eqPanel" aria-label="Equalizer" title="Equalizer">
         <svg viewBox="0 0 14 14"><path d="M2 1v12M7 1v12M12 1v12"/><path d="M.5 9h3M5.5 4h3M10.5 7h3" stroke-width="2"/></svg>
@@ -1642,6 +1649,7 @@ if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.is
 <script src="lib.js"></script>
 <script src="flowstream.js"></script>
 <script src="endverse.js"></script>
+<script src="cast.js"></script>
 <script src="bridgethemusic.js"></script>
 <script>
 const $ = id => document.getElementById(id);
@@ -3056,7 +3064,38 @@ async function fsPlay(v, id) {
   audio.volume = playerLevel() * fsLevel();
   P.play();
 }
-const A = () => engine === 'ep' ? epAudio : audio; // (the <audio> playing: songs' or talk's)
+// Casting (cast.js): the song played by a TV or a speaker in the house, this page its remote. Everything else goes on as
+// before — the queue, the lyrics on its clock, the controls, Listen together — only what plays is the device: each
+// song's address handed to it, one it fetches itself (FlowStream's AAC stream: every TV and speaker plays it; a
+// preview's, a podcast's, a concert's own), and where it's at asked for. No equalizer, sound effects or visuals from its
+// sound meanwhile: the sound's the device's. A song saved on this device: its stream (the TV can't reach a recording here).
+const cast = { s: null, dev: null, for: 'audio', local: '', shift: 0, want: false, cmdAt: 0, n: 0, loading: false, held: null, list: [], looking: false, lookedAt: 0, note: '', vt: 0 };
+const castEl = { // (the device, as a player: what P and the rest ask of one)
+  get paused() { return !cast.want; },
+  get currentTime() {
+    const l = cast.s?.last, h = cast.held, run = cast.want && !cast.loading;
+    if (h && (cast.loading || !l || l.at < h.at + 1600)) return h.t + (run ? (Date.now() - h.at) / 1000 : 0); // (moved, or starting: there, till the device says where it is)
+    return l ? Math.min(l.dur || Infinity, l.t + (l.state === 'playing' ? (Date.now() - l.at) / 1000 : 0)) : 0;
+  },
+  set currentTime(t) { cast.held = { t, at: Date.now() }; cast.cmdAt = Date.now(); if (!cast.loading) cast.s?.seek(t); },
+  get duration() { return cast.loading ? NaN : cast.s?.last?.dur || NaN; },
+  get src() { return cast.local; },
+  getAttribute() { return cast.local; },
+  play() {
+    const el = cast.for === 'ep' ? epAudio : audio, src = el.getAttribute('src');
+    cast.want = true; cast.cmdAt = Date.now();
+    if (src) { // a song just given to this device's own player: the TV's instead
+      el.removeAttribute('src'); el.load();
+      if (cast.local.startsWith('blob:') && cast.local !== src) URL.revokeObjectURL(cast.local);
+      cast.local = src; cast.shift = songShift;
+      castLoad(src, cast.for === 'ep' && !current?.epLive ? Math.max(0, epPos[current?.trackId] || 0) : 0);
+    } else cast.s?.play();
+    setPlaying(true);
+    return Promise.resolve();
+  },
+  pause() { cast.want = false; cast.cmdAt = Date.now(); cast.s?.pause(); setPlaying(false); },
+};
+const A = () => engine === 'ep' ? epAudio : engine === 'cast' ? castEl : audio; // (what's playing: songs' <audio>, talk's, or a TV)
 // Playing, but not moving on: its stream stopped coming with nothing said (the network changed, or slept, with the app
 // away; an address ran out), or the sound engine stopped (another app took the sound; Android stops a page's now and
 // then): the song looked to be playing, and nothing was heard. Every 2 s while one plays — the timers run with the app
@@ -3064,6 +3103,7 @@ const A = () => engine === 'ep' ? epAudio : audio; // (the <audio> playing: song
 // error is (a fresh address, the same moment). Coming back to the app: looked at at once.
 const stuck = { t: -1, at: 0 };
 function checkPlaying() {
+  if (engine === 'cast') return; // (the device's own business)
   const el = A();
   if (ctx && ctx.state !== 'running' && ctx.state !== 'closed' && !el.paused) ctx.resume().catch(() => {});
   if (el.paused || !el.getAttribute('src') || el.currentTime < .5 || mix.on || !navigator.onLine) { stuck.t = -1; return; } // (not started yet: loading, not stuck)
@@ -3125,6 +3165,7 @@ function setPlaying(on) {
   updateSkips();
 }
 function useEngine(kind) {
+  if (cast.s) { cast.for = kind; kind = 'cast'; } // (casting: whatever plays next, the device plays)
   if (engine === kind) return;
   engine = kind;
   if (kind !== 'audio') audio.pause();
@@ -3477,6 +3518,113 @@ function shuffleList(tracks, p = null) {
 // the playlist the queue was taken from (its rows, Play all, Shuffle), while it's still that queue: songs it gains
 // (an import filling in) join the queue too
 let queueFrom = null;
+// ---- casting: the devices, the song handed to one and back
+let caster = null;
+const castCan = !!window.NFCast && (!!window.netherflowApp?.castNet || native && !!Capacitor.Plugins?.Cast);
+$('castBtn').hidden = !castCan;
+function castNetOf() { // the house's network: desktop's from main.js (castnet.js); Android's, the app's (CastPlugin)
+  if (window.netherflowApp?.castNet) return netherflowApp.castNet;
+  const C = Capacitor.Plugins.Cast, open = new Map(), unb = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+  C.addListener('tlsData', e => open.get(e.id)?.data(unb(e.data)));
+  C.addListener('tlsClose', e => { const o = open.get(e.id); open.delete(e.id); o?.close(); });
+  return {
+    udp: (group, port, bytes, ms) => C.udp({ group, port, data: b64of(bytes), ms }).then(r => (r.answers || []).map(a => ({ from: a.from, data: unb(a.data) }))),
+    tls: async (host, port, data, close) => { const { id } = await C.tlsOpen({ host, port }); open.set(id, { data, close }); return { write: b => C.tlsWrite({ id, data: b64of(b) }).catch(() => {}), close: () => C.tlsClose({ id }).catch(() => {}) }; },
+    http: (method, url, headers, body) => C.http({ method, url, headers, body }),
+  };
+}
+const CAST_FMT = [140, 251, 250, 249, 139]; // (AAC first: every TV and speaker plays it; Opus after)
+async function castStream(vid) { // a song's FlowStream address, for the device to fetch itself
+  if (!native) return fetch('/api/fs/cast?' + new URLSearchParams({ id: vid })).then(r => r.ok ? r.json() : Promise.reject(new Error('no stream')));
+  const p = await flowPage.player(vid), f = CAST_FMT.map(i => p.formats.find(x => x.itag === i)).find(Boolean);
+  if (!f) throw new Error('no stream');
+  return { url: f.url, mime: f.mimeType.split(';')[0] };
+}
+const castMime = u => /\.(m4a|mp4|aac)(\?|$)/i.test(u) ? 'audio/mp4' : /\.(ogg|oga)(\?|$)/i.test(u) ? 'audio/ogg' : /\.flac(\?|$)/i.test(u) ? 'audio/flac' : 'audio/mpeg';
+async function castLoad(src, at = 0) {
+  const n = ++cast.n, t = current, s = cast.s;
+  cast.loading = true; cast.held = { t: at, at: Date.now() };
+  try {
+    let url = src, mime = '';
+    const vid = /fs\/media/.test(src) ? new URL(src, location.href).searchParams.get('id') : src.startsWith('blob:') && t?.kind !== 'episode' ? (await idb.get(t?.trackId).catch(() => null))?.ytId : null;
+    if (src.startsWith('blob:')) { if (t?.kind === 'episode') url = t.epUrl || ''; else if (!vid) throw new Error('here only'); songShift = 0; } // (the stream: from its very start)
+    if (vid) ({ url, mime } = await castStream(vid));
+    if (!/^https?:\/\//.test(url) || /^https?:\/\/(localhost|127\.)/.test(url)) throw new Error('here only');
+    if (n !== cast.n) return;
+    const art = artUrl(t, 600);
+    await s.load({ url, mime: mime || castMime(url), title: t?.trackName || '', artist: t?.artistName || '', album: t?.collectionName || '', art: /^https:/.test(art) ? art : '', at });
+    if (n !== cast.n) return;
+    cast.loading = false;
+    if (cast.held && cast.held.t !== at) s.seek(cast.held.t); // (moved meanwhile)
+    if (!cast.want) s.pause(); // (paused meanwhile)
+  } catch (e) {
+    if (n !== cast.n) return;
+    cast.loading = false; cast.want = false; setPlaying(false);
+    const why = e.message === 'here only' ? `it's saved on this ${native ? 'phone' : 'computer'} only` : `${cast.dev?.name || 'the TV'} couldn't play it`;
+    status('◇ ' + why); toast(`Not on ${cast.dev?.name || 'the TV'}: ${why}`, 6000);
+  }
+}
+function castStatus(st) { // what the device says: its own remote's pause and play followed, the song's end on to the next
+  if (cast.loading) return;
+  if (st.state === 'ended') { if (cast.want) { cast.want = false; setPlaying(false); songEnded(); } return; }
+  if (Date.now() - cast.cmdAt < 2500) return; // (its answer to what was just asked: not a change made on the TV itself)
+  if (st.state === 'playing' && !cast.want) { cast.want = true; setPlaying(true); }
+  else if (st.state === 'paused' && cast.want) { cast.want = false; setPlaying(false); }
+  else if (st.state === 'error' && cast.want) { cast.want = false; setPlaying(false); toast(`${cast.dev.name} couldn't play this one`); }
+}
+async function castTo(d) { // the song moves to the device, from where it is
+  if (cast.dev?.id === d.id) return;
+  cast.note = `Connecting to ${d.name}…`; castRender();
+  let s;
+  try { s = await (caster ||= NFCast.create({ net: castNetOf() })).open(d); }
+  catch { cast.note = `Couldn't reach ${d.name}: it may be off, or on another Wi-Fi.`; return castRender(); }
+  const at = P.t, playing = P.loaded && !P.paused;
+  if (cast.s) { const old = cast.s; old.onclose = old.onstatus = null; old.close(); } // (from one device to another)
+  else {
+    mixAbort();
+    const el = A(); cast.for = engine; cast.local = el.getAttribute('src') || ''; cast.shift = songShift;
+    el.pause(); if (cast.local) { el.removeAttribute('src'); el.load(); }
+    engine = 'cast';
+  }
+  cast.s = s; cast.dev = d; cast.note = ''; cast.want = playing && !!cast.local;
+  s.onstatus = castStatus; s.onclose = () => castStop(true);
+  if (cast.local) castLoad(cast.local, at);
+  setPlaying(cast.want); toast(`Playing on ${d.name}`); castRender();
+}
+function castStop(gone = false) { // back to this device, from where it was (the device let go: paused here)
+  const s = cast.s;
+  if (!s) return;
+  const at = P.t, want = cast.want && !gone, name = cast.dev.name, src = cast.local;
+  s.onclose = s.onstatus = null; if (!gone) s.close();
+  Object.assign(cast, { s: null, dev: null, n: cast.n + 1, loading: false, want: false, local: '', held: null });
+  engine = cast.for; songShift = cast.shift;
+  const el = A();
+  if (src) { el.src = src; el.addEventListener('loadedmetadata', () => { el.currentTime = at; }, { once: true }); }
+  if (src && want) P.play(); else setPlaying(false);
+  toast(gone ? `${name} let go: the song's back here, paused` : `Playing on this ${native ? 'phone' : 'computer'} again`);
+  castRender();
+}
+async function castLook() {
+  if (cast.looking) return;
+  cast.looking = true; cast.lookedAt = Date.now(); cast.note = ''; castRender();
+  caster ||= NFCast.create({ net: castNetOf() });
+  const list = await caster.devices(2500).catch(() => []);
+  if (cast.dev && !list.some(d => d.id === cast.dev.id)) list.unshift(cast.dev);
+  cast.list = list; cast.looking = false; castRender();
+}
+function castRender() {
+  $('castBtn').classList.toggle('on', !!cast.s);
+  if (!$('castPanel').matches(':popover-open')) return;
+  const here = native ? 'phone' : 'computer', row = (name, sub, on, go) => { const b = el('button', 'cast-dev' + (on ? ' on' : ''), name); b.append(el('small', 'lbl', sub)); b.onclick = go; return b; };
+  const out = [sectionHead('Play on', cast.looking ? '' : 'Look again', castLook), row('This ' + here, cast.s ? '' : 'playing here', !cast.s, () => castStop())];
+  for (const d of cast.list) out.push(row(d.name, cast.dev?.id === d.id ? 'playing here' : d.model || 'TV or speaker', cast.dev?.id === d.id, () => castTo(d)));
+  out.push(el('p', 'q-empty lbl', cast.note || (cast.looking ? 'Looking for TVs and speakers on your Wi-Fi…'
+    : !cast.list.length ? `None found. A TV or a speaker shows here when it's on, and on the same Wi-Fi as this ${here}.`
+    : cast.s ? `The song plays on ${cast.dev.name}. The lyrics, the queue and the controls stay here.` : 'Pick one: the song moves there, from where it is.')));
+  $('castPanel').replaceChildren(...out);
+}
+$('castPanel').addEventListener('toggle', e => { if (e.newState !== 'open') return; castRender(); if (Date.now() - cast.lookedAt > 15000) castLook(); });
+
 function songEnded() {
   if (tg.role === 'guest') return;
   if (repeat === 'one') { P.seek(0); P.play(); }
@@ -8852,6 +9000,7 @@ function setVolume(v, mute = muted, fromPhone = false) {
   volume = Math.min(3, Math.max(0, v)); muted = mute;
   const boosted = !muted && volume > 1;
   audio.volume = playerLevel() * fsLevel(); epAudio.volume = playerLevel();
+  if (engine === 'cast') { clearTimeout(cast.vt); cast.vt = setTimeout(() => cast.s?.volume(muted ? 0 : Math.min(1, volume)), 150); } // (the device's own volume, as this one's slider moves)
   levelAnalyser();
   if (sysLink && !fromPhone && !muted) setPhoneVolume(Math.min(1, volume));
   if (boostLevel !== (boosted ? volume : 1)) applyBoost(boosted ? volume : 1);

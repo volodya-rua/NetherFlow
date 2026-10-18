@@ -19,6 +19,17 @@ contextBridge.exposeInMainWorld('netherflowApp', {
     islandPlace: what => ipcRenderer.send('island-place', what), // ('move': moving it, or done; 'reset': the top middle)
     onIslandMoving: cb => ipcRenderer.on('island-moving', (_, on) => cb(!!on)),
   } : {}),
+  // casting (cast.js): the house's network, through castnet.js — a question to its devices, a Cast device's TLS, HTTP to a DLNA one
+  castNet: {
+    udp: (group, port, bytes, ms) => ipcRenderer.invoke('cast-udp', group, port, bytes, ms),
+    tls: async (host, port, onData, onClose) => {
+      const id = await ipcRenderer.invoke('cast-tls-open', host, port);
+      const data = (_, i, b) => { if (i === id) onData(b); }, end = (_, i) => { if (i !== id) return; ipcRenderer.off('cast-tls-data', data); ipcRenderer.off('cast-tls-close', end); onClose(); };
+      ipcRenderer.on('cast-tls-data', data); ipcRenderer.on('cast-tls-close', end);
+      return { write: b => ipcRenderer.send('cast-tls-write', id, b), close: () => ipcRenderer.send('cast-tls-close', id) };
+    },
+    http: (method, url, headers, body) => ipcRenderer.invoke('cast-http', method, url, headers, body),
+  },
   // Discord "Now playing" (see main.js): the song as it plays ({ title, artist, album, art, start, end, url }), or null
   presence: w => ipcRenderer.send('presence', w),
   // phone ↔ PC sync (see main.js): open the local server → { port, addrs, name }; what a phone sends (encrypted) comes in

@@ -295,6 +295,7 @@ ipcMain.on('island-place', (e, what) => {
   if (what === 'move') islandMove(!islandMoving);
   else if (what === 'reset') { islandAt = null; keepIslandAt(); placeIsland(); }
 });
+require('./castnet.js').register(ipcMain, () => win); // (casting: the house's network, for cast.js in the page)
 ipcMain.on('island-shape', (e, r) => {
   if (!island || e.sender !== island.webContents || !r || ![r.x, r.y, r.width, r.height].every(Number.isFinite)) return;
   const c = (v, max) => Math.max(0, Math.min(max, Math.round(v)));

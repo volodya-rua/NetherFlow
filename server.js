@@ -21,6 +21,7 @@ const FILES = {
   '/lib.js': ['lib.js', 'text/javascript'],
   '/flowstream.js': ['flowstream.js', 'text/javascript'],
   '/endverse.js': ['endverse.js', 'text/javascript'],
+  '/cast.js': ['cast.js', 'text/javascript'],
   '/bridgethemusic.js': ['bridgethemusic.js', 'text/javascript'],
   '/legal.html': ['legal.html', 'text/html; charset=utf-8'],
   '/island.html': ['island.html', 'text/html; charset=utf-8'], // (the desktop app's island: see main.js)
@@ -74,6 +75,8 @@ async function fetchOut(href, headers, signal) {
 // and FlowStream itself asks once more after that — see flowstream.js; YouTube Music's, as above)
 const flow = FlowStream.create({ post: guard.wrap((url, body, headers) => (url.includes('music.youtube.com') ? ytmRead : playerRead)(url, body, headers)) });
 const flowAudio = id => flow.audio(id);
+// casting: a song's stream for a TV or a speaker to fetch itself (AAC first: every one plays it; Opus after)
+const CAST_FMT = [140, 251, 250, 249, 139];
 // The next song's first 256 KB (about 15 s), fetched ahead into memory, so it starts the moment it's asked for (the
 // rest follows from its source as it plays). Two songs' at most.
 const HEAD = 262144, flowHeads = new Map();
@@ -168,6 +171,11 @@ async function handle(req, res) {
     const id = url.searchParams.get('id') || '', kept = keptMeta(id);
     if (kept) { flowAudio(id).catch(() => {}); return send(res, 200, JSON.stringify({ itag: kept.itag, mime: kept.mime, bitrate: kept.bitrate || 0, loudnessDb: kept.loudnessDb, duration: kept.duration, via: 'FlowStream', kept: true })); } // (its start kept here: at once, its address asked for meanwhile)
     try { const s = await flowAudio(url.searchParams.get('id') || ''); return send(res, 200, JSON.stringify({ itag: s.itag, mime: s.mime, bitrate: s.bitrate || 0, loudnessDb: s.loudnessDb, duration: s.duration || 0, via: s.via, why: s.why || '' })); }
+    catch (e) { return send(res, 502, JSON.stringify({ error: e.code || e.message })); }
+  }
+  if (url.pathname === '/api/fs/cast') {
+    try { const p = await flow.player(url.searchParams.get('id') || ''), f = CAST_FMT.map(i => p.formats.find(x => x.itag === i)).find(Boolean);
+      return f ? send(res, 200, JSON.stringify({ url: f.url, mime: f.mimeType.split(';')[0] })) : send(res, 502, JSON.stringify({ error: 'no audio stream' })); }
     catch (e) { return send(res, 502, JSON.stringify({ error: e.code || e.message })); }
   }
   if (url.pathname === '/api/fs/kept' && req.method === 'DELETE') { // (Clear history: the kept starts go too)
