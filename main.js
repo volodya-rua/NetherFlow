@@ -287,6 +287,7 @@ ipcMain.on('notify', (e, n) => {
   note.on('click', () => { notes.delete(note); if (!win || win.isDestroyed()) return; if (win.isMinimized()) win.restore(); win.show(); win.focus(); win.webContents.send('notify-click', String(n.tag || '').slice(0, 40)); });
   note.show();
 });
+require('./castnet.js').register(ipcMain, () => win); // (casting: the house's network, for cast.js in the page)
 ipcMain.on('update-install', e => { if (win && e.sender === win.webContents && getUpdater()) getUpdater().quitAndInstall(true, true); }); // (quietly, then open again)
 
 // Settings › Island position: move it (or done), or back to the top middle
@@ -295,7 +296,6 @@ ipcMain.on('island-place', (e, what) => {
   if (what === 'move') islandMove(!islandMoving);
   else if (what === 'reset') { islandAt = null; keepIslandAt(); placeIsland(); }
 });
-require('./castnet.js').register(ipcMain, () => win); // (casting: the house's network, for cast.js in the page)
 ipcMain.on('island-shape', (e, r) => {
   if (!island || e.sender !== island.webContents || !r || ![r.x, r.y, r.width, r.height].every(Number.isFinite)) return;
   const c = (v, max) => Math.max(0, Math.min(max, Math.round(v)));

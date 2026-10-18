@@ -78,6 +78,7 @@ kbd { font: inherit; border: 1px solid currentColor; border-radius: 3px; padding
 .singbar { position: fixed; left: 50%; bottom: 150px; translate: -50% 0; z-index: 30; display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-radius: 999px;
   background: color-mix(in srgb, var(--bg) 78%, transparent); backdrop-filter: blur(14px); border: 1px solid var(--hair); box-shadow: 0 10px 40px rgba(0,0,0,.45); font-size: 11px; }
 .singbar[hidden] { display: none; }
+body.home .singbar { display: none; } /* (its voice slider is for the lyrics: not over the home screen and its links) */
 .singbar svg { width: 18px; height: 18px; fill: none; stroke: var(--a); stroke-width: 1.8; }
 .singbar .sl { width: min(220px, 40vw); --p: 20%; }
 .singbar b { min-width: 3.2em; text-align: right; font-weight: 600; }
@@ -5508,7 +5509,7 @@ function alignTo(ls, ref) {
 // screen…) stays open; a song picked from one of them brings up the player.
 // mixed: Smooth mix has it playing already (its uploads, the first the one playing)
 async function playTrack(t, term = '', queued = false, stay = false, mixed = null) {
-  if (tgIntercept('play', t)) return;
+  if (!t || tgIntercept('play', t)) return; // (no song: Play all on an empty list)
   if (!mixed) mixAbort();
   lastSong = null; // (another song picked: the last one's no longer waiting)
   importYield = Date.now() + 6000;
