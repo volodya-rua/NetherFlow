@@ -3382,7 +3382,24 @@ for (const el of [audio, audioB]) { // (only the one playing the song now: see S
 epAudio.onplay = () => { if (engine === 'ep') setPlaying(true); };
 epAudio.onpause = () => { if (engine === 'ep') { setPlaying(false); epKeep(); } };
 epAudio.onended = () => { if (engine === 'ep') { setPlaying(false); epKeep(true); songEnded(); } };
-epAudio.onerror = () => { if (engine === 'ep' && epAudio.getAttribute('src') && current?.kind === 'episode') { setPlaying(false); status("◇ couldn't load it"); message("Couldn't play it", navigator.onLine ? "the episode didn't load: try again, or another" : "you're offline"); } };
+// (one that didn't load, or broke off: asked for again twice, a moment later each time, from where it was — the Internet
+// Archive's audiobooks and concerts answer slowly, or not at all, now and then: measured 2.6–11.5 s, and 1 in 5 failed)
+let epTries = { id: '', n: 0 };
+epAudio.addEventListener('playing', () => { if (epTries.n && current?.kind === 'episode') status(`◆ ${epKind(current)}`); epTries.n = 0; });
+epAudio.onerror = () => {
+  if (engine !== 'ep' || !epAudio.getAttribute('src') || current?.kind !== 'episode') return;
+  const id = current.trackId, src = epAudio.src, at = epAudio.currentTime || 0, lid = loadId;
+  if (epTries.id !== id) epTries = { id, n: 0 };
+  if (navigator.onLine && /^https?:/.test(src) && epTries.n < 2) {
+    epTries.n++; status('● loading · trying again');
+    return setTimeout(() => {
+      if (loadId !== lid || current?.trackId !== id) return;
+      epAudio.src = src; if (at) epAudio.addEventListener('loadedmetadata', () => { epAudio.currentTime = at; }, { once: true });
+      P.play();
+    }, 1500 * epTries.n);
+  }
+  setPlaying(false); status("◇ couldn't load it"); message("Couldn't play it", navigator.onLine ? "the episode didn't load: try again, or another" : "you're offline");
+};
 
 // The queue is the list a song was picked from (search results, history, a playlist…): next / previous walk it,
 // and when a song ends the next one starts. Repeat: off, all (the list starts over), or one (the same song again).
@@ -6133,6 +6150,7 @@ async function saveOne(job) {
   dl.cur.push(job);
   dlChanged();
   try {
+    if (job.t.epNoSave) throw new Error('kept for streaming only: it can\'t be saved'); // (a concert the Archive keeps for streaming only: never on the device, by any way here)
     // the artist's own upload on Audius (320 kbps, straight from there) when it's there; else YouTube's best, by
     // FlowStream
     const ep = job.t.kind === 'episode'; // (a podcast episode or audiobook chapter: its own file, no lyrics)
@@ -7385,10 +7403,10 @@ function renderExplore(head, list, tok) {
     libCard(tile('heart', 'Your mix'), 'Your mix', 'Your most played, and more like them', () => openList({ key: 'mix:mine', label: 'Made for you', title: 'Your mix', load: () => makeMix('mine') })),
     libCard(tile('compass', 'Discover'), 'Discover', 'Songs new to you, like the ones you love', () => openList({ key: 'mix:new', label: 'Made for you', title: 'Discover', load: () => makeMix('new') })),
     libCard(tile('clock', mixName('now')), mixName('now'), 'What you play at this time of day', () => openList({ key: 'mix:now:' + daypart(), label: 'Made for you', title: mixName('now'), load: () => makeMix('now') })),
-    libCard(tile('compass', 'Discover Weekly'), 'Discover Weekly', 'Songs new to you · new every Monday', () => openList({ key: 'made:weekly:' + weekFrom(1), label: 'Made for you', title: 'Discover Weekly', load: discoverWeekly })),
+    libCard(tile('compass', 'Weekly picks'), 'Weekly picks', 'Songs new to you · new every Monday', () => openList({ key: 'made:weekly:' + weekFrom(1), label: 'Made for you', title: 'Weekly picks', load: weeklyPicks })),
     libCard(tile('radio', 'New this week'), 'New this week', 'From your artists · new every Friday', () => openList({ key: 'made:fresh:' + weekFrom(5), label: 'Made for you', title: 'New this week', load: newThisWeek })),
-    ...tasteKinds().map(([kind, songs], i) => libCard(tile('radio', `Daily mix ${i + 1}`), `Daily mix · ${kind}`, `${kind} · new every day`,
-      () => openList({ key: 'made:daily:' + kind + ':' + dayKey(), label: 'Made for you', title: `Daily mix · ${kind}`, load: () => dailyMix(kind, songs) }))),
+    ...tasteKinds().map(([kind, songs]) => libCard(tile('radio', `Today's ${kind}`), `Today's mix · ${kind}`, `${kind} · new every day`,
+      () => openList({ key: 'made:daily:' + kind + ':' + dayKey(), label: 'Made for you', title: `Today's mix · ${kind}`, load: () => todaysMix(kind, songs) }))),
     libCard(tile('together', 'Mix with a friend'), 'Mix with a friend', 'Your taste and a friend\'s, in one playlist', blendInvite));
   list.push(sectionHead('Made for you'), mine, sectionHead(follows.length ? 'New from artists you follow and play' : 'New from artists you play'), fresh, sectionHead('Charts'), charts, sectionHead('New albums & singles'), albums, sectionHead('Trending'), trend, sectionHead('Moods & genres'), moods);
   const live = () => tok === libTok;
@@ -7435,7 +7453,7 @@ function playedAround(part) {
   return [...m.values()].sort((x, y) => y[1] - x[1]).map(x => x[0]).filter(t => t?.trackName);
 }
 const mixName = kind => kind === 'now' ? `${DAYPARTS[daypart()]} mix` : kind === 'mine' ? 'Your mix' : 'Discover';
-// (only: the songs to make it from — a Daily mix's, of one kind of music — in place of all of your taste)
+// (only: the songs to make it from — a Today's mix's, of one kind of music — in place of all of your taste)
 async function makeMix(kind, only) {
   const seeds = only || myTaste(), seen = new Set(seeds.map(songKey)), around = kind === 'now' ? playedAround(daypart()) : [], learnt = around.length >= 3;
   if (!seeds.length) return { name: mixName(kind), tracks: [], empty: 'Play and like some songs first: your mixes are made from them.' };
@@ -7453,10 +7471,11 @@ async function makeMix(kind, only) {
   return { name: mixName(kind), tracks: out.slice(0, 40), sub: kind === 'now' ? (learnt ? 'What you play around this time of day, and more like it' : 'Your most played for now: it learns what you play at this time of day')
     : kind === 'mine' ? 'Your most played, and more like them' : 'Songs you haven\'t played, like the ones you love' };
 }
-// Made for you, and kept: Discover Weekly (songs new to you, like the ones you love: new every Monday), New this week
-// (the latest songs of the artists you follow and play: new every Friday) and the Daily mixes (one for each kind of music
+// Made for you, and kept: Weekly picks (songs new to you, like the ones you love: new every Monday), New this week
+// (the latest songs of the artists you follow and play: new every Friday) and Today's mixes (one for each kind of music
 // you play most, your own songs among more like them: new every day). Each made once for its week or day and kept on
 // this device, the same list all week (or day) as the big apps keep theirs, and made again when its time comes round.
+// (Names of their own: Spotify's — Discover Weekly, Daily Mix, Release Radar, Daylist, On Repeat… — are its trademarks.)
 const MADE = 'netherflow.made';
 let made = (() => { try { return JSON.parse(store.get(MADE) || '{}') || {}; } catch { return {}; } })();
 const weekFrom = wd => { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - (d.getDay() - wd + 7) % 7); return dayKey(d); }; // (the last Monday, wd 1, or Friday, 5)
@@ -7466,7 +7485,7 @@ async function keptMix(key, at, make) {
   if (list.tracks?.length) { made[key] = { at, list: { ...list, tracks: list.tracks.map(slim) } }; store.set(MADE, JSON.stringify(made)); }
   return list;
 }
-const discoverWeekly = () => keptMix('weekly', weekFrom(1), async () => ({ ...(await makeMix('new')), name: 'Discover Weekly', sub: 'Songs new to you, like the ones you love · new every Monday' }));
+const weeklyPicks = () => keptMix('weekly', weekFrom(1), async () => ({ ...(await makeMix('new')), name: 'Weekly picks', sub: 'Songs new to you, like the ones you love · new every Monday' }));
 async function newThisWeek() {
   return keptMix('fresh', weekFrom(5), async () => {
     const since = new Date(Date.now() - 14 * 864e5).toISOString(), albums = (await xGet('fresh', newFromArtists)).filter(a => (a.releaseDate || '') > since).slice(0, 12);
@@ -7484,7 +7503,7 @@ function tasteKinds() {
   for (const t of myTaste().slice(0, 300)) { const k = (t.primaryGenreName !== 'Music' && t.primaryGenreName) || LANG_NAME[songLang(t)] || ''; if (k) g.set(k, [...(g.get(k) || []), t]); }
   return [...g].filter(([, l]) => l.length >= 3).sort((a, b) => b[1].length - a[1].length).slice(0, 3);
 }
-const dailyMix = (kind, songs) => keptMix('daily:' + kind, dayKey(), async () => ({ ...(await makeMix('daily', songs)), name: `Daily mix · ${kind}`, sub: `${kind}: your own and more like them · new every day` }));
+const todaysMix = (kind, songs) => keptMix('daily:' + kind, dayKey(), async () => ({ ...(await makeMix('daily', songs)), name: `Today's mix · ${kind}`, sub: `${kind}: your own and more like them · new every day` }));
 // Artists you follow (an artist's page: Follow): their new albums and singles first in Explore, and said when they come
 // out — a message here, and the system's notification on a computer; looked for a little after the app starts and twice
 // a day (one request per artist, to Apple's catalog), kept on this device
@@ -7683,9 +7702,10 @@ async function concertOf(id) {
   const j = await fetch(`${ARCHIVE}/metadata/${encodeURIComponent(id)}`).then(r => { if (!r.ok) throw new Error('the Internet Archive answered ' + r.status); return r.json(); });
   const m = j.metadata || {}, files = j.files || [], form = ['VBR MP3', 'MP3', 'Ogg Vorbis'].find(f => files.some(x => x.format === f));
   const num = x => parseInt(String(x.track || '').split('/')[0], 10) || 1e6;
-  const songs = form ? files.filter(x => x.format === form).sort((a, b) => num(a) - num(b) || a.name.localeCompare(b.name)) : [];
+  const songs = form ? files.filter(x => x.format === form && String(x.private) !== 'true').sort((a, b) => num(a) - num(b) || a.name.localeCompare(b.name)) : [];
   const c = { id, band: liveText(m.creator), date: liveText(m.date).slice(0, 10), venue: liveText(m.venue), place: liveText(m.coverage), art: '',
-    about: plainText([].concat(m.description || '')[0]).slice(0, 500), streamOnly: String(m['access-restricted-item']) === 'true' };
+    about: plainText([].concat(m.description || '')[0]).slice(0, 500), streamOnly: String(m['access-restricted-item']) === 'true',
+    licence: /^https?:\/\//.test(liveText(m.licenseurl)) ? liveText(m.licenseurl) : '' };
   const where = liveWhere(c);
   c.tracks = songs.map(x => ({ kind: 'episode', epLive: true, ...(c.streamOnly && { epNoSave: true }), trackId: 'lv:' + epHash(id + '/' + x.name),
     trackName: plainText(x.title) || x.name.replace(/\.\w+$/, ''), artistName: c.band, collectionName: where || 'Live', artworkUrl100: c.art,
@@ -7716,9 +7736,11 @@ function renderConcert(v, head, list, tok) {
     if (tok !== libTok) return;
     const mins = Math.round(c.tracks.reduce((a, t) => a + t.trackTimeMillis, 0) / 60000);
     head('Live concert', c.band || 'Live concert', [liveWhere(c), `${c.tracks.length} songs`, mins && (mins >= 60 ? `${Math.floor(mins / 60)} h ${mins % 60} min` : `${mins} min`)].filter(Boolean).join(' · '), c.art ? coverTile(c.art, true) : tile('speaker', c.band));
-    const go = el('button', 'pill', 'Play the show');
+    const go = el('button', 'pill', 'Play the show'), page = el('button', 'pill ghost', 'On the Internet Archive'), lic = el('button', 'pill ghost', 'Licence');
     go.onclick = () => { queue = c.tracks.slice(); playTrack(c.tracks[0]); };
-    $('libActs').replaceChildren(...(c.tracks.length ? [go] : []));
+    page.onclick = () => openExternal(`${ARCHIVE}/details/${encodeURIComponent(c.id)}`); // (its own page: the show's own terms are there)
+    lic.onclick = () => openExternal(c.licence);
+    $('libActs').replaceChildren(...(c.tracks.length ? [go] : []), page, ...(c.licence ? [lic] : []));
     $('libList').replaceChildren(el('p', 'x-about lbl', `From ${LMA}` + (c.streamOnly ? ' · streaming only: the band keeps it off downloads' : '')), ...(c.about ? [aboutEl(c.about)] : []),
       ...(c.tracks.length ? c.tracks.map((t, i) => epRow(t, i, c.tracks)) : [el('p', 'empty', 'No recording of it that plays here.')]));
   }).catch(e => { if (tok === libTok) { $('libSub').textContent = ''; $('libList').replaceChildren(xFail(e)); } });
@@ -8250,11 +8272,11 @@ async function runSearch(term) {
   const ctl = searchCtl = new AbortController();
   $('sstat').textContent = '● searching';
   searchFailed = false;
-  // (the band's live concerts at the Internet Archive, when it has them: in at the end, whenever they come — the search
-  // waits for nothing of theirs)
+  // (an artist found by the name typed: their live concerts at the Internet Archive, when it has them — asked for by the
+  // artist's own name, never the words typed (Legal) — in at the end, whenever they come: the search waits for none)
   const flat = x => words(x).filter(w => w !== 'the').join(' ');
-  let lastR = null, liveNow = [];
-  liveSearch(term, 12).then(l => { liveNow = l.filter(c => flat(c.band) === flat(term)); if (lastR && liveNow.length && !ctl.signal.aborted) { lastR.live = liveNow; showResults(lastR, shownFilter, false, true); } }, () => {});
+  let lastR = null, liveNow = [], liveFor = '';
+  const liveOf = name => { liveFor = name; liveSearch(name, 12).then(l => { liveNow = l.filter(c => flat(c.band) === flat(name)); if (lastR && liveNow.length && !ctl.signal.aborted) { lastR.live = liveNow; showResults(lastR, shownFilter, false, true); } }, () => {}); };
   try {
     const pSongs = searchSongs(term, ctl.signal);
     // (Apple's songs on screen the moment they're in — ~0.4 s — and the rest, YouTube Music's, the albums, the artist's,
@@ -8353,6 +8375,7 @@ async function runSearch(term) {
       // (a song named exactly as typed beats an album of that name)
       const ytFirst = extra.match > songs.match && songs.match < .6, titled = !meant && list.find(s => !isModded(s) && core(clean(s.trackName)) === core(asked));
       const best = ex ? null : meant && [...list, ...yl].find(isMeant) || titled || (ytFirst ? yl[0] : list[0]) || yl[0] || more[0], album = !ex && !titled && !meant && albumHit;
+      if (ex && !liveFor) liveOf(ex.artistName);
       R.live = liveNow; lastR = R;
       if (ex || album || best) R.top = () => topHit(best, ex ? all : yl.includes(best) ? yl : more.includes(best) ? more : list.length ? list : yl.length ? yl : more, ex, term, album);
       showResults(R, quick ? 'All' : shownFilter, false, !quick);
