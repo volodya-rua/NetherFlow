@@ -270,7 +270,7 @@
         const by = (v.longBylineText?.runs || []).map(x => x.text).join('').split(' • '), len = v.lengthText?.runs?.[0]?.text || '';
         const art = (v.thumbnail?.thumbnails || []).slice(-1)[0]?.url?.replace(/=w\d+-h\d+/, '=w544-h544') || '';
         if (!seen.has(v.videoId) && len) { seen.add(v.videoId); out.push({ id: v.videoId, title: (v.title?.runs || []).map(x => x.text).join(''), artist: by[0] || '',
-          album: by.length > 2 ? by[1] : '', year: +by.find(x => /^\d{4}$/.test(x)) || 0, dur: secs(len), art,
+          album: by.length > 2 && !/^[\d.,]+\s*[KMB]?\s+(views?|plays?)$/i.test(by[1]) ? by[1] : '', year: +by.find(x => /^\d{4}$/.test(x)) || 0, dur: secs(len), art, // (a music video's: its views there, not an album)
           type: (v.navigationEndpoint?.watchEndpoint?.watchEndpointMusicSupportedConfigs?.watchEndpointMusicConfig?.musicVideoType || '').replace('MUSIC_VIDEO_TYPE_', '') }); } // (ATV: the album recording; OMV: its music video; UGC: anyone's upload)
         return;
       }
