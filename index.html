@@ -2617,6 +2617,8 @@ function renderTextPanel() {
     settingRow('Smooth mix', ['Off', 'On'], smoothMix ? 'On' : 'Off', setSmoothMix, 'Songs blend into each other like a DJ mix: the next one starts on a beat and fades in over the last 8 seconds, and a quiet or silent ending is skipped.'),
     ...(native || window.netherflowApp?.syncOpen ? [settingRow(native ? 'Sync with computer' : 'Sync with phone', ['Start'], '', () => { $('textPanel').hidePopover(); $('syncPanel').showPopover(); },
       'Your liked songs, playlists, history and stats, swapped between your phone and computer over your Wi-Fi: no account.')] : []),
+    ...(castInTv ? [settingRow('Let phones and computers on this Wi-Fi play here', ['On', 'Off'], castInOn ? 'On' : 'Off', setCastIn,
+      'While NetherFlow is open on this TV, it shows in their Play on a TV or speaker list. Anyone on the same Wi-Fi can play on it (each time, this TV says who): on a shared Wi-Fi — a hotel, a dorm — turn it off.')] : []),
     ...(native ? [settingRow('Lyrics on the lock screen', ['Off', 'On'], lockLyrics ? 'On' : 'Off', setLockLyrics, 'The line being sung under the song\'s name on the lock screen, in the notification, on the widget and on a car\'s display.')] : []),
     settingRow('Liked songs offline', ['Off', 'On Wi-Fi'], likedOffline ? 'On Wi-Fi' : 'Off', setLikedOffline, 'Songs you like are saved on this device by themselves, a few at a time, only on Wi-Fi: they play with no connection.'),
     settingRow('Imported playlists', ['Kept in sync', 'As imported'], syncLists ? 'Kept in sync' : 'As imported', setSyncLists, 'Kept in sync: about once a day, NetherFlow reads each playlist you imported again from where it came from (Spotify, Apple Music or YouTube, which see your IP address when it does) and adds the songs new in it. Songs you took out stay out. As imported: never read again.'),
@@ -3141,6 +3143,7 @@ let place = 2;
 // while this window's not in front
 let islandOn = store.get('netherflow.island') !== 'Off', islandGlow = store.get('netherflow.islandglow') !== 'Off', islandMoving = false; // (moving: being dragged, see main.js)
 let discordOn = store.get('netherflow.discord') === 'On'; // (Discord status: see setDiscord)
+let castInTv = false, castInOn = store.get('netherflow.castin') !== 'Off'; // (this app as a TV the others cast to: see castIn)
 let lockLyrics = store.get('netherflow.locklyrics') === 'On', likedOffline = store.get('netherflow.likedoff') === 'On'; // (Android extras: see setLockLyrics)
 const vizWanted = () => place > 0 || (islandOn && !!window.netherflowApp?.island);
 function keepAwake() {
@@ -3533,6 +3536,7 @@ function castNetOf() { // the house's network: desktop's from main.js (castnet.j
     http: (method, url, headers, body) => C.http({ method, url, headers, body }),
   };
 }
+const castMake = () => caster ||= NFCast.create({ net: castNetOf(), from: 'NetherFlow on a ' + (native ? 'phone' : 'computer') });
 const CAST_FMT = [140, 251, 250, 249, 139]; // (AAC first: every TV and speaker plays it; Opus after)
 async function castStream(vid) { // a song's FlowStream address, for the device to fetch itself
   if (!native) return fetch('/api/fs/cast?' + new URLSearchParams({ id: vid })).then(r => r.ok ? r.json() : Promise.reject(new Error('no stream')));
@@ -3552,7 +3556,7 @@ async function castLoad(src, at = 0) {
     if (!/^https?:\/\//.test(url) || /^https?:\/\/(localhost|127\.)/.test(url)) throw new Error('here only');
     if (n !== cast.n) return;
     const art = artUrl(t, 600);
-    await s.load({ url, mime: mime || castMime(url), title: t?.trackName || '', artist: t?.artistName || '', album: t?.collectionName || '', art: /^https:/.test(art) ? art : '', at });
+    await s.load({ url, mime: mime || castMime(url), title: t?.trackName || '', artist: t?.artistName || '', album: t?.collectionName || '', art: /^https:/.test(art) ? art : '', at, dur: (t?.trackTimeMillis || 0) / 1000 });
     if (n !== cast.n) return;
     cast.loading = false;
     if (cast.held && cast.held.t !== at) s.seek(cast.held.t); // (moved meanwhile)
@@ -3576,7 +3580,7 @@ async function castTo(d) { // the song moves to the device, from where it is
   if (cast.dev?.id === d.id) return;
   cast.note = `Connecting to ${d.name}…`; castRender();
   let s;
-  try { s = await (caster ||= NFCast.create({ net: castNetOf() })).open(d); }
+  try { s = await castMake().open(d); }
   catch { cast.note = `Couldn't reach ${d.name}: it may be off, or on another Wi-Fi.`; return castRender(); }
   const at = P.t, playing = P.loaded && !P.paused;
   if (cast.s) { const old = cast.s; old.onclose = old.onstatus = null; old.close(); } // (from one device to another)
@@ -3607,8 +3611,7 @@ function castStop(gone = false) { // back to this device, from where it was (the
 async function castLook() {
   if (cast.looking) return;
   cast.looking = true; cast.lookedAt = Date.now(); cast.note = ''; castRender();
-  caster ||= NFCast.create({ net: castNetOf() });
-  const list = await caster.devices(2500).catch(() => []);
+  const list = await castMake().devices(2500).catch(() => []);
   if (cast.dev && !list.some(d => d.id === cast.dev.id)) list.unshift(cast.dev);
   cast.list = list; cast.looking = false; castRender();
 }
@@ -3623,10 +3626,69 @@ function castRender() {
     : cast.s ? `The song plays on ${cast.dev.name}. The lyrics, the queue and the controls stay here.` : 'Pick one: the song moves there, from where it is.')));
   $('castPanel').replaceChildren(...out);
 }
+// ---- this app as a TV the others cast to (Android on a TV — Fire TV, Android TV — while it's open: CastPlugin's
+// receiver, a DLNA media renderer): what a phone or a computer on the Wi-Fi sends played here — lyrics, visuals and all —
+// and how it's going told back each second. Anyone on the Wi-Fi can, so each time it says who (on screen). Settings › Let
+// phones and computers… plays here; off: not listening. Only once the terms are agreed to.
+const castIn = { uri: '', meta: '', fresh: false, from: '', on: false };
+async function castInListen() {
+  if (!native || store.get(TERMS) !== TERMS_VERSION) return;
+  const C = Capacitor.Plugins.Cast;
+  const r = await C.receiverStart({ listen: castInOn, ...(window.__castInForce && { force: true }) }).catch(() => null);
+  if (!r?.tv) return;
+  if (!castInTv) { castInTv = true; renderTextPanel(); C.addListener('receiver', castInCmd); setInterval(castInTell, 1000); }
+  castIn.on = !!r.on;
+}
+function setCastIn(v) {
+  castInOn = v === 'On'; store.set('netherflow.castin', castInOn ? '' : 'Off');
+  if (castInOn) castInListen(); else { Capacitor.Plugins.Cast.receiverStop().catch(() => {}); castIn.on = false; }
+  renderTextPanel();
+}
+function castInCmd(e) {
+  if (!castInOn) return;
+  const who = `${e.who || 'A device'} at ${e.from}`, a = e.action, mine = !!current?.castUri;
+  if (a === 'SetAVTransportURI') { Object.assign(castIn, { uri: e.uri, meta: e.meta || '', fresh: true }); return; }
+  if (a === 'Play') {
+    if (castIn.fresh) { castIn.fresh = false; castIn.from = who; toast(`Playing from ${who}`); playTrack(castInTrack(who)); }
+    else if (mine) { toast(`Playing from ${who}`); P.play(); }
+  } else if (!mine) return; // (this TV's own song, picked here: not the sender's to change)
+  else if (a === 'Pause') { toast(`Paused from ${who}`); P.pause(); }
+  else if (a === 'Stop') { toast(`Stopped from ${who}`); P.pause(); }
+  else if (a === 'Seek') { toast(`Moved from ${who}`, 2000); P.seek(e.t || 0); }
+  else if (a === 'SetVolume') setVolume(e.volume ?? volume, false);
+  castInTell();
+}
+function castInTrack(who) { // the song, from what the sender said of it (read by hand: nothing in it fetched or expanded)
+  const m = castIn.meta.slice(0, 16384), unx = s => s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, '&');
+  const get = n => unx(((m.match(new RegExp(`<(?:\\w+:)?${n}(?:\\s[^>]*)?>([^<]{0,500})</(?:\\w+:)?${n}>`)) || [])[1] || '').trim());
+  const res = m.match(/<res\b([^>]*)>/)?.[1] || '', dur = (res.match(/duration="([\d:.]+)"/)?.[1] || '').split(':').reduce((a, n) => a * 60 + (+n || 0), 0);
+  const art = get('albumArtURI');
+  return { kind: 'song', trackId: 'castin:' + Date.now(), trackName: get('title') || 'A song', artistName: get('artist') || get('creator') || who, collectionName: get('album'),
+    artworkUrl100: /^https:\/\//.test(art) ? art : '', trackTimeMillis: Math.round(dur * 1000), castUri: castIn.uri, castFrom: who };
+}
+// played from the address the sender gave, as the app's own file (CastPlugin.castInMedia: https, public, sound only);
+// its lyrics looked up here by its name, as for any song
+async function playCastIn(t, id) {
+  useEngine('audio');
+  audio.src = '/_fs/castin?' + new URLSearchParams({ u: t.castUri });
+  P.play();
+  status(`◆ from ${t.castFrom} · finding lyrics…`);
+  const lyr = await lyricsFor(t)(t.trackTimeMillis / 1000 || null, null).catch(() => null);
+  if (id !== loadId) return;
+  status(`◆ from ${t.castFrom}${lyr?.raw ? ' · ' + lyr.kind : ''}`);
+  setLines(lyr?.raw || '', { yrc: !!lyr?.yrc, guide: lyr?.guide, ref: lyr?.ref, ...(lyr?.note && { note: lyr.note }) });
+}
+function castInTell() { // what the sender's told: where its song is (another, picked here: stopped, as far as it's concerned)
+  if (!castIn.on) return;
+  const mine = !!current?.castUri && P.loaded, ended = mine && P.paused && P.dur > 0 && P.t >= P.dur - .5;
+  Capacitor.Plugins.Cast.receiverState({ state: !mine ? 'STOPPED' : castIn.fresh ? 'TRANSITIONING' : ended ? 'STOPPED' : P.paused ? 'PAUSED_PLAYBACK' : 'PLAYING',
+    t: mine ? (ended ? P.dur : P.t) : 0, dur: mine ? P.dur : 0, volume: Math.min(1, volume) }).catch(() => {});
+}
+setTimeout(castInListen); // (once the whole page is in: the terms, below)
 $('castPanel').addEventListener('toggle', e => { if (e.newState !== 'open') return; castRender(); if (Date.now() - cast.lookedAt > 15000) castLook(); });
 
 function songEnded() {
-  if (tg.role === 'guest') return;
+  if (tg.role === 'guest' || current?.castUri) return; // (a song sent here: what's next is the sender's to say)
   if (repeat === 'one') { P.seek(0); P.play(); }
   else if (hasNext()) nextTrack();
   // the list's end, Autoplay on: the song it looked up as this one started; if that came to nothing (no connection just
@@ -5451,7 +5513,7 @@ async function playTrack(t, term = '', queued = false, stay = false, mixed = nul
   lastSong = null; // (another song picked: the last one's no longer waiting)
   importYield = Date.now() + 6000;
   const id = ++loadId;
-  autoStart(t, current, P.t, P.dur);
+  if (!t.castUri) autoStart(t, current, P.t, P.dur);
   current = t; lastLyr = null; songShift = 0; savedDur = 0; fsVid = null; fsFmt = null;
   clock.t = 0; clock.hold = null;
   if (!stay) goHome(false);
@@ -5462,12 +5524,13 @@ async function playTrack(t, term = '', queued = false, stay = false, mixed = nul
   wantNext(); // (an imported playlist's songs coming up: matched now, so they start at once)
   if ($('queuePanel').matches(':popover-open')) renderQueue();
   const ep = t.kind === 'episode';
-  if (!ep) { remember(t, term); autoFill(t); }
+  if (!ep && !t.castUri) { remember(t, term); autoFill(t); }
   updateSkips(); updateLikeBtn();
   if (!stay) for (const d of [dlg, $('artistPage'), $('library')]) if (d.open) d.close();
   const kept = saved.get(t.trackId);
   setNow(t.trackName, t.artistName, kept?.coverUrl || artUrl(t, 600), t.collectionName);
   if (ep) return playEpisode(t, id);
+  if (t.castUri) return playCastIn(t, id);
   audio.playbackRate = audio.defaultPlaybackRate = 1;
   if (kept) return playSaved(t, id);
   // Offline, and this one isn't saved here: the list plays on from the next song that is (a song coming up by itself);
@@ -8797,7 +8860,7 @@ if (store.get(TERMS) !== TERMS_VERSION) { $('consent').showModal(); placeWinctl(
 // its usual port taken (see main.js): the library and settings are kept under that one, so here all looks new; said so
 if (window.netherflowApp?.portMoved) setTimeout(() => { toast('Something else is using NetherFlow\'s port, so your library and settings aren\'t shown. Close it (or another NetherFlow) and open NetherFlow again.'); clearTimeout(toastTimer); toastTimer = setTimeout(() => $('toast').hidePopover(), 15000); }, 1500);
 $('consent').addEventListener('cancel', e => e.preventDefault()); // Esc doesn't count as agreeing
-$('agree').onclick = () => { store.set(TERMS, TERMS_VERSION); $('consent').close(); resumeDownloads(); };
+$('agree').onclick = () => { store.set(TERMS, TERMS_VERSION); $('consent').close(); resumeDownloads(); castInListen(); };
 $('decline').onclick = () => {
   if (window.netherflowApp) netherflowApp.win('close');
   else if (native) Capacitor.Plugins.App.exitApp();
@@ -8874,7 +8937,7 @@ $('play').onclick = toggle;
 // carries on from there (a podcast episode or audiobook chapter: their own place is kept, see Podcasts)
 const LAST = 'netherflow.last';
 let lastSong = null; // ({ t, at }: shown, not loaded yet)
-function keepLast() { if (current && current.kind !== 'episode' && P.loaded && !lastSong) store.set(LAST, JSON.stringify({ t: slim(current), at: Math.round(P.t) })); }
+function keepLast() { if (current && current.kind !== 'episode' && !current.castUri && P.loaded && !lastSong) store.set(LAST, JSON.stringify({ t: slim(current), at: Math.round(P.t) })); }
 setInterval(() => { if (!P.paused) { keepLast(); store.set('netherflow.playingat', String(Date.now())); } }, 5000); // (playing at: see the page lost, below)
 addEventListener('pagehide', keepLast);
 function resumeLast() {

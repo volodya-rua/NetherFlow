@@ -63,6 +63,7 @@ public class MainActivity extends BridgeActivity {
                 if ("localhost".equals(q.getHost()) && "/_fs/ahead".equals(q.getPath())) return flowAhead(q.getQueryParameter("u"), q.getQueryParameter("id"), q.getQueryParameter("g"));
                 if ("localhost".equals(q.getHost()) && "/_fs/url".equals(q.getPath())) return handOver(q.getQueryParameter("t"), q.getQueryParameter("u"));
                 if ("localhost".equals(q.getHost()) && "/_fs/clear".equals(q.getPath())) return forgetKept(q.getQueryParameter("g"));
+                if ("localhost".equals(q.getHost()) && "/_fs/castin".equals(q.getPath())) return CastPlugin.castInMedia(request); // (a song sent to this TV: see CastPlugin)
                 return super.shouldInterceptRequest(view, request);
             }
             // The page's process gone (Android took its memory back with the app away — Instagram, a game, the camera — or

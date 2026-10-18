@@ -9,10 +9,11 @@
 //   tls(host, port, onData(bytes), onClose()) → { write(bytes), close() }   a Cast device (its own certificate taken)
 //   http(method, url, headers, body) → { status, text }   a DLNA device
 //
-//   const c = NFCast.create({ net });  await c.devices(ms) → [{ id, kind ('cast' | 'dlna'), name, model, … }]
+//   const c = NFCast.create({ net, from });  await c.devices(ms) → [{ id, kind ('cast' | 'dlna'), name, model, … }]
 //   const s = await c.open(device);  await s.load({ url, mime, title, artist, album, art, at });  s.play() s.pause()
 //   s.seek(t) s.volume(0–1) s.close();  s.onstatus = { state ('playing' 'paused' 'buffering' 'idle' 'ended' 'error'), t, dur }
 //   s.onclose = () => …  (the device let go: turned off, another phone took it)
+//   (from: what this is, "NetherFlow on a phone", for a TV running NetherFlow to show who's playing on it)
 (function (out) {
   'use strict';
   const enc = new TextEncoder(), dec = new TextDecoder();
@@ -147,13 +148,13 @@
   // ---- DLNA: SOAP to the renderer's AVTransport (what plays) and RenderingControl (its volume); asked where it's at
   // a second apart (it says nothing by itself)
   const AV = 'urn:schemas-upnp-org:service:AVTransport:1', RC = 'urn:schemas-upnp-org:service:RenderingControl:1';
-  async function dlnaOpen(net, d) {
+  async function dlnaOpen(net, d, from) {
     let closed = false, last = null, playing = false, loadAt = 0;
     const s = { onstatus: null, onclose: null, kind: 'dlna', name: d.name, get last() { return last; } };
     const soap = async (url, svc, action, args = {}) => {
       const body = '<?xml version="1.0" encoding="utf-8"?><s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"><s:Body>'
         + `<u:${action} xmlns:u="${svc}">${Object.entries({ InstanceID: 0, ...args }).map(([k, v]) => `<${k}>${xml(v)}</${k}>`).join('')}</u:${action}></s:Body></s:Envelope>`;
-      const r = await net.http('POST', url, { 'Content-Type': 'text/xml; charset="utf-8"', SOAPACTION: `"${svc}#${action}"` }, body);
+      const r = await net.http('POST', url, { 'Content-Type': 'text/xml; charset="utf-8"', SOAPACTION: `"${svc}#${action}"`, ...(from && { 'X-NetherFlow-From': from }) }, body);
       if (r.status >= 400) throw new Error(`the device said no (${tag(r.text, 'errorDescription') || tag(r.text, 'faultstring') || r.status})`);
       return r.text;
     };
@@ -174,10 +175,10 @@
       } catch { if (++fails > 8) s.close(); } // (gone ten seconds: turned off, or off the network)
     }, 1000);
     Object.assign(s, {
-      async load({ url, mime, title, artist, album, art, at = 0 }) {
+      async load({ url, mime, title, artist, album, art, at = 0, dur = 0 }) {
         const didl = '<DIDL-Lite xmlns="urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:upnp="urn:schemas-upnp-org:metadata-1-0/upnp/">'
           + `<item id="0" parentID="-1" restricted="1"><dc:title>${xml(title)}</dc:title><dc:creator>${xml(artist)}</dc:creator><upnp:artist>${xml(artist)}</upnp:artist><upnp:album>${xml(album)}</upnp:album>`
-          + (art ? `<upnp:albumArtURI>${xml(art)}</upnp:albumArtURI>` : '') + `<upnp:class>object.item.audioItem.musicTrack</upnp:class><res protocolInfo="http-get:*:${xml(mime || 'audio/mp4')}:*">${xml(url)}</res></item></DIDL-Lite>`;
+          + (art ? `<upnp:albumArtURI>${xml(art)}</upnp:albumArtURI>` : '') + `<upnp:class>object.item.audioItem.musicTrack</upnp:class><res protocolInfo="http-get:*:${xml(mime || 'audio/mp4')}:*"${dur ? ` duration="${hms(dur)}.000"` : ''}>${xml(url)}</res></item></DIDL-Lite>`;
         playing = false; loadAt = Date.now();
         await soap(d.av, AV, 'SetAVTransportURI', { CurrentURI: url, CurrentURIMetaData: didl });
         await soap(d.av, AV, 'Play', { Speed: 1 });
@@ -192,7 +193,7 @@
   }
 
   class Caster {
-    constructor({ net }) { this.net = net; }
+    constructor({ net, from = '' }) { this.net = net; this.from = from; }
     // the TVs and speakers that answer within ms (a device both Cast and DLNA: Cast's, the better of the two)
     async devices(ms = 2500) {
       const [casts, renderers] = await Promise.all([
@@ -210,7 +211,7 @@
       }));
       return [...out.values()].sort((a, b) => a.name.localeCompare(b.name));
     }
-    open(d) { if (!privateHost(d.host)) throw new Error('not a device in the house'); return d.kind === 'cast' ? castOpen(this.net, d) : dlnaOpen(this.net, d); }
+    open(d) { if (!privateHost(d.host)) throw new Error('not a device in the house'); return d.kind === 'cast' ? castOpen(this.net, d) : dlnaOpen(this.net, d, this.from); }
   }
   out.create = opts => new Caster(opts);
   out._test = { mdnsQuery, mdnsParse, castFrame, castRead, privateHost, hms, secs }; // (for its checks)
