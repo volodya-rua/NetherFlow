@@ -44,26 +44,29 @@ need a powerful graphics card anyway), about 18 MB smaller, and it updates to Li
 
 <a id="whats-new"></a>
 
-## What's new in 1.5.1
+## What's new in 1.6.0
 
-- **A new search**, laid out like the big music apps: the top result beside the first four songs, artists and albums in
-  rows, and All, Songs, Artists and Albums at the top. The page is there in under a second
-- **Playlists you can arrange:** find a song as you type, sort by title, artist, newest added or length, drag songs into
-  your own order, and Add songs from the playlist itself
-- **Songs start sooner,** and the artist's own upload is preferred
-- **Rap lyrics in sync:** word-by-word timing that's out of line with the song is lined up again
-- **A volume booster up to 300%** that stays loud without clipping, and **360 sound** that keeps the bass
-- **Play on** (pick the speakers or headphones), **Interface size**, four looks for the **beat on the screen edges**, and
-  **Esc twice** for the home screen
-- **No freeze when picking Redline:** the 3D race runs on its own
+- **Play on a TV or speaker.** It works with Chromecast and other Google Cast devices, and with DLNA TVs and speakers.
+  NetherFlow isn't made, certified or endorsed by Google
+- **NetherFlow also runs on Fire TV: install the APK.** Phones and computers on your Wi-Fi can then play on it
+- **Live concerts from the Internet Archive's Live Music Archive:** free shows taped by fans, in Library ›
+  Live concerts and with the artists you search for
+- **Weekly picks** (new every Monday) and **Today's mix**, made from what you play and like
+- **Listen together with up to 30 people**
+- **Lyrics romanized** in Hindi, Punjabi and India's other scripts, and word by word in them where the song has it
+- **Share to NetherFlow** (Android): a song shared from YouTube or YouTube Music plays that very song
+- **Move the island** (Windows) anywhere on the screen: Settings › Island position, or Ctrl+Alt+I from any app
+- **A notice when an update is out,** and on phones the music keeps playing when Android takes the app's page away
+- **Faster and steadier everywhere:** long lists quicker to draw and steady while songs download, and on phones,
+  jumping ahead past what's loaded just works
 
-1.5.0 brought NetherFlow's own player, FlowStream, the sound tools, Radio, Shuffle, gapless albums, Android Auto and a
-much smaller app: see the [changelog](CHANGELOG.md#150-netherflows-own-player-and-a-much-smaller-app).
+1.5.1 brought the new search, playlists you can arrange and the 300% booster: see the
+[changelog](CHANGELOG.md#151-better-search-playlists-you-can-arrange-and-a-booster-up-to-300).
 
 > [!NOTE]
 > Someone on 1.4.2 or older can't join a Listen together session started on 1.5 or newer, so update both sides. Shared
-> playlists keep working with older versions. Coming from 1.4 or older: the terms and privacy policy changed a little (which country's law
-> applies, a note on flashing light, and the new relay), so you're asked to accept them again.
+> playlists keep working with older versions. The terms and privacy policy changed a little (TVs and speakers, NetherFlow
+> on a TV, live concerts and update notices), so you're asked to accept them again.
 
 The full notes for this release and every earlier one are in the [changelog](CHANGELOG.md).
 
@@ -79,9 +82,11 @@ The full notes for this release and every earlier one are in the [changelog](CHA
 - **Smooth mix**: songs blend into each other like a DJ set, on the beat. Albums play **gapless**, straight from one song
   into the next
 - **Explore**: charts, new releases, trending, moods and genres with their playlists, and **Your mix**, **Discover** and a
-  mix for **the time of day** (morning, afternoon, evening, late night), made from what you play
+  mix for **the time of day** (morning, afternoon, evening, late night), **Weekly picks** (new every Monday) and
+  **Today's mix**, made from what you play
 - **Follow artists**: their new albums and singles show up first in Explore, and you hear when they're out
 - **Podcasts and audiobooks**: follow shows, pick up where you left off, any speed from 0.8× to 2×
+- **Live concerts from the Internet Archive's Live Music Archive**: free shows taped by fans
 - **Equalizer** with presets, a volume booster, **headphone correction** for 6,000+ headphones (AutoEQ), and every song
   at its **original loudness**
 - **Sound tools**: 360 sound, crossfeed for headphones, clarity, loudness at low volume and a night mode, and a line
@@ -114,7 +119,7 @@ The full notes for this release and every earlier one are in the [changelog](CHA
 
 ### With your people
 
-- **Listen together**: up to 10 people hear the same song at the same moment, each on their own phone or PC. Anyone can
+- **Listen together**: up to 30 people hear the same song at the same moment, each on their own phone or PC. Anyone can
   add songs, skip and react. End-to-end encrypted, no account
 - **Share playlists with a QR code**: tap Share on any playlist and a friend points their phone camera at it, or send
   the link and they paste it in NetherFlow's search. The songs ride inside the link itself; nothing is uploaded
@@ -126,15 +131,18 @@ The full notes for this release and every earlier one are in the [changelog](CHA
 
 ### On every screen
 
+- **Play on a TV or speaker.** It works with Chromecast and other Google Cast devices, and with DLNA TVs and speakers.
+  NetherFlow isn't made, certified or endorsed by Google
 - **Windows**: a **now-playing island** at the top of the screen, over every app. Click it for the cover, timeline,
-  volume and controls
+  volume and controls, and move it anywhere (Settings › Island position, or Ctrl+Alt+I)
 - **Linux**: the same app as a .deb or an AppImage, with your song in your desktop's media controls
 - **Android**: a home-screen widget, lyrics on the lock screen (and in the notification and on your car's display), and
   liked songs saving themselves for offline on Wi-Fi
 - **Android Auto**: your liked songs, recently played and playlists on the car's screen, and voice search. NetherFlow
   plays from your phone, so open it there first. Android Auto shows apps from outside Google Play once its *Unknown
   sources* developer setting is on
-- **Android TV and Google TV**: on the TV's home screen, and everything works with the remote
+- **Android TV and Google TV**: on the TV's home screen, and everything works with the remote. NetherFlow also runs on
+  Fire TV: install the APK. Phones and computers on your Wi-Fi can then play on it
 - **Updates inside the app**: the Windows installer downloads only what changed, and so does the Linux AppImage.
   NetherFlow's own Android app does the same, signed and checked first (a store's build is updated by the store). The
   portable app and the .deb don't update themselves
@@ -192,18 +200,17 @@ All four apps scored on the ten things that matter most to listeners. NetherFlow
 every category.
 
 <p align="center">
-  <img src="docs/media/score.png" width="100%" alt="The score, out of 100: NetherFlow 89.0, Apple Music 78.5, Spotify 78.0, YouTube Music 66.5">
+  <img src="docs/media/score.png" width="100%" alt="The score, out of 100: NetherFlow 92.5, Apple Music 78.5, Spotify 78.0, YouTube Music 66.5">
 </p>
 
 | Rank | App | Score | Best at |
 |:-:|:--|:-:|:--|
-| 1 | **NetherFlow** | **89.0** | price, lyrics, the look, privacy, offline, together |
+| 1 | **NetherFlow** | **92.5** | price, lyrics, the look, privacy, offline, together, discovery |
 | 2 | **Apple Music** | **78.5** | sound quality, offline, catalog |
-| 3 | **Spotify** | **78.0** | discovery, devices, together, catalog |
+| 3 | **Spotify** | **78.0** | discovery, devices, catalog |
 | 4 | **YouTube Music** | **66.5** | catalog (covers, live versions, remixes) |
 
-NetherFlow is **first, or tied for first, in six categories**. The others beat it on catalog, sound, discovery and
-devices.
+NetherFlow is **first, or tied for first, in seven categories**. The others beat it on catalog, sound and devices.
 
 <details>
 <summary><b>The full breakdown, category by category</b></summary>
@@ -227,6 +234,7 @@ devices.
 | Songs | everything on YouTube, found through Apple's catalog | 100M+ | 100M+ | 100M+, plus YouTube's covers, live versions and remixes |
 | Officially licensed | ✗ it plays the songs from YouTube | ✓ | ✓ | ✓ |
 | Podcasts | ✓ podcasts from Apple's directory, saved for offline too | ✓ | ~ in a separate app | ✓ |
+| Live concerts | ✓ live concerts from the Internet Archive's Live Music Archive, taped by fans | ✓ official live albums | ✓ official live albums | ✓ official live albums, and YouTube's live versions |
 | Audiobooks | ~ free classics only (LibriVox, public domain in the US) | ✓ the bestsellers | ~ in Apple Books | ✗ |
 | Can break when YouTube changes something | ~ yes, until an update fixes it | ✓ no | ✓ no | ✓ no |
 | **Score** | 7 | **10** | **10** | **10** |
@@ -263,10 +271,10 @@ devices.
 
 | | NetherFlow | Spotify | Apple Music | YouTube Music |
 |:--|:--|:--|:--|:--|
-| Recommendations | ✓ Your mix, Discover, Radio from any song or artist, a mix for the time of day, Mix with a friend, and Autoplay that learns from what you skip and like | ✓ Discover Weekly, AI DJ, daylist | ✓ stations, personal mixes | ✓ Supermix, strong recommendations |
+| Recommendations | ✓ Your mix, Discover, Weekly picks, Today's mix, Radio from any song or artist, a mix for the time of day, Mix with a friend, and Autoplay that learns from what you skip and like | ✓ Discover Weekly, AI DJ, daylist | ✓ stations, personal mixes | ✓ Supermix, strong recommendations |
 | Curated playlists, charts, new releases | ✓ YouTube Music's charts, moods & genres, and new releases from the artists you follow, with an alert when they're out | ✓ | ✓ | ✓ |
 | Your year in music | ✓ your stats, any time | ✓ Wrapped | ✓ Replay | ✓ Recap |
-| **Score** | 9 | **10** | 8 | 9 |
+| **Score** | **10** | **10** | 8 | 9 |
 
 ### Privacy and ads
 
@@ -282,19 +290,19 @@ devices.
 |:--|:--|:--|:--|:--|
 | Phone | Android | Android, iPhone | iPhone, Android | Android, iPhone |
 | Computer | Windows, Linux | Windows, Mac, Linux, web | Mac, Windows, web | ~ web only |
-| TV, speakers, car, watch | ~ Android TV and Google TV, Android Auto (NetherFlow has to be open on the phone, and Android Auto lists apps from outside the Play Store only with its Unknown sources developer setting on), and lyrics on your car's display (Android) | ✓ almost everything | ✓ Apple's devices, and plenty more | ✓ many |
-| **Score** | 7 | **10** | 8 | 8 |
+| TV, speakers, car, watch | ✓ plays on Chromecast and other Google Cast devices, and on DLNA TVs and speakers; Android TV and Google TV, and NetherFlow also runs on Fire TV (install the APK); Android Auto (NetherFlow has to be open on the phone, and Android Auto lists apps from outside the Play Store only with its Unknown sources developer setting on), and lyrics on your car's display (Android) | ✓ almost everything | ✓ Apple's devices, and plenty more | ✓ many |
+| **Score** | 9 | **10** | 8 | 8 |
 
 ### Offline and together
 
 | | NetherFlow | Spotify | Apple Music | YouTube Music |
 |:--|:--|:--|:--|:--|
 | Download songs | ✓ free, whole playlists at once (but YouTube's terms don't allow it) | ✓ Premium, 10,000 a device | ✓ up to 100,000 in your library | ✓ Premium |
-| Listen together, live | ✓ up to 10 people, any phone or PC, no account, end-to-end encrypted | ✓ Jam | ✓ SharePlay (Apple devices) | ✗ not built in |
+| Listen together, live | ✓ up to 30 people, any phone or PC, no account, end-to-end encrypted | ✓ Jam | ✓ SharePlay (Apple devices) | ✗ not built in |
 | Share a playlist | ✓ a QR code or a link (the songs show up even without the app) | ✓ a link, or a Spotify Code to scan | ✓ a link | ✓ a link |
 | Playlists you edit together | ✓ anyone with the link, live, end-to-end encrypted, no account | ✓ | ✓ | ✓ |
 | **Offline score** | **10** | 9 | **10** | 9 |
-| **Together score** | **9** | **9** | 7 | 5 |
+| **Together score** | **10** | 9 | 7 | 5 |
 
 </details>
 
@@ -304,8 +312,8 @@ devices.
   features can break until an update fixes them
 - **The sound tops out around 160 kbps.** On good headphones, Apple Music's and Spotify's lossless is clearly better
 - **No iPhone and no Mac yet.** Windows, Linux, Android and Android TV
-- **Audiobooks are free classics only** (LibriVox's), not the bestsellers Spotify and Apple have. Finding new music is
-  good, but Spotify's is still better
+- **Audiobooks are free classics only** (LibriVox's), not the bestsellers Spotify and Apple have. Spotify's
+  recommendations still learn from far more listeners
 - **Artists earn less from your plays** than on the paid apps, since no YouTube ads play. If you love an artist, support
   them directly: buy the merch, go to the show, or stream them on a paid app too
 
@@ -339,6 +347,8 @@ NetherFlow doesn't host any music, videos or lyrics. It finds them on other serv
 | Explore | YouTube Music's charts, new releases, moods and genres; your mixes from its radio for the songs you play most |
 | Podcasts | Apple's podcast directory and charts; the episodes from each show's own feed and host |
 | Audiobooks | [LibriVox](https://librivox.org)'s recordings (public domain in the US), from the [Internet Archive](https://archive.org) |
+| Live concerts | The Internet Archive's [Live Music Archive](https://archive.org/details/etree): shows taped by fans |
+| Play on a TV or speaker | Google Cast and DLNA, on your own Wi-Fi: the TV or speaker fetches the song itself |
 | Headphone correction | [AutoEQ](https://github.com/jaakkopasanen/AutoEq)'s published results (MIT), fetched when you pick your headphones |
 | Playlists you make together | NetherFlow's own relay on Cloudflare (public MQTT relays as a backup), end-to-end encrypted with a key from the playlist link |
 | Saving for offline | FlowStream saves the audio from YouTube, as YouTube serves it (its best, usually Opus); podcast episodes and audiobook chapters come as their host serves them |

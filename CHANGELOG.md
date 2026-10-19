@@ -2,6 +2,33 @@
 
 What changed in each NetherFlow release. The builds are on the [releases page](https://github.com/volodya-rua/NetherFlow/releases).
 
+## 1.6.0: Play on a TV or speaker, live concerts, and Listen together for 30
+
+- **Play on a TV or speaker.** It works with Chromecast and other Google Cast devices, and with DLNA TVs and speakers.
+  NetherFlow isn't made, certified or endorsed by Google. The TV or speaker fetches the song itself; play, pause,
+  moving through the song and the volume work from NetherFlow, on computers and phones
+- **NetherFlow also runs on Fire TV: install the APK.** Phones and computers on your Wi-Fi can then play on it, as on
+  any Android TV or Google TV. Settings › "Let phones and computers on this Wi-Fi play here" turns it off
+- **Live concerts from the Internet Archive's Live Music Archive:** free shows taped by fans, in Library › Live concerts
+  and with the artists you search for, each with its own page there
+- **Weekly picks** (songs new to you, like the ones you love, new every Monday) and **Today's mix**
+- **Listen together** with up to 30 people
+- **Romanized lyrics** in Hindi, Punjabi and India's other scripts, the line coming next too, and word-by-word lyrics
+  in those scripts
+- **Share to NetherFlow** (Android): a song shared from YouTube or YouTube Music plays that very song (a music video's
+  song as its album recording)
+- **The island** (Windows) can be moved: Settings › Island position, or Ctrl+Alt+I from any app
+- **Update notices:** a system notification when a newer NetherFlow is out
+- **Phones:** the music keeps playing when Android takes the app's page away, and a song that stuck picks up again;
+  jumping ahead past what's loaded now works
+- **Steadier and lighter:** a long list stays where it was while songs download; rows are built twice as fast; songs scrolled
+  past aren't looked up for lyrics; the island rests while paused; Smooth mix checks once a second until a song's end
+- **Fixes:** a song with no timed lyrics shows its cover; no "1.8B views" as a shared video's album; a junk lyrics entry
+  no longer cuts word-by-word lyrics to one line; headphone correction at 0% is kept after a restart
+- The built-in server on computers turns away requests from web pages in a browser
+- The terms and privacy policy changed a little (TVs and speakers, NetherFlow on a TV, live concerts and update notices),
+  so you're asked to accept them again
+
 ## 1.5.1: Better search, playlists you can arrange, and a booster up to 300%
 
 - **Search** works like the big music apps: All, Songs, Artists and Albums at the top, the top result beside the first
