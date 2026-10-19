@@ -2,6 +2,12 @@
 
 What changed in each NetherFlow release. The builds are on the [releases page](https://github.com/volodya-rua/NetherFlow/releases).
 
+## 1.6.1: Your computer's name stays private while syncing
+
+- **Phone ↔ PC sync:** while the sync is open, any device on your Wi-Fi that asks who's there only hears "your computer",
+  never the computer's own name (often its owner's). Your phone says "Syncing with your computer", and the computer's
+  Sync panel still shows its name to you
+
 ## 1.6.0: Play on a TV or speaker, live concerts, and Listen together for 30
 
 - **Play on a TV or speaker.** It works with Chromecast and other Google Cast devices, and with DLNA TVs and speakers.

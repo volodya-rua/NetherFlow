@@ -44,7 +44,10 @@ need a powerful graphics card anyway), about 18 MB smaller, and it updates to Li
 
 <a id="whats-new"></a>
 
-## What's new in 1.6.0
+## What's new in 1.6.1
+
+**Phone ↔ PC sync keeps your computer's name to itself:** while it's open, other devices on your Wi-Fi only see "your
+computer". Everything 1.6.0 brought is here too:
 
 - **Play on a TV or speaker.** It works with Chromecast and other Google Cast devices, and with DLNA TVs and speakers.
   NetherFlow isn't made, certified or endorsed by Google
