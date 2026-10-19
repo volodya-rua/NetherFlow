@@ -78,11 +78,12 @@
     player(id, { ahead = false } = {}) {
       if (!/^[\w-]{11}$/.test(String(id))) return Promise.reject(new FlowError('id', 'not a video id: ' + id));
       const had = this.cache.get(id);
-      if (had && had.until > Date.now()) return had.p;
+      if (had && had.until > Date.now()) { if (!ahead) had.now?.(); return had.p; } // (waiting in line ahead, and wanted now: out of the line, asked at once)
       if (ahead && this.limited) return Promise.reject(new FlowError('limited', 'YouTube is limiting this connection for now: nothing looked up ahead'));
-      const p = ahead ? this.queue.then(() => sleep(this.gap)).then(() => this.ask(id)) : this.ask(id);
+      let now; const wanted = new Promise(r => { now = r; });
+      const p = ahead ? Promise.race([this.queue.then(() => sleep(this.gap)), wanted]).then(() => this.ask(id)) : this.ask(id);
       if (ahead) this.queue = p.catch(() => {}); // (the line goes on, a gap apart, whatever this one's answer)
-      const entry = { p, until: Infinity };
+      const entry = { p, until: Infinity, now: ahead ? now : null };
       this.cache.delete(id); this.cache.set(id, entry);
       while (this.cache.size > KEEP) this.cache.delete(this.cache.keys().next().value);
       p.then(a => { entry.until = a.expires - 5 * 60e3; }, () => { if (this.cache.get(id) === entry) this.cache.delete(id); });
@@ -146,5 +147,5 @@
 
   out.create = opts => new Engine(opts);
   out.Error = FlowError;
-  out.version = '0.3.2';
+  out.version = '0.3.3';
 })(typeof module === 'object' && module.exports ? module.exports : (globalThis.FlowStream = {}));

@@ -4,15 +4,16 @@
 const { app, BrowserWindow, shell, ipcMain, powerSaveBlocker, screen, powerMonitor, Notification, globalShortcut } = require('electron');
 const path = require('path');
 const fs = require('fs');
-const { execFileSync } = require('child_process');
+const { execFile } = require('child_process');
 const srvMod = require('./server'), { start } = srvMod;
 
 const PORT = 41739; // fixed, so settings saved by the page (lyric sync per song) survive restarts
 const LITE = !!require('./package.json').lite; // (NetherFlow Lite: built by tools/lite-build.js, without Extreme+)
 // The person's country, for the music store the page searches: Windows' "Country or region" (Settings › Time & language
 // › Region). The language's own region is often another (English (United States) in India), and Electron reads that one.
-let COUNTRY = '';
-try { if (process.platform === 'win32') COUNTRY = execFileSync('reg', ['query', String.raw`HKCU\Control Panel\International\Geo`, '/v', 'Name'], { encoding: 'utf8', timeout: 2000, windowsHide: true }).match(/Name\s+REG_SZ\s+([A-Z]{2})\b/)?.[1] || ''; } catch {}
+// (asked while the server starts, not before it: ~15 ms off every start)
+const COUNTRY = process.platform !== 'win32' ? Promise.resolve('') : new Promise(r => execFile('reg', ['query', String.raw`HKCU\Control Panel\International\Geo`, '/v', 'Name'], { encoding: 'utf8', timeout: 2000, windowsHide: true },
+  (e, out) => r(e ? '' : out.match(/Name\s+REG_SZ\s+([A-Z]{2})\b/)?.[1] || '')));
 
 // Songs start right after a search finishes, which isn't a click as far as Chromium is concerned.
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
@@ -322,7 +323,7 @@ app.whenReady().then(async () => {
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       backgroundThrottling: false, // keep timers at full speed when minimized (the next song readied, Smooth mix on time)
-      additionalArguments: [...(LITE ? ['--nf-lite'] : []), ...(port !== PORT ? ['--nf-port-moved'] : []), '--nf-country=' + (COUNTRY || app.getLocaleCountryCode() || ''), '--nf-version=' + app.getVersion()], // (see preload.js: lite, portMoved, country)
+      additionalArguments: [...(LITE ? ['--nf-lite'] : []), ...(port !== PORT ? ['--nf-port-moved'] : []), '--nf-country=' + ((await COUNTRY) || app.getLocaleCountryCode() || ''), '--nf-version=' + app.getVersion()], // (see preload.js: lite, portMoved, country)
     },
   });
   win.removeMenu();

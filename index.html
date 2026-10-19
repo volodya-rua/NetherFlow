@@ -407,9 +407,6 @@ body.home .singbar { display: none; } /* (its voice slider is for the lyrics: no
 .sheet p { margin: 0 0 .32em; font: 400 calc(clamp(20px, 2.6vw, 36px) * var(--ls, 1))/1.28 var(--serif); letter-spacing: -.01em; max-width: 1000px; color: color-mix(in srgb, var(--ink) 88%, transparent); }
 .sheet .count { margin-bottom: 1.4em; }
 
-/* YouTube player: keeps playing, parked out of sight behind the backdrop canvas */
-/* (hidden outright, as well as behind the backdrop: the player's own script then mostly rests — it plays on all the same) */
-
 /* ---------- bottom ---------- */
 .bottom { display: grid; gap: 10px; }
 .scrub { position: relative; height: 38px; }
@@ -977,9 +974,8 @@ body.home .home-now { display: flex; }
 .qpanel { width: min(420px, calc(100vw - 32px)); }
 .qpanel .hist-h { padding: 12px 8px 6px; }
 .qpanel .hist-h:first-child { padding-top: 2px; }
-.qrow { display: flex; align-items: center; gap: 2px; border-radius: 10px; transition: background-color .2s; }
+.qrow { display: flex; align-items: center; gap: 2px; border-radius: 10px; transition: background-color .2s, transform .18s cubic-bezier(.2,.9,.3,1); }
 .qrow:hover { background: var(--hair); }
-.qrow { transition: background-color .2s, transform .18s cubic-bezier(.2,.9,.3,1); }
 .qrow.dragging { position: relative; z-index: 1; transition: none; background: color-mix(in srgb, var(--bg) 85%, var(--a)); box-shadow: 0 10px 30px rgba(0,0,0,.5); }
 .qgrip { cursor: grab; touch-action: none; opacity: .55; }
 .qgrip:hover, .dragging .qgrip { opacity: 1; }
@@ -3243,7 +3239,7 @@ const eqMsg = () => ({ on: eqState.on, gains: eqState.gains.slice(), boost: boos
 // to 10 filters), kept on this device, so it works offline. In the page's sound graph (routeAudio). ----------
 const AUTOEQ = 'https://raw.githubusercontent.com/jaakkopasanen/AutoEq/master/results/';
 let hp = null; try { hp = JSON.parse(store.get('netherflow.hp')); } catch {}
-let hpStrength = Math.max(0, Math.min(1, +store.get('netherflow.hpstrength') || 1)); // (1 = full; dial the evening-out back)
+let hpStrength = store.get('netherflow.hpstrength') === '' ? 1 : Math.max(0, Math.min(1, +store.get('netherflow.hpstrength') || 0)); // (1 = full; dial the evening-out back — 0 kept as 0, not read as "none saved")
 function setHpStrength(pct) { hpStrength = Math.max(0, Math.min(1, pct / 100)); store.set('netherflow.hpstrength', hpStrength === 1 ? '' : String(hpStrength)); hpSig = ''; routeAudio(); }
 if (!hp?.filters?.length) hp = null;
 // a ParametricEQ.txt: "Preamp: -6.0 dB", then "Filter 1: ON PK Fc 105 Hz Gain 2.6 dB Q 0.70" (PK, LSC, HSC)
@@ -3309,8 +3305,14 @@ function renderHp() {
   q.oninput = show; show();
 }
 // its curve on the graph (dashed, under the bands): what it does to each frequency, as measured from its filters
+let hpPath = { for: null, d: '' }; // (worked out once per headphones: a band dragged draws the graph anew at every move)
 function hpCurve() {
   if (!hp) return '';
+  if (hpPath.for === hp) return hpPath.d;
+  hpPath = { for: hp, d: hpCurveNow() };
+  return hpPath.d;
+}
+function hpCurveNow() {
   const N = 120, fs = new Float32Array(N), mag = new Float32Array(N), ph = new Float32Array(N), total = new Float32Array(N).fill(hp.pre);
   // (x as the graph has it: each band's frequency at its point, log-spaced between them, beyond the ends at the end gaps' pace)
   const lx = Math.log, F = EQ.freqs, xs = F.map((f, i) => EQX(i));
@@ -3886,24 +3888,29 @@ function mixStep() {
   }
   if (x >= 1) { mixClear(); mixReset(); setVolume(volume); }
 }
-setInterval(() => {
+// (every 50 ms only near a song's end or while mixing, where a beat is caught; else once a second — a phone in a
+// pocket, paused, isn't woken twenty times a second for nothing)
+function mixTick() {
+  if (mix.on) { mixStep(); return 50; }
+  if (engine !== 'audio' || !fsVid || !current || (native && place === 0) || P.paused) return 1000; // (a phone in the background: as usual)
   const [next, up] = nextUp(), seamless = albumNext(current, next);
-  if (!(smoothMix || seamless || mix.on) || engine !== 'audio' || !fsVid || !current || (native && place === 0)) return; // (a phone in the background: as usual)
-  if (mix.on) return mixStep();
+  if (!(smoothMix || seamless)) return 1000;
   if (mix.for && mix.for !== current.trackId) mixReset(); // (another song since)
-  const left = P.dur - P.t;
+  const left = P.dur - P.t, soon = left < 27 ? 50 : 1000;
   if (!mix.for) {
-    if (next && P.dur > 40 && left < 25 && left > (seamless ? 1 : FADE) && repeat !== 'one' && !P.paused) mixPrepare(next, up);
-    return;
+    if (next && P.dur > 40 && left < 25 && left > (seamless ? 1 : FADE) && repeat !== 'one') mixPrepare(next, up);
+    return soon;
   }
-  if (next !== mix.next) return mixAbort(); // (the queue changed: readied again, for the new next)
-  if (!mix.ready || P.paused) return;
-  if (!mix.fade) { if (left < .6 && !mix.timer) mix.timer = setTimeout(mixBegin, Math.max(0, (left - .02) * 1000)); return; } // (gapless: at its very end; or as it ends, below)
+  if (next !== mix.next) { mixAbort(); return soon; } // (the queue changed: readied again, for the new next)
+  if (!mix.ready) return soon;
+  if (!mix.fade) { if (left < .6 && !mix.timer) mix.timer = setTimeout(mixBegin, Math.max(0, (left - .02) * 1000)); return soon; } // (gapless: at its very end; or as it ends, below)
   // a quiet ending: the music (nearly) silent for a second and a half — the mix begins there and then
   const f = specFrames[specFrames.length - 1], level = f && performance.now() - f.t < 400 ? f.d.reduce((a, v) => a + v, 0) / f.d.length / 255 : 1;
   mix.quiet = level < .03 ? mix.quiet + .05 : 0;
   if (mix.quiet > 1.5 || left <= FADE - .4 || (left <= FADE + .4 && lyricKick > .5)) mixBegin(); // (on a beat, when there's one in time)
-}, 50);
+  return soon;
+}
+(function mixLoop() { let d = 1000; try { d = mixTick(); } catch {} setTimeout(mixLoop, d); })();
 
 // Is this upload the song? named: its title (or channel) has every word of the song's name (a long name may miss
 // one); byArtist: its title or channel has one of the artists' names (or, for a film song — "Song (From "Film")" —
@@ -5554,7 +5561,10 @@ async function playTrack(t, term = '', queued = false, stay = false, mixed = nul
     // (Audius waited on only a moment past YouTube's upload being found — its lookup takes 0.6–1.5 s and finds the song
     // rarely, and every first play waited on it, a song from the search ~1.3 s; found later, it's kept for the next time)
     const vp = videosFor(t).catch(e => { if (!noteLimited(e)) why = e.message; return []; }), ap = audiusFor(t);
-    [au, vids] = await Promise.all([Promise.race([ap, vp.then(v => v.length ? new Promise(r => setTimeout(r, 250, null)) : ap)]), vp]); // (found on YouTube: that video)
+    // (its stream looked up meanwhile: the wait for Audius and that lookup at once, not one after the other — both
+    // FlowStream's and the server's answers are kept, so fsPlay then has it at once)
+    const warm = v => { if (v[0] && !v[0].cache && !ytLimited()) native ? flowPage?.audio(v[0].id).catch(() => {}) : fetch('/api/fs/audio?' + new URLSearchParams({ id: v[0].id })).catch(() => {}); };
+    [au, vids] = await Promise.all([Promise.race([ap, vp.then(v => { warm(v); return v.length ? new Promise(r => setTimeout(r, 250, null)) : ap; })]), vp]); // (found on YouTube: that video)
     if (id !== loadId) return;
     if (!t.artworkUrl100 && vids[0]?.art) { t.artworkUrl100 = vids[0].art; setNow(t.trackName, t.artistName, artUrl(t, 600), t.collectionName); } // (an imported song with no cover yet: its YouTube Music one, at once)
     if (au) source = '◆ full song · Audius 320 kbps';
@@ -5741,7 +5751,14 @@ function renderFolders() {
     libCard(tile('down', 'Downloads', saved.size), 'Downloads', `${saved.size} offline`, () => openLibrary({ kind: 'saved' })),
     ...library.playlists.map(p => libCard(mosaic(p.tracks, listTile(p)), p.name, `${p.tracks.length} songs`, () => openLibrary({ kind: 'playlist', id: p.id }))));
 }
-const isLiked = t => !!t && library.liked.some(x => x.trackId === t.trackId);
+// (by a set of their ids, made again when the list is another or changes length: every row of a long list asks, and the
+// island ~30 times a second — looked through song by song, a 5,000-song playlist with 3,000 liked was 15 million looks)
+let likedIds = { of: null, n: -1, set: null };
+const isLiked = t => {
+  const L = library.liked;
+  if (likedIds.of !== L || likedIds.n !== L.length) likedIds = { of: L, n: L.length, set: new Set(L.map(x => x.trackId)) };
+  return !!t && likedIds.set.has(t.trackId);
+};
 function toggleLike(t) {
   const on = !isLiked(t);
   autoTaste(t, on ? 3 : -2);
@@ -5763,7 +5780,7 @@ function newPlaylist(name) {
   return p;
 }
 function addToPlaylist(p, tracks) {
-  const fresh = tracks.filter((t, i) => !p.tracks.some(x => x.trackId === t.trackId) && tracks.findIndex(x => x.trackId === t.trackId) === i);
+  const have = new Set(p.tracks.map(x => x.trackId)), fresh = tracks.filter(t => !have.has(t.trackId) && have.add(t.trackId)); // (not in it, and not twice: by a set — thousands at once were millions of looks)
   p.tracks.push(...fresh.map(slim));
   saveLib();
   toast(fresh.length ? `Added to ${p.name}` : `Already in ${p.name}`);
@@ -5786,6 +5803,7 @@ function toast(text, ms = 2800) {
 }
 
 // ---------- song options (⋯): like, add to a playlist, save for offline, remove, go to the artist ----------
+let dotsMade = null; // (see row)
 const DOTS = '<svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>';
 // line icons (24×24, stroked in the accent color by CSS)
 const ICONS = {
@@ -5817,7 +5835,9 @@ const ICONS = {
   together: '<circle cx="9" cy="8" r="3.2"/><path d="M3 19.5c.6-3.3 3-5.2 6-5.2s5.4 1.9 6 5.2"/><circle cx="16.5" cy="9" r="2.6"/><path d="M16.8 14.3c2.3.2 3.9 1.8 4.4 4.4"/>',
   story: '<rect x="6" y="2.5" width="12" height="19" rx="2.5"/><circle cx="12" cy="10.5" r="3.2"/><path d="M9 16.5h6"/>',
 };
-const ico = name => { const s = document.createElementNS(SVGNS, 'svg'); s.setAttribute('viewBox', '0 0 24 24'); s.setAttribute('class', 'ico'); s.innerHTML = ICONS[name]; return s; };
+// (each made once, then copied: a long list's rows each take two, and reading the markup each time was a third of a row's cost)
+const icoMade = new Map();
+const ico = name => { let s = icoMade.get(name); if (!s) { s = document.createElementNS(SVGNS, 'svg'); s.setAttribute('viewBox', '0 0 24 24'); s.setAttribute('class', 'ico'); s.innerHTML = ICONS[name]; icoMade.set(name, s); } return s.cloneNode(true); };
 const mi = (icon, text, onclick, extra) => {
   const b = el('button', 'mi');
   b.append(ico(icon), el('span', '', text));
@@ -6342,8 +6362,15 @@ const METHOD = 'file';
 // Three at once (as Musify does: a playlist comes in about three times as fast; many more and YouTube starts to slow
 // them down). A batch says how it went once, at the end.
 const DL_AT_ONCE = 3;
+let dlDraw = 0; // (the Library drawn again, once a frame at most: see dlChanged)
 const dl = { queue: [], cur: [], done: [], failed: [], waiting: [] }; // cur: downloading now · done, failed: since it was last idle · waiting: for the internet
-const dlJob = id => [...dl.cur, ...dl.queue, ...dl.waiting].find(j => j.t.trackId === id);
+// (asked of every row drawn: by id, the lists' index made again only when one of them has changed)
+let dlIdx = { of: [], map: null };
+const dlJob = id => {
+  const of = [dl.cur, dl.queue, dl.waiting, dl.cur.length, dl.queue.length, dl.waiting.length];
+  if (!dlIdx.map || of.some((x, i) => x !== dlIdx.of[i])) dlIdx = { of, map: new Map([...dl.cur, ...dl.queue, ...dl.waiting].reverse().map(j => [j.t.trackId, j])) }; // (reversed: the first of the same id kept)
+  return dlIdx.map.get(id);
+};
 // Downloads left unfinished when the app closed (the list kept on this device only, never synced): carried on once the
 // saved songs are known and the terms agreed to, the ones saved meanwhile skipped. The internet gone mid-way: they wait,
 // and carry on when it's back.
@@ -6378,7 +6405,7 @@ function dlChanged() { // the count by "Library", the library screen, and the fo
   if (dlResumed) store.set(DL_PENDING, n ? JSON.stringify([...dl.cur, ...dl.queue, ...dl.waiting].map(({ t, withLyrics, upgrade }) => ({ t, withLyrics, upgrade }))) : '');
   $('dlCount').hidden = !n;
   $('dlCount').textContent = n;
-  if ($('library').open) renderLibrary();
+  if ($('library').open && !dlDraw) dlDraw = requestAnimationFrame(() => { dlDraw = 0; if ($('library').open) renderLibrary(); }); // (one song done and the next begun: drawn once)
 }
 function pumpDl() {
   while (dl.cur.length < DL_AT_ONCE && dl.queue.length) saveOne(dl.queue.shift());
@@ -7528,9 +7555,8 @@ async function autoSaveLiked() {
 setInterval(autoSaveLiked, 60000);
 function openLibrary(view = null) {
   if (!$('library').open) { $('library').showModal(); placeWinctl(); body.classList.add('lib-open'); }
-  libView = view;
+  libView = view; libDrawn = undefined; // (opened: from its top)
   renderLibrary();
-  $('libList').scrollTop = 0;
 }
 function libBack() { if (libView?.from) openLibrary(libView.from); else if (libView) openLibrary(null); else $('library').close(); } // (a page opened from another: back to that one)
 const mb = n => n >= 1e9 ? (n / 1e9).toFixed(1) + ' GB' : Math.max(1, Math.round(n / 1e6)) + ' MB';
@@ -7579,13 +7605,16 @@ function dlRows() {
   });
 }
 function dlProgress(j, label) {
+  const said = label || pct(j);
+  if (j.said === said) return; // (each bit as it arrives: drawn only when its percent moves)
+  j.said = said;
   for (const x of document.querySelectorAll('.ep-save')) if (x.dataset.dl === String(j.t.trackId)) x.textContent = pct(j) || '…';
   const r =[...document.querySelectorAll('.dlrow')].find(x => x.dataset.dl === String(j.t.trackId));
   if (!r) return;
   r.style.setProperty('--dp', j.dur ? Math.min(1, j.at / j.dur) : 0); // (a song whose length isn't known: no NaN)
   r.querySelector('small').textContent = label || `Downloading · ${pct(j) || 'starting'}`;
 }
-let libTok = 0;
+let libTok = 0, libDrawn; // (libDrawn: the page drawn last — drawn again, as a download starting or ending does, it stays where it was)
 // ---------- Explore (Library › Explore): YouTube Music's own — this country's charts, new albums and singles, what's
 // trending, its moods and genres (each a shelf of its curated playlists) — and, made here from what you play and like,
 // your mixes and what's new from the artists you play (nothing about your listening leaves the device: only the songs
@@ -8072,7 +8101,9 @@ function renderBook(v, head, list, tok) {
   }).catch(e => { if (tok === libTok) { $('libSub').textContent = ''; $('libList').replaceChildren(xFail(e)); } });
 }
 function renderLibrary() {
-  const v = libView, list = [], acts = [], tok = ++libTok;
+  const v = libView, list = [], acts = [], tok = ++libTok, again = libDrawn === v, keep = again ? $('libList').scrollTop : 0;
+  const had = again ? $('libList').querySelector('.lib-rows')?.childElementCount || 0 : 0; // (as many rows drawn at once as were there: room to stay where it was)
+  libDrawn = v;
   const head = (kind, name, sub, art) => { // art: the sleeve, with a record slid out behind it
     $('libKind').textContent = kind; $('libName').replaceChildren(name); $('libSub').textContent = sub; $('libArt').replaceChildren(el('i', 'vinyl'), art);
   };
@@ -8191,18 +8222,23 @@ function renderLibrary() {
     const opts = p ? { playlist: p } : {}, box = el('div', 'lib-rows');
     // (its rows as found and sorted — see listView — the first 200 at once, the rest a chunk at a time, so a long list
     // opens straight away; in Edit order, each with a handle to drag it by)
+    let first = Math.max(200, had);
     const drawRows = () => {
-      const shown = listView(v, tracks), edit = v.edit && p && shown === tracks, my = ++rowsTok;
+      // (drawn again — a song dragged or moved by the keys, another order, a find — as many at once as were there: it stays put)
+      const shown = listView(v, tracks), edit = v.edit && p && shown === tracks, my = ++rowsTok, n = Math.max(first, box.childElementCount);
+      first = 200;
       box.classList.toggle('lib-edit', !!edit);
       const rowOf = (s, i) => { const r = s.kind === 'episode' ? epRow(s, i, shown) : row(s, i, shown, opts); if (edit) r.append(gripFor(r, p, i, drawRows)); return r; }; // (a saved episode or chapter: as on its show's page)
-      box.replaceChildren(...(shown.length ? shown.slice(0, 200).map(rowOf) : [el('p', 'empty', 'No songs here match that.')]));
-      (async () => { for (let k = 200; k < shown.length; k += 120) { await new Promise(r => setTimeout(r, 16)); if (my !== rowsTok || tok !== libTok) return; box.append(...shown.slice(k, k + 120).map((s, i) => rowOf(s, k + i))); } })();
+      box.replaceChildren(...(shown.length ? shown.slice(0, n).map(rowOf) : [el('p', 'empty', 'No songs here match that.')]));
+      (async () => { for (let k = n; k < shown.length; k += 120) { await new Promise(r => setTimeout(r, 16)); if (my !== rowsTok || tok !== libTok) return; box.append(...shown.slice(k, k + 120).map((s, i) => rowOf(s, k + i))); } })();
     };
     if (!tracks.length) list.push(el('p', 'empty', v.kind === 'saved' ? 'Nothing saved yet. Tap ••• on any song, then Save for offline.' : 'No songs yet. Tap ••• on any song to add it here.'));
     else { if (tracks.length > 1 && v.kind !== 'saved') list.push(libTools(v, p, drawRows)); list.push(box); drawRows(); }
   }
   $('libActs').replaceChildren(...acts);
   $('libList').replaceChildren(...list);
+  $('libList').scrollTop = keep;
+  if (keep) requestAnimationFrame(() => { if (tok === libTok) $('libList').scrollTop = keep; }); // (a page whose rows come a moment later, from what's kept: there too)
 }
 // A list's tools (a playlist, Liked songs): a song in it found as you type (every word, each the start of one of the
 // song's); its order — its own (Custom), or by title, artist, the newest added first, length (kept for each list, on
@@ -8212,7 +8248,7 @@ let libSorts = (() => { try { return JSON.parse(store.get('netherflow.libsort') 
 const byName = new Intl.Collator(undefined, { sensitivity: 'base', numeric: true });
 function listView(v, tracks) {
   const sort = libSorts[sortKey(v)] || 'Custom', want = words(v.q || '');
-  let out = want.length ? tracks.filter(t => { const have = words(`${t.trackName} ${t.artistName} ${t.collectionName || ''}`); return want.every(w => have.some(x => x.startsWith(w))); }) : tracks;
+  let out = want.length ? tracks.filter(t => { const have = songWords(t); return want.every(w => have.some(x => x.startsWith(w))); }) : tracks;
   if (sort === 'Title') out = [...out].sort((a, b) => byName.compare(clean(a.trackName || ''), clean(b.trackName || '')));
   else if (sort === 'Artist') out = [...out].sort((a, b) => byName.compare(a.artistName || '', b.artistName || '') || byName.compare(a.trackName || '', b.trackName || ''));
   else if (sort === 'Length') out = [...out].sort((a, b) => (a.trackTimeMillis || 0) - (b.trackTimeMillis || 0));
@@ -8324,6 +8360,9 @@ async function itunes(path, params, signal) {
 let searchFailed = false; // (a source didn't answer: no results then means no connection, not a spelling)
 const quiet = e => { if (e.name === 'AbortError') throw e; searchFailed = true; return []; };
 const words = s => (s || '').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^\p{L}\p{N}]+/gu, ' ').trim().split(' ').filter(Boolean);
+// a song's words (its name's, its artist's, its album's), worked out once: a big library found in as you type
+const songWordsMade = new WeakMap();
+const songWords = t => { let w = songWordsMade.get(t); if (!w) songWordsMade.set(t, w = words(`${t.trackName} ${t.artistName} ${t.collectionName || ''}`)); return w; };
 const sameWords = (a, b) => words(a).join(' ') === words(b).join(' ');
 const contains = (big, small) => { const w = words(big); return words(small).every(x => w.includes(x)); };
 const playable = s => s.kind === 'song' && (s.previewUrl || fullSongs);
@@ -8455,7 +8494,7 @@ function searchLibrary(term) {
   if (!want.length) return [];
   const all = new Map();
   for (const t of [...library.liked, ...library.playlists.flatMap(p => p.tracks), ...[...saved.values()].map(x => x.track)]) if (t?.trackId && !all.has(t.trackId)) all.set(t.trackId, t);
-  return [...all.values()].filter(t => { const have = words(`${t.trackName} ${t.artistName} ${t.collectionName || ''}`); return want.every(w => have.some(x => x.startsWith(w))); }).slice(0, 5);
+  return [...all.values()].filter(t => { const have = songWords(t); return want.every(w => have.some(x => x.startsWith(w))); }).slice(0, 5);
 }
 // albums whose name (with their artist's) has every word typed, one of each
 async function searchAlbums(term, signal) {
@@ -8722,10 +8761,10 @@ function renderArtist() {
   follow.onclick = () => { const on = !following(artist); setFollow(artist, on, albums); paint(); toast(on ? `Following ${artist.artistName}: their new music shows up in Explore, and you'll hear when it's out` : `Not following ${artist.artistName}`); };
   const list = [];
   if (songs.length) {
-    list.push(sectionHead('Popular'), ...songs.slice(0, 10).map((s, i) => row(s, i, songs)));
-    if (songs.length > 10) {
+    list.push(sectionHead('Popular'), ...songs.slice(0, apData.all ? songs.length : 10).map((s, i) => row(s, i, songs)));
+    if (songs.length > 10 && !apData.all) {
       const more = el('button', 'link more lbl', `Show all ${songs.length} songs`);
-      more.onclick = () => more.replaceWith(...songs.slice(10).map((s, i) => row(s, i + 10, songs)));
+      more.onclick = () => { apData.all = true; more.replaceWith(...songs.slice(10).map((s, i) => row(s, i + 10, songs))); };
       list.push(more);
     }
   }
@@ -8735,13 +8774,13 @@ function renderArtist() {
       const b = el('button', 'album'), img = el('img');
       img.alt = ''; img.loading = 'lazy'; img.src = artUrl(a, 300);
       b.append(img, el('b', '', a.collectionName), el('small', '', [(a.releaseDate || '').slice(0, 4), a.trackCount && `${a.trackCount} songs`].filter(Boolean).join(' · ')));
-      b.onclick = () => openAlbum(a);
+      b.onclick = () => { apData.at = $('apList').scrollTop; openAlbum(a); }; // (back from it: here again, as it was)
       grid.append(b);
     }
     list.push(sectionHead('Albums & singles'), grid);
   }
   $('apList').replaceChildren(...list);
-  $('apList').scrollTop = 0;
+  $('apList').scrollTop = apData.at || 0;
 }
 async function openAlbum(album) {
   const id = ++apLoad;
@@ -8764,11 +8803,13 @@ $('closeArtist').onclick = apBack;
 $('artist').onclick = () => current && openArtist(current);
 // A song in a list. Clicking plays it (the list becomes the queue); ⋯ opens its options.
 // from: { playlist } when the list is a playlist (adds "Remove from …").
-// Does a song have lyrics? Checked as its row scrolls into view, three songs at a time; the answers are kept for the session.
+// Does a song have lyrics? Checked as its row scrolls into view, three songs at a time, the latest in view first; the answers are kept for the session.
+// (a row scrolled past before its turn isn't looked up — a long list flicked through queued hundreds — but when it's back in view)
 const lyrKnown = new Map(), lyrWait = [], lyrRows = new WeakMap();
 let lyrBusy = 0;
-function lyricsKind(s) {
+function lyricsKind(s, still) {
   if (!lyrKnown.has(s.trackId)) lyrKnown.set(s.trackId, new Promise(res => { lyrWait.push(async () => {
+    if (still && !still()) { lyrKnown.delete(s.trackId); return res(null); }
     try {
       const dur = (s.trackTimeMillis || 0) / 1000, l = await fetchLyrics(s.artistName, s.trackName, dur, lyricsAlts(s));
       if (lyrUnsure(l)) { lyrKnown.delete(s.trackId); return res(''); } // ask again next time
@@ -8777,8 +8818,8 @@ function lyricsKind(s) {
   }); lyrPump(); }));
   return lyrKnown.get(s.trackId);
 }
-function lyrPump() { while (lyrBusy < 3 && lyrWait.length) { lyrBusy++; lyrWait.shift()().finally(() => { lyrBusy--; lyrPump(); }); } }
-const lyrIO = new IntersectionObserver(es => { for (const e of es) if (e.isIntersecting) { lyrIO.unobserve(e.target); lyrRows.get(e.target)(); } }, { rootMargin: '300px 0px' });
+function lyrPump() { while (lyrBusy < 3 && lyrWait.length) { lyrBusy++; lyrWait.pop()().finally(() => { lyrBusy--; lyrPump(); }); } }
+const lyrIO = new IntersectionObserver(es => { for (const e of es) { e.target.lyrIn = e.isIntersecting; if (e.isIntersecting) lyrRows.get(e.target)?.(); } }, { rootMargin: '300px 0px' });
 const LYB = { synced: 'Lyrics', plain: 'Unsynced lyrics', none: 'No lyrics' };
 // a playlist songs are being added to from the search (its Add songs): null otherwise. The search closed, back to it.
 let addingTo = null;
@@ -8798,7 +8839,8 @@ function row(s, i, list, from = {}) {
   wrap.classList.toggle('liked', isLiked(s)); // (a heart before the name)
   if (saved.has(s.trackId)) sub.append(el('span', 'offmark', '↓')); // saved on this device
   else {
-    lyrRows.set(wrap, () => lyricsKind(s).then(k => k && sub.prepend(el('span', 'lyb ' + k, LYB[k]))));
+    lyrRows.set(wrap, () => { if (wrap.lyb) return; wrap.lyb = 1; // (null: passed by before its turn — asked again when it's back)
+      lyricsKind(s, () => wrap.isConnected && wrap.lyrIn).then(k => { if (k === null) { wrap.lyb = 0; if (wrap.isConnected && wrap.lyrIn) lyrRows.get(wrap)(); return; } lyrIO.unobserve(wrap); if (k) sub.prepend(el('span', 'lyb ' + k, LYB[k])); }); });
     lyrIO.observe(wrap);
   }
   sub.append(`${s.artistName} — ${s.collectionName || 'Single'}`);
@@ -8811,7 +8853,7 @@ function row(s, i, list, from = {}) {
   // it came from, as it did, kept by the next save)
   b.onclick = () => { queue = list.slice(); queueFrom = from.playlist ? { p: from.playlist, queue } : null; playTrack(s, dlg.open ? $('q').value.trim() : ''); };
   b.onpointerdown = e => { if (e.pointerType === 'mouse' && fullSongs && !saved.has(s.trackId)) videosFor(s).catch(() => {}); };
-  more.innerHTML = DOTS;
+  more.append((dotsMade ||= Object.assign(document.createElement('template'), { innerHTML: DOTS }).content.firstChild).cloneNode(true));
   more.setAttribute('aria-label', `Options for ${s.trackName}`);
   more.onclick = () => songMenu(s, more, from);
   wrap.append(b, more);
@@ -8999,11 +9041,13 @@ function setIsland(v) { islandOn = v === 'On'; store.set('netherflow.island', is
 function setIslandGlow(v) { islandGlow = v === 'On'; store.set('netherflow.islandglow', islandGlow ? '' : 'Off'); renderTextPanel(); }
 if (window.netherflowApp?.island) {
   const EDGES = [40, 110, 260, 600, 1400, 3200, 7000, 16000], peak = new Float32Array(7).fill(.25), bars = new Array(7).fill(0);
-  let quiet = false, tick = 0;
+  let quiet = false, tick = 0, sent = null;
   setInterval(() => {
-    if (!islandOn || !current || !P.loaded) { if (!quiet) netherflowApp.island(null); quiet = true; return; }
+    if (!islandOn || !current || !P.loaded) { if (!quiet) netherflowApp.island(null); quiet = true; sent = null; return; }
     quiet = false;
-    if (place === 2 && ++tick % 15) return; // (NetherFlow in front, the island away: twice a second is plenty)
+    const playing = body.classList.contains('playing');
+    if ((place === 2 || P.paused) && playing === sent && ++tick % 15) return; // (NetherFlow in front, the island away — or paused, nothing moving: twice a second is plenty; played or paused: at once)
+    sent = playing;
     const at = performance.now() - soundLag() * 1000;
     let f = null;
     for (const x of specFrames) if (x.t <= at) f = x;
@@ -9016,7 +9060,7 @@ if (window.netherflowApp?.island) {
     }
     netherflowApp.island({ title: curTitle, artist: $('artist').textContent, art: /^https?:/.test(curArt) ? curArt : artUrl(current, 300),
       // (playing: as the page has it — YouTube's brief "paused" while it buffers left out)
-      playing: body.classList.contains('playing'), t: P.t, dur: P.dur, vol: muted ? 0 : volAt(volume), repeat, liked: isLiked(current), next: hasNext(), bars, glow: islandGlow,
+      playing, t: P.t, dur: P.dur, vol: muted ? 0 : volAt(volume), repeat, liked: isLiked(current), next: hasNext(), bars, glow: islandGlow,
       pal: { bg: pal.bg, a: pal.a, b: pal.b, ink: pal.ink } });
   }, 33);
   netherflowApp.onIsland((cmd, v) => {

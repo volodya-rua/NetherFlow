@@ -22,13 +22,14 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 public class SystemVolumePlugin extends Plugin {
     private AudioManager audio;
     private int last = -1;
+    private BroadcastReceiver changed;
 
     @Override
     public void load() {
         audio = (AudioManager) getContext().getSystemService(Context.AUDIO_SERVICE);
         last = audio.getStreamVolume(AudioManager.STREAM_MUSIC);
         getActivity().setVolumeControlStream(AudioManager.STREAM_MUSIC); // the volume keys: always the media volume
-        BroadcastReceiver changed = new BroadcastReceiver() {
+        changed = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
                 int now = audio.getStreamVolume(AudioManager.STREAM_MUSIC);
@@ -40,6 +41,11 @@ public class SystemVolumePlugin extends Plugin {
             }
         };
         ContextCompat.registerReceiver(getContext(), changed, new IntentFilter("android.media.VOLUME_CHANGED_ACTION"), ContextCompat.RECEIVER_NOT_EXPORTED);
+    }
+
+    @Override
+    protected void handleOnDestroy() { // (the page built again — see MainActivity — brings its own: this one let go)
+        try { getContext().unregisterReceiver(changed); } catch (Exception ignored) {}
     }
 
     @PluginMethod

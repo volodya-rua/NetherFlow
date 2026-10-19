@@ -103,7 +103,8 @@ public class ImmersivePlugin extends Plugin {
         android.app.UiModeManager ui = (android.app.UiModeManager) getContext().getSystemService(android.content.Context.UI_MODE_SERVICE);
         JSObject r = new JSObject();
         r.put("tv", ui != null && ui.getCurrentModeType() == android.content.res.Configuration.UI_MODE_TYPE_TELEVISION
-            || getContext().getPackageManager().hasSystemFeature(android.content.pm.PackageManager.FEATURE_LEANBACK));
+            || getContext().getPackageManager().hasSystemFeature(android.content.pm.PackageManager.FEATURE_LEANBACK)
+            || getContext().getPackageManager().hasSystemFeature("amazon.hardware.fire_tv")); // (a Fire TV, by Amazon's own word for it)
         call.resolve(r);
     }
 

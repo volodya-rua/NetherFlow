@@ -165,7 +165,12 @@ async function flowMedia(req, res, url) {
 async function handle(req, res) {
   // Only for this app's own page: a request named for any other host is a web page trying to reach in (DNS rebinding)
   if (!/^(localhost|127\.0\.0\.1)(:\d+)?$/.test(req.headers.host || '')) return send(res, 403, 'forbidden', 'text/plain');
+  // …and one a web page elsewhere sends here (a site open in a browser, linking or posting to localhost): its browser says
+  // so. The app's own page only ever asks from its own address.
+  if (/^(cross|same)-site$/.test(req.headers['sec-fetch-site'] || '')) return send(res, 403, 'forbidden', 'text/plain');
   const url = new URL(req.url, 'http://localhost');
+  // (what it answers is data, never a page that runs: an episode's host's "audio" that's really a web page, say)
+  if (url.pathname.startsWith('/api/')) { res.setHeader('X-Content-Type-Options', 'nosniff'); res.setHeader('Content-Security-Policy', "sandbox; default-src 'none'"); }
   if (url.pathname === '/api/fs/media') return flowMedia(req, res, url);
   if (url.pathname === '/api/fs/audio') { // a song's stream, described (the page then plays /api/fs/media)
     const id = url.searchParams.get('id') || '', kept = keptMeta(id);
@@ -178,7 +183,7 @@ async function handle(req, res) {
       return f ? send(res, 200, JSON.stringify({ url: f.url, mime: f.mimeType.split(';')[0] })) : send(res, 502, JSON.stringify({ error: 'no audio stream' })); }
     catch (e) { return send(res, 502, JSON.stringify({ error: e.code || e.message })); }
   }
-  if (url.pathname === '/api/fs/kept' && req.method === 'DELETE') { // (Clear history: the kept starts go too)
+  if (url.pathname === '/api/fs/kept' && req.method === 'DELETE') { // (Settings › Kept song starts: Clear, or Instant start: Off)
     flowHeads.clear(); keptEra = url.searchParams.get('g') || '';
     if (module.exports.heads) fs.rmSync(module.exports.heads, { recursive: true, force: true });
     return send(res, 204, '');
@@ -247,7 +252,9 @@ async function handle(req, res) {
       const r = await fetchOut(url.searchParams.get('url'), {}, stop.signal);
       if (!r.ok) return send(res, 502, JSON.stringify({ error: 'its host answered ' + r.status }));
       const len = r.headers.get('content-length');
-      res.writeHead(200, { 'Content-Type': r.headers.get('content-type') || 'application/octet-stream', ...(len ? { 'Content-Length': len } : {}) });
+      const type = r.headers.get('content-type') || '';
+      // (sound as it is; a page or data — a host's error page — as plain text, so the page still sees it isn't sound; else bytes: never a page that runs)
+      res.writeHead(200, { 'Content-Type': /^(audio|video)\//i.test(type) ? type : /^(text\/|application\/(json|xml|xhtml))/i.test(type) ? 'text/plain' : 'application/octet-stream', ...(len ? { 'Content-Length': len } : {}) });
       // (read and written by hand: Readable.fromWeb + pipeline stalled the next one after a download was stopped)
       for await (const c of r.body) {
         if (res.destroyed) break;

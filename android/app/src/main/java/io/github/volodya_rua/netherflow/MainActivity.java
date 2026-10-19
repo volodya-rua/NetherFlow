@@ -120,7 +120,7 @@ public class MainActivity extends BridgeActivity {
             head.put("Accept-Ranges", "bytes"); head.put("Cache-Control", "no-store");
             for (String k : new String[] { "Content-Length", "Content-Range" }) if (c.getHeaderField(k) != null) head.put(k, c.getHeaderField(k));
             if (first) keepStart(id, u, q.getQueryParameter("g")); // (for next time)
-            return new WebResourceResponse(type, null, code, code == 206 ? "Partial Content" : "OK", head, c.getInputStream());
+            return new WebResourceResponse(type, null, code, code == 206 ? "Partial Content" : "OK", head, code == 206 ? CastPlugin.skipped(c.getInputStream(), range) : c.getInputStream()); // (a range: see CastPlugin.skipped)
         } catch (Exception e) {
             return failed(502);
         }
@@ -164,7 +164,7 @@ public class MainActivity extends BridgeActivity {
             }
         } catch (Exception ignored) {}
     }
-    // Clear history: the kept starts go too (a trace of what was played), and the next songs' in memory
+    // Settings › Kept song starts: Clear (or Instant start: Off): the kept starts go (a trace of what was played), and the next songs' in memory
     // The page's era: a new one at each Clear history, given with every song it asks for; only a start asked for in the
     // latest is kept (a song that began before the clear isn't kept after it). null: any, till the first clear in this run.
     private static volatile String keptEra;

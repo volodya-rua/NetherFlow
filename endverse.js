@@ -289,5 +289,5 @@
   out.create = opts => new Engine(opts);
   out.krcToYrc = krcToYrc;
   out.ttmlToYrc = ttmlToYrc;
-  out.version = '0.5.3';
+  out.version = '0.5.4';
 })(typeof module === 'object' && module.exports ? module.exports : (globalThis.EndVerse = {}));

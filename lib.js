@@ -80,7 +80,7 @@
   //   lib.politeFetch(fetchImpl, opts?) → a drop-in fetch (input, init) → Promise<Response>
   lib.politeFetch = function politeFetch(fetchImpl, opts = {}) {
     const D = { retry: 5, backoffBase: 400, backoffCap: 15000, retryOn: new Set([429, 500, 502, 503, 504]),
-      retryMethods: new Set(['GET']), cacheMs: 10 * 60 * 1000, staleMs: 60 * 60 * 1000, maxCache: 1000,
+      retryMethods: new Set(['GET']), cacheMs: 10 * 60 * 1000, staleMs: 60 * 60 * 1000, maxCache: 300, // (ponytail: by count, not bytes — a YouTube page is ~1 MB; 300 and none kept past staleMs bounds it)
       cacheKey: (url, init) => (init?.method || 'GET').toUpperCase() + ' ' + url,
       shouldCache: (resp, init) => (init?.method || 'GET').toUpperCase() === 'GET' && resp.ok };
     const cfg = { ...D, ...opts }, cache = new Map(), inflight = new Map();
@@ -88,7 +88,11 @@
     const retryAfter = resp => { const h = resp.headers?.get?.('Retry-After'); if (!h) return null;
       const n = Number(h); if (Number.isFinite(n)) return Math.min(n * 1000, cfg.backoffCap);
       const d = Date.parse(h); if (Number.isFinite(d)) return Math.min(Math.max(0, d - Date.now()), cfg.backoffCap); return null; };
-    const cachePut = (k, resp) => { if (cache.size >= cfg.maxCache) cache.delete(cache.keys().next().value); cache.set(k, { t: Date.now(), resp: resp.clone() }); };
+    const cachePut = (k, resp) => {
+      for (const [key, v] of cache) { if (Date.now() - v.t < cfg.staleMs) break; cache.delete(key); } // (too old to serve: let go, not kept till asked again)
+      cache.delete(k); if (cache.size >= cfg.maxCache) cache.delete(cache.keys().next().value);
+      cache.set(k, { t: Date.now(), resp: resp.clone() }); // (deleted first: the map stays oldest-first)
+    };
     const execute = async (url, init, key) => {
       const method = (init?.method || 'GET').toUpperCase(), retryable = cfg.retryMethods.has(method);
       let lastErr;

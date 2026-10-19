@@ -170,7 +170,7 @@ window.islandApp?.onState(s => {
   const now = performance.now();
   // (just after a seek: the time it was sent to, running on, till the reports catch up)
   if (hold.t) { const t = hold.t.v + (now - hold.t.at) / 1000; if (now < hold.t.until && Math.abs(s.t - t) > 1.5) s.t = t; else delete hold.t; }
-  S = s; at = now; show();
+  S = s; at = now; show(); run();
 });
 function setPlaying(on) { if (on !== playing) { playing = on; isl.classList.toggle('playing', on); } }
 function show() {
@@ -198,12 +198,14 @@ function show() {
 // every frame (while it's out): the beat, eased (up fast, down slow); and open, the time running on between reports.
 // Only what's changed is touched; the bars move by transform alone (no layout).
 const lv = new Float32Array(7), shownScale = new Array(7).fill(''), barGroups = [...document.querySelectorAll('.bars')].map(g => [...g.children]);
-let lastKick = '', lastSec = -1, lastP = '', away = true, glowing = false, shownT = 0;
-new MutationObserver(() => { away = document.body.classList.contains('away'); glowing = document.body.classList.contains('glow'); lastSec = -1; lastP = ''; })
+let lastKick = '', lastSec = -1, lastP = '', away = true, glowing = false, shownT = 0, looping = false;
+// (away, or nothing yet: no frames at all — the loop stops, and starts again as it comes back)
+const run = () => { if (!looping && S && !away) { looping = true; requestAnimationFrame(frame); } };
+new MutationObserver(() => { away = document.body.classList.contains('away'); glowing = document.body.classList.contains('glow'); lastSec = -1; lastP = ''; run(); })
   .observe(document.body, { attributes: true, attributeFilter: ['class'] });
-(function frame() {
+function frame() {
+  if (!S || away) { looping = false; return; }
   requestAnimationFrame(frame);
-  if (!S || away) return;
   const bars = S.bars || [];
   for (let k = 0; k < 7; k++) {
     const v = playing ? bars[k] || 0 : 0;
@@ -220,7 +222,7 @@ new MutationObserver(() => { away = document.body.classList.contains('away'); gl
   if (pc !== lastP) { lastP = pc; $('seek').value = pc * 10; $('seek').style.setProperty('--p', pc + '%'); }
   const sec = Math.floor(t);
   if (sec !== lastSec) { lastSec = sec; $('cur').textContent = fmt(t); $('left').textContent = '-' + fmt((S.dur || 0) - t); }
-})();
+}
 
 // ---- open and close: a click on the pill opens it; a click on the cover, or the pointer leaving it a moment, closes it
 let closeTimer = 0;
