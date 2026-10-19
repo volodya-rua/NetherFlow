@@ -2873,21 +2873,47 @@ function setNow(title, artist, art = '', album = '') {
   $('title').textContent = title;
   $('artist').textContent = artist || 'Unknown artist';
   document.title = `${title} — NetherFlow`;
-  body.classList.toggle('has-art', !!art);
-  $('art').style.backgroundImage = art ? `url(${JSON.stringify(art)})` : '';
-  root.style.setProperty('--art-bg', art ? `url(${JSON.stringify(art)})` : 'none'); // the Cover background theme
-  $('nowCover').hidden = !art;
-  $('nowCover').style.backgroundImage = art ? `url(${JSON.stringify(art)})` : '';
+  showArt(art);
   body.classList.add('has-song'); // (the cover view needs a song)
   $('csTitle').textContent = title;
   $('csSub').textContent = [artist, album].filter(Boolean).join(' · ');
   fitCover();
-  curArt = art; curTitle = title;
+  curTitle = title;
   $('dvTitle').textContent = title; $('dvArtist').textContent = artist || '';
-  $('dvArt').style.backgroundImage = art ? `url(${JSON.stringify(art)})` : '';
   applyMood(); skinExtras();
   if ('mediaSession' in navigator)
     navigator.mediaSession.metadata = new MediaMetadata({ title, artist, album, artwork: art ? [{ src: art, sizes: '600x600', type: 'image/jpeg' }] : [] });
+  watchArt(art);
+}
+// the song playing's cover, everywhere it's shown: the player, the play button, the record (and the Cover theme), Drive
+function showArt(art) {
+  const u = art ? `url(${JSON.stringify(art)})` : '';
+  body.classList.toggle('has-art', !!art);
+  $('art').style.backgroundImage = u;
+  root.style.setProperty('--art-bg', u || 'none');
+  $('nowCover').hidden = !art;
+  $('nowCover').style.backgroundImage = u;
+  $('dvArt').style.backgroundImage = u;
+  if (body.classList.contains('home')) $('homeNow').querySelector('i').style.backgroundImage = u;
+  curArt = art;
+}
+// The cover, watched as it loads: one an image server turned away (YouTube's, now and then, when the app asks for many at
+// once, as a mix does) asked again another way, as the lists' covers are (see coverAgain), then its own full-size one,
+// then its video's picture, and shown once one comes, with its colours. Before, the player kept an empty square while the
+// record, drawn later, had the cover.
+let artTry = 0;
+function watchArt(url, my = ++artTry, n = 0, tried = new Set()) {
+  if (!url || /^(blob|data):/.test(url)) return; // (a saved song's own: on this device)
+  tried.add(url);
+  const im = new Image();
+  im.onload = () => { if (my === artTry && url !== curArt) { showArt(url); applyMood(); } };
+  im.onerror = () => {
+    if (my !== artTry) return;
+    const t = current, vid = t?.ytId || fsVid, again = coverAgain(url, n);
+    const next = again || [t?.artworkUrl100, vid && `https://i.ytimg.com/vi/${vid}/hqdefault.jpg`].find(u => u && !tried.has(u));
+    if (next) setTimeout(() => { if (my === artTry) watchArt(next, my, again ? n + 1 : 0, tried); }, again ? 1500 * (n + 1) : 0);
+  };
+  im.src = url;
 }
 
 // ---------- the music's spectrum, for everything that moves with it (backdrop, scrubber, beat ring) ----------
@@ -8313,22 +8339,19 @@ $('openLib').onclick = () => openLibrary();
 // a cover YouTube's image server turned away (a few at a time, when a page asks for many): once more, a moment later, by
 // another of its addresses (a size a pixel smaller; a thumbnail without its signed extras), not the failed one again;
 // that failing too, or another server's: the row's next cover (data-alt: the full-size one, the video's own picture)
+// another address for a cover an image server turned away, its nth time ('': none: on to the next cover): a size a pixel
+// smaller (not the failure the browser kept), a thumbnail without its signed extras, or the same asked anew
+const coverAgain = (u, n) => n >= 2 ? '' : /googleusercontent\.com\/.*=(w\d+-h\d+|s\d+)/.test(u) ? u.replace(/=w(\d+)-h(\d+)|=s(\d+)/, (m, w, h, s) => s ? `=s${s - 1}` : `=w${w - 1}-h${h - 1}`)
+  : /ytimg\.com\/.*\?/.test(u) ? u.split('?')[0] : /ytimg\.com\//.test(u) ? u + '?nf=' + (n + 1) : '';
 document.addEventListener('error', e => {
   const i = e.target;
   if (i.tagName !== 'IMG' || !i.closest('#libList, .results, .ritem')) return;
   i.style.visibility = 'hidden'; // (no broken-picture sign meanwhile: the tile's own ground)
-  const n = +(i.dataset.again || 0), alt = (i.dataset.alt || '').split(' ').filter(Boolean);
-  if (n >= 2 || !/googleusercontent\.com|ytimg\.com/.test(i.src)) {
-    if (alt.length) { i.dataset.alt = alt.slice(1).join(' '); i.dataset.again = 0; i.addEventListener('load', () => { i.style.visibility = ''; }, { once: true }); i.src = alt[0]; }
-    return;
-  }
-  i.dataset.again = n + 1;
+  const n = +(i.dataset.again || 0), alt = (i.dataset.alt || '').split(' ').filter(Boolean), again = coverAgain(i.src, n);
   i.addEventListener('load', () => { i.style.visibility = ''; }, { once: true });
-  setTimeout(() => {
-    if (/googleusercontent\.com\/.*=(w\d+-h\d+|s\d+)/.test(i.src)) i.src = i.src.replace(/=w(\d+)-h(\d+)|=s(\d+)/, (m, w, h, s) => s ? `=s${s - 1}` : `=w${w - 1}-h${h - 1}`); // (another size: not the failure the browser kept)
-    else if (/ytimg\.com\/.*\?/.test(i.src)) i.src = i.src.split('?')[0];
-    else if (/ytimg\.com\//.test(i.src)) i.src += '?nf=' + (n + 1);
-  }, 1500 * (n + 1));
+  if (!again) { if (alt.length) { i.dataset.alt = alt.slice(1).join(' '); i.dataset.again = 0; i.src = alt[0]; } return; }
+  i.dataset.again = n + 1;
+  setTimeout(() => { i.src = again; }, 1500 * (n + 1));
 }, true);
 $('closeLib').onclick = libBack;
 $('library').addEventListener('cancel', e => { if (libView) { e.preventDefault(); libBack(); } }); // Esc: back a step first
