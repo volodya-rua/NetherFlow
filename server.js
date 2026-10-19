@@ -137,14 +137,20 @@ async function flowMedia(req, res, url) {
     return res.end(start.buf);
   }
   try {
-    let s = await pick(), r;
-    for (let tries = 0; tries < 2; tries++) {
-      const late = setTimeout(() => stop.abort(), 15000); // (no answer in 15 s: given up on, and the page moves on)
-      r = await fetch(s.url, { headers: req.headers.range ? { Range: req.headers.range } : {}, signal: stop.signal }).finally(() => clearTimeout(late));
-      if (r.status !== 403 || tries) break;
-      flow.forget(id); s = await pick(); // (expired, or tied to another address: a fresh one)
+    // (YouTube refusing a moment, an address expired or tied to another, no answer: asked again with a fresh address, a
+    // little later — three times in all — before the page's told it won't play. It gave up after one try before, and the
+    // song was skipped for a refusal that was gone a second later. Each try its own 15 s: one that timed out no longer
+    // stopped the next before it began.)
+    let s = await pick().catch(async e => { if (e.code === 'limited') throw e; flow.forget(id); await new Promise(ok => setTimeout(ok, 600)); return pick(); }), r = null, why = '';
+    for (let tries = 0; ; tries++) {
+      const one = new AbortController(), late = setTimeout(() => one.abort(), 15000);
+      r = await fetch(s.url, { headers: req.headers.range ? { Range: req.headers.range } : {}, signal: AbortSignal.any([stop.signal, one.signal]) })
+        .catch(e => { why = one.signal.aborted ? 'no answer in 15 s' : e.cause?.code || e.message; return null; }).finally(() => clearTimeout(late));
+      if (r && !r.ok) why = 'the stream answered ' + r.status;
+      if (r?.ok || tries >= 2 || stop.signal.aborted) break;
+      flow.forget(id); await new Promise(ok => setTimeout(ok, tries ? 1500 : 300)); s = await pick();
     }
-    if (!r.ok) return send(res, 502, JSON.stringify({ error: 'the stream answered ' + r.status }));
+    if (!r?.ok) { console.warn('stream', id, why); return send(res, 502, JSON.stringify({ error: why })); }
     const total = +(r.headers.get('content-range') || '').split('/')[1] || +r.headers.get('content-length') || 0, had = !video && keptMeta(id);
     if (had && total && had.total !== total) { dropKept(id); if (!/^bytes=0-/.test(req.headers.range || '')) return send(res, 502, JSON.stringify({ error: 'the kept start was another file' })); }
     const head = { 'Content-Type': s.mime.split(';')[0], 'Accept-Ranges': 'bytes', 'Cache-Control': 'no-store' };

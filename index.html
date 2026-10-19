@@ -4232,8 +4232,9 @@ for (const el of [audio, audioB]) el.onerror = () => {
   if (audio.src.includes('audius.co')) { audiusBad.add(t.trackId); playTrack(t, '', fromUpNext, true); }
   else if (fsVid && audio.src.includes('fs/media')) { // (FlowStream's stream failing: a fresh address once, from where it was; then the next upload found; then the next song, or the preview)
     const at = P.t, vid = fsVid, id = loadId, next = () => {
-      const v = ++fsTries < 3 && ytQueue.shift(); // (three uploads at most: then the next song, or the preview)
       if (id !== loadId) return;
+      if (!fsTries++) return setTimeout(() => { if (id === loadId) { flowPage?.forget(vid); fsPlay({ id: vid }, id).then(() => { if (at > 1) P.seek(at); }).catch(next); } }, 2000); // (the same upload once more, 2 s on: YouTube refusing a moment, the network blinking)
+      const v = fsTries < 4 && ytQueue.shift(); // (then two more uploads of it at most: then the next song, or the preview)
       if (v) fsPlay(v, id).catch(next);
       else if (navigator.onLine && hasNext()) { toast(`Couldn't load ${t.trackName}: on to the next`); nextTrack(); }
       else previewFallback('couldn\'t load it');
@@ -4286,7 +4287,10 @@ async function findVideos(artist, title, dur, album = '', lang = '') {
     for (const v of await api.yt(`${artist} ${name} audio`).catch(e => { if (musicErr || /limited/.test(e.message)) throw e; return []; })) if (!found.some(x => x.id === v.id)) found.push(v);
     if (!found.some(own)) for (const v of await api.yt(`${first} ${name}`).catch(() => [])) if (!found.some(x => x.id === v.id)) found.push(v);
   }
-  const likely = v => { const m = match(v); return (m.named || m.byArtist) && !m.other && dur && Math.abs(v.dur - dur) <= 2; };
+  // (by the artist at the song's very length but not by its name: only where the name's in another script and can't be
+  // told apart — in the same script it's another of their songs: "Locked & Loaded" kept in reserve for d4vd's "Feel It",
+  // played when that didn't load)
+  const likely = v => { const m = match(v); return (m.named || m.byArtist && !sameScript(v.title, title)) && !m.other && dur && Math.abs(v.dur - dur) <= 2; };
   // Its name matched, or not: the ones that aren't come after all that are — unless their title is in another script than
   // the song's ("アイドル" for "Idol"), where a name can't be told apart: then the artist's own upload at its very length
   // beats a fan's re-upload that spells it in Latin letters (measured: a fan's lyric video played for YOASOBI's "Idol").
@@ -5750,7 +5754,10 @@ async function playTrack(t, term = '', queued = false, stay = false, mixed = nul
     else if (vids.length) {
       // try the uploads in turn (three at most); one that won't play — or a shared id of the wrong length — gives way to
       // the next. YouTube limiting this connection: stop (another would be refused the same way).
-      const tryList = async list => { let picked = null; ytQueue = list.slice(1); for (let v = list[0], n = 0; v && !fsVid && id === loadId && n < 3; v = ytQueue.shift(), n++) { const e = await fsPlay(v, id).then(() => null, e => e); if (fsVid) { picked = v; break; } if (noteLimited(e)) break; } return picked; };
+      const tryList = async list => { let picked = null; ytQueue = list.slice(1); for (let v = list[0], n = 0; v && !fsVid && id === loadId && n < 3; v = ytQueue.shift(), n++) { let e = await fsPlay(v, id).then(() => null, e => e);
+        // (the song's best upload, refused: once more a moment later before another — a refusal that lasted a second skipped it)
+        if (!fsVid && !n && e && id === loadId && !noteLimited(e) && !/wrong length/.test(e.message)) { await new Promise(r => setTimeout(r, 1500)); if (id === loadId) e = await fsPlay(v, id).then(() => null, e => e); }
+        if (fsVid) { picked = v; break; } if (noteLimited(e)) break; } return picked; };
       vid = await tryList(vids);
       if (!fsVid && vids[0]?.cache && !ytLimited() && id === loadId) { forgetVids(t); const real = await videosFor(t).catch(() => []); if (real[0] && !real[0].cache) vid = await tryList(real); } // (the shared id didn't fit: a real search, and that's remembered)
       if (id !== loadId) return;
