@@ -49,8 +49,8 @@ need a powerful graphics card anyway), about 18 MB smaller, and it updates to Li
 - **Play on a TV or speaker.** It works with Chromecast and other Google Cast devices, and with DLNA TVs and speakers.
   NetherFlow isn't made, certified or endorsed by Google
 - **NetherFlow also runs on Fire TV: install the APK.** Phones and computers on your Wi-Fi can then play on it
-- **Live concerts from the Internet Archive's Live Music Archive:** free shows taped by fans, in Library ›
-  Live concerts and with the artists you search for
+- **Live concerts from the Internet Archive's Live Music Archive:** free shows, most of them taped by
+  fans, in Library › Live concerts and with the artists you search for
 - **Weekly picks** (new every Monday) and **Today's mix**, made from what you play and like
 - **Listen together with up to 30 people**
 - **Lyrics romanized** in Hindi, Punjabi and India's other scripts, and word by word in them where the song has it
@@ -86,7 +86,7 @@ The full notes for this release and every earlier one are in the [changelog](CHA
   **Today's mix**, made from what you play
 - **Follow artists**: their new albums and singles show up first in Explore, and you hear when they're out
 - **Podcasts and audiobooks**: follow shows, pick up where you left off, any speed from 0.8× to 2×
-- **Live concerts from the Internet Archive's Live Music Archive**: free shows taped by fans
+- **Live concerts from the Internet Archive's Live Music Archive**: free shows, most of them taped by fans
 - **Equalizer** with presets, a volume booster, **headphone correction** for 6,000+ headphones (AutoEQ), and every song
   at its **original loudness**
 - **Sound tools**: 360 sound, crossfeed for headphones, clarity, loudness at low volume and a night mode, and a line
@@ -234,7 +234,7 @@ NetherFlow is **first, or tied for first, in seven categories**. The others beat
 | Songs | everything on YouTube, found through Apple's catalog | 100M+ | 100M+ | 100M+, plus YouTube's covers, live versions and remixes |
 | Officially licensed | ✗ it plays the songs from YouTube | ✓ | ✓ | ✓ |
 | Podcasts | ✓ podcasts from Apple's directory, saved for offline too | ✓ | ~ in a separate app | ✓ |
-| Live concerts | ✓ live concerts from the Internet Archive's Live Music Archive, taped by fans | ✓ official live albums | ✓ official live albums | ✓ official live albums, and YouTube's live versions |
+| Live concerts | ✓ live concerts from the Internet Archive's Live Music Archive, most of them taped by fans | ✓ official live albums | ✓ official live albums | ✓ official live albums, and YouTube's live versions |
 | Audiobooks | ~ free classics only (LibriVox, public domain in the US) | ✓ the bestsellers | ~ in Apple Books | ✗ |
 | Can break when YouTube changes something | ~ yes, until an update fixes it | ✓ no | ✓ no | ✓ no |
 | **Score** | 7 | **10** | **10** | **10** |
@@ -347,7 +347,7 @@ NetherFlow doesn't host any music, videos or lyrics. It finds them on other serv
 | Explore | YouTube Music's charts, new releases, moods and genres; your mixes from its radio for the songs you play most |
 | Podcasts | Apple's podcast directory and charts; the episodes from each show's own feed and host |
 | Audiobooks | [LibriVox](https://librivox.org)'s recordings (public domain in the US), from the [Internet Archive](https://archive.org) |
-| Live concerts | The Internet Archive's [Live Music Archive](https://archive.org/details/etree): shows taped by fans |
+| Live concerts | The Internet Archive's [Live Music Archive](https://archive.org/details/etree): free shows, most of them taped by fans |
 | Play on a TV or speaker | Google Cast and DLNA, on your own Wi-Fi: the TV or speaker fetches the song itself |
 | Headphone correction | [AutoEQ](https://github.com/jaakkopasanen/AutoEq)'s published results (MIT), fetched when you pick your headphones |
 | Playlists you make together | NetherFlow's own relay on Cloudflare (public MQTT relays as a backup), end-to-end encrypted with a key from the playlist link |

@@ -9,8 +9,8 @@ What changed in each NetherFlow release. The builds are on the [releases page](h
   moving through the song and the volume work from NetherFlow, on computers and phones
 - **NetherFlow also runs on Fire TV: install the APK.** Phones and computers on your Wi-Fi can then play on it, as on
   any Android TV or Google TV. Settings › "Let phones and computers on this Wi-Fi play here" turns it off
-- **Live concerts from the Internet Archive's Live Music Archive:** free shows taped by fans, in Library › Live concerts
-  and with the artists you search for, each with its own page there
+- **Live concerts from the Internet Archive's Live Music Archive:** free shows, most of them taped by fans, in Library ›
+  Live concerts and with the artists you search for, each with its own page there
 - **Weekly picks** (songs new to you, like the ones you love, new every Monday) and **Today's mix**
 - **Listen together** with up to 30 people
 - **Romanized lyrics** in Hindi, Punjabi and India's other scripts, the line coming next too, and word-by-word lyrics
