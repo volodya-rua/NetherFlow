@@ -7981,7 +7981,7 @@ async function concertOf(id) {
 // a show's card (from the search too: it opens over it)
 const concertCard = c => libCard(c.art ? coverTile(c.art) : tile('speaker', c.band), c.band, liveWhere(c), () => { if (dlg.open) dlg.close(); openLibrary({ kind: 'concert', from: libView, id: c.id, band: c.band, art: c.art }); });
 function renderLives(v, head, list, tok) {
-  head('Live concerts', 'Live concerts', `Free, taped by fans · from ${LMA}`, tile('speaker', 'Live concerts'));
+  head('Live concerts', 'Live concerts', `Free, most of them taped by fans · from ${LMA}`, tile('speaker', 'Live concerts'));
   const q = el('input', 'hp-q x-q'), found = el('div', 'albums strip'), mine = el('div', 'albums strip'), top = el('div', 'albums strip'), live = () => tok === libTok;
   q.type = 'search'; q.placeholder = 'A band or an artist'; q.setAttribute('aria-label', 'Find live concerts'); q.autocomplete = 'off'; q.spellcheck = false;
   const find = () => { const term = q.value, now = () => q.isConnected && q.value === term;
@@ -8131,7 +8131,7 @@ function renderLibrary() {
     discover.append(libCard(tile('compass', 'Explore'), 'Explore', 'Charts, new music, moods, your mixes', () => openLibrary({ kind: 'explore' })),
       libCard(tile('mic', 'Podcasts', pods.length || null), 'Podcasts', pods.length ? `${pods.length} followed` : 'Shows, from where you left off', () => openLibrary({ kind: 'pods' })),
       libCard(tile('book', 'Audiobooks', books.length || null), 'Audiobooks', 'Free classics, read by volunteers', () => openLibrary({ kind: 'books' })),
-      libCard(tile('speaker', 'Live concerts', lives.length || null), 'Live concerts', 'Free shows, taped by fans', () => openLibrary({ kind: 'lives' })));
+      libCard(tile('speaker', 'Live concerts', lives.length || null), 'Live concerts', 'Free shows, most taped by fans', () => openLibrary({ kind: 'lives' })));
     list.push(sectionHead('Discover'), discover, sectionHead('Playlists'), grid);
     if (dl.cur.length || dl.queue.length) list.push(sectionHead('Downloading'), ...dlRows());
   } else if (v.kind === 'explore') renderExplore(head, list, tok);
