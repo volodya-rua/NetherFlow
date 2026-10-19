@@ -204,7 +204,9 @@ const lanAddrs = () => Object.entries(os.networkInterfaces()).filter(([n]) => !/
 function syncClose() { if (!sync) return; clearTimeout(sync.timer); sync.srv.close(); for (const r of sync.pending.values()) r(null); sync = null; }
 function syncHandle(req, res) {
   const send = (code, body) => { res.writeHead(code, { 'Content-Type': 'application/json' }); res.end(body); };
-  if (req.method === 'GET' && req.url === '/nf-sync/hello') return send(200, JSON.stringify({ app: 'NetherFlow', name: os.hostname() }));
+  // (anyone on the Wi-Fi can ask this, code or not: never the computer's own name — it's often its owner's — only what
+  // the phone says while it syncs)
+  if (req.method === 'GET' && req.url === '/nf-sync/hello') return send(200, JSON.stringify({ app: 'NetherFlow', name: 'your computer' }));
   if (req.method !== 'POST' || req.url !== '/nf-sync/swap') return send(404, '{}');
   const parts = []; let size = 0;
   req.on('data', c => { size += c.length; if (size > 64e6) req.destroy(); else parts.push(c); }); // (a library with big imported playlists runs to megabytes)
