@@ -280,10 +280,10 @@ body.home .singbar { display: none; } /* (its voice slider is for the lyrics: no
    graphics chip — otherwise the whole line is painted again every frame (on a phone, half the frame rate or worse) */
 .la-self .ch, .la-self .rocket, .la-self .spark { will-change: transform; }
 .la-self .cur .w.now .ch.lit { text-shadow: 0 0 .25em color-mix(in srgb, var(--a) 75%, transparent); }
-/* Knot, Möbius, Ribbon: the letters in the lit color always — unlit, a fainter opacity, and lighting up by opacity too
+/* Knot, Möbius, Ribbon (and Coaster, Corkscrew, Star, Infinity, Coil, Lissajous): the letters in the lit color always — unlit, a fainter opacity, and lighting up by opacity too
    (curvePlace: the same look). Fading the color itself had each letter painted again for every frame of the fade; on a
    phone, the line stalled as it was sung. Opacity, the graphics chip does alone. */
-.la-knot .cur .ch, .la-möbius .cur .ch, .la-ribbon .cur .ch { color: var(--ink); transition: none; }
+.la-knot .cur .ch, .la-möbius .cur .ch, .la-ribbon .cur .ch, .la-coaster .cur .ch, .la-corkscrew .cur .ch, .la-star .cur .ch, .la-infinity .cur .ch, .la-coil .cur .ch, .la-lissajous .cur .ch { color: var(--ink); transition: none; }
 /* Spiral: a whirlpool. The line winds out of the middle, the word being sung big at the top, and what's been sung
    sweeps on round and out, growing and fading */
 /* Swarm: the letters fly loops round the middle like a swarm, each to its place in the line as it's sung; the line
@@ -2282,7 +2282,7 @@ function setKinetic(v) { kinetic = v === 'Music video'; store.set('netherflow.ki
 
 // ---------- background theme (mood menu): what the backdrop draws. The mood picks its colors. ----------
 // The shader draws all but Gradient and Cover (both CSS: see PLAIN). The index is the shader's style number (themeNo).
-const THEMES = ['Smoke', 'Aurora', 'Liquid', 'Lava', 'Rings', 'Nebula', 'Prism', 'Silk', 'Mesh', 'Fireflies', 'Black Hole', 'Tunnel', 'Storm', 'Kaleido', 'Gyroid', 'Mandala', 'Fractal', 'Julia', 'Crystal', 'Cosmos', 'Galaxy', 'Plasma', 'Ribbons', 'Synapse', 'Halo', 'Bloom', 'Hyperbolic', 'Gradient', 'Cover',
+const THEMES = ['Smoke', 'Aurora', 'Liquid', 'Lava', 'Rings', 'Nebula', 'Prism', 'Silk', 'Mesh', 'Fireflies', 'Black Hole', 'Tunnel', 'Storm', 'Kaleido', 'Gyroid', 'Mandala', 'Fractal', 'Julia', 'Crystal', 'Cosmos', 'Galaxy', 'Plasma', 'Ribbons', 'Synapse', 'Halo', 'Bloom', 'Hyperbolic', 'Apollonian', 'Newton', 'Coral', 'Mandelbrot', 'Vortex', 'Gradient', 'Cover',
   'Stickman', 'Spider', 'Blocks', 'Tactical', 'Ops', 'Redline'];
 // (the backgrounds the shader doesn't draw: Gradient, plain CSS; Cover, the album cover blurred, CSS too)
 const PLAIN = new Set(['Gradient', 'Cover']);
@@ -2605,8 +2605,8 @@ body.classList.toggle('bg-beat', bgBeat);
 // folders on the home screen (an option: see renderFolders)
 let folders = store.get('netherflow.folders') === 'On';
 // how the lyrics move (see "lyrics animations" in the CSS, and buildStage / layoutLyricShape / turnLyricShape)
-const LANIMS = ['Classic', 'Wave', 'Spiral', 'Shatter', 'Fireworks', 'Swarm', 'Black Hole', 'Cylinder', 'Globe', 'Helix', 'DNA', 'Tornado', 'Knot', 'Möbius', 'Ribbon', 'Orbit', 'Atom', 'Tunnel', 'Cube'];
-const SELF_LAID = new Set(['Spiral', 'Fireworks', 'Swarm', 'Black Hole', 'Cylinder', 'Globe', 'Helix', 'DNA', 'Tornado', 'Knot', 'Möbius', 'Ribbon', 'Orbit', 'Atom']); // (placed by layoutLyricShape)
+const LANIMS = ['Classic', 'Wave', 'Spiral', 'Shatter', 'Fireworks', 'Swarm', 'Black Hole', 'Cylinder', 'Globe', 'Helix', 'DNA', 'Tornado', 'Knot', 'Möbius', 'Ribbon', 'Coaster', 'Corkscrew', 'Star', 'Infinity', 'Coil', 'Lissajous', 'Orbit', 'Atom', 'Tunnel', 'Cube'];
+const SELF_LAID = new Set(['Spiral', 'Fireworks', 'Swarm', 'Black Hole', 'Cylinder', 'Globe', 'Helix', 'DNA', 'Tornado', 'Knot', 'Möbius', 'Ribbon', 'Coaster', 'Corkscrew', 'Star', 'Infinity', 'Coil', 'Lissajous', 'Orbit', 'Atom']); // (placed by layoutLyricShape)
 const LETTERED = new Set(['Wave', 'Shatter', ...[...SELF_LAID].filter(n => n !== 'Cylinder')]), HUSHED = new Set(['Tunnel', ...SELF_LAID]);
 const LEAVING = new Set(['Tunnel', 'Cube', 'Shatter', ...SELF_LAID]);
 // Shatter: where each letter hangs before it's sung, and blows off to after (em, degrees)
@@ -2842,7 +2842,7 @@ function renderTextPanel() {
       native ? 'A notification when a newer NetherFlow is out, even with the app closed (Android looks once a day).' : 'A notification when a newer NetherFlow is out, while NetherFlow is open but not in front (it looks once a day).')] : []),
     settingRow('Interface size', UI_SIZES, uiSize, setUiSize, 'Everything larger or smaller: the buttons, the text, the panels.'),
     settingRow('Show', ['Lyrics', 'Cover'], view, setView, 'Cover: the record spinning, with a ring that moves to the beat. Tap the cover in the player to switch. A song with no timed lyrics shows its cover by itself: tap it for the words.'),
-    settingRow('Lyrics animation', LANIMS, lanimPick, setLanim, 'How the lyrics move. 2D: Wave, Spiral, Shatter, Fireworks. 3D: Swarm, Black Hole, Cylinder, Globe, Helix, DNA, Tornado, Knot, Möbius, Ribbon, Orbit, Atom, Tunnel, Cube.' + (kin.on ? ' (Extreme lyrics are on, in the mood menu: this is for when they\x27re off.)' : '')),
+    settingRow('Lyrics animation', LANIMS, lanimPick, setLanim, 'How the lyrics move. 2D: Wave, Spiral, Shatter, Fireworks. 3D: Swarm, Black Hole, Cylinder, Globe, Helix, DNA, Tornado, Knot, Möbius, Ribbon, Coaster, Corkscrew, Star, Infinity, Coil, Lissajous, Orbit, Atom, Tunnel, Cube.' + (kin.on ? ' (Extreme lyrics are on, in the mood menu: this is for when they\x27re off.)' : '')),
     ...(skin ? [] : [fontRow()]), // (a theme brings its own font and timeline)
     settingRow('Beat style', BEATS, beatStyle, setBeat, 'The ring round the record, in the Cover view.'),
     settingRow('Beat on the screen edges', ['Off', 'On'], edges ? 'On' : 'Off', setEdges, 'The beat also runs along all four sides of the screen, with the lyrics too.'),
@@ -5417,6 +5417,25 @@ const CURVES = {
   // a long silk banner rippling through space (it turns over away from the singing: see curvePlace)
   Ribbon: { closed: false, tilt: .2, shape: (u, t) => { const x = (u - .5) * 16; return [x, .7 * Math.sin(x * .42 + t * .5) + .22 * Math.sin(x * 1.1 - t * .8), 1.1 * Math.sin(x * .3 + 1 + t * .35)]; },
           up: T => unit3([-T[0] * T[1], 1 - T[1] * T[1], -T[2] * T[1]]) },
+  // a roller coaster: the line rides a track that loops the loop and swings side to side, followed close up — the view
+  // rolling right round with it at every loop
+  Coaster: { closed: false, still: true, tilt: .16, shape: u => { const th = (u - .5) * 6 * Math.PI; return [1.15 * th - 2.5 * Math.sin(th), 2.5 * Math.cos(th), 1.4 * Math.sin(th * .5)]; },
+          up: T => unit3([-T[1], T[0], 0]) },
+  // a corkscrew: the line wound round and round a line through space, followed close up — the world turning round you
+  Corkscrew: { closed: false, still: true, tilt: .1, shape: u => { const x = (u - .5) * 40, a = x * .42; return [x, 2.4 * Math.cos(a), 2.4 * Math.sin(a)]; },
+          up: (T, u) => { const a = (u - .5) * 40 * .42; return [0, Math.cos(a), Math.sin(a)]; } },
+  // a star: a (2, 5) torus knot, turning — the line round its five points, passing over and under itself
+  Star: { closed: true, whole: true, tilt: .45, shape: u => { const a = u * 2 * Math.PI, r = 2 + Math.cos(5 * a); return [r * Math.cos(2 * a), r * Math.sin(2 * a), -1.1 * Math.sin(5 * a)]; },
+          up: T => unit3(cross3([0, 0, 1], T)) },
+  // infinity: a figure of eight through space, turning, the line turning over as it goes round
+  Infinity: { closed: true, whole: true, tilt: .3, shape: u => { const a = u * 2 * Math.PI; return [2.2 * Math.sin(a), 1.1 * Math.sin(2 * a), .9 * Math.cos(a)]; },
+          up: (T, u) => { const a = u * 2 * Math.PI; return unit3(mix3(unit3(cross3([0, 0, 1], T)), [0, 0, 1], Math.cos(a), .8 * Math.sin(a))); } },
+  // a coil: a spring wound round a ring — the line spiralling round and round a turning doughnut, its letters on its skin
+  Coil: { closed: true, whole: true, tilt: .55, shape: u => { const a = u * 2 * Math.PI, b = 5 * a, r = 1.7 + .85 * Math.cos(b); return [r * Math.cos(a), r * Math.sin(a), .85 * Math.sin(b)]; },
+          up: (T, u) => { const a = u * 2 * Math.PI, b = 5 * a; return [Math.cos(b) * Math.cos(a), Math.cos(b) * Math.sin(a), Math.sin(b)]; } },
+  // a Lissajous knot (3, 2, 5), turning: the line woven through itself, every way at once
+  Lissajous: { closed: true, whole: true, tilt: .4, shape: u => { const a = u * 2 * Math.PI; return [Math.cos(3 * a + .7), Math.cos(2 * a + .2), Math.cos(5 * a)]; },
+          up: T => unit3(cross3([0, 0, 1], T)) },
 };
 function curveTable(shape, len, closed, t = 0) {
   const N = closed ? 1200 : 600, raw = [], cum = [0];
@@ -5449,7 +5468,7 @@ function curveAt(s, x) {
 const BAND = [[.22, 0], [.16, 6], [.95, 1.4]];
 function curvePlace(s, lp) {
   const C = CURVES[s.kind], now = performance.now() / 1000;
-  if (!C.whole) s.tab = curveTable(C.shape, s.tab.len, false, now);
+  if (!C.whole && !C.still) s.tab = curveTable(C.shape, s.tab.len, false, now); // (a still track — Coaster, Corkscrew — measured once)
   s.off += (sungTo(s) + lp * s.fs * 14 - s.off) * (s.leave ? .25 : .15);
   const o = curveAt(s, s.start + s.off), N = cross3(o.T, o.U);
   const tl = C.tilt + Math.sin(now * .4) * .08, yaw = Math.sin(now * .27) * (C.whole ? .38 : .22);
@@ -5469,7 +5488,7 @@ function curvePlace(s, lp) {
   };
   // where a letter or a stretch of the band lies on the shape: a whole shape doesn't change as it turns (only the camera
   // moves round it), so that's worked out once for this line and kept; the banner ripples, so it's worked out each time
-  const on = (key, x) => { if (!C.whole) return curveAt(s, x); const m = s.on ||= new Map(); let q = m.get(key); if (!q) m.set(key, q = curveAt(s, x)); return q; };
+  const on = (key, x) => { if (!C.whole && !C.still) return curveAt(s, x); const m = s.on ||= new Map(); let q = m.get(key); if (!q) m.set(key, q = curveAt(s, x)); return q; };
   const seen = [0, 0, 0, 0];
   // (the banner turns over away from the singing: none round it, up to a turn and a half further off)
   const turn = (q, x) => {
@@ -5495,7 +5514,7 @@ function curvePlace(s, lp) {
   const span = C.whole ? s.tab.len : s.W2 * 6, from = C.whole ? 0 : s.start + s.off - span / 2;
   const pts = s.pts ||= Array.from({ length: n + 1 }, () => ({ a: [0, 0, 0, 0], b: [0, 0, 0, 0], z: 0, face: 0 })); // (kept, refilled)
   for (let i = 0; i <= n; i++) {
-    const x = from + span * i / n, q = on(i, x), U = turn(q, x), p = pts[i];
+    const x = from + span * i / n, q = C.whole ? on(i, x) : curveAt(s, x), U = turn(q, x), p = pts[i]; // (the banner's band moves along it: looked up afresh)
     const ends = C.whole ? (q.ends ||= [mix3(q.P, U, 1, -h), mix3(q.P, U, 1, h)]) : [mix3(q.P, U, 1, -h), mix3(q.P, U, 1, h)]; // (its two edges)
     const a = view(ends[0], p.a), b = view(ends[1], p.b), tx = dot3(q.T, ex), ty = dot3(q.T, ey);
     p.z = (a[2] + b[2]) / 2; p.face = tx * dot3(U, ey) - ty * dot3(U, ex);
@@ -10865,6 +10884,103 @@ void main(){
   col += mix(k, vec3(1.), .3) * (smoothstep(.0022, 0., dE) * .6 + exp(-dE * 140.) * .18) * drawn * F.w;
   col += k * smoothstep(.0012, 0., dS) * .2 * drawn * F.w;
   col += mix(C1, C2, .5) * exp(-abs(zr - 1.) * 28.) * .3 * F.w;                // the rim, where it all goes
+#elif STYLE == ${themeNo('Apollonian')}
+  // Apollonian: circles packed inside circles without end — the plane folded into a cell and turned inside out by a
+  // circle, again and again — every rim glowing; turning, breathing in and out, the packing itself slowly reshaping
+  vec2 p = uv / F.x * (1.25 + .2 * sin(t * .37));
+  float cs = cos(t * .11), sn = sin(t * .11);
+  p = mat2(cs, -sn, sn, cs) * p + vec2(.31 * sin(t * .19), .23 * cos(t * .23));
+  float sc = 1., s = 1.12 + .08 * sin(t * .53), trap = 9., tr2 = 9.;
+  for (int i = 0; i < 8; i++) {
+    p = -1. + 2. * fract(.5 * p + .5);                                          // (into the cell)
+    float r2 = dot(p, p), k = s / r2;
+    trap = min(trap, r2); tr2 = min(tr2, abs(p.x * p.y));
+    p *= k; sc *= k;                                                             // (turned inside out by the circle)
+  }
+  float d = .25 * abs(p.y) / sc / F.x, dim = clamp(2.2 / pow(sc, .22), .14, 1.); // (to the nearest rim, on screen; the smallest circles' rims fainter: lace, never a fill)
+  vec3 k = mix(C2, C1, smoothstep(.0, 1.2, trap));
+  col = C0 + k * (smoothstep(.0018, 0., d) * .7 + exp(-d * 200.) * .18 + exp(-d * 30.) * .03) * dim * F.w;
+  col += mix(k, vec3(1.), .5) * exp(-tr2 * 80.) * smoothstep(.01, 0., d) * .3 * dim * F.w; // (where rims meet: sparks)
+#elif STYLE == ${themeNo('Newton')}
+  // Newton: Newton's method finding the three roots of z³ = w, from every point — most settle at once, but along the
+  // borders between where each root wins, it can't decide, and those borders are an endless lace, glowing. The roots
+  // turn, and the lace with them; the darkness inside each basin faintly its root's colour
+  vec2 z = uv / F.x * (1.1 + .15 * sin(t * .3));
+  float a0 = t * .35, cs = cos(t * .07), sn = sin(t * .07);
+  z = mat2(cs, -sn, sn, cs) * z;
+  vec2 w = vec2(cos(3. * a0), sin(3. * a0));                                      // (z³ = w: the roots, a0 + 120° apart)
+  float it = 0., moved = 0.;
+  for (int i = 0; i < 26; i++) {
+    vec2 z2 = vec2(z.x * z.x - z.y * z.y, 2. * z.x * z.y), z3 = vec2(z2.x * z.x - z2.y * z.y, z2.x * z.y + z2.y * z.x);
+    vec2 num = 2. * z3 + w, den = 3. * z2;                                       // z ← (2z³ + w) / 3z²
+    vec2 nz = vec2(num.x * den.x + num.y * den.y, num.y * den.x - num.x * den.y) / max(dot(den, den), 1e-9);
+    float step_ = dot(nz - z, nz - z);
+    z = nz;
+    moved += exp(-step_ * 40.);
+    if (step_ < 1e-7) break;
+    it += 1.;
+  }
+  float ang = atan(z.y, z.x) - a0, root = mod(floor(ang / 2.0944 + .5), 3.);    // (which root it came to)
+  vec3 k = root < .5 ? C1 : root < 1.5 ? C2 : mix(C1, C2, .5);
+  float lace = pow(it / 26., 2.2);
+  col = C0 + k * .035 * F.w + mix(k, vec3(1.), .25) * lace * .8 * F.w + mix(k, vec3(1.), .6) * pow(lace, 5.) * .5 * F.w;
+#elif STYLE == ${themeNo('Coral')}
+  // Coral: Fractal's fold without its mirror — turned a little at every step — so it grows into branching neon coral,
+  // reaching and curling, never quite the same twice
+  vec2 p = uv / F.x * (1.3 + .15 * sin(t * .29)) + vec2(.25 * sin(t * .17), .2 * cos(t * .13));
+  float ra = .26 + .07 * sin(t * .31), cs = cos(ra), sn = sin(ra), acc = 0., last = 0., trap = 9.;
+  for (int i = 0; i < 8; i++) {
+    p = abs(p) / max(dot(p, p), .03) - vec2(.9 + .05 * sin(t * .43), .52 + .05 * cos(t * .37)); // the fold
+    p = mat2(cs, -sn, sn, cs) * p;                                               // (and the turn)
+    float m = length(p);
+    acc += exp(-abs(m - last) * 3.);
+    trap = min(trap, abs(p.y));
+    last = m;
+  }
+  acc /= 8.;
+  col = C0 + mix(C2, C1, acc) * pow(acc, 2.6) * 1.1 * F.w + mix(C1, vec3(1.), .55) * exp(-trap * 30.) * .5 * F.w;
+#elif STYLE == ${themeNo('Mandelbrot')}
+  // Mandelbrot: a slow dive into the set's edge, at the seahorse valley, and back out — the edge drawn as glowing lace
+  // (its distance estimate), each tendril curling into smaller ones the deeper it goes
+  float zt = .5 - .5 * cos(t * .42), zoom = exp(mix(log(.6), log(.0016), zt * zt * (3. - 2. * zt)));
+  float cs = cos(t * .09), sn = sin(t * .09);
+  vec2 c = vec2(-.7436439, .1318259) + mat2(cs, -sn, sn, cs) * uv / F.x * zoom, z = vec2(0.), dz = vec2(0.);
+  float m2 = 0., trap = 9., N = QF > 1.5 ? 220. : QF > .5 ? 150. : 96.;
+  for (int i = 0; i < 220; i++) {
+    if (float(i) >= N) break;
+    dz = 2. * vec2(z.x * dz.x - z.y * dz.y, z.x * dz.y + z.y * dz.x) + vec2(1., 0.);
+    z = vec2(z.x * z.x - z.y * z.y, 2. * z.x * z.y) + c;
+    m2 = dot(z, z); trap = min(trap, abs(z.x));
+    if (m2 > 1e4) break;
+  }
+  bool out_ = m2 > 1e4;
+  float d = out_ ? .5 * sqrt(m2 / max(dot(dz, dz), 1e-30)) * log(m2) / zoom * F.x : 0.; // (on screen)
+  vec3 k = mix(C2, C1, .5 + .5 * sin(trap * 6. + t * 2.));
+  col = C0 + (out_ ? k * (exp(-d * 90.) * .3 + exp(-d * 14.) * .06) + mix(k, vec3(1.), .55) * exp(-d * 320.) * .42 : k * .02) * F.w;
+#elif STYLE == ${themeNo('Vortex')}
+  // Vortex: Fractal itself — the same six-fold fold, its glowing filaments — wound into a spiral that pours into its middle
+  // forever (log-polar: each turn in the same as the one outside it, a quarter smaller), two depths blended so it never jumps
+  vec2 p = uv / F.x;
+  float r = max(length(p), 1e-4), a = atan(p.y, p.x), L = log(r), glow = 0., lines = 0.;
+  for (int j = 0; j < 2; j++) {
+    float ph = fract(L / 1.3863 * .9 + t * .55 + float(j) * .5), wt = sin(3.1416 * ph);   // (each depth faded in and out)
+    float an = a + L * 1.7 - t * .25, seg = 6.2832 / 6.;
+    an = abs(mod(an, seg) - seg * .5);
+    vec2 z = vec2(cos(an), sin(an)) * .25 * exp(ph * 1.3863) * (1.6 + .3 * sin(t * .5));
+    float acc = 0., last = 0., trap = 9.;
+    for (int i = 0; i < 9; i++) {
+      z = abs(z) / max(dot(z, z), .03) - vec2(.92 + .06 * sin(t * .7), .48 + .05 * cos(t * .5));
+      float m = length(z);
+      acc += exp(-abs(m - last) * 3.);
+      trap = min(trap, abs(z.y));
+      last = m;
+    }
+    acc /= 9.;
+    glow += pow(acc, 2.5) * wt; lines += exp(-trap * 18.) * wt;
+  }
+  col = C0 + mix(C2, C1, clamp(glow, 0., 1.)) * glow * .48 * F.w + mix(C1, vec3(1.), .55) * lines * .4 * F.w;
+  col += mix(C1, vec3(1.), .6) * exp(-r * 10.) * .45 * F.w;                       // (the eye of it)
+  col *= smoothstep(.0, .1, r) * .75 + .25;
 #elif STYLE == ${themeNo('Stickman')}
   // Stickman: notebook paper, inked by hand — stick figures dancing to the beat on the timeline (its pencil line: see
   // drawSpec, where one runs along it too), notes floating up off them, a doodled sun and clouds. The lines boil

@@ -102,9 +102,9 @@ The full notes for this release and every earlier one are in the [changelog](CHA
 
 ### Lyrics
 
-- **Synced lyrics**, word by word where the song has them, lined up to the exact recording that's playing, with **19 animations**: Wave, Spiral,
-  Shatter, Fireworks, Swarm, Black Hole, Cylinder, Globe, Helix, DNA, Tornado, Knot, Möbius, Ribbon, Orbit, Atom,
-  Tunnel, Cube and Classic
+- **Synced lyrics**, word by word where the song has them, lined up to the exact recording that's playing, with **25 animations**: Wave, Spiral,
+  Shatter, Fireworks, Swarm, Black Hole, Cylinder, Globe, Helix, DNA, Tornado, Knot, Möbius, Ribbon, Coaster,
+  Corkscrew, Star, Infinity, Coil, Lissajous, Orbit, Atom, Tunnel, Cube and Classic
 - **Extreme lyrics** (Windows): the lyrics cut like a music video or a lyric edit, every word landing as it's sung
   <details><summary>58 looks, emoji, and the music video behind it</summary>
 
@@ -176,7 +176,7 @@ the lyrics come in. There are six (five on Android).
 
 ## Backgrounds
 
-There are 27, and they take their colours from the album cover: smoke, northern lights, liquid colour, starfields,
+There are 32, and they take their colours from the album cover: smoke, northern lights, liquid colour, starfields,
 galaxies, kaleidoscopes, fractals and more. A few of them:
 
 <table>
@@ -257,7 +257,7 @@ NetherFlow is **first, or tied for first, in seven categories**. The others beat
 | | NetherFlow | Spotify | Apple Music | YouTube Music |
 |:--|:--|:--|:--|:--|
 | Synced lyrics | ✓ word by word | ✓ line by line | ✓ word by word | ~ line by line, on many songs |
-| Lyrics animations | ✓ 19, plus 58 Extreme looks | ✗ | ~ one style (a very good one) | ✗ |
+| Lyrics animations | ✓ 25, plus 58 Extreme looks | ✗ | ~ one style (a very good one) | ✗ |
 | Karaoke | ✓ Sing | ✗ | ✓ Apple Music Sing | ✗ |
 | Lyrics fonts | ✓ 13 | ✗ | ✗ | ✗ |
 | **Score** | **10** | 7 | 9 | 5 |
@@ -266,7 +266,7 @@ NetherFlow is **first, or tied for first, in seven categories**. The others beat
 
 | | NetherFlow | Spotify | Apple Music | YouTube Music |
 |:--|:--|:--|:--|:--|
-| Moving backgrounds | ✓ 27, and they move with the beat | ~ Canvas loops, when the artist made one | ~ animated album covers | ~ music videos |
+| Moving backgrounds | ✓ 32, and they move with the beat | ~ Canvas loops, when the artist made one | ~ animated album covers | ~ music videos |
 | Themes that change the whole app | ✓ 6 | ✗ | ✗ | ✗ |
 | Colour moods | ✓ 46 | ✗ | ✗ | ✗ |
 | **Score** | **10** | 6 | 7 | 6 |
