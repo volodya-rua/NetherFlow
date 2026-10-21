@@ -13,8 +13,9 @@
 <meta property="og:image" content="https://volodya-rua.github.io/NetherFlow/social-preview.jpg">
 <link rel="icon" href="../logo/netherflow-logo.png">
 <style>
-/* A shared playlist (NetherFlow's Library › Share). The songs ride in the link's # part: browsers don't send it to
-   GitHub, and nothing is kept anywhere. This page only reads it, looks Apple's songs up at Apple, and shows them. */
+/* A shared playlist (NetherFlow's Library › Share). A long link: the songs ride in its # part (browsers don't send it
+   to GitHub), nothing kept anywhere. A short one (#s.<id>.<key>): the songs are on NetherFlow's relay, encrypted with
+   the key in the link, read from there. This page only reads them, looks Apple's songs up at Apple, and shows them. */
 @font-face { font-family: Anton; src: url(../fonts/Anton-400-latin.woff2) format('woff2'); font-display: swap; }
 @font-face { font-family: Martian; src: url(../fonts/MartianMono-latin.woff2) format('woff2'); font-weight: 100 800; font-display: swap; }
 @font-face { font-family: Serif; src: url(../fonts/LibreBodoni-400i-latin.woff2) format('woff2'); font-style: italic; font-display: swap; }
@@ -80,8 +81,16 @@ const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls)
 const toast = t => { $('toast').textContent = t; $('toast').classList.add('on'); setTimeout(() => $('toast').classList.remove('on'), 1800); };
 $('copy').onclick = () => navigator.clipboard.writeText(location.href).then(() => toast('Link copied'), () => toast('Copy it from the address bar'));
 // the playlist, from the link (anyone can make one: what's in it is checked, and its unpacking capped)
+// a short link (#s.<id>.<key>): its songs from NetherFlow's relay, encrypted, opened here with the key in the link
+const SHORT = location.hash.match(/^#s\.([A-Za-z0-9]{12})\.([\w-]{22})$/), unb64 = s => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
 async function read() {
-  const z = Uint8Array.from(atob(location.hash.slice(1).replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
+  let z;
+  if (SHORT) {
+    const r = await fetch('https://netherflow-relay.netherflow.workers.dev/s/' + SHORT[1]);
+    if (r.status === 404) throw new Error('gone');
+    const b = new Uint8Array(await r.arrayBuffer()), key = await crypto.subtle.importKey('raw', unb64(SHORT[2]), 'AES-GCM', false, ['decrypt']);
+    z = new Uint8Array(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b.slice(0, 12) }, key, b.slice(12)));
+  } else z = unb64(location.hash.slice(1));
   const r = new Blob([z]).stream().pipeThrough(new DecompressionStream('deflate-raw')).getReader(), parts = [];
   for (let size = 0; ;) { const { done, value } = await r.read(); if (done) break; if ((size += value.length) > 4e6) throw new Error('too big'); parts.push(value); }
   const { n, s, t } = JSON.parse(await new Blob(parts).text());
@@ -158,7 +167,12 @@ async function readTogether(code) {
     return;
   }
   let pl;
-  try { pl = await read(); } catch { $('name').textContent = 'This link is cut short'; $('meta').textContent = 'Ask for the link again: it needs every character'; return; }
+  if (SHORT) $('where').textContent = 'This playlist is kept on NetherFlow\'s relay, encrypted: only those with the link can read it. It\'s deleted a year after it was last opened.';
+  try { pl = await read(); } catch (e) {
+    if (SHORT && e.message === 'gone') { $('name').textContent = 'This playlist has gone'; $('meta').textContent = 'A shared link is kept for a year after it was last opened: ask for it again'; return; }
+    if (SHORT && !(e instanceof DOMException)) { $('name').textContent = 'Not here right now'; $('meta').textContent = 'Check the connection, then open the link again'; return; }
+    $('name').textContent = 'This link is cut short'; $('meta').textContent = 'Ask for the link again: it needs every character'; return;
+  }
   $('name').textContent = pl.name; document.title = pl.name + ' · NetherFlow';
   $('meta').textContent = `${pl.tracks.length} songs · shared from NetherFlow`;
   // Apple's songs by their ids, from the store they were shared from (150 at a time)
