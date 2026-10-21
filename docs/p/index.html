@@ -169,7 +169,7 @@ async function readTogether(code) {
   let pl;
   if (SHORT) $('where').textContent = 'This playlist is kept on NetherFlow\'s relay, encrypted: only those with the link can read it. It\'s deleted a year after it was last opened.';
   try { pl = await read(); } catch (e) {
-    if (SHORT && e.message === 'gone') { $('name').textContent = 'This playlist has gone'; $('meta').textContent = 'A shared link is kept for a year after it was last opened: ask for it again'; return; }
+    if (SHORT && e.message === 'gone') { $('name').textContent = 'This playlist is gone'; $('meta').textContent = 'A shared link is kept for a year after it was last opened: ask for it again'; return; }
     if (SHORT && !(e instanceof DOMException)) { $('name').textContent = 'Not here right now'; $('meta').textContent = 'Check the connection, then open the link again'; return; }
     $('name').textContent = 'This link is cut short'; $('meta').textContent = 'Ask for the link again: it needs every character'; return;
   }

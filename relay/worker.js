@@ -8,7 +8,11 @@
 //                   after a year without a change
 // And a shared playlist's short link (/s/<12 letters and numbers>, plain HTTP): its songs, encrypted by the app with a
 // key that's only in the link (after #: never sent here), put once (never replaced) and given back to whoever opens the
-// link; deleted a year after it was last opened.
+// link; deleted a year after it was last opened, or when its maker stops sharing it (a delete token only the app that
+// made it holds: its hash is kept with the copy), or by NetherFlow's developer on a valid notice (Terms §8):
+//   curl -X DELETE -H "Authorization: Bearer $(cat ~/.netherflow-signing/relay-admin.key)" https://netherflow-relay.netherflow.workers.dev/s/<id>
+// (<id>: the 12 letters and numbers after #s. in the link reported. The key: a Worker secret, set once with
+//  npx wrangler secret put ADMIN_KEY — never in this repository.)
 // Nothing is logged: no console output, and the Worker's observability off (wrangler.toml). Deploy: npx wrangler deploy
 const TOPIC = /^(nf2\/[0-9a-f]{32}|nf1\/l[0-9a-f]{32})$/;
 const KEEP = 365 * 864e5; // a kept copy, after its last change
@@ -17,8 +21,8 @@ const LIMITS = { // per topic: people at once, the biggest message, and messages
   nf1: { conns: 50, size: 262144, burst: 10, rate: 0.5 },
 };
 
-const SHARE = /^\/s\/([A-Za-z0-9]{12})$/, SHARE_MAX = 512 * 1024; // (a short link's copy: the biggest)
-const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, PUT, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type', 'Access-Control-Max-Age': '86400' };
+const SHARE = /^\/s\/([A-Za-z0-9]{12})$/, SHARE_MAX = 256 * 1024; // (a short link's copy: the biggest — a 10,000-song playlist of any kind, with room; a bigger one gets the long link)
+const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, PUT, DELETE, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type, X-Delete-Hash, X-Delete-Token, Authorization', 'Access-Control-Max-Age': '86400' };
 // (short links made, per address: 20 at once, then 20 an hour — held only in this Worker's memory, never kept or logged)
 const puts = new Map();
 const putOk = ip => { const now = Date.now(), b = puts.get(ip) || { tokens: 20, at: now }; b.tokens = Math.min(20, b.tokens + (now - b.at) / 180000); b.at = now;
@@ -29,7 +33,7 @@ export default {
     const url = new URL(req.url), t = url.searchParams.get('t') || '', s = url.pathname.match(SHARE);
     if (s) {
       if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
-      if (req.method !== 'GET' && req.method !== 'PUT') return new Response('Not found', { status: 404, headers: CORS });
+      if (!['GET', 'PUT', 'DELETE'].includes(req.method)) return new Response('Not found', { status: 404, headers: CORS });
       if (req.method === 'PUT' && !putOk(req.headers.get('CF-Connecting-IP') || '')) return new Response('Slow down', { status: 429, headers: CORS });
       return env.TOPICS.get(env.TOPICS.idFromName('nf3/' + s[1])).fetch(req);
     }
@@ -44,7 +48,7 @@ const packet = (head, ...parts) => { const n = parts.reduce((a, p) => a + p.leng
 const str = s => { const b = new TextEncoder().encode(s); return new Uint8Array([b.length >> 8, b.length & 255, ...b]); };
 
 export class Topic {
-  constructor(ctx) { this.ctx = ctx; }
+  constructor(ctx, env) { this.ctx = ctx; this.env = env; }
 
   async fetch(req) {
     if (new URL(req.url).pathname.startsWith('/s/')) return this.share(req);
@@ -97,9 +101,19 @@ export class Topic {
     ws.serializeAttachment(s);
   }
 
-  // a short link's copy: given (its year started again — written at most once a day), or put, once
+  // a short link's copy: given (its year started again — written at most once a day), put once, or deleted — by its
+  // maker's token, or the developer's key
   async share(req) {
-    const now = Date.now();
+    const now = Date.now(), sha = async s => [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)))].map(b => b.toString(16).padStart(2, '0')).join('');
+    if (req.method === 'DELETE') {
+      if (!(await this.ctx.storage.get('copy'))) return new Response('Not found', { status: 404, headers: CORS });
+      const auth = req.headers.get('Authorization') || '', token = req.headers.get('X-Delete-Token') || '', del = await this.ctx.storage.get('del');
+      const admin = !!this.env.ADMIN_KEY && auth.startsWith('Bearer ') && await sha(auth.slice(7)) === await sha(this.env.ADMIN_KEY); // (compared as hashes: no timing to learn from)
+      const maker = !!del && /^[\w-]{22,64}$/.test(token) && await sha(token) === del;
+      if (!admin && !maker) return new Response('Not yours', { status: 403, headers: CORS });
+      await this.ctx.storage.deleteAll(); await this.ctx.storage.deleteAlarm();
+      return new Response(null, { status: 204, headers: CORS });
+    }
     if (req.method === 'GET') {
       const copy = await this.ctx.storage.get('copy');
       if (!copy) return new Response('Not found', { status: 404, headers: CORS });
@@ -110,7 +124,8 @@ export class Topic {
     if (+req.headers.get('Content-Length') > SHARE_MAX) return new Response('Too big', { status: 413, headers: CORS });
     const copy = await req.arrayBuffer();
     if (!copy.byteLength || copy.byteLength > SHARE_MAX) return new Response('Too big', { status: 413, headers: CORS });
-    await this.ctx.storage.put({ copy, changed: now }); await this.ctx.storage.setAlarm(now + KEEP);
+    const del = (req.headers.get('X-Delete-Hash') || '').toLowerCase(); // (its maker's delete token's SHA-256: kept, the token never sent here until it's used)
+    await this.ctx.storage.put({ copy, changed: now, ...(/^[0-9a-f]{64}$/.test(del) ? { del } : {}) }); await this.ctx.storage.setAlarm(now + KEEP);
     return new Response(null, { status: 201, headers: CORS });
   }
 

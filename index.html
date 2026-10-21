@@ -1656,7 +1656,7 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
   <h2 id="qrTitle" tabindex="-1"></h2>
   <canvas id="qrCode" role="img" aria-label="The playlist's QR code"></canvas>
   <p id="qrNote"></p>
-  <div class="acts lbl"><button type="button" id="qrClose" class="link">Close</button><button type="button" id="qrSave" class="link">Save QR</button><button type="button" id="qrCopy" class="pill">Copy link</button></div>
+  <div class="acts lbl"><button type="button" id="qrClose" class="link">Close</button><button type="button" id="qrStop" class="link danger" hidden>Stop sharing</button><button type="button" id="qrSave" class="link">Save QR</button><button type="button" id="qrCopy" class="pill">Copy link</button></div>
 </dialog>
 
 <dialog id="scanQr" class="consent scan-qr" aria-labelledby="scTitle">
@@ -7275,7 +7275,7 @@ async function importPlaylistNow(link, { quiet = false, sync = false } = {}) {
     }
     catch (e) { // (said so a person can do something about it)
       const m = String(e.message || '');
-      return say(ours && m === 'gone' ? 'That shared playlist has gone: a short link is kept for a year after it was last opened'
+      return say(ours && m === 'gone' ? 'That shared playlist is gone: a short link is kept for a year after it was last opened'
         : ours && /fetch failed|failed to fetch|timeout|network|abort/i.test(m) ? "Couldn't reach it: check the connection and try again"
         : ours ? 'That playlist link is cut short or broken'
         : /fetch failed|failed to fetch|timeout|network|ENOTFOUND|ECONN|EAI_AGAIN/i.test(m) ? "Couldn't reach it: check the connection and try again"
@@ -7520,14 +7520,36 @@ const QR_MAX = 2000; // (characters of link a code holds: about version 33, stil
 const pipe = (data, stream) => new Response(new Blob([data]).stream().pipeThrough(stream)).arrayBuffer();
 const b64url = u => { let s = ''; for (const b of u) s += String.fromCharCode(b); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
 const unb64url = s => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
-// (the short link for these packed songs, or '' — the relay didn't take them)
+// The short links made here, kept on this device (each one's delete token: Stop sharing), by what they hold — the same
+// playlist, unchanged, shared again: the same link, nothing put again. (The relay keeps only the token's hash.)
+const SHARES = 'netherflow.shares';
+const sharesKept = () => { try { return JSON.parse(store.get(SHARES) || '{}') || {}; } catch { return {}; } };
+const sha256hex = async u => [...new Uint8Array(await crypto.subtle.digest('SHA-256', u))].map(b => b.toString(16).padStart(2, '0')).join('');
+// (the short link for these packed songs, or '' — the relay didn't take them, or they're more than it keeps: 256 KB)
 async function shortLink(z) {
+  const what = (await sha256hex(z)).slice(0, 32), kept = sharesKept(), had = kept[what];
+  if (had && Date.now() - had.at < 300 * 864e5) return `${SHARE_URL}s.${had.id}.${had.key}`; // (a year unopened is when it goes: well before that, a new one)
+  if (z.length > 256 * 1024 - 64) return '';
   const id = Array.from(crypto.getRandomValues(new Uint8Array(12)), b => 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'[b % 62]).join('');
-  const raw = crypto.getRandomValues(new Uint8Array(16)), iv = crypto.getRandomValues(new Uint8Array(12));
+  const raw = crypto.getRandomValues(new Uint8Array(16)), iv = crypto.getRandomValues(new Uint8Array(12)), del = b64url(crypto.getRandomValues(new Uint8Array(16)));
   const key = await crypto.subtle.importKey('raw', raw, 'AES-GCM', false, ['encrypt']), ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, z));
   const body = new Uint8Array(12 + ct.length); body.set(iv); body.set(ct, 12);
-  const r = await fetch(SHARE_STORE + id, { method: 'PUT', body, headers: { 'Content-Type': 'application/octet-stream' }, signal: AbortSignal.timeout(8000) }).catch(() => null);
-  return r?.status === 201 ? `${SHARE_URL}s.${id}.${b64url(raw)}` : '';
+  const r = await fetch(SHARE_STORE + id, { method: 'PUT', body, headers: { 'Content-Type': 'application/octet-stream', 'X-Delete-Hash': await sha256hex(new TextEncoder().encode(del)) },
+    signal: AbortSignal.timeout(8000) }).catch(() => null);
+  if (r?.status !== 201) return '';
+  kept[what] = { id, key: b64url(raw), del, at: Date.now() };
+  const ks = Object.keys(kept); for (const k of ks.slice(0, Math.max(0, ks.length - 300))) delete kept[k]; // (the latest 300)
+  store.set(SHARES, JSON.stringify(kept));
+  return `${SHARE_URL}s.${id}.${b64url(raw)}`;
+}
+// Stop sharing a short link made here: its copy deleted from the relay (the link no longer opens), and forgotten here
+async function stopSharing(link) {
+  const id = link.match(SHORT_LINK)?.[1], kept = sharesKept(), what = Object.keys(kept).find(k => kept[k].id === id);
+  if (!what) return false;
+  const r = await fetch(SHARE_STORE + id, { method: 'DELETE', headers: { 'X-Delete-Token': kept[what].del }, signal: AbortSignal.timeout(8000) }).catch(() => null);
+  if (r?.status !== 204 && r?.status !== 404) return false; // (404: gone already)
+  delete kept[what]; store.set(SHARES, JSON.stringify(kept));
+  return true;
 }
 async function shareLink(name, tracks, extra = {}, short = true) { // (extra: { b: 1 } — a blend's; short: false — the long link only)
   // (a song not matched yet: its name, artist and length, matched again where the link's opened)
@@ -7575,9 +7597,18 @@ async function sharePlaylist(name, tracks, extra) {
   $('qrTitle').textContent = name;
   $('qrNote').textContent = n < tracks.length ? `The code holds the first ${n} of its ${tracks.length} songs (a QR code only fits so much). The link has them all.`
     : `${tracks.length} songs. Point a phone camera at it, or send the link: in NetherFlow, paste it in the search.`;
+  const stop = $('qrStop'); stop.hidden = !Object.values(sharesKept()).some(k => link.includes('#s.' + k.id + '.')); delete stop.dataset.sure; stop.textContent = 'Stop sharing';
   $('qrShare').showModal(); placeWinctl();
 }
 $('qrClose').onclick = () => $('qrShare').close();
+// (twice, as Delete: whoever has the link can't open it any more)
+$('qrStop').onclick = async () => {
+  const b = $('qrStop');
+  if (!b.dataset.sure) { b.dataset.sure = 1; b.textContent = 'Tap again: the link stops opening'; return setTimeout(() => { if (b.dataset.sure) { delete b.dataset.sure; b.textContent = 'Stop sharing'; } }, 4000); }
+  delete b.dataset.sure; b.textContent = 'Stopping…';
+  if (await stopSharing(qrShared.link)) { $('qrShare').close(); toast('Stopped sharing: that link no longer opens'); }
+  else { b.textContent = 'Stop sharing'; toast("Couldn't stop it just now: check the connection and try again"); }
+};
 $('qrCopy').onclick = () => qrShared && navigator.clipboard.writeText(qrShared.link).then(() => toast('Link copied'), () => toast('Couldn\'t copy it'));
 $('qrSave').textContent = native ? 'Share QR' : 'Save QR';
 $('qrSave').onclick = () => { // a card to post or send: the name, the code, how to use it
@@ -8025,7 +8056,7 @@ async function collabShare(p) {
 }
 function collabInvite(p) {
   const link = collabLink(p.collab);
-  qrShared = { name: p.name, link, modules: netherflowLib.qr(link), n: p.tracks.length, total: p.tracks.length, together: true };
+  qrShared = { name: p.name, link, modules: netherflowLib.qr(link), n: p.tracks.length, total: p.tracks.length, together: true }; $('qrStop').hidden = true;
   drawQr($('qrCode'), qrShared.modules, 8);
   $('qrTitle').textContent = p.name;
   $('qrNote').textContent = 'Anyone with this link can add songs, take them out and rename it, on their phone or PC: they paste it in NetherFlow\'s search to join. Changes show up for everyone.';

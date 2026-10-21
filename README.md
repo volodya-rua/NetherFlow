@@ -125,7 +125,8 @@ The full notes for this release and every earlier one are in the [changelog](CHA
 - **Listen together**: up to 30 people hear the same song at the same moment, each on their own phone or PC. Anyone can
   add songs, skip and react. End-to-end encrypted, no account
 - **Share playlists with a QR code**: tap Share on any playlist and a friend points their phone camera at it, or send
-  the link and they paste it in NetherFlow's search. The songs ride inside the link itself; nothing is uploaded
+  the short link and they paste it in NetherFlow's search. The playlist is kept on NetherFlow's relay, encrypted, and
+  only people with the link can read it
 - **Playlists you make together**: choose *Edit together*, send the link, and everyone with it can add, remove and
   rename, live. End-to-end encrypted, no account
 - **Mix with a friend**: your taste and a friend's in one playlist. Send them your link; they open it
