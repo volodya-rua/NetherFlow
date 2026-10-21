@@ -1638,7 +1638,7 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
     <li>Spotify emails you a link, usually within a few days. Download <b>my_spotify_data.zip</b> from it.</li>
     <li>Choose that file here (or the .json files in it).</li>
   </ol>
-  <p class="sm-note">It's read on this device and isn't uploaded anywhere. Only your library and playlists are opened, not your listening history.</p>
+  <p class="sm-note">Your file is read on this device and never uploaded. Only your library and playlists are opened, not your listening history. To find each song, album, artist and podcast, NetherFlow looks it up, as it does for any import.</p>
   <p id="smStatus" class="sm-status" aria-live="polite"></p>
   <div class="acts lbl"><button type="button" id="smClose" class="link">Close</button><button type="button" id="smOpen" class="link">Spotify's page</button><button type="button" id="smPick" class="pill">Choose the file</button><input type="file" id="smFile" accept=".zip,.json,application/zip,application/json" multiple hidden></div>
 </dialog>
@@ -7198,8 +7198,9 @@ $('scFile').onchange = async e => {
 };
 // ---------- everything from Spotify (Library › Import › Everything from Spotify): liked songs, every playlist, saved
 // albums, the artists and podcasts followed — from the user's own copy of their Spotify data (Spotify's "Download your
-// data", Account data: the my_spotify_data.zip it emails, or the .json files in it). Read here, on the device; nothing of
-// it goes anywhere. Only YourLibrary.json and Playlist*.json are opened (not what was played, searched or inferred).
+// data", Account data: the my_spotify_data.zip it emails, or the .json files in it). Read here, on the device; the file
+// goes nowhere (its songs, albums, artists and podcasts are looked up by name, as any import's — Legal's wording on the
+// screen). Only YourLibrary.json and Playlist*.json are opened (not what was played, searched or inferred).
 // Songs come in as a long playlist's do (waiting for the matcher: by name, artist, album); brought over again (a newer
 // download), each list gets only the songs it doesn't have. Then, slowly, in the background: each saved album imported
 // from its Spotify link (as one pasted in), each artist followed (found on Apple's catalog by the very name), each

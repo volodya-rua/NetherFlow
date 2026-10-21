@@ -1,7 +1,7 @@
 // NetherFlow - Copyright (C) 2026 Volodya.rua - GNU GPL v3 only, with additional terms (credit, name and logo): see LICENSE and NOTICE.
 // NetherFlow desktop app: a window around the player page, served by the built-in server
 // (which also hands the page FlowStream's streams, from its own address, so the equalizer and visuals can hear them).
-const { app, BrowserWindow, shell, ipcMain, powerSaveBlocker, screen, powerMonitor, Notification, globalShortcut } = require('electron');
+const { app, BrowserWindow, shell, ipcMain, powerSaveBlocker, screen, powerMonitor, Notification, globalShortcut, session } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { execFile } = require('child_process');
@@ -306,6 +306,18 @@ ipcMain.on('island-shape', (e, r) => {
   if (islandShown) island.setShape([islandShape]);
 });
 
+// What the page may use, asked by its own address only (this port: the player, its legal page, the island): the camera
+// (Library › Import › Scan a QR code: video alone, never the microphone), notifications (an artist you follow has
+// something new), copying to the clipboard, full screen; and the list of sound outputs, by name (Settings' output picker:
+// 'speaker-selection'). Anything else — the microphone, the screen, location… — or asked by any other address, is
+// refused. (Electron grants every request unasked otherwise.)
+function guardPermissions(ses, port) {
+  const ours = u => { try { const x = new URL(u); return /^(localhost|127\.0\.0\.1)$/.test(x.hostname) && x.port === String(port); } catch { return false; } };
+  const MAY = new Set(['notifications', 'clipboard-sanitized-write', 'fullscreen']);
+  ses.setPermissionRequestHandler((wc, permission, done, d) => done(ours(d.requestingUrl) && (MAY.has(permission)
+    || permission === 'media' && Array.isArray(d.mediaTypes) && d.mediaTypes.length === 1 && d.mediaTypes[0] === 'video')));
+  ses.setPermissionCheckHandler((wc, permission, origin, d) => ours(origin) && (MAY.has(permission) || permission === 'speaker-selection' || permission === 'media' && d?.mediaType === 'video'));
+}
 if (process.platform === 'win32') app.setAppUserModelId(require('./package.json').build?.appId || 'io.github.volodya_rua.netherflow'); // (its notifications under its own name)
 app.whenReady().then(async () => {
   if (!first) return;
@@ -315,6 +327,7 @@ app.whenReady().then(async () => {
   let port = 0;
   for (let i = 0; i < 12 && !port; i++) port = await start(PORT).catch(() => new Promise(r => setTimeout(r, 250, 0)));
   if (!port) port = await start(0);
+  guardPermissions(session.defaultSession, port);
 
   // 1280×820, or as much as the screen has free (a 1366×768 laptop: else the player sat under the taskbar)
   const free = screen.getPrimaryDisplay().workAreaSize;
