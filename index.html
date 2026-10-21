@@ -794,6 +794,8 @@ body.home .singbar { display: none; } /* (its voice slider is for the lyrics: no
   box-shadow: 0 0 22px color-mix(in srgb, var(--a) 70%, transparent), inset 0 0 22px color-mix(in srgb, var(--a) 40%, transparent); animation: scanGlow 2.4s ease-in-out infinite; }
 @keyframes scanGlow { 50% { opacity: .55; } }
 @media (prefers-reduced-motion: reduce) { .sc-view::after { animation: none; } }
+.consent .sc-hint { margin-top: -6px; font-size: 12.5px; line-height: 1.6; opacity: .55; }
+@media (max-height: 700px) { .sc-view { width: min(440px, 100%, 44vh); } } /* (a short phone: its buttons still in view) */
 .spot-move ol { margin: 0 0 12px; padding-left: 22px; font: 400 14px/1.7 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; letter-spacing: 0; }
 .spot-move .sm-note { opacity: .6; }
 /* a big playlist loading (prepBox): its progress round a glowing ring, a spark running round it */
@@ -1662,6 +1664,7 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
   <h2 id="scTitle" tabindex="-1">Spotify, Apple Music, YouTube Music</h2>
   <div class="sc-view"><video id="scVideo" muted playsinline aria-label="What the camera sees"></video></div>
   <p id="scNote" aria-live="polite"></p>
+  <p id="scHint" class="sc-hint">Spotify's bar codes can't be scanned here. In Spotify, tap Share › Copy link, then paste the link in Library › Import.</p>
   <div class="acts lbl"><button type="button" id="scClose" class="link">Close</button><button type="button" id="scPick" class="pill">Choose a picture</button><input type="file" id="scFile" accept="image/*" hidden></div>
 </dialog>
 
@@ -7324,6 +7327,7 @@ async function openScan(mode = 'music') {
   const d = $('scanQr'), v = $('scVideo');
   scanMode = mode; scanLast = '';
   $('scTitle').textContent = mode === 'sync' ? 'The code on your computer' : 'Spotify, Apple Music, YouTube Music';
+  $('scHint').hidden = mode === 'sync'; // (Spotify Codes — its bars, not a QR code — aren't read: Legal, private lookup; a link pasted instead)
   scanSay(mode === 'sync' ? 'Point the camera at the QR code NetherFlow shows on your computer (Settings › Sync with phone).'
     : 'Point the camera at a song\'s, an album\'s or a playlist\'s code. Only Spotify, Apple Music and YouTube Music links open.');
   d.showModal(); placeWinctl();
