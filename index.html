@@ -795,6 +795,41 @@ body.home .singbar { display: none; } /* (its voice slider is for the lyrics: no
 @media (prefers-reduced-motion: reduce) { .sc-view::after { animation: none; } }
 .spot-move ol { margin: 0 0 12px; padding-left: 22px; font: 400 14px/1.7 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; letter-spacing: 0; }
 .spot-move .sm-note { opacity: .6; }
+/* a big playlist loading (prepBox): its progress round a glowing ring, a spark running round it */
+.prep { position: relative; overflow: hidden; display: flex; align-items: center; gap: 20px; margin: 8px 12px 6px; padding: 14px 20px 14px 14px; border-radius: 20px; transition: opacity .8s, translate .8s;
+  background: radial-gradient(130% 160% at 0% 50%, color-mix(in srgb, var(--a) 18%, transparent), transparent 62%), color-mix(in srgb, var(--bg) 55%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--a) 24%, transparent), 0 10px 40px color-mix(in srgb, var(--a) 10%, transparent); }
+.prep.done { opacity: 0; translate: 0 -6px; transition-delay: 2.6s; }
+/* (a soft light drifting across it, slowly: moved, not repainted) */
+.prep::before { content: ''; position: absolute; inset: -60% auto -60% -30%; width: 45%; pointer-events: none; will-change: transform;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--b) 16%, transparent), transparent); animation: prepDrift 7s ease-in-out infinite alternate; }
+@keyframes prepDrift { to { transform: translateX(250%); } }
+.prep > * { position: relative; }
+.prep-dial { position: relative; flex: none; width: 86px; aspect-ratio: 1; display: grid; place-items: center; }
+.prep-ring { position: absolute; inset: 0; width: 100%; height: 100%; rotate: -90deg; overflow: visible; }
+.prep-ring circle { fill: none; stroke-width: 6; }
+.prep-ring stop:first-child { stop-color: var(--a); }
+.prep-ring stop:last-child { stop-color: var(--b); }
+.pr-back { stroke: color-mix(in srgb, var(--ink) 9%, transparent); }
+.pr-fill { stroke: url(#prepGrad); stroke-linecap: round; stroke-dasharray: 100; stroke-dashoffset: var(--off, 100); transition: stroke-dashoffset .9s cubic-bezier(.2, .8, .2, 1), opacity .4s;
+  filter: drop-shadow(0 0 4px var(--a)) drop-shadow(0 0 12px color-mix(in srgb, var(--a) 55%, transparent)); }
+.prep-spark { will-change: transform; animation: spin 2.6s linear infinite; transition: opacity .4s; }
+.prep-spark circle { stroke: var(--b); stroke-width: 4; stroke-linecap: round; stroke-dasharray: 7 93; filter: drop-shadow(0 0 6px var(--b)); }
+.prep.turning .pr-fill { opacity: 0; }
+.prep.turning .prep-spark { animation-duration: 1.3s; }
+.prep.turning .prep-spark circle { stroke-dasharray: 22 78; }
+.prep.done .prep-spark { opacity: 0; }
+.prep-pct { position: relative; font: 400 21px/1 var(--poster); letter-spacing: .02em; text-shadow: 0 0 18px color-mix(in srgb, var(--a) 70%, transparent); }
+.prep-txt { display: grid; gap: 5px; min-width: 0; }
+.prep-t { font: italic 400 clamp(20px, 3vw, 26px)/1.1 var(--serif); }
+.prep-s { font-size: 9.5px; line-height: 1.6; letter-spacing: .1em; text-transform: uppercase; opacity: .6; }
+/* its card in the Library: a glowing bar under the cover (reading: a light sweeping along it) */
+.lc-bar { position: absolute; z-index: 2; left: 8px; right: 8px; top: 8px; height: 3px; border-radius: 3px; overflow: hidden; background: color-mix(in srgb, var(--bg) 60%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--ink) 10%, transparent); }
+.lc-bar::before { content: ''; display: block; width: calc(var(--p, 0) * 100%); height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--a), var(--b)); box-shadow: 0 0 10px var(--a); transition: width .9s; }
+.album.reading .lc-bar::before { width: 34%; animation: lcSweep 1.5s ease-in-out infinite; }
+@keyframes lcSweep { from { translate: -100% 0; } to { translate: 300% 0; } }
+@media (prefers-reduced-motion: reduce) { .prep-spark, .prep::before, .album.reading .lc-bar::before { animation: none; } }
 .sm-status:empty { display: none; }
 .sm-status { color: var(--a); }
 /* (a short phone: the buttons kept in view at the foot, the text scrolling under them) */
@@ -6933,10 +6968,10 @@ const pendingTrack = s => ({ kind: 'song', trackId: 'q:' + hash36(`${s.title}|${
   collectionName: s.album || '', trackTimeMillis: (s.dur || 0) * 1000, artworkUrl100: SPOTIFY_ART && /^https:\/\/i\.scdn\.co\/image\/\w+$/.test(s.art || '') ? s.art : undefined });
 // The matcher. A song imported and not matched yet is looked up on YouTube Music (its upload, cover and album) only when
 // it's wanted: on screen, or coming up next (importWant, the latest first) — and every song of a short playlist, right
-// after its import (importBulk, in order: seconds' work). Not all of a long one: ten thousand searches have YouTube slow
-// the whole connection down, and it plays as it is. Two at a time; a song starting first (importYield); YouTube not
-// answering: a pause, longer each time. A match is put in place wherever the song is (playlists, liked songs, the rows
-// on screen) and its upload kept for when it plays; a song not found stays as it is, looked for more widely when played.
+// after its import (importBulk, in order: seconds' work); and then the rest of a long one, slowly (prepNext, below: a
+// big playlist got ready all through). Two at a time; a song starting first (importYield); YouTube not answering: a
+// pause, longer each time. A match is put in place wherever the song is (playlists, liked songs, the rows on screen)
+// and its upload kept for when it plays; a song not found stays as it is, looked for more widely when played.
 const importWant = [], importBulk = [], matchTried = new Set();
 let matchLive = 0, matchWait = 0, matchMiss = 0, matchSave = 0, matchLater = 0;
 const wantMatch = (...ids) => { importWant.push(...ids); if (importWant.length > 300) importWant.splice(0, importWant.length - 300); matchPump(); };
@@ -6958,17 +6993,125 @@ function matchPump() {
   const until = Math.max(matchWait, importYield, ytLimitedUntil); // (YouTube limiting this connection: no matching meanwhile)
   if (Date.now() < until) { clearTimeout(matchLater); matchLater = setTimeout(matchPump, until - Date.now() + 50); return; }
   while (matchLive < 2) {
-    const id = importWant.length ? importWant.pop() : importBulk.shift();
-    if (id === undefined) return;
+    let id = importWant.length ? importWant.pop() : importBulk.shift(), slow = false;
+    if (id === undefined) { if (matchLive || (id = prepNext()) === undefined) return; slow = true; } // (a big list's next song: alone, when nothing else is)
     const s = !matchTried.has(id) && pendingOf(id);
     if (!s) continue;
     matchTried.add(id); matchLive++;
     api.ytm(`${s.artistName} ${clean(s.trackName)}`.trim())
-      .then(list => { matchMiss = 0; const v = list.find(x => fitsSong(x, s)); if (v) placeMatch(id, ytmToTrack(v)); },
-        e => { noteLimited(e); matchTried.delete(id); importBulk.push(id); if (++matchMiss >= 3) matchWait = Date.now() + Math.min(600, 15 * 2 ** (matchMiss - 3)) * 1000; })
+      .then(list => { matchMiss = 0; const v = list.find(x => fitsSong(x, s)); prepSeen(id, !!v); if (v) placeMatch(id, ytmToTrack(v)); },
+        e => { noteLimited(e); matchTried.delete(id); if (!slow) importBulk.push(id); if (++matchMiss >= 3) matchWait = Date.now() + Math.min(600, 15 * 2 ** (matchMiss - 3)) * 1000; })
       .finally(() => { matchLive--; matchPump(); });
+    if (slow) return;
   }
 }
+// ---------- a big playlist got ready all through (the user's wish: every song of it loaded, a loader showing how far) ----
+// After an import (or Everything from Spotify), every song of the list still waiting for its match is looked up in the
+// background until none is left — those on screen or next up first, as ever, then the rest here: one every 2.5 s (24 a
+// minute: under half of what FlowGuard lets through, so the app's own searches and songs keep their room, and gentle
+// enough that YouTube doesn't slow the connection down, as 10,000 quick searches once did), only while nothing else is
+// being matched; on a phone, only on Wi-Fi (each answer is tens of KB: thousands aren't for mobile data). Kept with the
+// list (p.prep — Liked songs': library.likedPrep: how many are done, and those not found, not asked for again), so it
+// goes on after a restart. ponytail: one list after another, in the Library's order.
+let PREP_GAP = 2500; // (ms between two songs: the pace, kept a knob)
+let prepAt = 0, prepTimer = 0, prepNet = !native;
+if (native) { const net = async () => { const was = prepNet; prepNet = !!(await Capacitor.Plugins.Net.wifi().catch(() => ({}))).free; if (prepNet && !was) matchPump(); }; net(); setInterval(net, 60e3); addEventListener('online', net); }
+// [its state, its songs, its name, done()] for each list being got ready
+const prepTargets = () => [...(library.likedPrep ? [[library.likedPrep, library.liked, 'Liked songs', () => delete library.likedPrep]] : []),
+  ...library.playlists.filter(p => p.prep).map(p => [p.prep, p.tracks, p.name, () => delete p.prep])];
+const prepWaits = (s, miss = new Set(s.miss)) => t => isPending(t) && !matchTried.has(t.trackId) && !saved.has(t.trackId) && !miss.has(t.trackId);
+// how far a list has got: { done, left, total }
+const prepCount = (s, tracks) => { const left = tracks.filter(prepWaits(s)).length, done = s.done || 0; return { done, left, total: done + left }; };
+function prepNext() {
+  if (!prepNet || !libReady) return;
+  const wait = prepAt - Date.now();
+  if (wait > 0) { clearTimeout(prepTimer); prepTimer = setTimeout(matchPump, wait + 20); return; }
+  for (const [s, tracks, name, end] of prepTargets()) {
+    const t = tracks.find(prepWaits(s));
+    if (t) { prepAt = Date.now() + PREP_GAP; return t.trackId; }
+    end(); saveLib(false); // (none left: nothing's being looked up either — this is only asked when nothing is)
+    toast(`${name}: all ${tracks.length.toLocaleString()} songs ready`, 4000);
+  }
+}
+// (a song looked up, in any list being got ready: one more done; not found, not asked for again)
+const prepSeen = (id, found) => {
+  for (const [s, tracks] of prepTargets()) if (tracks.some(t => t.trackId === id)) {
+    s.done = (s.done || 0) + 1; if (!found) (s.miss ||= []).push(id);
+    clearTimeout(matchSave); matchSave = setTimeout(() => saveLib(false), 3000); // (kept, as a match is: a restart goes on from here)
+  }
+};
+// a list with n songs waiting after an import: got ready all through from now on (fewer than 50: a short list's are
+// matched at once anyway, see importBulk)
+function prepStart(holder, key, n, save = true) { // (save: false — many at once, saved after)
+  if (!holder[key] && n < 50) return;
+  holder[key] ||= { done: 0, miss: [] };
+  if (save) { saveLib(false); matchPump(); }
+}
+// What a list is doing now, for its loader: being read ('read': its link read, page by page — n songs in so far), the
+// rest to come ('rest': the service stopped sending; read again by itself soon), its songs being got ready ('prep':
+// done of total), or nothing (null). (p: a playlist; liked: Liked songs)
+function loadOf(p, liked) {
+  const s = liked ? library.likedPrep : p.prep, tracks = liked ? library.liked : p.tracks;
+  if (!liked && p.src && importing.has(linkKey(p.src))) return { kind: 'read', n: tracks.length };
+  if (!liked && p.rest > 0 && p.rest <= 8) return { kind: 'rest', n: tracks.length };
+  return s ? { kind: 'prep', ...prepCount(s, tracks) } : null;
+}
+const prepLeftSaid = left => { const s = left * PREP_GAP / 1000; return s < 60 ? 'under a minute left' : s < 3600 ? `about ${Math.round(s / 60)} min left` : `about ${Math.floor(s / 3600)} h ${Math.round(s % 3600 / 60)} min left`; };
+// The loader at the top of a list loading: its progress round a glowing ring (a spark running round it as it goes; the
+// ring only turning while it's read), how far, and what's left. Kept up to date every second (prepTick); done: the
+// ring full, said, and gone.
+function prepBox(p, liked) {
+  const box = el('div', 'prep'), dial = el('div', 'prep-dial'), ring = document.createElementNS(SVGNS, 'svg'), pct = el('b', 'prep-pct'), txt = el('div', 'prep-txt'), t = el('b', 'prep-t'), sub = el('small', 'prep-s');
+  ring.setAttribute('viewBox', '0 0 120 120'); ring.setAttribute('class', 'prep-ring'); ring.setAttribute('aria-hidden', 'true');
+  ring.innerHTML = '<defs><linearGradient id="prepGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0"/><stop offset="1"/></linearGradient></defs>'
+    + '<circle class="pr-back" cx="60" cy="60" r="52"/><circle class="pr-fill" cx="60" cy="60" r="52" pathLength="100"/>';
+  // (the spark: a ring of its own, turned whole — a layer the screen turns, not glow drawn again every frame; a phone stuttered)
+  const spark = ring.cloneNode(false); spark.setAttribute('class', 'prep-ring prep-spark'); spark.innerHTML = '<circle cx="60" cy="60" r="52" pathLength="100"/>';
+  dial.append(ring, spark, pct); txt.append(t, sub); box.append(dial, txt);
+  box.setAttribute('role', 'progressbar'); box.setAttribute('aria-valuemin', '0'); box.setAttribute('aria-valuemax', '100');
+  const tracks = () => liked ? library.liked : p.tracks, n = x => x.toLocaleString();
+  box.update = () => {
+    const st = loadOf(p, liked);
+    if (!st) { // (done: or, read and nothing more to do, just gone)
+      box.update = () => {};
+      if (box.dataset.kind !== 'prep') return box.remove();
+      box.style.setProperty('--off', 0); pct.textContent = '100%'; t.textContent = 'Every song ready'; sub.textContent = `${n(tracks().length)} songs, each found and in place`;
+      box.classList.add('done'); setTimeout(() => box.remove(), 3600); return;
+    }
+    box.dataset.kind = st.kind; box.classList.toggle('turning', st.kind !== 'prep');
+    if (st.kind === 'prep') {
+      const f = st.total ? st.done / st.total : 0, paused = Date.now() < Math.max(ytLimitedUntil, matchWait);
+      box.style.setProperty('--off', 100 - f * 100); pct.textContent = Math.floor(f * 100) + '%'; box.setAttribute('aria-valuenow', Math.floor(f * 100));
+      t.textContent = 'Getting every song ready';
+      sub.textContent = `${n(st.done)} of ${n(st.total)} · ` + (!prepNet ? 'waiting for Wi-Fi (not on mobile data)' : paused ? 'YouTube asked for a pause: going on in a few minutes' : `${prepLeftSaid(st.left)} · it plays meanwhile`);
+    } else {
+      pct.textContent = n(st.n); box.removeAttribute('aria-valuenow');
+      t.textContent = st.kind === 'read' ? 'Reading the playlist' : 'The rest of it is on its way';
+      sub.textContent = st.kind === 'read' ? `${n(st.n)} songs in so far · they play as they come in` : 'The service stopped sending part of it for now: it\'s read again by itself';
+    }
+  };
+  box.update();
+  return box;
+}
+// its card in the Library: a glowing bar under the cover, and how far in its line
+function cardLoad(c, p, liked) {
+  const small = c.querySelector(':scope > small'), bar = el('i', 'lc-bar'), base = small.textContent;
+  c.classList.add('loading'); c.dataset.prep = 1; c.firstElementChild.append(bar); // (over the cover's top edge: the card keeps its height)
+  c.update = () => {
+    const st = loadOf(p, liked);
+    if (!st) { c.classList.remove('loading', 'reading'); delete c.dataset.prep; bar.remove(); small.textContent = base; c.update = null; return; }
+    c.classList.toggle('reading', st.kind !== 'prep');
+    c.style.setProperty('--p', st.kind === 'prep' && st.total ? st.done / st.total : 0);
+    small.textContent = `${base} · ` + (st.kind === 'prep' ? `${Math.floor(st.total ? st.done / st.total * 100 : 0)}% ready` : st.kind === 'read' ? 'reading…' : 'the rest on its way');
+  };
+  c.update();
+  return c;
+}
+setInterval(() => {
+  if (!$('library').open || document.hidden) return;
+  $('libList').querySelector('.prep')?.update();
+  for (const c of $('libList').querySelectorAll('.album[data-prep]')) c.update?.();
+}, 1000);
 function placeMatch(id, m) {
   const t = slim(m);
   if (!vidCache.has(id)) vidCache.set(id, Promise.resolve([{ id: m.ytId, dur: m.trackTimeMillis / 1000 }])); // (played as it is — in a queue already — its upload's found; one found by its own search kept, with the others)
@@ -7001,7 +7144,7 @@ async function autoImports() {
     for (const p of library.playlists.slice()) {
       if (p.tracks.length <= 200) for (const t of p.tracks) if (isPending(t) && !matchTried.has(t.trackId)) importBulk.push(t.trackId);
       if (!p.src || p.collab || SHARE_LINK.test(p.src) || !library.playlists.includes(p)) continue;
-      if (p.left?.length) await importPlaylist(p.src, { quiet: true }); // (an import cut short, by a version before this one)
+      if (p.left?.length || p.rest > 0 && p.rest <= 8) await importPlaylist(p.src, { quiet: true }); // (an import cut short — by a version before this one; or read in part, the app closed before the rest)
       else if (syncLists && Date.now() - (p.synced || 0) > 864e5) await importPlaylist(p.src, { quiet: true, sync: true });
     }
   } finally { autoBusy = false; matchPump(); }
@@ -7117,12 +7260,17 @@ async function importPlaylistNow(link, { quiet = false, sync = false } = {}) {
   if (seen) { Object.assign(p, { seen, synced: Date.now() }); saveLib(false); }
   // a short list: every song matched now (seconds' work; imported again by hand: those not found before, tried again);
   // a long one's as they're wanted
-  if (!quiet) for (const id of waiting) matchTried.delete(id);
+  if (!quiet && again) { for (const id of waiting) matchTried.delete(id); if (p.prep) p.prep.miss = []; } // (not a first import's: those looked up as it was read were just now)
   if (waiting.length <= 200) { importBulk.push(...waiting); matchPump(); }
+  prepStart(p, 'prep', waiting.length); // (and a long one's all through, slowly: see prepNext)
+  // (the service stopped sending the rest: read again by itself, a little later each time — 30 s, then 1, 2, 4… minutes,
+  // eight tries — until all of it is in; what's here already isn't added twice)
+  if (pl.partial) { p.rest = (p.rest || 0) + 1; if (p.rest <= 8) setTimeout(() => importPlaylist(link, { quiet: true, sync }), 15e3 * 2 ** p.rest); } else delete p.rest;
+  saveLib(false);
   const added = p.tracks.filter(x => !before.has(songKey(x.trackName, x.artistName))).length;
   if (sync) return added && toast(`${p.name}: ${added} new song${added > 1 ? 's' : ''} added`); // (kept in sync: said only when there's something new)
   say((again ? `${p.name}: ` + (added ? `${added} new song${added > 1 ? 's' : ''} added` : 'nothing new in it') : `Imported ${pl.name}: ${p.tracks.length} songs, ready to play`)
-    + (pl.partial ? `. ${pl.from || 'The service'} stopped sending the rest: import it again later for all of it` : ''));
+    + (pl.partial && p.rest <= 8 ? `. ${pl.from || 'The service'} stopped sending the rest for now: it's read again by itself in a moment` : pl.partial ? `. ${pl.from || 'The service'} keeps stopping before the end: import it again later for the rest` : ''));
   if (!quiet && !opened) openLibrary({ kind: 'playlist', id: p.id });
 }
 // ---------- scan a QR code (Library › Import › Scan a QR code): a song's, an album's or a playlist's code on Spotify,
@@ -7264,7 +7412,9 @@ async function spotifyMove(files) {
     const add = into(p.tracks, items);
     songs += add.length;
     if (p.tracks.length <= 200) importBulk.push(...add.filter(isPending).map(t => t.trackId)); // (a short list: matched now, as an import's)
+    prepStart(p, 'prep', add.filter(isPending).length, false); // (a long one: all through, slowly)
   }
+  prepStart(library, 'likedPrep', liked.filter(isPending).length, false);
   saveLib(); matchPump();
   const albums = x.albums.map(a => str(a?.uri).match(/^spotify:album:(\w+)$/)?.[1]).filter(Boolean), artists = x.artists.map(a => str(a?.name)).filter(Boolean),
     shows = x.shows.map(s => ({ name: str(s?.name), by: str(s?.publisher) })).filter(s => s.name);
@@ -8533,9 +8683,9 @@ function renderLibrary() {
       if (name) openLibrary({ kind: 'playlist', id: newPlaylist(name).id });
     });
     grid.append(
-      libCard(tile('heart', 'Liked songs', library.liked.length), 'Liked songs', `${library.liked.length} songs`, () => openLibrary({ kind: 'liked' })),
+      ...[libCard(tile('heart', 'Liked songs', library.liked.length), 'Liked songs', `${library.liked.length} songs`, () => openLibrary({ kind: 'liked' }))].map(c => loadOf(null, true) ? cardLoad(c, null, true) : c),
       libCard(tile('down', 'Saved offline', saved.size), 'Downloads', `${saved.size} songs${saved.size ? ' · ' + mb(savedSize) : ''}`, () => openLibrary({ kind: 'saved' })),
-      ...library.playlists.map(p => libCard(mosaic(p.tracks, listTile(p)), p.name, `${p.tracks.length} songs${p.collab ? ' · together' : ''}`, () => openLibrary({ kind: 'playlist', id: p.id }))),
+      ...library.playlists.map(p => { const c = libCard(mosaic(p.tracks, listTile(p)), p.name, `${p.tracks.length} songs${p.collab ? ' · together' : ''}`, () => openLibrary({ kind: 'playlist', id: p.id })); return loadOf(p) ? cardLoad(c, p) : c; }),
       fresh,
       libCard(tile('import', 'Import', null, true), 'Import', 'Links, QR codes, all of Spotify', e => showMenu(e.currentTarget, [
         mi('import', 'Paste a link', async () => {
@@ -8637,6 +8787,7 @@ function renderLibrary() {
         acts.push(stop);
       }
     }
+    if ((p || v.kind === 'liked') && loadOf(p, v.kind === 'liked')) list.push(prepBox(p, v.kind === 'liked')); // (loading: how far, at the top)
     if ((v.kind === 'saved' || tracks.some(t => dlJob(t.trackId))) && (dl.cur.length || dl.queue.length)) list.push(sectionHead('Downloading now'), ...dlRows());
     const opts = p ? { playlist: p } : {}, box = el('div', 'lib-rows');
     // (its rows as found and sorted — see listView — the first 200 at once, the rest a chunk at a time, so a long list
