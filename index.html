@@ -796,7 +796,7 @@ body.home .singbar { display: none; } /* (its voice slider is for the lyrics: no
 @media (prefers-reduced-motion: reduce) { .sc-view::after { animation: none; } }
 .consent .sc-hint { margin-top: -6px; font-size: 12.5px; line-height: 1.6; opacity: .55; }
 @media (max-height: 700px) { .sc-view { width: min(440px, 100%, 44vh); } } /* (a short phone: its buttons still in view) */
-.spot-move ol { margin: 0 0 12px; padding-left: 22px; font: 400 14px/1.7 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; letter-spacing: 0; }
+.spot-move :is(ol, ul) { margin: 0 0 12px; padding-left: 22px; font: 400 14px/1.7 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; letter-spacing: 0; }
 .spot-move .sm-note { opacity: .6; }
 /* a big playlist loading (prepBox): its progress round a glowing ring, a spark running round it */
 .prep { position: relative; overflow: hidden; display: flex; align-items: center; gap: 20px; margin: 8px 12px 6px; padding: 14px 20px 14px 14px; border-radius: 20px; transition: opacity .8s, translate .8s;
@@ -838,7 +838,7 @@ body.home .singbar { display: none; } /* (its voice slider is for the lyrics: no
 /* (a short phone: the buttons kept in view at the foot, the text scrolling under them) */
 .spot-move .acts { position: sticky; bottom: -28px; margin: 18px -28px -28px; padding: 14px 28px 28px; background: linear-gradient(transparent, var(--bg) 28%); flex-wrap: wrap; row-gap: 16px; }
 .spot-move .acts button { white-space: nowrap; }
-@media (max-height: 700px) { .spot-move p, .spot-move ol { font-size: 13px; line-height: 1.55; } .spot-move h2 { margin: 6px 0 10px; font-size: 30px; } }
+@media (max-height: 700px) { .spot-move p, .spot-move :is(ol, ul) { font-size: 13px; line-height: 1.55; } .spot-move h2 { margin: 6px 0 10px; font-size: 30px; } }
 .name-in { width: 100%; min-width: 0; margin: 14px 0 4px; padding: 4px 0 8px; background: none; border: 0; border-bottom: 1px solid var(--a); outline: none;
   color: var(--ink); caret-color: var(--a); font: italic 400 clamp(28px, 6vw, 40px)/1.15 var(--serif); letter-spacing: 0; }
 .name-in::placeholder { color: color-mix(in srgb, var(--ink) 30%, transparent); }
@@ -1670,6 +1670,18 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
 
 <dialog id="spotMove" class="consent spot-move" aria-labelledby="smTitle">
   <div class="kicker lbl">Everything from Spotify</div>
+  <div id="smAsk" hidden>
+    <h2 id="smAskTitle" tabindex="-1">Only your music</h2>
+    <p>Spotify's download holds much more than music: your streaming history, searches, payment and subscription details, location, voice input, messages, what Spotify infers about you, and more.</p>
+    <p>NetherFlow uses only the music in it, from two of its files:</p>
+    <ul>
+      <li><b>YourLibrary.json</b>: your liked songs, saved albums, and the artists and podcasts you follow</li>
+      <li><b>Playlist1.json</b> (and any more like it): your playlists' names and songs</li>
+    </ul>
+    <p>Nothing else in it is opened, read or kept, and the file is never uploaded. To find each song's cover and music, NetherFlow then looks it up by its name and artist, as it does for any import.</p>
+    <div class="acts lbl"><button type="button" id="smNo" class="link">Don't continue</button><button type="button" id="smYes" class="pill">I agree: bring my music over</button></div>
+  </div>
+  <div id="smMain">
   <h2 id="smTitle" tabindex="-1">Bring your Spotify here</h2>
   <p>Your liked songs, every playlist, your saved albums, and the artists and podcasts you follow, in three steps:</p>
   <ol>
@@ -1680,6 +1692,7 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
   <p class="sm-note">Your file is read on this device and never uploaded. Only your library and playlists are opened, not your listening history. To find each song, album, artist and podcast, NetherFlow looks it up, as it does for any import.</p>
   <p id="smStatus" class="sm-status" aria-live="polite"></p>
   <div class="acts lbl"><button type="button" id="smClose" class="link">Close</button><button type="button" id="smOpen" class="link">Spotify's page</button><button type="button" id="smPick" class="pill">Choose the file</button><input type="file" id="smFile" accept=".zip,.json,application/zip,application/json" multiple hidden></div>
+  </div>
 </dialog>
 
 <dialog id="library" class="search apage lib" aria-label="Library">
@@ -7390,15 +7403,23 @@ $('scFile').onchange = async e => {
 // is added twice. ----------
 const SPOT_FILE = /(^|\/)(YourLibrary|Playlist\d*)\.json$/i, arrOf = a => Array.isArray(a) ? a : [];
 // a .zip's files: [[name, read() → text]] (no ZIP64: Spotify's download is a few MB)
+// (only its list of files is read, from its end; a file's own bytes only when it's read — the rest of the download is
+// never even loaded: what the user agreed to, see smAsk)
 async function zipFiles(file) {
-  const b = new Uint8Array(await file.arrayBuffer()), v = new DataView(b.buffer), out = [], dec = new TextDecoder();
-  let e = b.length - 22;
-  while (e >= 0 && v.getUint32(e, true) !== 0x06054b50) e--;
+  const bytes = async (a, b) => new Uint8Array(await file.slice(a, b).arrayBuffer()), dec = new TextDecoder(), out = [];
+  // (its end: the last 22 bytes — a zip with no comment, as Spotify's — or, with one, the most a comment can take)
+  let tail = await bytes(Math.max(0, file.size - 22), file.size), tv = new DataView(tail.buffer), e = tail.length - 22;
+  if (e < 0 || tv.getUint32(e, true) !== 0x06054b50) { tail = await bytes(Math.max(0, file.size - 65557), file.size); tv = new DataView(tail.buffer); e = tail.length - 22; }
+  while (e >= 0 && tv.getUint32(e, true) !== 0x06054b50) e--;
   if (e < 0) throw new Error('not a zip');
-  for (let n = v.getUint16(e + 10, true), at = v.getUint32(e + 16, true); n-- > 0 && at + 46 <= b.length && v.getUint32(at, true) === 0x02014b50;) {
+  const cdSize = tv.getUint32(e + 12, true), cdAt = tv.getUint32(e + 16, true), cd = await bytes(cdAt, cdAt + Math.min(cdSize, 16e6)), v = new DataView(cd.buffer);
+  for (let n = tv.getUint16(e + 10, true), at = 0; n-- > 0 && at + 46 <= cd.length && v.getUint32(at, true) === 0x02014b50;) {
     const method = v.getUint16(at + 10, true), size = v.getUint32(at + 20, true), full = v.getUint32(at + 24, true), nl = v.getUint16(at + 28, true), off = v.getUint32(at + 42, true);
-    const name = dec.decode(b.subarray(at + 46, at + 46 + nl)), start = off + 30 + v.getUint16(off + 26, true) + v.getUint16(off + 28, true), data = b.subarray(start, start + size);
-    if (full < 64e6) out.push([name, async () => method === 0 ? dec.decode(data) : method === 8 ? dec.decode(await pipe(data, new DecompressionStream('deflate-raw'))) : '']);
+    const name = dec.decode(cd.subarray(at + 46, at + 46 + nl));
+    if (full < 64e6) out.push([name, async () => {
+      const h = new DataView((await bytes(off, off + 30)).buffer), start = off + 30 + h.getUint16(26, true) + h.getUint16(28, true), data = await bytes(start, start + size);
+      return method === 0 ? dec.decode(data) : method === 8 ? dec.decode(await pipe(data, new DecompressionStream('deflate-raw'))) : '';
+    }]);
     at += 46 + nl + v.getUint16(at + 30, true) + v.getUint16(at + 32, true);
   }
   return out;
@@ -7475,9 +7496,14 @@ async function spotifyMove(files) {
 }
 $('smClose').onclick = () => $('spotMove').close();
 $('smOpen').onclick = () => openExternal('https://www.spotify.com/account/privacy/');
-$('smPick').onclick = () => $('smFile').click();
+// (the file chosen only once the user has agreed to what's used of it, each time: Spotify's download holds far more than
+// music — the user's wish, Legal's wording. Not agreed: nothing is read.)
+const smAsk = on => { $('smAsk').hidden = !on; $('smMain').hidden = on; (on ? $('smAskTitle') : $('smTitle')).focus(); };
+$('smPick').onclick = () => smAsk(true);
+$('smNo').onclick = () => { smAsk(false); $('smStatus').textContent = 'Stopped: nothing was read.'; };
+$('smYes').onclick = () => { smAsk(false); $('smFile').click(); };
 $('smFile').onchange = e => { const f = [...e.target.files]; e.target.value = ''; if (f.length) spotifyMove(f); };
-function openSpotifyMove() { if (!spotBusy) $('smStatus').textContent = ''; $('spotMove').showModal(); placeWinctl(); }
+function openSpotifyMove() { if (!spotBusy) $('smStatus').textContent = ''; $('smAsk').hidden = true; $('smMain').hidden = false; $('spotMove').showModal(); placeWinctl(); }
 // ---------- share a playlist: a link, and its QR code, that carry the songs themselves ----------
 // The part of the link after # holds them, deflated: Apple's songs by their catalog ids (looked up in the sharer's store),
 // YouTube's by their video ids with their names and lengths. Nothing is uploaded anywhere: the page the link opens
