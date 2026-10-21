@@ -6,6 +6,9 @@
 //   nf2/<32 hex>    Listen together: passed on live, nothing kept
 //   nf1/l<32 hex>   a playlist edited together: passed on, and its latest copy kept for whoever opens it next, deleted
 //                   after a year without a change
+// And a shared playlist's short link (/s/<12 letters and numbers>, plain HTTP): its songs, encrypted by the app with a
+// key that's only in the link (after #: never sent here), put once (never replaced) and given back to whoever opens the
+// link; deleted a year after it was last opened.
 // Nothing is logged: no console output, and the Worker's observability off (wrangler.toml). Deploy: npx wrangler deploy
 const TOPIC = /^(nf2\/[0-9a-f]{32}|nf1\/l[0-9a-f]{32})$/;
 const KEEP = 365 * 864e5; // a kept copy, after its last change
@@ -14,9 +17,22 @@ const LIMITS = { // per topic: people at once, the biggest message, and messages
   nf1: { conns: 50, size: 262144, burst: 10, rate: 0.5 },
 };
 
+const SHARE = /^\/s\/([A-Za-z0-9]{12})$/, SHARE_MAX = 512 * 1024; // (a short link's copy: the biggest)
+const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, PUT, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type', 'Access-Control-Max-Age': '86400' };
+// (short links made, per address: 20 at once, then 20 an hour — held only in this Worker's memory, never kept or logged)
+const puts = new Map();
+const putOk = ip => { const now = Date.now(), b = puts.get(ip) || { tokens: 20, at: now }; b.tokens = Math.min(20, b.tokens + (now - b.at) / 180000); b.at = now;
+  if (puts.size > 5000) puts.clear(); puts.set(ip, b); if (b.tokens < 1) return false; b.tokens -= 1; return true; };
+
 export default {
   async fetch(req, env) {
-    const url = new URL(req.url), t = url.searchParams.get('t') || '';
+    const url = new URL(req.url), t = url.searchParams.get('t') || '', s = url.pathname.match(SHARE);
+    if (s) {
+      if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
+      if (req.method !== 'GET' && req.method !== 'PUT') return new Response('Not found', { status: 404, headers: CORS });
+      if (req.method === 'PUT' && !putOk(req.headers.get('CF-Connecting-IP') || '')) return new Response('Slow down', { status: 429, headers: CORS });
+      return env.TOPICS.get(env.TOPICS.idFromName('nf3/' + s[1])).fetch(req);
+    }
     if (url.pathname !== '/mqtt' || !TOPIC.test(t) || req.headers.get('Upgrade') !== 'websocket') return new Response('Not found', { status: 404 });
     return env.TOPICS.get(env.TOPICS.idFromName(t)).fetch(req);
   },
@@ -31,6 +47,7 @@ export class Topic {
   constructor(ctx) { this.ctx = ctx; }
 
   async fetch(req) {
+    if (new URL(req.url).pathname.startsWith('/s/')) return this.share(req);
     const t = new URL(req.url).searchParams.get('t'), L = LIMITS[t.slice(0, 3)];
     if (this.ctx.getWebSockets().length >= L.conns) return new Response('Full', { status: 429 });
     const [client, server] = Object.values(new WebSocketPair());
@@ -80,7 +97,24 @@ export class Topic {
     ws.serializeAttachment(s);
   }
 
-  async alarm() { // a year without a change: the kept copy deleted
+  // a short link's copy: given (its year started again — written at most once a day), or put, once
+  async share(req) {
+    const now = Date.now();
+    if (req.method === 'GET') {
+      const copy = await this.ctx.storage.get('copy');
+      if (!copy) return new Response('Not found', { status: 404, headers: CORS });
+      if (now - (await this.ctx.storage.get('changed') || 0) > 864e5) { await this.ctx.storage.put('changed', now); await this.ctx.storage.setAlarm(now + KEEP); }
+      return new Response(copy, { headers: { ...CORS, 'Content-Type': 'application/octet-stream', 'Cache-Control': 'no-store' } });
+    }
+    if (await this.ctx.storage.get('copy')) return new Response('Taken', { status: 409, headers: CORS }); // (never replaced: a link always opens what was shared)
+    if (+req.headers.get('Content-Length') > SHARE_MAX) return new Response('Too big', { status: 413, headers: CORS });
+    const copy = await req.arrayBuffer();
+    if (!copy.byteLength || copy.byteLength > SHARE_MAX) return new Response('Too big', { status: 413, headers: CORS });
+    await this.ctx.storage.put({ copy, changed: now }); await this.ctx.storage.setAlarm(now + KEEP);
+    return new Response(null, { status: 201, headers: CORS });
+  }
+
+  async alarm() { // a year without a change (a short link's: unopened): the kept copy deleted
     const changed = await this.ctx.storage.get('changed');
     if (!changed || Date.now() - changed >= KEEP) await this.ctx.storage.deleteAll();
     else await this.ctx.storage.setAlarm(changed + KEEP);

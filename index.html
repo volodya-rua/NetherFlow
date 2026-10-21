@@ -7275,7 +7275,9 @@ async function importPlaylistNow(link, { quiet = false, sync = false } = {}) {
     }
     catch (e) { // (said so a person can do something about it)
       const m = String(e.message || '');
-      return say(ours ? 'That playlist link is cut short or broken'
+      return say(ours && m === 'gone' ? 'That shared playlist has gone: a short link is kept for a year after it was last opened'
+        : ours && /fetch failed|failed to fetch|timeout|network|abort/i.test(m) ? "Couldn't reach it: check the connection and try again"
+        : ours ? 'That playlist link is cut short or broken'
         : /fetch failed|failed to fetch|timeout|network|ENOTFOUND|ECONN|EAI_AGAIN/i.test(m) ? "Couldn't reach it: check the connection and try again"
         : /page changed|unreadable|^not a playlist link$|^$/i.test(m) ? "Couldn't read that playlist: it may be private, or the link may be wrong" : "Couldn't read that playlist: " + m);
     }
@@ -7504,24 +7506,46 @@ $('smNo').onclick = () => { smAsk(false); $('smStatus').textContent = 'Stopped: 
 $('smYes').onclick = () => { smAsk(false); $('smFile').click(); };
 $('smFile').onchange = e => { const f = [...e.target.files]; e.target.value = ''; if (f.length) spotifyMove(f); };
 function openSpotifyMove() { if (!spotBusy) $('smStatus').textContent = ''; $('smAsk').hidden = true; $('smMain').hidden = false; $('spotMove').showModal(); placeWinctl(); }
-// ---------- share a playlist: a link, and its QR code, that carry the songs themselves ----------
-// The part of the link after # holds them, deflated: Apple's songs by their catalog ids (looked up in the sharer's store),
-// YouTube's by their video ids with their names and lengths. Nothing is uploaded anywhere: the page the link opens
-// (docs/p on GitHub Pages, for whoever scans it without NetherFlow) reads them from the link, and browsers don't send
-// that part to GitHub. Pasted in the search, or in Library › Import playlist, the link makes the playlist here.
-const SHARE_URL = 'https://volodya-rua.github.io/NetherFlow/p/#', SHARE_LINK = /^https:\/\/volodya-rua\.github\.io\/NetherFlow\/p\/?#[\w-]+$/i;
+// ---------- share a playlist: a short link, and its QR code ----------
+// Its songs, deflated: Apple's by their catalog ids (looked up in the sharer's store), YouTube's by their video ids with
+// their names and lengths. The short link (the user's choice: about 80 characters, and a QR code that holds the whole
+// list): those songs encrypted here, with a key made for the link that's only in the link (after the #: browsers never
+// send that part anywhere), and kept on NetherFlow's own relay (relay/worker.js), which can't read them; a year after
+// the link was last opened, they're gone. The relay out of reach: the long link, as before — the songs in the link
+// itself, nothing kept anywhere. The page a link opens (docs/p on GitHub Pages, for whoever has no NetherFlow) reads
+// either. Pasted in the search, or in Library › Import, the link makes the playlist here.
+const SHARE_URL = 'https://volodya-rua.github.io/NetherFlow/p/#', SHARE_LINK = /^https:\/\/volodya-rua\.github\.io\/NetherFlow\/p\/?#[\w.-]+$/i;
+const SHARE_STORE = 'https://netherflow-relay.netherflow.workers.dev/s/', SHORT_LINK = /#s\.([A-Za-z0-9]{12})\.([\w-]{22})$/;
 const QR_MAX = 2000; // (characters of link a code holds: about version 33, still easy for a phone camera to read off a screen)
 const pipe = (data, stream) => new Response(new Blob([data]).stream().pipeThrough(stream)).arrayBuffer();
-async function shareLink(name, tracks, extra = {}) { // (extra: { b: 1 } — a blend's)
+const b64url = u => { let s = ''; for (const b of u) s += String.fromCharCode(b); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
+const unb64url = s => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
+// (the short link for these packed songs, or '' — the relay didn't take them)
+async function shortLink(z) {
+  const id = Array.from(crypto.getRandomValues(new Uint8Array(12)), b => 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'[b % 62]).join('');
+  const raw = crypto.getRandomValues(new Uint8Array(16)), iv = crypto.getRandomValues(new Uint8Array(12));
+  const key = await crypto.subtle.importKey('raw', raw, 'AES-GCM', false, ['encrypt']), ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, z));
+  const body = new Uint8Array(12 + ct.length); body.set(iv); body.set(ct, 12);
+  const r = await fetch(SHARE_STORE + id, { method: 'PUT', body, headers: { 'Content-Type': 'application/octet-stream' }, signal: AbortSignal.timeout(8000) }).catch(() => null);
+  return r?.status === 201 ? `${SHARE_URL}s.${id}.${b64url(raw)}` : '';
+}
+async function shareLink(name, tracks, extra = {}, short = true) { // (extra: { b: 1 } — a blend's; short: false — the long link only)
   // (a song not matched yet: its name, artist and length, matched again where the link's opened)
   const t = tracks.map(x => { const id = String(x.trackId), d = Math.round((x.trackTimeMillis || 0) / 1000);
     return id.startsWith('yt:') ? [x.ytId || id.slice(3), x.trackName, x.artistName, d] : isPending(x) ? ['', x.trackName, x.artistName, d] : +x.trackId; }).filter(x => x);
   const z = new Uint8Array(await pipe(new TextEncoder().encode(JSON.stringify({ n: name, s: STORE, t, ...extra })), new CompressionStream('deflate-raw')));
-  let s = ''; for (const b of z) s += String.fromCharCode(b);
-  return SHARE_URL + btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  return short && await shortLink(z) || SHARE_URL + b64url(z);
 }
 async function readShareLink(link) { // (anyone can make a link: what's in it is checked, and its unpacking capped)
-  const z = Uint8Array.from(atob(link.split('#')[1].replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
+  const sm = link.match(SHORT_LINK);
+  let z;
+  if (sm) { // (a short link: its songs from the relay, opened with the link's own key)
+    const r = await fetch(SHARE_STORE + sm[1], { signal: AbortSignal.timeout(12000) });
+    if (r.status === 404) throw new Error('gone');
+    if (!r.ok) throw new Error('fetch failed');
+    const b = new Uint8Array(await r.arrayBuffer()), key = await crypto.subtle.importKey('raw', unb64url(sm[2]), 'AES-GCM', false, ['decrypt']);
+    z = new Uint8Array(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b.slice(0, 12) }, key, b.slice(12)));
+  } else z = unb64url(link.split('#')[1]);
   const r = new Blob([z]).stream().pipeThrough(new DecompressionStream('deflate-raw')).getReader(), parts = [];
   for (let size = 0; ;) { const { done, value } = await r.read(); if (done) break; if ((size += value.length) > 4e6) { r.cancel(); throw new Error('too big'); } parts.push(value); }
   const { n, s, t, b } = JSON.parse(await new Blob(parts).text());
@@ -7542,8 +7566,8 @@ async function sharePlaylist(name, tracks, extra) {
   let n = tracks.length, qrLink = link;
   if (link.length > QR_MAX) { // (too many songs for one code: the most that fit, the link keeps them all)
     let lo = 1, hi = n - 1;
-    while (lo < hi) { const mid = Math.ceil((lo + hi) / 2); if ((await shareLink(name, tracks.slice(0, mid), extra)).length <= QR_MAX) lo = mid; else hi = mid - 1; }
-    n = lo; qrLink = await shareLink(name, tracks.slice(0, n), extra);
+    while (lo < hi) { const mid = Math.ceil((lo + hi) / 2); if ((await shareLink(name, tracks.slice(0, mid), extra, false)).length <= QR_MAX) lo = mid; else hi = mid - 1; } // (the relay out of reach: the long links)
+    n = lo; qrLink = await shareLink(name, tracks.slice(0, n), extra, false);
   }
   const modules = netherflowLib.qr(qrLink);
   qrShared = { name, link, modules, n, total: tracks.length };
