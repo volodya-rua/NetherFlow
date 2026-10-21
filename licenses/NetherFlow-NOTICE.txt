@@ -63,6 +63,8 @@ material in this repository keeps its own license and is not covered by it:
                                          race/cars.json
   docs/media/music/                      songs by HoliznaCC0: public domain (CC0 1.0)
   docs/vendor/                           the website's copies of three.js and Lenis: MIT
+  jsqr.js                                jsQR 1.4.0, by Cosmo Wolfe and the jsQR
+                                         contributors: Apache License 2.0
 
 Their license texts are in licenses/. The full list of components and licenses is in
 the app (About › Licenses), in legal.html, and on the website:

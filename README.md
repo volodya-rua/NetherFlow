@@ -431,7 +431,7 @@ edit together is kept on NetherFlow's own relay (on Cloudflare; for now public r
 ## Legal
 
 - NetherFlow is an independent project. It is **not affiliated with, funded by, authorized by, endorsed by or sponsored by** YouTube, Google,
-  Apple, Audius, LRCLIB, NetEase, Kugou, the AMLL lyrics database, LyricFind, the Internet Archive and its Live Music Archive, LibriVox, AutoEQ, Discord, any podcast or its publisher,
+  Apple, Spotify, Audius, LRCLIB, NetEase, Kugou, the AMLL lyrics database, LyricFind, the Internet Archive and its Live Music Archive, LibriVox, AutoEQ, Discord, any podcast or its publisher,
   or any artist, label or publisher. All names, trademarks, music,
   videos, lyrics and artwork belong to their respective owners.
 - NetherFlow **hosts no content**. Everything it plays comes straight from the services above to your device.
@@ -462,7 +462,7 @@ terms in [NOTICE](NOTICE):
 NetherFlow 1.3.1 and earlier came out under the MIT License, and copies of those keep it.
 
 Third-party code in this repository keeps its own license: the 27 typefaces in `fonts/` (SIL Open Font License 1.1; Permanent Marker, Special
-Elite and Yellowtail under the Apache License 2.0), Microsoft's Fluent Emoji in `emoji/` (MIT), and three.js in
+Elite and Yellowtail under the Apache License 2.0), Microsoft's Fluent Emoji in `emoji/` (MIT), jsQR in `jsqr.js` (Apache 2.0), and three.js in
 `race/three/` (MIT). The three songs on the website in `docs/media/music/` are by HoliznaCC0, in the public domain
 (CC0 1.0). The builds also include Electron (with Chromium, Node.js and FFmpeg), Capacitor and electron-updater, each under its own license. All
 license texts are in [`licenses/`](licenses); the full list of components is in the app under About › Licenses.

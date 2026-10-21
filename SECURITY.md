@@ -47,6 +47,7 @@ NetherFlow's own code in this repository, including:
 - the Android Auto media service the app exports (which apps may bind to it, and what the library it exposes lets them read)
 - Play on a TV or speaker: how the app finds devices on your Wi-Fi, its connection to the chosen device, and what it accepts back from it
 - NetherFlow on a TV as a receiver: the listener it opens on your Wi-Fi, what it accepts, and what it fetches
+- the QR scanner and the Spotify data import: what they accept from a code, a picture or a file
 - the website (volodya-rua.github.io/NetherFlow) and its shared-playlist page
 
 Out of scope:
