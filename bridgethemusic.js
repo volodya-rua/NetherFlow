@@ -14,6 +14,7 @@
 //                                            it — read it all after: what the first read asked for isn't asked for twice)
 // Apple's songs also carry what its pages say of them: album, art (100 px), preview, genre, released, no, disc.
 // partial: some of a long list couldn't be read just now (what came before is kept; try again later).
+// A Spotify song's link (open.spotify.com/track/…, or its short link): { name, from, song: true, tracks: [that song] }.
 (function (out) {
   'use strict';
   const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36';
@@ -101,9 +102,9 @@
   };
   async function read(get, post, link, pace) {
     const u = new URL(link), find = (o, key) => { if (!o || typeof o !== 'object') return null; if (o[key]) return o[key]; for (const k in o) { const r = find(o[k], key); if (r) return r; } return null; };
-    if (/^spotify\.(app\.)?link$/.test(u.hostname)) { // (the Spotify app's short link: its page names the playlist)
+    if (/^spotify\.(app\.)?link$/.test(u.hostname)) { // (the Spotify app's short link: its page names the playlist, or the song)
       const m = (await get(link, { 'User-Agent': UA })).match(/open\.spotify\.com\/(playlist|album|track)\/([A-Za-z0-9]{22})/);
-      if (!m || m[1] === 'track') throw new Error(m ? 'that\'s a song, not a playlist' : 'not a playlist link');
+      if (!m) throw new Error('not a playlist link');
       return read(get, post, `https://open.spotify.com/${m[1]}/${m[2]}`, pace);
     }
     if (/(^|\.)youtube\.com$|^youtu\.be$/.test(u.hostname)) {
@@ -143,10 +144,16 @@
       return { name: name === 'YouTube playlist' && one || name, from: 'YouTube', tracks, partial, ...(pace.first ? { more } : {}) };
     }
     if (/(^|\.)spotify\.com$/.test(u.hostname)) {
-      const m = u.pathname.match(/\/(playlist|album)\/([A-Za-z0-9]+)/);
+      const m = u.pathname.match(/\/(playlist|album|track)\/([A-Za-z0-9]+)/);
       if (!m) throw new Error('not a playlist link');
       const html = await pageOf(get, `https://open.spotify.com/embed/${m[1]}/${m[2]}`);
       const st = JSON.parse(html.match(/<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/)?.[1] || '{}').props?.pageProps?.state, e = st?.data?.entity;
+      // (a song's link: that song alone — song: true — its cover on Spotify's image server, as a long list's are)
+      if (m[1] === 'track') {
+        if (!e?.name) throw new Error('Spotify page changed');
+        return { name: e.name, from: 'Spotify', song: true, partial: false, tracks: [{ title: e.name, artist: e.artists?.[0]?.name || '', dur: Math.round((e.duration || 0) / 1000),
+          art: e.visualIdentity?.image?.find(x => x.maxWidth === 640)?.url?.replace(/^https:\/\/[\w.-]+\/image\//, 'https://i.scdn.co/image/') }] };
+      }
       if (!e?.trackList) throw new Error('Spotify page changed');
       let tracks = e.trackList.map(t => ({ title: t.title, artist: (t.subtitle || '').split(',')[0].trim(), album: m[1] === 'album' ? e.name : '', dur: Math.round((t.duration || 0) / 1000) })), partial = false;
       const pass = st.settings?.session?.accessToken;
@@ -216,5 +223,5 @@
     }
   }
   out.create = opts => new Engine(opts);
-  out.version = '0.5.1';
+  out.version = '0.6.0';
 })(typeof module === 'object' && module.exports ? module.exports : (globalThis.BridgeTheMusic = {}));

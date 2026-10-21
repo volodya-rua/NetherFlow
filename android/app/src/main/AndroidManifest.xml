@@ -79,6 +79,9 @@
     <!-- TVs (Android TV, Google TV): worked with the remote, no touchscreen needed -->
     <uses-feature android:name="android.software.leanback" android:required="false" />
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+    <!-- (a camera isn't needed: without one, a QR code is read from a picture) -->
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
 
     <!-- Android Auto and Google's assistant: seen, so their signatures can be checked (PlaybackService.trusted) -->
     <queries>
@@ -97,4 +100,7 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Library › Import › Scan a QR code: asked for the first time it's used, the camera on only while the scanner's open,
+         its picture read on the phone and never kept -->
+    <uses-permission android:name="android.permission.CAMERA" />
 </manifest>

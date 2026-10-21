@@ -783,6 +783,24 @@ body.home .singbar { display: none; } /* (its voice slider is for the lyrics: no
 .name-prompt { margin: max(14px, 8vh) auto auto; }
 .qr-share h2 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .qr-share canvas { display: block; width: min(440px, 100%, 58vh); aspect-ratio: 1; margin: 4px auto 18px; border-radius: 18px; box-shadow: 0 0 0 1px var(--hair), 0 18px 60px color-mix(in srgb, var(--a) 22%, transparent); }
+/* scanning a QR code: the camera in a rounded square, a glowing frame where the code goes */
+.sc-view { position: relative; width: min(440px, 100%, 52vh); aspect-ratio: 1; margin: 4px auto 18px; border-radius: 18px; overflow: hidden;
+  background: radial-gradient(circle, color-mix(in srgb, var(--a) 14%, transparent), transparent 70%); box-shadow: 0 0 0 1px var(--hair), 0 18px 60px color-mix(in srgb, var(--a) 22%, transparent); }
+.sc-view video { display: block; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .4s; }
+.scan-qr.live .sc-view video { opacity: 1; }
+.scan-qr.mirror .sc-view video { transform: scaleX(-1); }
+.sc-view::after { content: ''; position: absolute; inset: 17%; border: 2px solid var(--a); border-radius: 16px; pointer-events: none;
+  box-shadow: 0 0 22px color-mix(in srgb, var(--a) 70%, transparent), inset 0 0 22px color-mix(in srgb, var(--a) 40%, transparent); animation: scanGlow 2.4s ease-in-out infinite; }
+@keyframes scanGlow { 50% { opacity: .55; } }
+@media (prefers-reduced-motion: reduce) { .sc-view::after { animation: none; } }
+.spot-move ol { margin: 0 0 12px; padding-left: 22px; font: 400 14px/1.7 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; letter-spacing: 0; }
+.spot-move .sm-note { opacity: .6; }
+.sm-status:empty { display: none; }
+.sm-status { color: var(--a); }
+/* (a short phone: the buttons kept in view at the foot, the text scrolling under them) */
+.spot-move .acts { position: sticky; bottom: -28px; margin: 18px -28px -28px; padding: 14px 28px 28px; background: linear-gradient(transparent, var(--bg) 28%); flex-wrap: wrap; row-gap: 16px; }
+.spot-move .acts button { white-space: nowrap; }
+@media (max-height: 700px) { .spot-move p, .spot-move ol { font-size: 13px; line-height: 1.55; } .spot-move h2 { margin: 6px 0 10px; font-size: 30px; } }
 .name-in { width: 100%; min-width: 0; margin: 14px 0 4px; padding: 4px 0 8px; background: none; border: 0; border-bottom: 1px solid var(--a); outline: none;
   color: var(--ink); caret-color: var(--a); font: italic 400 clamp(28px, 6vw, 40px)/1.15 var(--serif); letter-spacing: 0; }
 .name-in::placeholder { color: color-mix(in srgb, var(--ink) 30%, transparent); }
@@ -1601,6 +1619,28 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
   <canvas id="qrCode" role="img" aria-label="The playlist's QR code"></canvas>
   <p id="qrNote"></p>
   <div class="acts lbl"><button type="button" id="qrClose" class="link">Close</button><button type="button" id="qrSave" class="link">Save QR</button><button type="button" id="qrCopy" class="pill">Copy link</button></div>
+</dialog>
+
+<dialog id="scanQr" class="consent scan-qr" aria-labelledby="scTitle">
+  <div class="kicker lbl">Scan a QR code</div>
+  <h2 id="scTitle" tabindex="-1">Spotify, Apple Music, YouTube Music</h2>
+  <div class="sc-view"><video id="scVideo" muted playsinline aria-label="What the camera sees"></video></div>
+  <p id="scNote" aria-live="polite"></p>
+  <div class="acts lbl"><button type="button" id="scClose" class="link">Close</button><button type="button" id="scPick" class="pill">Choose a picture</button><input type="file" id="scFile" accept="image/*" hidden></div>
+</dialog>
+
+<dialog id="spotMove" class="consent spot-move" aria-labelledby="smTitle">
+  <div class="kicker lbl">Everything from Spotify</div>
+  <h2 id="smTitle" tabindex="-1">Bring your Spotify here</h2>
+  <p>Your liked songs, every playlist, your saved albums, and the artists and podcasts you follow, in three steps:</p>
+  <ol>
+    <li>On Spotify's website, in your account's <b>Privacy</b> page, ask for <b>Download your data</b>: tick <b>Account data</b>.</li>
+    <li>Spotify emails you a link, usually within a few days. Download <b>my_spotify_data.zip</b> from it.</li>
+    <li>Choose that file here (or the .json files in it).</li>
+  </ol>
+  <p class="sm-note">It's read on this device and isn't uploaded anywhere. Only your library and playlists are opened, not your listening history.</p>
+  <p id="smStatus" class="sm-status" aria-live="polite"></p>
+  <div class="acts lbl"><button type="button" id="smClose" class="link">Close</button><button type="button" id="smOpen" class="link">Spotify's page</button><button type="button" id="smPick" class="pill">Choose the file</button><input type="file" id="smFile" accept=".zip,.json,application/zip,application/json" multiple hidden></div>
 </dialog>
 
 <dialog id="library" class="search apage lib" aria-label="Library">
@@ -5959,10 +5999,10 @@ function updateLikeBtn() {
   $('likeBtn').setAttribute('aria-pressed', on);
   $('likeBtn').setAttribute('aria-label', on ? 'Remove from Liked songs' : 'Add to Liked songs');
 }
-function newPlaylist(name) {
+function newPlaylist(name, save = true) { // (save: false — many made at once, saved once after)
   const p = { id: 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7), name: name.trim().slice(0, 80) || `Playlist ${library.playlists.length + 1}`, tracks: [] };
   library.playlists.push(p);
-  saveLib();
+  if (save) saveLib();
   return p;
 }
 function addToPlaylist(p, tracks) {
@@ -6833,7 +6873,9 @@ const cutText = (g, s, w) => { if (g.measureText(s).width <= w) return s; while 
 // A long list is kept as it goes. YouTube slows down an app that searches thousands of songs in a row: a search that
 // fails is tried again, slower, never counted as not found; if YouTube stops answering for minutes, or the app closes
 // first, what's left is kept with the playlist, and importing the same link again finishes it (just those songs).
-const PLAYLIST_LINK = /^https?:\/\/((music\.youtube\.com|(www\.|m\.)?youtube\.com|youtu\.be|open\.spotify\.com|music\.apple\.com)\S*(list=|\/playlist\/|\/album\/|\/browse\/VL)|spotify\.(app\.)?link\/\w+)/i;
+const PLAYLIST_LINK = /^https?:\/\/((music\.youtube\.com|(www\.|m\.)?youtube\.com|youtu\.be|open\.spotify\.com|music\.apple\.com)\S*(list=|\/playlist\/|\/album\/|\/browse\/(VL|MPREb_))|spotify\.(app\.)?link\/\w+)/i;
+// a Spotify or Apple Music song's link (Apple's own page, or its album's with ?i=…): played, not imported (playSongLink)
+const SONG_LINK = /^https?:\/\/(open\.spotify\.com\/(intl-[\w-]+\/)?track\/\w|music\.apple\.com\/[a-z]{2}\/(song\/|album\/[^?#\s]*\?(\S*&)?i=\d))/i;
 // the link in what was pasted: a message's words around it ("Listen on Spotify: https://…"), a full stop after it
 const linkIn = s => (String(s).match(/https?:\/\/[^\s<>"']+/) || [String(s).trim()])[0].replace(/[).,!?\]]+$/, '');
 // the same playlist's link, however it was shared: without Spotify's ?si=… (new at every share) and other trackers
@@ -6845,9 +6887,25 @@ const ytIdIn = l => (String(l).match(/^https?:\/\/(?:[\w-]+\.)?(?:youtu\.be\/|yo
 // with what can be done with it.
 async function openShared(text) {
   if ($('consent')?.open) await new Promise(r => $('consent').addEventListener('close', r, { once: true })); // (a first start: the terms first)
-  const link = linkIn(text), id = ytIdIn(link);
-  if (id) return playLink(id);
+  const link = linkIn(text);
+  if (ytIdIn(link) || SONG_LINK.test(link)) return playSongLink(link);
   openSearch(); $('q').value = link; runSearch(link);
+}
+// a song's link — YouTube's, YouTube Music's, Spotify's (or a Spotify short link, which may be a list's: imported then),
+// Apple Music's — the song plays: Apple's, that very recording; Spotify's, by its name, artist and length (as an imported
+// song not matched yet)
+async function playSongLink(link) {
+  const id = ytIdIn(link), apple = link.match(/music\.apple\.com\/([a-z]{2})\/(?:song\/(?:[^/?#]+\/)?(\d+)|album\/[^?#]*\?(?:\S*&)?i=(\d+))/i);
+  if (id) return playLink(id);
+  toast('Opening the song…');
+  if (apple) {
+    const t = (await itunes('lookup', { id: apple[2] || apple[3], country: apple[1] }).catch(() => [])).find(x => x.wrapperType === 'track');
+    return t ? playTrack(t) : toast('Couldn\'t open that song: Apple Music didn\'t answer, or doesn\'t have it now');
+  }
+  const pl = await api.playlist(link).catch(() => null);
+  if (pl?.song && pl.tracks[0]?.title) return playTrack(pendingTrack(pl.tracks[0]));
+  if (pl?.tracks?.length) return importPlaylist(link);
+  toast('Couldn\'t open that song: Spotify didn\'t answer. Try again in a moment.');
 }
 async function playLink(id) {
   toast('Opening the song…');
@@ -6958,6 +7016,7 @@ async function importPlaylistNow(link, { quiet = false, sync = false } = {}) {
   link = linkIn(link);
   const ours = SHARE_LINK.test(link);
   if (COLLAB_LINK.test(link)) return collabJoin(link.match(COLLAB_LINK)[1]);
+  if (!quiet && SONG_LINK.test(link)) return playSongLink(link); // (a song's link: it plays)
   if (!ours && !PLAYLIST_LINK.test(link)) return say('That isn\'t a Spotify, Apple Music, YouTube or NetherFlow playlist link');
   // imported from this link before: into that one again (one cut short: just its songs left; else the songs it lacks —
   // new in the list since, or cut off by the service last time — not a second copy)
@@ -7042,6 +7101,7 @@ async function importPlaylistNow(link, { quiet = false, sync = false } = {}) {
         : /fetch failed|failed to fetch|timeout|network|ENOTFOUND|ECONN|EAI_AGAIN/i.test(m) ? "Couldn't reach it: check the connection and try again"
         : /page changed|unreadable|^not a playlist link$|^$/i.test(m) ? "Couldn't read that playlist: it may be private, or the link may be wrong" : "Couldn't read that playlist: " + m);
     }
+    if (pl?.song && pl.tracks[0]?.title) return quiet || playTrack(pendingTrack(pl.tracks[0])); // (a Spotify short link to a song: it plays)
     if (!pl?.tracks?.length) return say('That playlist looks empty (or private)');
     if (pl.blend) pl = blendWith(pl); // (a friend's taste: blended with yours)
   }
@@ -7065,6 +7125,174 @@ async function importPlaylistNow(link, { quiet = false, sync = false } = {}) {
     + (pl.partial ? `. ${pl.from || 'The service'} stopped sending the rest: import it again later for all of it` : ''));
   if (!quiet && !opened) openLibrary({ kind: 'playlist', id: p.id });
 }
+// ---------- scan a QR code (Library › Import › Scan a QR code): a song's, an album's or a playlist's code on Spotify,
+// Apple Music or YouTube Music — and nothing else (the user's rule: any other link, or text, is said so and not opened).
+// A song plays; an album or a playlist is imported. The camera's picture is read here, a few times a second, by jsQR
+// (jsqr.js, loaded the first time), and never kept or sent anywhere; the camera's off as the scanner closes. Or a picture
+// of a code (a screenshot) chosen instead. ----------
+const SCAN_HOSTS = { 'open.spotify.com': 'Spotify', 'spotify.link': 'Spotify', 'spotify.app.link': 'Spotify', 'music.apple.com': 'Apple Music', 'music.youtube.com': 'YouTube Music' };
+// the code's link, if it's one of those three's (https; a spotify:track:… one as its open.spotify.com link), else ''
+const scanLink = text => {
+  try {
+    const u = new URL(String(text).trim().replace(/^spotify:(track|album|playlist):(\w+)$/i, 'https://open.spotify.com/$1/$2'));
+    if (!/^https?:$/.test(u.protocol) || u.username || u.password || !SCAN_HOSTS[u.hostname]) return '';
+    u.protocol = 'https:'; return u.href;
+  } catch { return ''; }
+};
+let jsqrLoad = null, scanStream = null, scanTimer = 0, scanLast = '', scanCanvas = null;
+const loadJsqr = () => jsqrLoad ||= new Promise((ok, no) => { const s = document.createElement('script'); s.src = 'jsqr.js'; s.onload = () => ok(window.jsQR); s.onerror = () => { jsqrLoad = null; no(new Error('jsqr')); }; document.head.append(s); });
+// a picture's code: what it says, or '' (the picture made at most max px across: enough for a code, quick to read;
+// light on dark too)
+async function readQr(src, w, h, max) {
+  const read = await loadJsqr(), k = Math.min(1, max / Math.max(w, h)), c = scanCanvas ||= document.createElement('canvas');
+  c.width = Math.round(w * k); c.height = Math.round(h * k);
+  const g = c.getContext('2d', { willReadFrequently: true });
+  g.drawImage(src, 0, 0, c.width, c.height);
+  return read(g.getImageData(0, 0, c.width, c.height).data, c.width, c.height, { inversionAttempts: 'attemptBoth' })?.data || '';
+}
+const scanSay = m => { $('scNote').textContent = m; };
+async function openScan() {
+  const d = $('scanQr'), v = $('scVideo');
+  scanLast = ''; scanSay('Point the camera at a song\'s, an album\'s or a playlist\'s code. Only Spotify, Apple Music and YouTube Music links open.');
+  d.showModal(); placeWinctl();
+  loadJsqr().catch(() => {});
+  try {
+    const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false });
+    if (!d.open) return s.getTracks().forEach(t => t.stop()); // (closed while the camera was asked for)
+    scanStream = s; v.srcObject = s; await v.play();
+    d.classList.add('live'); d.classList.toggle('mirror', s.getVideoTracks()[0]?.getSettings().facingMode !== 'environment'); // (a computer's camera, facing you: as a mirror)
+    const tick = async () => {
+      if (scanStream !== s) return;
+      const text = v.videoWidth ? await readQr(v, v.videoWidth, v.videoHeight, 640).catch(() => '') : '';
+      if (scanStream === s && !(text && scanGot(text))) scanTimer = setTimeout(tick, 200);
+    };
+    tick();
+  } catch (e) {
+    if (d.open) scanSay(e.name === 'NotAllowedError' ? 'NetherFlow isn\'t allowed to use the camera. Choose a picture of the code instead (a screenshot works), or allow the camera in your settings.'
+      : 'No camera here. Choose a picture of the code instead (a screenshot works).');
+  }
+}
+function scanStop() { clearTimeout(scanTimer); scanStream?.getTracks().forEach(t => t.stop()); scanStream = null; $('scVideo').srcObject = null; $('scanQr').classList.remove('live', 'mirror'); }
+// what a code says: one of the three's song, album or playlist opens (true); anything else is said so, and the camera
+// looks on (false)
+function scanGot(text) {
+  const link = scanLink(text), said = m => { if (text !== scanLast) { scanLast = text; scanSay(m); } return false; };
+  if (!link) return said(/^\s*https?:\/\//i.test(text) ? 'That code\'s link isn\'t Spotify, Apple Music or YouTube Music, so it isn\'t opened.' : 'That code isn\'t a Spotify, Apple Music or YouTube Music link.');
+  const song = !!ytIdIn(link) || SONG_LINK.test(link), list = !song && (PLAYLIST_LINK.test(link) || /^https:\/\/spotify\.(app\.)?link\/\w/.test(link));
+  if (!song && !list) return said(`That's a ${SCAN_HOSTS[new URL(link).hostname]} link, but not to a song, an album or a playlist.`);
+  $('scanQr').close();
+  song ? playSongLink(link) : importPlaylist(link);
+  return true;
+}
+$('scanQr').addEventListener('close', scanStop);
+$('scClose').onclick = () => $('scanQr').close();
+$('scPick').onclick = () => $('scFile').click();
+$('scFile').onchange = async e => {
+  const f = e.target.files[0]; e.target.value = '';
+  if (!f) return;
+  try {
+    const b = await createImageBitmap(f), text = await readQr(b, b.width, b.height, 1600).finally(() => b.close());
+    scanLast = '';
+    if (!text) scanSay('No QR code found in that picture: try one where the code is sharp and whole.'); else scanGot(text);
+  } catch { scanSay('Couldn\'t read that picture.'); }
+};
+// ---------- everything from Spotify (Library › Import › Everything from Spotify): liked songs, every playlist, saved
+// albums, the artists and podcasts followed — from the user's own copy of their Spotify data (Spotify's "Download your
+// data", Account data: the my_spotify_data.zip it emails, or the .json files in it). Read here, on the device; nothing of
+// it goes anywhere. Only YourLibrary.json and Playlist*.json are opened (not what was played, searched or inferred).
+// Songs come in as a long playlist's do (waiting for the matcher: by name, artist, album); brought over again (a newer
+// download), each list gets only the songs it doesn't have. Then, slowly, in the background: each saved album imported
+// from its Spotify link (as one pasted in), each artist followed (found on Apple's catalog by the very name), each
+// podcast (by its name and publisher). ponytail: the app closed before that's done — choose the file again: nothing
+// is added twice. ----------
+const SPOT_FILE = /(^|\/)(YourLibrary|Playlist\d*)\.json$/i, arrOf = a => Array.isArray(a) ? a : [];
+// a .zip's files: [[name, read() → text]] (no ZIP64: Spotify's download is a few MB)
+async function zipFiles(file) {
+  const b = new Uint8Array(await file.arrayBuffer()), v = new DataView(b.buffer), out = [], dec = new TextDecoder();
+  let e = b.length - 22;
+  while (e >= 0 && v.getUint32(e, true) !== 0x06054b50) e--;
+  if (e < 0) throw new Error('not a zip');
+  for (let n = v.getUint16(e + 10, true), at = v.getUint32(e + 16, true); n-- > 0 && at + 46 <= b.length && v.getUint32(at, true) === 0x02014b50;) {
+    const method = v.getUint16(at + 10, true), size = v.getUint32(at + 20, true), full = v.getUint32(at + 24, true), nl = v.getUint16(at + 28, true), off = v.getUint32(at + 42, true);
+    const name = dec.decode(b.subarray(at + 46, at + 46 + nl)), start = off + 30 + v.getUint16(off + 26, true) + v.getUint16(off + 28, true), data = b.subarray(start, start + size);
+    if (full < 64e6) out.push([name, async () => method === 0 ? dec.decode(data) : method === 8 ? dec.decode(await pipe(data, new DecompressionStream('deflate-raw'))) : '']);
+    at += 46 + nl + v.getUint16(at + 30, true) + v.getUint16(at + 32, true);
+  }
+  return out;
+}
+// the download's library: { liked, lists, albums, artists, shows } (null: none of its files)
+async function spotifyRead(files) {
+  const texts = [];
+  for (const f of files) {
+    if (/\.zip$/i.test(f.name)) { for (const [n, read] of await zipFiles(f)) if (SPOT_FILE.test(n)) texts.push([n, await read()]); }
+    else if (SPOT_FILE.test(f.name)) texts.push([f.name, await f.text()]);
+  }
+  if (!texts.length) return null;
+  const x = { liked: [], lists: [], albums: [], artists: [], shows: [] };
+  for (const [n, s] of texts) {
+    const j = JSON.parse(s.replace(/^﻿/, '')) || {};
+    if (/YourLibrary\.json$/i.test(n)) for (const k of ['albums', 'artists', 'shows']) x[k].push(...arrOf(j[k]));
+    if (/YourLibrary\.json$/i.test(n)) x.liked.push(...arrOf(j.tracks)); else x.lists.push(...arrOf(j.playlists));
+  }
+  return x;
+}
+const smSay = m => { $('smStatus').textContent = m; if (!$('spotMove').open) toast(m, 5000); };
+let spotBusy = false;
+async function spotifyMove(files) {
+  if (spotBusy) return smSay('Already bringing your Spotify over: it goes on in the background');
+  smSay('Reading it…');
+  let x;
+  try { x = await spotifyRead(files); } catch { return smSay('Couldn\'t read that file. Choose the my_spotify_data.zip Spotify emailed you (or the .json files in it).'); }
+  if (!x) return smSay('That isn\'t your Spotify library: choose the my_spotify_data.zip of your Account data (YourLibrary.json and Playlist1.json are in it).');
+  const str = s => typeof s === 'string' ? s.trim().slice(0, 200) : '', key = s => songKey({ trackName: s.title, artistName: s.artist });
+  const song = (title, artist, album) => str(title) ? { title: str(title), artist: str(artist), album: str(album) } : null;
+  // (a song the Library has already, matched — liked, in a playlist: by its name and first artist — is that one)
+  const mine = new Map([...library.liked, ...library.playlists.flatMap(p => p.tracks)].filter(t => !isPending(t) && t.kind !== 'episode').map(t => [songKey(t), t]));
+  const asTrack = s => slim(mine.get(key(s)) || pendingTrack(s));
+  const into = (list, songs) => { const have = new Set(list.map(songKey)), add = []; for (const s of songs) if (!have.has(key(s))) { have.add(key(s)); add.push(asTrack(s)); } list.push(...add); return add; };
+  const liked = into(library.liked, x.liked.map(t => song(t?.track, t?.artist, t?.album)).filter(Boolean));
+  let made = 0, songs = 0;
+  const names = new Map();
+  for (const pl of x.lists) {
+    const name = str(pl?.name) || 'Spotify playlist', n = names.get(name) || 0, items = arrOf(pl?.items).map(it => it?.track && song(it.track.trackName, it.track.artistName, it.track.albumName)).filter(Boolean);
+    names.set(name, n + 1);
+    if (!items.length) continue;
+    const id = name + (n ? ' #' + (n + 1) : ''); // (two of the same name: each its own)
+    let p = library.playlists.find(q => q.spotify === id);
+    if (!p) { p = newPlaylist(name, false); p.spotify = id; made++; }
+    const add = into(p.tracks, items);
+    songs += add.length;
+    if (p.tracks.length <= 200) importBulk.push(...add.filter(isPending).map(t => t.trackId)); // (a short list: matched now, as an import's)
+  }
+  saveLib(); matchPump();
+  const albums = x.albums.map(a => str(a?.uri).match(/^spotify:album:(\w+)$/)?.[1]).filter(Boolean), artists = x.artists.map(a => str(a?.name)).filter(Boolean),
+    shows = x.shows.map(s => ({ name: str(s?.name), by: str(s?.publisher) })).filter(s => s.name);
+  const many = (k, w) => `${k} ${w}${k === 1 ? '' : 's'}`, later = [albums.length && many(albums.length, 'album'), artists.length && many(artists.length, 'artist'), shows.length && many(shows.length, 'podcast')].filter(Boolean);
+  const now = [liked.length && many(liked.length, 'liked song'), made && many(made, 'playlist'), songs && !made && many(songs, 'new song') + ' in your playlists'].filter(Boolean);
+  smSay(`In your Library now: ${now.join(', ') || 'nothing new (it\'s all here already)'}` + (later.length ? `. Next, in the background: ${later.join(', ')}` : '') + '.');
+  spotBusy = true;
+  let followed = 0, podded = 0;
+  try {
+    for (const a of albums) { await importPlaylist('https://open.spotify.com/album/' + a, { quiet: true }).catch(() => {}); await new Promise(r => setTimeout(r, 1000)); }
+    for (const n of artists) { // (Apple's catalog: a request every 3 s, as it likes)
+      const a = (await searchArtists(n).catch(() => [])).find(a => sameWords(a.artistName, n));
+      if (a) { if (!following(a)) setFollow(a, true); followed++; }
+      await new Promise(r => setTimeout(r, 3000));
+    }
+    for (const s of shows) {
+      const p = (await podSearch(s.name).catch(() => [])).find(p => sameWords(p.name, s.name) && (!s.by || contains(p.artist, s.by) || contains(s.by, p.artist)));
+      if (p) { if (!pods.some(x => x.feed === p.feed)) { pods.push(p); store.set(PODS, JSON.stringify(pods)); } podded++; }
+      await new Promise(r => setTimeout(r, 3000));
+    }
+  } finally { spotBusy = false; }
+  if (later.length) smSay(`Your Spotify is here: ${[...now, albums.length && many(albums.length, 'album'), artists.length && `following ${followed} of ${many(artists.length, 'artist')}`,
+    shows.length && `${podded} of ${many(shows.length, 'podcast')}`].filter(Boolean).join(', ')}.`);
+}
+$('smClose').onclick = () => $('spotMove').close();
+$('smOpen').onclick = () => openExternal('https://www.spotify.com/account/privacy/');
+$('smPick').onclick = () => $('smFile').click();
+$('smFile').onchange = e => { const f = [...e.target.files]; e.target.value = ''; if (f.length) spotifyMove(f); };
+function openSpotifyMove() { if (!spotBusy) $('smStatus').textContent = ''; $('spotMove').showModal(); placeWinctl(); }
 // ---------- share a playlist: a link, and its QR code, that carry the songs themselves ----------
 // The part of the link after # holds them, deflated: Apple's songs by their catalog ids (looked up in the sharer's store),
 // YouTube's by their video ids with their names and lengths. Nothing is uploaded anywhere: the page the link opens
@@ -8308,10 +8536,14 @@ function renderLibrary() {
       libCard(tile('down', 'Saved offline', saved.size), 'Downloads', `${saved.size} songs${saved.size ? ' · ' + mb(savedSize) : ''}`, () => openLibrary({ kind: 'saved' })),
       ...library.playlists.map(p => libCard(mosaic(p.tracks, listTile(p)), p.name, `${p.tracks.length} songs${p.collab ? ' · together' : ''}`, () => openLibrary({ kind: 'playlist', id: p.id }))),
       fresh,
-      libCard(tile('import', 'Import playlist', null, true), 'Import playlist', 'From Spotify, Apple Music, YouTube or a friend', async () => {
-        const link = await askName('Import a playlist', '', 'Import', 20000, 'Paste its link (Spotify, Apple Music, YouTube, NetherFlow)');
-        if (link) importPlaylist(link);
-      }),
+      libCard(tile('import', 'Import', null, true), 'Import', 'Links, QR codes, all of Spotify', e => showMenu(e.currentTarget, [
+        mi('import', 'Paste a link', async () => {
+          hideMenu();
+          const link = await askName('Import a playlist', '', 'Import', 20000, 'Paste its link (Spotify, Apple Music, YouTube, NetherFlow)');
+          if (link) importPlaylist(link);
+        }),
+        mi('qr', 'Scan a QR code', () => { hideMenu(); openScan(); }),
+        mi('heart', 'Everything from Spotify', () => { hideMenu(); openSpotifyMove(); })])),
       libCard(tile('chart', 'Your stats', fmtMins(statsFor('month').secs)), 'Your stats', `${fmtMins(statsFor('month').secs)} min this month`, () => openLibrary({ kind: 'stats' })));
     const discover = el('div', 'albums');
     discover.append(libCard(tile('compass', 'Explore'), 'Explore', 'Charts, new music, moods, your mixes', () => openLibrary({ kind: 'explore' })),
@@ -8709,11 +8941,11 @@ async function runSearch(term) {
   dlg.classList.toggle('typed', !!term.trim()); // (the search box smaller: room for the results)
   if (!term.trim()) return showHistory();
   const lk = linkIn(term), sid = ytIdIn(lk);
-  if (sid) {
+  if (sid || SONG_LINK.test(lk)) {
     const b = el('button', 'pill', 'Play this song');
-    b.onclick = () => { dlg.close(); playLink(sid); };
-    $('sstat').textContent = 'A YouTube song link';
-    return $('results').replaceChildren(el('p', 'empty', 'That very upload, played here.'), b);
+    b.onclick = () => { dlg.close(); playSongLink(lk); };
+    $('sstat').textContent = sid ? 'A YouTube song link' : 'A song link';
+    return $('results').replaceChildren(el('p', 'empty', sid ? 'That very upload, played here.' : 'Spotify or Apple Music: that song, played here.'), b);
   }
   if (COLLAB_LINK.test(lk)) {
     const b = el('button', 'pill', 'Join this playlist');

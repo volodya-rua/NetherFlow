@@ -23,6 +23,7 @@ const FILES = {
   '/endverse.js': ['endverse.js', 'text/javascript'],
   '/cast.js': ['cast.js', 'text/javascript'],
   '/bridgethemusic.js': ['bridgethemusic.js', 'text/javascript'],
+  '/jsqr.js': ['jsqr.js', 'text/javascript'], // (jsQR, Apache-2.0: reads a QR code — loaded only when one's scanned)
   '/legal.html': ['legal.html', 'text/html; charset=utf-8'],
   '/island.html': ['island.html', 'text/html; charset=utf-8'], // (the desktop app's island: see main.js)
   '/logo.png': ['logo.png', 'image/png'],

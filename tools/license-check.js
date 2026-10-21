@@ -34,7 +34,7 @@ same('LICENSE', 'licenses/NetherFlow-GPL-3.0.txt');
 
 // 4. Every NetherFlow source file starts with the GPL notice (the section 7 terms need it there)
 const NOTICE_LINE = 'GNU GPL v3 only, with additional terms';
-const THIRD_PARTY = /^(race\/three\/|docs\/vendor\/|android\/app\/src\/(test|androidTest)\/|docs\/google)/;
+const THIRD_PARTY = /^(race\/three\/|docs\/vendor\/|android\/app\/src\/(test|androidTest)\/|docs\/google|jsqr\.js$)/;
 for (const f of execFileSync('git', ['ls-files', '*.js', '*.html', '*.java', '*.py']).toString().split('\n').filter(Boolean))
   if (!THIRD_PARTY.test(f) && !read(f).split('\n').slice(0, 3).join('\n').includes(NOTICE_LINE)) problems.push(`${f} has no GPL notice at the top`);
 
@@ -42,7 +42,7 @@ for (const f of execFileSync('git', ['ls-files', '*.js', '*.html', '*.java', '*.
 for (const c of JSON.parse(read('race/cars.json'))) if (!legal.includes(c.by)) problems.push(`race/cars.json: ${c.by} (${c.name}) isn't credited on legal.html`);
 
 // 7. Every npm package the apps ship has a row on the legal page (build-only tools don't ship)
-const SHIPPED_AS = { electron: 'Electron', 'electron-updater': 'electron-updater', three: 'three.js', '@capacitor/core': 'Capacitor', '@capacitor/android': 'Capacitor', '@capacitor/app': 'Capacitor' };
+const SHIPPED_AS = { electron: 'Electron', 'electron-updater': 'electron-updater', three: 'three.js', '@capacitor/core': 'Capacitor', '@capacitor/android': 'Capacitor', '@capacitor/app': 'Capacitor', jsqr: 'jsQR' };
 const BUILD_ONLY = ['@capacitor/cli', 'electron-builder'];
 const pkg = JSON.parse(read('package.json'));
 for (const name of Object.keys({ ...pkg.dependencies, ...pkg.devDependencies }).filter(n => !BUILD_ONLY.includes(n))) {
