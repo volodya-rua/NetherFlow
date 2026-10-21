@@ -1672,13 +1672,13 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
   <div class="kicker lbl">Everything from Spotify</div>
   <div id="smAsk" hidden>
     <h2 id="smAskTitle" tabindex="-1">Only your music</h2>
-    <p>Spotify's download holds much more than music: your streaming history, searches, payment and subscription details, location, voice input, messages, what Spotify infers about you, and more.</p>
+    <p>Spotify's download can hold much more than music: your streaming history, searches, payment and subscription details, location, voice input, messages, what Spotify infers about you, and more.</p>
     <p>NetherFlow uses only the music in it, from two of its files:</p>
     <ul>
       <li><b>YourLibrary.json</b>: your liked songs, saved albums, and the artists and podcasts you follow</li>
       <li><b>Playlist1.json</b> (and any more like it): your playlists' names and songs</li>
     </ul>
-    <p>Nothing else in it is opened, read or kept, and the file is never uploaded. To find each song's cover and music, NetherFlow then looks it up by its name and artist, as it does for any import.</p>
+    <p>No other file in it is opened or kept (NetherFlow only looks at the file's list of names to find these two), and the file is never uploaded. NetherFlow then looks up each song, album, artist and podcast online, as it does for any import.</p>
     <div class="acts lbl"><button type="button" id="smNo" class="link">Don't continue</button><button type="button" id="smYes" class="pill">I agree: bring my music over</button></div>
   </div>
   <div id="smMain">
