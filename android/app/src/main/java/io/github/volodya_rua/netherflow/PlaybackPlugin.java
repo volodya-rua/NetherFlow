@@ -85,20 +85,30 @@ public class PlaybackPlugin extends Plugin {
         call.resolve(out);
     }
 
-    // MobiVib: one tap of the phone's vibration motor ({ ms, amp 1–255 }), as music's (the phone's own Media vibration
-    // setting has the last word); a motor that can't set its strength: its own
+    // MobiVib: the phone's vibration motor, a stretch of the music's vibration at a time ({ t: each step's ms, a: each one's
+    // strength 0–255 }) — what it was doing replaced by it (the page sends what's still to come, so it runs on without a
+    // gap). As music's (the phone's own Media vibration setting has the last word). A motor that can't set its strength:
+    // each 10 ms of a step on or off in turn, as often on as it's strong (the motor's own slowness smooths it).
     @PluginMethod
-    public void vibe(PluginCall call) {
+    public void vibeWave(PluginCall call) {
         android.os.Vibrator v = Build.VERSION.SDK_INT >= 31 ? getContext().getSystemService(android.os.VibratorManager.class).getDefaultVibrator() : getContext().getSystemService(android.os.Vibrator.class);
-        int ms = Math.max(5, Math.min(200, call.getInt("ms", 30))), amp = Math.max(1, Math.min(255, call.getInt("amp", 200)));
-        if (v != null && v.hasVibrator()) try {
-            if (Build.VERSION.SDK_INT < 26) v.vibrate(ms);
-            else {
-                android.os.VibrationEffect e = android.os.VibrationEffect.createOneShot(ms, v.hasAmplitudeControl() ? amp : android.os.VibrationEffect.DEFAULT_AMPLITUDE);
-                if (Build.VERSION.SDK_INT >= 33) v.vibrate(e, android.os.VibrationAttributes.createForUsage(android.os.VibrationAttributes.USAGE_MEDIA));
-                else v.vibrate(e, new android.media.AudioAttributes.Builder().setUsage(android.media.AudioAttributes.USAGE_MEDIA).setContentType(android.media.AudioAttributes.CONTENT_TYPE_MUSIC).build());
+        JSArray ts = call.getArray("t"), as = call.getArray("a");
+        if (v == null || !v.hasVibrator() || ts == null || as == null || ts.length() != as.length() || ts.length() == 0 || ts.length() > 400 || Build.VERSION.SDK_INT < 26) { call.resolve(); return; }
+        try {
+            boolean strength = v.hasAmplitudeControl();
+            java.util.List<Long> t = new ArrayList<>(); java.util.List<Integer> a = new ArrayList<>();
+            double owe = 0;
+            for (int i = 0; i < ts.length(); i++) {
+                long ms = Math.max(0, Math.min(5000, ts.getLong(i))); int amp = Math.max(0, Math.min(255, as.getInt(i)));
+                if (strength) { t.add(ms); a.add(amp); continue; }
+                for (long left = ms; left > 0; left -= 10) { owe += amp / 255.0; boolean on = owe >= .5; if (on) owe -= 1; t.add(Math.min(10, left)); a.add(on ? 255 : 0); }
             }
-        } catch (RuntimeException ignored) {}
+            long[] tt = new long[t.size()]; int[] aa = new int[a.size()];
+            for (int i = 0; i < tt.length; i++) { tt[i] = t.get(i); aa[i] = a.get(i); }
+            android.os.VibrationEffect e = android.os.VibrationEffect.createWaveform(tt, aa, -1);
+            if (Build.VERSION.SDK_INT >= 33) v.vibrate(e, android.os.VibrationAttributes.createForUsage(android.os.VibrationAttributes.USAGE_MEDIA));
+            else v.vibrate(e, new android.media.AudioAttributes.Builder().setUsage(android.media.AudioAttributes.USAGE_MEDIA).setContentType(android.media.AudioAttributes.CONTENT_TYPE_MUSIC).build());
+        } catch (Exception ignored) {}
         call.resolve();
     }
 

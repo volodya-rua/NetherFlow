@@ -2103,22 +2103,27 @@ class Space extends AudioWorkletProcessor {
 }
 registerProcessor('nf-space', Space);`;
 let spaceUrl = '';
-// MobiVib (Sound › MobiVib, a phone): the phone taps with the music, as Apple Music's Music Haptics does — a firm tap on
-// each kick, a lighter one on each snare or clap (Strong) — screen on or off. Its ears, on the sound's own thread (so
-// they hear on with the screen off, when the page's frames stop): the song's kicks (its lows, under ~150 Hz) and its
-// snares and claps (their crack, 1.5–5 kHz: more than a hat's hiss), each found as that band's level jumps well over
-// where it's been lately, in 5 ms steps, at most one each ~110 ms (a snare: only one near the loudest lately); told to the
-// page with its strength (0–1, against the loudest lately) and the moment it's at (the engine's clock). Its output:
-// silence (connected only so it's run). Measured (scratchpad hap-bench.js; qa/s-mobivib.js): a made-up drum track, every
-// kick and snare found, 4 ms after it, 2 taps more of each in 16 s; the CC0 songs, 73% and 88% of their big low hits
-// tapped, 74% and 91% of the taps on one. (Smoothed, or tied to a beat found in the song, it scored worse.)
+// MobiVib (Sound › MobiVib, a phone): the phone vibrates with the music — a rumble that follows it, the bass most,
+// surging on each kick (and, Strong, each snare and clap), none in a quiet part — screen on or off. Not taps: the user's
+// "I want vibrations, not taps". Its ears, on the sound's own thread (they hear on with the screen off, when the page's
+// frames stop): the song's lows (under ~150 Hz), its crack (1.5–5 kHz: a snare, a clap — more than a hat's hiss) and its
+// whole loudness, in 5 ms steps. Every 10 ms, how strong the vibration is (0–1): the lows (70%) and the loudness (30%),
+// each against its loudest lately and eased (a middling level is felt), none under a quarter, then from 30% — where a
+// phone's motor is felt at all — up; and a surge on each hit found (a band's level jumping well over where it's been
+// lately), dying away over ~40 ms. Sent to the page eight at a time with the moment the first is at (the engine's
+// clock); its output, silence (connected only so it's run). Measured (scratchpad vib-bench.js): on while the music
+// plays (97–100% of the time), about half strength, a kick 2.5× what's between; nothing in silence. The hits it finds
+// (hap-bench.js): a made-up drum track, every kick and snare, 4 ms after; real songs, 73–88% of their big low hits.
 const HAPTIC_WORKLET = `class Haptics extends AudioWorkletProcessor {
-  constructor() {
+  constructor(o) {
     super();
     const pole = f => 1 - Math.exp(-2 * Math.PI * f / sampleRate);
     this.lo = pole(150); this.hi = pole(1500); this.top = pole(5000); this.z = new Float64Array(4);
-    this.hop = Math.round(sampleRate * .005); this.n = 0;
+    this.hop = Math.round(sampleRate * .005); this.n = 0; this.k = 0;
     this.acc = new Float64Array(2); this.env = new Float64Array(2); this.avg = new Float64Array(2).fill(1e-4); this.peak = new Float64Array(2).fill(1e-4); this.last = new Float64Array(2).fill(-1);
+    this.body = 0; this.loud = 0; this.allPeak = 1e-4; this.accAll = 0; this.swell = 0; this.out = []; this.t0 = 0;
+    this.strong = o?.processorOptions?.mode !== 'Light';
+    this.port.onmessage = e => { this.strong = e.data.mode !== 'Light'; };
   }
   process(ins) {
     const i = ins[0];
@@ -2128,7 +2133,7 @@ const HAPTIC_WORKLET = `class Haptics extends AudioWorkletProcessor {
       const x = (L[s] + R[s]) * .5;
       z[0] += this.lo * (x - z[0]); z[1] += this.lo * (z[0] - z[1]); z[2] += this.hi * (x - z[2]); z[3] += this.top * (x - z[3]); // (two poles under 150 Hz; 1.5–5 kHz)
       const h = z[3] - z[2];
-      this.acc[0] += z[1] * z[1]; this.acc[1] += h * h;
+      this.acc[0] += z[1] * z[1]; this.acc[1] += h * h; this.accAll += x * x;
       if (++this.n >= this.hop) { this.n = 0; this.step(); }
     }
     return true;
@@ -2141,19 +2146,31 @@ const HAPTIC_WORKLET = `class Haptics extends AudioWorkletProcessor {
       this.peak[b] = Math.max(e, this.peak[b] * .9993); // (the loudest lately, falling away over ~7 s)
       if (e > avg * 1.8 && e - was > avg * .4 && e > this.peak[b] * (b ? .45 : .3) && currentTime - this.last[b] > .11) {
         this.last[b] = currentTime;
-        this.port.postMessage({ b, s: Math.min(1, e / this.peak[b]), t: currentTime });
+        if (!b || this.strong) this.swell = Math.max(this.swell, (b ? .5 : 1) * Math.min(1, e / this.peak[b]));
       }
     }
+    const all = Math.sqrt(this.accAll / this.hop); this.accAll = 0;
+    this.body = Math.max(this.env[0], this.body * .97); this.loud = Math.max(all, this.loud * .97);
+    this.allPeak = Math.max(this.loud, this.allPeak * .9995);
+    if (++this.k % 2) return;
+    // each 10 ms: the rumble — the lows (most of it) and the whole song's loudness, each against its loudest lately, eased
+    // so a middling level is felt — none in a quiet part, then from where a phone's felt at all; and the swell on top
+    const lv = .7 * Math.pow(this.body / this.peak[0], .6) + (1 - .7) * Math.pow(this.loud / this.allPeak, .6), x = Math.max(0, (lv - .25) / (1 - .25));
+    const a = Math.min(1, (x > 0 ? .3 + (1 - .3) * x : 0) * .75 + this.swell * (this.strong ? .5 : .35));
+    this.swell *= .6;
+    if (!this.out.length) this.t0 = currentTime;
+    this.out.push(Math.round(a * 1000) / 1000);
+    if (this.out.length === 8) { this.port.postMessage({ t: this.t0, a: this.out }); this.out = []; }
   }
 }
 registerProcessor('nf-haptics', Haptics);`;
 let hapUrl = '';
-function makeHaptics(c, onTap) {
+function makeHaptics(c, onFrames) {
   const h = { node: null };
   h.ready = (c.audioWorklet ? c.audioWorklet.addModule(hapUrl ||= URL.createObjectURL(new Blob([HAPTIC_WORKLET], { type: 'text/javascript' }))) : Promise.reject(new Error('no AudioWorklet'))).then(() => {
-    h.node = new AudioWorkletNode(c, 'nf-haptics', { numberOfOutputs: 1, outputChannelCount: [1] });
+    h.node = new AudioWorkletNode(c, 'nf-haptics', { numberOfOutputs: 1, outputChannelCount: [1], processorOptions: { mode: mobivib } });
     h.node.connect(c.destination);
-    h.node.port.onmessage = e => onTap(e.data);
+    h.node.port.onmessage = e => onFrames(e.data);
   }).catch(e => console.warn('MobiVib:', e));
   return h;
 }
@@ -2161,7 +2178,8 @@ const MOBIVIB = ['Off', 'Light', 'Strong'];
 let mobivib = MOBIVIB.includes(store.get('netherflow.mobivib')) ? store.get('netherflow.mobivib') : 'Off', hapNode = null;
 function setMobivib(v) {
   mobivib = v; store.set('netherflow.mobivib', v === 'Off' ? '' : v); hapWire(); renderLoud();
-  if (v !== 'Off') Capacitor.Plugins.Playback.vibe({ ms: 40, amp: v === 'Strong' ? 230 : 140 }).catch(() => {}); // (a taste of it)
+  hapNode?.node?.port.postMessage({ mode: v });
+  if (v !== 'Off') { const top = v === 'Strong' ? 255 : 150; Capacitor.Plugins.Playback.vibeWave({ t: [60, 60, 60, 60, 60, 60], a: [.3, .55, .8, 1, .7, .35].map(x => Math.round(x * top)) }).catch(() => {}); } // (a taste of it: a swell)
 }
 // its ears on the song (before the equalizer: the music itself), while it's on
 function hapWire() {
@@ -2169,15 +2187,20 @@ function hapWire() {
   try { audioSrc.disconnect(hapNode.node); } catch {}
   if (mobivib !== 'Off') audioSrc.connect(hapNode.node);
 }
-// a kick (b 0) or a snare (b 1) heard: its tap, when it reaches the ears (the sound's out a little after the engine has
-// it: its latency) — Light, the kicks alone, softer
-let hapKick = -1;
-function hapTap({ b, s, t }) {
-  if (mobivib === 'Off' || !ctx || P.paused || (b && mobivib !== 'Strong')) return;
-  if (b ? t - hapKick < .06 : (hapKick = t, false)) return; // (a snare with a kick: the kick's tap alone)
-  const strong = mobivib === 'Strong', ms = b ? 14 : strong ? 36 : 26, amp = Math.round(b ? 60 + 110 * s : strong ? 90 + 165 * s : 50 + 110 * s);
-  const wait = (t + (ctx.baseLatency || 0) + (ctx.outputLatency || 0) - ctx.currentTime) * 1000 - 12; // (12 ms: the tap's own way to the motor)
-  if (wait > -80) setTimeout(() => Capacitor.Plugins.Playback.vibe({ ms, amp }).catch(() => {}), Math.max(0, wait)); // (later than that: not felt with it)
+// Eight 10 ms steps more of it: played when they're heard (the sound's out a little after the engine has them: its
+// latency; later than that already, at once). The phone's told what's still to come each time — what it's doing now
+// replaced by the same and more, so it runs on without a gap — and a little after the last, should the next be late.
+// Nothing to feel, nothing sent.
+const hap = { line: [], now: 0 };
+function hapFrames({ t, a }) {
+  if (mobivib === 'Off' || !ctx || P.paused) { hap.line.length = 0; return; }
+  const top = mobivib === 'Strong' ? 255 : 170, lat = (ctx.baseLatency || 0) + (ctx.outputLatency || 0), now = ctx.currentTime;
+  const at = Math.max(t + lat, now + .015);
+  a.forEach((v, i) => hap.line.push({ at: at + i * .01, a: Math.round(v * top) })); // (each motor told anew stops and starts: told less often, fewer gaps)
+  while (hap.line.length && hap.line[0].at < now) hap.now = hap.line.shift().a;
+  if (!hap.line.length || !hap.now && hap.line.every(f => !f.a)) return;
+  const lead = Math.round((hap.line[0].at - now) * 1000), last = hap.line[hap.line.length - 1].a;
+  Capacitor.Plugins.Playback.vibeWave({ t: [...(lead > 0 ? [lead] : []), ...hap.line.map(() => 10), 60], a: [...(lead > 0 ? [hap.now] : []), ...hap.line.map(f => f.a), last >> 1] }).catch(() => {});
 }
 // the 360 sound's place in the sound's path: as it is (passed straight through) till its worklet's loaded, then the worklet
 function makeSpace(c) {
@@ -3712,7 +3735,7 @@ function initAudio() { // created lazily: browsers want a user gesture first
   // then the volume booster: a gain, and a limiter so a boosted song never distorts
   boostNode = ctx.createGain(); limiterNode = ctx.createDynamicsCompressor(); singNode = makeSing(ctx); spaceNode = makeSpace(ctx); spaceNode.set(space);
   toolNodes = { cross: makeCross(ctx), clarity: makeClarity(ctx), lowvol: makeLowVol(ctx), night: makeNight(ctx) };
-  if (native) { hapNode = makeHaptics(ctx, hapTap); hapNode.ready.then(hapWire); } // (MobiVib)
+  if (native) { hapNode = makeHaptics(ctx, hapFrames); hapNode.ready.then(hapWire); } // (MobiVib)
   for (const k in toolNodes) toolNodes[k].set(tools[k]);
   limiterNode.knee.value = 10; limiterNode.ratio.value = 16; limiterNode.attack.value = 0.003; limiterNode.release.value = 0.16; // (till the master's loaded, or with none)
   ctx.audioWorklet?.addModule(URL.createObjectURL(new Blob([MASTER_WORKLET], { type: 'text/javascript' }))).then(() => { // (the master in its place: see MASTER_WORKLET)
@@ -3884,7 +3907,7 @@ function sinkRow() {
 function renderLoud() {
   $('eqLoud').replaceChildren(...(canSink && sinks.length > 1 ? [sinkRow()] : []),
     settingRow('Quality', QUALITIES, quality, setQuality, 'How songs stream. Best: the best YouTube has of each song (Opus, about 130–160 kbps). Normal: about 70 kbps, half the data. Data saver: about 50 kbps.' + (native ? ' Auto: Best on Wi-Fi, Normal on mobile data.' : '') + ' Songs you save for offline are always saved in Best.'),
-    ...(native && matchMedia('(pointer: coarse)').matches ? [settingRow('MobiVib', MOBIVIB, mobivib, setMobivib, 'Feel the music: your phone taps with it, a firm tap on each kick (Light) and a lighter one on each snare and clap too (Strong), screen on or off. Uses some battery. If you feel nothing, turn on Media vibration in your phone\'s Vibration & haptics settings.')] : []),
+    ...(native && matchMedia('(pointer: coarse)').matches ? [settingRow('MobiVib', MOBIVIB, mobivib, setMobivib, 'Feel the music: your phone vibrates with it, rumbling with the bass and swelling on every beat, screen on or off. Light: softer, the bass and the kicks. Strong: fuller, the snares and claps too. Uses some battery. If you feel nothing, turn on Media vibration in your phone\'s Vibration & haptics settings.')] : []),
     settingRow('Loudness', ['Original', 'Levelled'], loud, v => { loud = v; store.set('netherflow.loud', v === 'Original' ? '' : v); renderLoud(); applyEq(); setVolume(volume); },
     'Original: each song at its own original loudness. Levelled: loud songs turned down so all play at about one level.'),
     settingRow('360 sound', SPACES, space, setSpace, 'On headphones. Orbit: the whole song going round your head, once every 10 seconds (the "8D" sound). The others set it round you, standing still — the voice in front, what\'s panned out to its side, the room and the reverb round you and behind, its sound and its bass as they were. Around: like good speakers in a room. Wide: further out. Hall: a concert hall.'),
