@@ -1905,8 +1905,8 @@ function routeAudio() {
 // sphere's shadow, Brown and Duda's model; no measured head's peaks and dips to colour it); and each kept exactly as loud,
 // in every band, as it was (both ears together): nothing duller, thinner or boomier. Below 300 Hz it's left as it is,
 // untouched (the bass and the low-mids give little direction anyway). Then a room round it all: early reflections, and a
-// tail that fades darker (a feedback delay network), with no bass in or out. Orbit: everything goes round the head, once
-// every 10 seconds, nearly all of it in the near ear at each side (see MODES). Measured (scratchpad space-bench.js, qa/s-space360.js): on real songs each band within about half a
+// tail that fades darker (a feedback delay network), with no bass in or out. (Orbit: the song as one sound going round,
+// heard through the browser's own 3D ears — see earsFor.) Measured (scratchpad space-bench.js, qa/s-space360.js): on real songs each band within about half a
 // dB of the song's own (Hall a little more: its room), the bass to 0.03 dB. The browser's own 3D filters, used before,
 // coloured it 4–11 dB (round 800 Hz and 9 kHz; a wide sound's low-mids). Its cost: 1024 samples late (~21 ms; the lyrics
 // wait for it, see spaceLag), and ~2.5% of a computer's core.
@@ -1925,11 +1925,9 @@ const MODES = {
   Around: { front: 30, amb: 110, wet: .38, decay: .4, damp: 7000, turn: 0, rear: .3, pan: 0, low: 300, dip: 0 },
   Wide: { front: 55, amb: 130, wet: .3, decay: .35, damp: 8000, turn: 0, rear: .3, pan: 0, low: 300, dip: 0 },
   Hall: { front: 35, amb: 120, wet: .36, decay: 1.9, damp: 4500, turn: 0, rear: .3, pan: 0, low: 300, dip: 0 },
-  // (all of the song as one, a little wide, going round the head once every 10 s: nearly all in one ear at the side, darker
-  // and quieter behind, the bass staying in the middle; a smaller room, its echo in both ears filled in the far one.
-  // Measured, scratchpad orbit-bench.js: the ears now ±13 dB apart at 250 Hz–1 kHz, ±16 to 4 kHz, ±19 above — it was ±2.5,
-  // ±9, ±15, the user's "doesn't feel like 360")
-  Orbit: { front: 12, amb: 35, wet: .18, decay: .9, damp: 6000, turn: 1 / 10, rear: 1.6, pan: .95, low: 120, dip: .5 },
+  // (Orbit: the whole song above 120 Hz as one sound going round, once every 10 s, through the browser's own 3D ears —
+  // see earsFor; its room a little smaller. Till the ears come: as Around, turning)
+  Orbit: { front: 15, amb: 60, wet: .16, decay: .8, damp: 6500, turn: 1 / 10, rear: .6, pan: 0, low: 120, dip: 0 },
 };
 // a radix-2 FFT, in place (inv: the inverse, unscaled)
 const rev = new Uint16Array(N), wc = new Float64Array(N / 2), ws = new Float64Array(N / 2);
@@ -1991,7 +1989,8 @@ class Space extends AudioWorkletProcessor {
     this.len = [887, 1109, 1327, 1559, 1783, 2011, 2293, 2531].map(n => Math.round(n * sr / 48000));
     this.line = this.len.map(n => new F(n)); this.pos = new Int32Array(8); this.lp = new F(8); this.v = new F(8);
     this.wet = 0; this.fb = new F(8); this.damp = 0; this.room(); // (its echo's level glides: see process)
-    this.port.onmessage = e => { const m = MODES[e.data.mode]; if (m) this.to = m; };
+    this.orbit = options?.processorOptions?.mode === 'Orbit'; this.ears = options?.processorOptions?.ears || null; // (Orbit's: see earsFor)
+    this.port.onmessage = e => { if (e.data.ears) this.ears = e.data.ears; if (!e.data.mode) return; const m = MODES[e.data.mode]; if (m) this.to = m; this.orbit = e.data.mode === 'Orbit'; };
   }
   lows() { // (lowP: below the mode's low all of it as it was, blended over to 5/3 of it)
     for (let k = 0; k < B; k++) { const f = k * sampleRate / N, a = this.m.low, b = a * 5 / 3; this.lowP[k] = f <= a ? 1 : f >= b ? 0 : .5 + .5 * Math.cos(Math.PI * (f - a) / (b - a)); }
@@ -2023,10 +2022,22 @@ class Space extends AudioWorkletProcessor {
     for (let q = 0; q < 4; q++) { const t = ea[(q >> 1) * 7 + 2 + (q & 1)]; ph[q * 4] = 1; ph[q * 4 + 1] = 0; ph[q * 4 + 2] = Math.cos(dw * t); ph[q * 4 + 3] = -Math.sin(dw * t); }
     for (let i = 0; i < N; i++) { re[i] = xl[i] * win[i]; im[i] = xr[i] * win[i]; }
     fft(re, im, false);
+    // Orbit, its ears come: where it is round the head now, between two of the ears' 72 directions
+    const E = this.orbit && this.ears, AZ = E ? E.length / (4 * B) : 0;
+    let b0 = 0, b1 = 0, e1 = 0;
+    if (E) { const at = ((turn / TAU) % 1 + 1) % 1 * AZ, i0 = Math.floor(at); e1 = at - i0; b0 = (i0 % AZ) * 4 * B; b1 = ((i0 + 1) % AZ) * 4 * B; }
+    const e0 = 1 - e1;
     for (let k = 0; k < B; k++) {
       // this band, left and right (one FFT for both: left real, right imaginary)
       const j = (N - k) % N, zr = re[k], zi = im[k], yr = re[j], yi = im[j];
       const lr = (zr + yr) / 2, li = (zi - yi) / 2, rr = (zi + yi) / 2, ri = (yr - zr) / 2;
+      if (E) { // (the song's middle, as heard from there by each ear; under 120 Hz, as it was)
+        const lpk = lowP[k], mr = (lr + rr) * .5, mi = (li + ri) * .5;
+        const hlr = e0 * E[b0 + k] + e1 * E[b1 + k], hli = e0 * E[b0 + B + k] + e1 * E[b1 + B + k], hrr = e0 * E[b0 + 2 * B + k] + e1 * E[b1 + 2 * B + k], hri = e0 * E[b0 + 3 * B + k] + e1 * E[b1 + 3 * B + k];
+        el[2 * k] = lpk * lr + (1 - lpk) * (mr * hlr - mi * hli); el[2 * k + 1] = lpk * li + (1 - lpk) * (mr * hli + mi * hlr);
+        er[2 * k] = lpk * rr + (1 - lpk) * (mr * hrr - mi * hri); er[2 * k + 1] = lpk * ri + (1 - lpk) * (mr * hri + mi * hrr);
+        continue;
+      }
       // how it's been in this band lately (~25 ms): each side's level, and how alike they are and in step
       sLL[k] = .8 * sLL[k] + .2 * (lr * lr + li * li); sRR[k] = .8 * sRR[k] + .2 * (rr * rr + ri * ri); sX[k] = .8 * sX[k] + .2 * (lr * rr + li * ri);
       const pL = sLL[k], pR = sRR[k], psi = (pL - pR) / (pL + pR + 1e-20), alike = Math.max(0, sX[k]) / Math.sqrt(pL * pR + 1e-30);
@@ -2215,13 +2226,65 @@ function makeSpace(c) {
   const inp = c.createGain(), out = c.createGain();
   inp.channelCount = 2; inp.channelCountMode = 'explicit'; inp.channelInterpretation = 'speakers';
   inp.connect(out);
-  let node = null, mode = 'Around';
-  const sp = { inp, out, lag: 0, set(m) { if (m !== 'Off') mode = m; node?.port.postMessage({ mode }); } };
-  sp.ready = (c.audioWorklet ? c.audioWorklet.addModule(spaceUrl ||= URL.createObjectURL(new Blob([SPACE_WORKLET], { type: 'text/javascript' }))) : Promise.reject(new Error('no AudioWorklet'))).then(() => {
-    node = new AudioWorkletNode(c, 'nf-space', { outputChannelCount: [2], channelCount: 2, channelCountMode: 'explicit', processorOptions: { mode } });
-    inp.disconnect(); inp.connect(node); node.connect(out); sp.lag = SPACE_N / c.sampleRate;
+  let node = null, mode = 'Around', sent = false;
+  const ears = () => { if (mode !== 'Orbit' || !node || sent) return; sent = true; earsFor(c.sampleRate).then(e => node.port.postMessage({ ears: e }), () => { sent = false; }); }; // (Orbit: its ears, once)
+  const sp = { inp, out, lag: 0, set(m) { if (m !== 'Off') mode = m; node?.port.postMessage({ mode }); ears(); } };
+  sp.ready = (c.audioWorklet ? c.audioWorklet.addModule(spaceUrl ||= URL.createObjectURL(new Blob([SPACE_WORKLET], { type: 'text/javascript' }))) : Promise.reject(new Error('no AudioWorklet'))).then(async () => {
+    const e = mode === 'Orbit' ? await earsFor(c.sampleRate).catch(() => null) : null; // (from the start: an offline render's messages come after it)
+    node = new AudioWorkletNode(c, 'nf-space', { outputChannelCount: [2], channelCount: 2, channelCountMode: 'explicit', processorOptions: { mode, ears: e } });
+    sent = !!e; inp.disconnect(); inp.connect(node); node.connect(out); sp.lag = SPACE_N / c.sampleRate;
   }).catch(e => console.warn('360 sound:', e));
   return sp;
+}
+// Orbit's ears: the browser's own 3D sound (HRTF: a real head's ears, measured — part of the browser, nothing of ours
+// or anyone else's added) heard once — a click from each of 72 directions round the head, through a PannerNode, offline,
+// a fraction of a second — and handed to the 360 worklet as spectra: what it does with them each moment costs it next to
+// nothing (the browser's own, run live, took 18–20% of a phone's core; this, the worklet's usual ~5%). Each set level on
+// average over every direction, frequency by frequency (over a third of an octave): the ears as measured are dark and
+// heavy — 13 dB up at 250 Hz, 10 down at 8 kHz — and each direction's own difference from that average is what tells a
+// front from a back, and a sound round you from one panned. (The user: the old Orbit "only makes one side quieter and
+// the other louder — that's not 360": it panned, every pitch, with a head's shadow and no outer ear. Measured,
+// qa/s-orbit.js, a sound in the middle going round: see there.) Kept for the session, a sample rate's.
+const EAR_AZ = 72, EAR_SHARP = 1.4, earsMade = new Map();
+function earsFor(sr) {
+  if (earsMade.has(sr)) return earsMade.get(sr);
+  const made = (async () => {
+    const GAP = Math.round(sr * .15), AT = Math.round(sr * .1), n = GAP * (EAR_AZ + 1), c = new OfflineAudioContext(2, n, sr), click = c.createBuffer(1, n, sr);
+    for (let a = 0; a < EAR_AZ; a++) click.getChannelData(0)[a * GAP + AT] = 1; // (each a moment after it's moved there: the browser's crossfade done)
+    const s = c.createBufferSource(), pn = c.createPanner();
+    Object.assign(pn, { panningModel: 'HRTF', distanceModel: 'linear', refDistance: 1, maxDistance: 1e4, rolloffFactor: 0 });
+    for (let a = 0; a < EAR_AZ; a++) { const th = 2 * Math.PI * a / EAR_AZ, t = a * GAP / sr; pn.positionX.setValueAtTime(Math.sin(th), t); pn.positionY.setValueAtTime(0, t); pn.positionZ.setValueAtTime(-Math.cos(th), t); } // (ahead, then right, behind, left)
+    s.buffer = click; s.connect(pn); pn.connect(c.destination); s.start();
+    const o = await c.startRendering(), ch = [o.getChannelData(0), o.getChannelData(1)];
+    let first = GAP; // (where the earliest of them all starts, a little before: the same for every direction, so the ears' delays stay)
+    for (let a = 0; a < EAR_AZ; a++) for (const x of ch) for (let i = 0; i < GAP - AT; i++) if (Math.abs(x[a * GAP + AT + i]) > 1e-3) { first = Math.min(first, i); break; }
+    const M = SPACE_N, B = M / 2 + 1, LEN = 320, lead = Math.max(0, first - 8), out = new Float32Array(EAR_AZ * 4 * B), pw = new Float64Array(B), re = new Float64Array(M), im = new Float64Array(M);
+    for (let a = 0; a < EAR_AZ; a++) for (let e = 0; e < 2; e++) {
+      re.fill(0); im.fill(0);
+      for (let i = 0; i < LEN; i++) re[i] = ch[e][a * GAP + AT + lead + i] * (i < LEN - 64 ? 1 : .5 + .5 * Math.cos(Math.PI * (i - LEN + 64) / 64)); // (its tail tapered)
+      fftInPlace(re, im);
+      const o2 = a * 4 * B + e * 2 * B;
+      for (let k = 0; k < B; k++) { out[o2 + k] = re[k]; out[o2 + B + k] = im[k]; pw[k] += (re[k] * re[k] + im[k] * im[k]) / (2 * EAR_AZ); }
+    }
+    for (let k = 0; k < B; k++) { const lo = Math.max(1, Math.floor(k / 1.12)), hi = Math.max(lo, Math.min(B - 1, Math.ceil(k * 1.12))); let q = 0; for (let j = lo; j <= hi; j++) q += pw[j]; re[k] = 1 / Math.sqrt(q / (hi - lo + 1) + 1e-12); } // (the lowest band: its neighbour's)
+    for (let a = 0; a < EAR_AZ; a++) for (let e = 0; e < 2; e++) { const o2 = a * 4 * B + e * 2 * B; for (let k = 0; k < B; k++) { out[o2 + k] *= re[k]; out[o2 + B + k] *= re[k]; } }
+    // (each direction's difference from the average made a little more of — its level raised to EAR_SHARP, its timing
+    // kept — and set level on average again: the cues clearer, as a real room and a moving head make them)
+    pw.fill(0);
+    for (let a = 0; a < EAR_AZ; a++) for (let e = 0; e < 2; e++) { const o2 = a * 4 * B + e * 2 * B; for (let k = 0; k < B; k++) { const m = Math.hypot(out[o2 + k], out[o2 + B + k]) + 1e-12, f = m ** (EAR_SHARP - 1); out[o2 + k] *= f; out[o2 + B + k] *= f; pw[k] += (m * f) ** 2 / (2 * EAR_AZ); } }
+    for (let a = 0; a < EAR_AZ; a++) for (let e = 0; e < 2; e++) { const o2 = a * 4 * B + e * 2 * B; for (let k = 0; k < B; k++) { const g = 1 / Math.sqrt(pw[k] + 1e-12); out[o2 + k] *= g; out[o2 + B + k] *= g; } }
+    return out;
+  })();
+  earsMade.set(sr, made); made.catch(() => earsMade.delete(sr));
+  return made;
+}
+// a radix-2 FFT, in place (the page's own: earsFor)
+function fftInPlace(re, im) {
+  const n = re.length;
+  for (let i = 1, j = 0; i < n; i++) { let bit = n >> 1; for (; j & bit; bit >>= 1) j ^= bit; j ^= bit; if (i < j) { let t = re[i]; re[i] = re[j]; re[j] = t; t = im[i]; im[i] = im[j]; im[j] = t; } }
+  for (let len = 2; len <= n; len <<= 1) { const ang = -2 * Math.PI / len; for (let i = 0; i < n; i += len) for (let k = 0; k < len / 2; k++) {
+    const c = Math.cos(ang * k), sn = Math.sin(ang * k), a = i + k, b = a + len / 2, tr = re[b] * c - im[b] * sn, ti = re[b] * sn + im[b] * c;
+    re[b] = re[a] - tr; im[b] = im[a] - ti; re[a] += tr; im[a] += ti; } }
 }
 // The sound tools (the Equalizer panel), each in the path only while it's on:
 //   Crossfeed (headphones): a little of each side, softened and a moment late, into the other, as speakers reach both
