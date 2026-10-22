@@ -75,6 +75,16 @@ public class PlaybackPlugin extends Plugin {
         call.resolve(out);
     }
 
+    // whether any app's music is sounding now, or a call's on ({ on }): the page waits for it to be over to carry on a song
+    // another app's sound paused (no app named: Android only says whether)
+    @PluginMethod
+    public void musicActive(PluginCall call) {
+        android.media.AudioManager am = getContext().getSystemService(android.media.AudioManager.class);
+        JSObject out = new JSObject();
+        out.put("on", am != null && (am.isMusicActive() || am.getMode() != android.media.AudioManager.MODE_NORMAL));
+        call.resolve(out);
+    }
+
     // the app's own page in the phone's settings (Battery › Unrestricted, there, lets it play on in the background)
     @PluginMethod
     public void appSettings(PluginCall call) {

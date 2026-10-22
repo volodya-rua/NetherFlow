@@ -99,6 +99,8 @@
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <!-- the phone kept awake while a song plays (and its Wi-Fi), never longer: see PlaybackService.hold -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Library › Import › Scan a QR code: asked for the first time it's used, the camera on only while the scanner's open,
          its picture read on the phone and never kept -->

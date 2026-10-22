@@ -57,6 +57,20 @@ public class PlaybackService extends MediaBrowserServiceCompat {
     private String artUrl = "";
     private Bitmap art, small; // (small: the widget's copy — a widget's picture has to be small)
     private boolean foreground = false;
+    // While a song plays: the phone's processor and Wi-Fi kept awake. Asleep with the screen off, a stream that stalled had
+    // nothing to notice it and pick it up (the page's watchdog asleep with the phone), and Wi-Fi saving power starved a
+    // stream. Let go the moment it's paused or stopped; the processor's for 30 min at most each time (told again on every
+    // change), should a "playing" never be taken back.
+    private android.os.PowerManager.WakeLock cpu;
+    private android.net.wifi.WifiManager.WifiLock wifi;
+    private void hold(boolean on) {
+        try {
+            if (cpu == null) { cpu = getSystemService(android.os.PowerManager.class).newWakeLock(android.os.PowerManager.PARTIAL_WAKE_LOCK, "NetherFlow:playing"); cpu.setReferenceCounted(false); }
+            if (wifi == null) { android.net.wifi.WifiManager w = getApplicationContext().getSystemService(android.net.wifi.WifiManager.class); if (w != null) { wifi = w.createWifiLock(android.net.wifi.WifiManager.WIFI_MODE_FULL_HIGH_PERF, "NetherFlow:playing"); wifi.setReferenceCounted(false); } }
+            if (on) { cpu.acquire(30 * 60 * 1000L); if (wifi != null && !wifi.isHeld()) wifi.acquire(); }
+            else { if (cpu.isHeld()) cpu.release(); if (wifi != null && wifi.isHeld()) wifi.release(); }
+        } catch (RuntimeException ignored) {} // (never a reason for the notification not to show)
+    }
 
     @Override
     public void onCreate() {
@@ -248,6 +262,7 @@ public class PlaybackService extends MediaBrowserServiceCompat {
 
     private void publish() {
         boolean playing = song.getBoolean("playing");
+        hold(playing);
         String title = song.getString("title", "NetherFlow"), artist = song.getString("artist", ""), album = song.getString("album", "");
         // (lyrics on the lock screen: the line being sung where the artist goes — under the title there, and on a car's display)
         String lyric = song.getString("lyric", ""), line = lyric.isEmpty() ? artist : lyric;
@@ -309,6 +324,7 @@ public class PlaybackService extends MediaBrowserServiceCompat {
     @Override
     public void onDestroy() {
         instance = null;
+        hold(false);
         NowPlayingWidget.refresh(this, null); // (closed: the widget back to "open the app")
         unregisterReceiver(unplugged);
         session.release();

@@ -3414,23 +3414,111 @@ const A = () => engine === 'ep' ? epAudio : engine === 'cast' ? castEl : audio; 
 // Stuck 5 s now — 2 s when the app's just back in front — and a saved song picked up again too, not only a stream; a
 // mix that never finished, dropped; and still stuck after three tries: shown as it is — paused, with a word — never
 // "playing" with nothing heard.)
-const stuck = { t: -1, at: 0, tries: 0 };
+// (2026-10-22, "make the music play no matter what": the sound engine itself can stop — Android cuts a page's sound
+// output dead when another app takes the sound or the speaker or headphones change, while it still says "running"; a
+// player routed through it then never moves again, and no reload of the song brings it back: only restarting the app
+// did. Now: the engine's own clock watched too, and stopped and started again — still stuck, made again from scratch
+// (freshSound). And a song that still won't play: the next one (songFailed) — "playing" with nothing heard, never.)
+const stuck = { t: -1, at: 0, tries: 0 }, engineClock = { t: -1, at: 0 };
 function checkPlaying(back = false) {
   if (engine === 'cast') return; // (the device's own business)
   const el = A();
   if (ctx && ctx.state !== 'running' && ctx.state !== 'closed' && !el.paused) ctx.resume().catch(() => {});
   if (mix.on && performance.now() - mix.t0 > (mix.fade + 6) * 1000) mixAbort(); // (a mix that never finished: not a reason to stop looking)
-  if (el.paused || !el.getAttribute('src') || mix.on || !navigator.onLine) { stuck.t = -1; stuck.tries = 0; return; }
+  if (el.paused || !el.getAttribute('src') || mix.on) { stuck.t = engineClock.t = -1; stuck.tries = 0; return; }
+  // (the engine's clock not moving on, though it's running and a song's playing through it: its output cut off)
+  if (engine === 'audio' && ctx?.state === 'running') {
+    if (ctx.currentTime !== engineClock.t) { engineClock.t = ctx.currentTime; engineClock.at = Date.now(); }
+    else if (Date.now() - engineClock.at > 3000) { engineClock.at = Date.now(); return reviveSound(); }
+  }
+  if (!navigator.onLine) { stuck.t = -1; stuck.tries = 0; return; } // (offline: waiting is right — see waitOnline)
   const t = el.currentTime < .5 ? 0 : el.currentTime; // (not started yet — loading — counts as stuck only after 12 s: a stream that hangs at its very start shows playing too)
-  if (t !== stuck.t) { if (stuck.tries && t > stuck.t + 1) stuck.tries = 0; stuck.t = t; stuck.at = Date.now(); return; }
+  if (t !== stuck.t) { if (stuck.t > 0 && t > stuck.t + 1) { stuck.tries = 0; trouble.n = trouble.retries = 0; } stuck.t = t; stuck.at = Date.now(); return; } // (moving on as it should: its troubles behind it)
   if (Date.now() - stuck.at < (!t ? 12000 : back ? 2000 : 5000)) return;
   stuck.at = Date.now();
-  if (++stuck.tries > 3) { // (picked up three times, and still nothing: said so, the song paused where it was — Play tries again)
-    stuck.tries = 0; el.pause(); setPlaying(false);
-    return toast('The sound stopped and wouldn\'t come back. Tap Play to carry on.', 6000);
-  }
+  // picked up again: its stream afresh; then the engine stopped and started too; then everything made again; then the
+  // next song
+  if (++stuck.tries > 3) { stuck.tries = 0; return songFailed('kept stopping'); }
+  if (stuck.tries === 3 && engine === 'audio' && ctx) return freshSound();
+  if (stuck.tries === 2 && engine === 'audio' && ctx) reviveSound();
   restartStream();
 }
+// The engine stopped and started again (a new output, on the speakers or headphones there now); its clock still not
+// moving on: made again from scratch
+async function reviveSound() {
+  const c = ctx, t0 = c.currentTime, wait = ms => new Promise(r => setTimeout(r, ms));
+  await Promise.race([c.suspend().then(() => c.resume()), wait(1500)]).catch(() => {});
+  await wait(1200);
+  if (c === ctx && c.currentTime === t0) freshSound();
+}
+// The sound engine made again from scratch: new players (a player is tied to its engine for good), a new engine with
+// everything in it as it was (the equalizer, 360 sound, the booster…), and the song carried on from where it was
+let freshAt = 0;
+function freshSound() {
+  if (!ctx || Date.now() - freshAt < 8000) return; // (not over and over: a device failing again and again)
+  freshAt = Date.now();
+  mixAbort();
+  const was = audio, src = was.getAttribute('src'), at = was.currentTime, go = !was.paused, old = ctx;
+  for (const el of [audio, audioB]) { el.onplay = el.onpause = el.onended = el.onerror = null; el.pause(); el.removeAttribute('src'); el.load(); }
+  audio = new Audio(); audioB = new Audio(); wirePlayers();
+  audio.volume = was.volume; audio.playbackRate = audio.defaultPlaybackRate = was.playbackRate;
+  ctx = null; routed = null; hpSig = ''; hpNodes = []; engineClock.t = -1;
+  old.close().catch(() => {});
+  initAudio(); routeAudio();
+  if (!src || engine !== 'audio') return;
+  if (fsVid && src.includes('fs/media')) { const vid = fsVid, id = loadId; flowPage?.forget(vid); fsPlay({ id: vid }, id).then(() => { if (id === loadId && at > 1) P.seek(at); }).catch(() => playerError(audio)); }
+  else { audio.src = src; audio.addEventListener('loadedmetadata', () => { audio.currentTime = at; }, { once: true }); if (go) audio.play().catch(() => {}); }
+}
+// A song that won't play (it won't load; it kept stopping, everything tried): the next one — the music carries on. A
+// third in a row: it isn't the songs (the internet's down, YouTube's refusing this connection), so none more skipped:
+// this one tried again from where it was, in 10 s, 20 s, 40 s, then each minute (five times: then its preview, or a
+// word), said so, Play or Next any time; offline, when the internet's back.
+const trouble = { n: 0, retries: 0, timer: 0, wait: null };
+function songFailed(why) {
+  const t = current, at = P.t;
+  if (!t) return;
+  clearTimeout(trouble.timer);
+  if (++trouble.n < 3 && hasNext()) { toast(`${t.trackName} ${why}: on to the next`); return nextTrack(); }
+  A().pause(); setPlaying(false);
+  if (!navigator.onLine) return waitOnline(t, at);
+  if (trouble.retries >= 5) { trouble.retries = 0; return previewFallback(`it ${why}`); }
+  const secs = [10, 20, 40, 60, 60][trouble.retries++];
+  status(`◌ it ${why}: trying again in ${secs} s`);
+  trouble.timer = setTimeout(() => { if (current === t && P.paused) replay(t, at); }, secs * 1000);
+}
+// Another app's sound pausing the song (Android gives the sound to one app at a time — a reel, a video, a voice note —
+// and gives it back by itself only after a short one): the song carries on by itself once that sound's over (quiet
+// 2–4 s: not a gap between two reels), within half an hour — never one paused by hand, by the page itself, at its end,
+// or in a call. (The user's "make the music play no matter what".) Paused, the sound engine's let rest a second on (its
+// own silence counted as music sounding; and a phone's battery spared)
+const others = { t: null, at: 0, timer: 0, quiet: 0 };
+let pausedByHand = 0;
+function pausedBy() {
+  const t = current;
+  setTimeout(() => { if (P.paused && !audio.ended && !mix.on && A() === audio && ctx?.state === 'running') ctx.suspend().catch(() => {}); }, 1000);
+  if (performance.now() - pausedByHand < 1500 || audio.ended || !audio.getAttribute('src') || trouble.wait) return;
+  setTimeout(async () => {
+    if (current !== t || !P.paused || performance.now() - pausedByHand < 3000 || trouble.wait) return;
+    if (!(await Capacitor.Plugins.Playback.musicActive().catch(() => ({}))).on) return; // (nothing else sounding: not another app's doing)
+    Object.assign(others, { t, at: Date.now(), quiet: 0 });
+    clearInterval(others.timer); others.timer = setInterval(othersOver, 2000);
+  }, 2500);
+}
+async function othersOver() {
+  const t = others.t;
+  if (!t || current !== t || !P.paused || Date.now() - others.at > 30 * 60e3) { clearInterval(others.timer); others.t = null; return; }
+  if ((await Capacitor.Plugins.Playback.musicActive().catch(() => ({ on: true }))).on) { others.quiet = 0; return; }
+  if (++others.quiet < 2) return;
+  clearInterval(others.timer); others.t = null;
+  P.play(); toast('Carried on: the other app\'s sound is over');
+}
+// the internet gone mid-song: the song waits where it was, said so, and carries on by itself when it's back
+function waitOnline(t, at) {
+  A().pause(); setPlaying(false);
+  trouble.wait = { t, at };
+  status('◌ waiting for the internet: it carries on when it\'s back');
+}
+addEventListener('online', () => { const w = trouble.wait; trouble.wait = null; if (w && current === w.t && P.paused) replay(w.t, w.at); });
 function restartStream() {
   const el = A(), at = el.currentTime, id = loadId;
   if (engine === 'audio' && fsVid && el.src.includes('fs/media')) { const vid = fsVid; flowPage?.forget(vid); return fsPlay({ id: vid }, id).then(() => { if (id === loadId && at > 1) P.seek(at); }).catch(() => {}); }
@@ -3461,7 +3549,7 @@ const P = {
     el.play().catch(() => {});
     if (t0 > .5 && engine !== 'cast') setTimeout(() => { if (A() === el && !el.paused && el.currentTime === t0 && el.readyState >= 2) restartStream(); }, 3000);
   },
-  pause() { mixAbort(); A().pause(); },
+  pause() { pausedByHand = performance.now(); others.t = null; mixAbort(); A().pause(); },
   seek(t) {
     mixAbort();
     A().currentTime = t;
@@ -3518,6 +3606,7 @@ function useEngine(kind) {
 function initAudio() { // created lazily: browsers want a user gesture first
   if (ctx) return ctx.resume();
   ctx = new AudioContext({ latencyHint: 'playback' }); // (music's larger buffers: no cracks when the device is busy)
+  ctx.addEventListener('error', () => freshSound()); // (its output device failing, where the browser says so)
   applySink(); // (on the speakers chosen)
   analyser = ctx.createAnalyser();
   analyser.fftSize = 1024; // ~47 Hz per bin: enough to tell the kick from the bass line
@@ -3788,11 +3877,17 @@ $('eqGraph').addEventListener('keydown', e => {
 });
 drawEq(); renderLoud(); renderHp();
 $('eqPanel').addEventListener('toggle', e => { if (e.newState === 'open') renderLoud(); }); // (what's playing now: as it is when it opens)
-for (const el of [audio, audioB]) { // (only the one playing the song now: see Smooth mix)
-  el.onplay = () => { if (el !== audio) return; initAudio(); if (engine === 'audio') setPlaying(true); };
-  el.onpause = () => { if (el === audio && engine === 'audio') setPlaying(false); };
-  el.onended = () => { if (el === audio && engine === 'audio') { if (mix.ready && !mix.fade && !mix.on) return mixBegin(); setPlaying(false); songEnded(); } }; // (gapless: the next, readied, at once)
+// the songs' two players' own events (only the one playing the song now: see Smooth mix) — again for new ones (freshSound)
+function wirePlayers() {
+  for (const el of [audio, audioB]) {
+    el.crossOrigin = 'anonymous';
+    el.onplay = () => { if (el !== audio) return; initAudio(); if (engine === 'audio') setPlaying(true); };
+    el.onpause = () => { if (el === audio && engine === 'audio') { setPlaying(false); if (native) pausedBy(); } };
+    el.onended = () => { if (el === audio && engine === 'audio') { if (mix.ready && !mix.fade && !mix.on) return mixBegin(); setPlaying(false); songEnded(); } }; // (gapless: the next, readied, at once)
+    el.onerror = () => playerError(el);
+  }
 }
+wirePlayers();
 epAudio.onplay = () => { if (engine === 'ep') setPlaying(true); };
 epAudio.onpause = () => { if (engine === 'ep') { setPlaying(false); epKeep(); } };
 epAudio.onended = () => { if (engine === 'ep') { setPlaying(false); epKeep(true); songEnded(); } };
@@ -4432,24 +4527,25 @@ function audiusFor(t) {
   return audiusCache.get(t.trackId);
 }
 // Audius's stream failing (gone, or the network): the same song from YouTube instead
-for (const el of [audio, audioB]) el.onerror = () => {
+function playerError(el) {
   if (el !== audio) return mixAbort(); // (Smooth mix's next song not loading: the mix dropped)
   const t = current; if (engine !== 'audio' || !t || !audio.getAttribute('src')) return;
   if (audio.src.includes('audius.co')) { audiusBad.add(t.trackId); playTrack(t, '', fromUpNext, true); }
   else if (fsVid && audio.src.includes('fs/media')) { // (FlowStream's stream failing: a fresh address once, from where it was; then the next upload found; then the next song, or the preview)
     const at = P.t, vid = fsVid, id = loadId, next = () => {
       if (id !== loadId) return;
+      if (!navigator.onLine) return waitOnline(t, at); // (the internet gone: this song, from there, when it's back — not the preview, not the next)
       if (!fsTries++) return setTimeout(() => { if (id === loadId) { flowPage?.forget(vid); fsPlay({ id: vid }, id).then(() => { if (at > 1) P.seek(at); }).catch(next); } }, 2000); // (the same upload once more, 2 s on: YouTube refusing a moment, the network blinking)
       const v = fsTries < 4 && ytQueue.shift(); // (then two more uploads of it at most: then the next song, or the preview)
       if (v) fsPlay(v, id).catch(next);
-      else if (navigator.onLine && hasNext()) { toast(`Couldn't load ${t.trackName}: on to the next`); nextTrack(); }
-      else previewFallback('couldn\'t load it');
+      else songFailed('wouldn\'t load');
     };
     if (fsAgain !== id) { fsAgain = id; fsTries = 0; flowPage?.forget(vid); fsPlay({ id: vid }, id).then(() => { if (at > 1) P.seek(at); }).catch(next); }
     else next();
   }
-  else if (!audio.src.startsWith('blob:')) { audio.pause(); setPlaying(false); status("◇ couldn't load it"); message("Couldn't play it", navigator.onLine ? "the preview didn't load: try again" : "you're offline: songs saved on this device still play"); }
-};
+  else if (audio.src.startsWith('blob:')) songFailed('wouldn\'t play'); // (a saved song's file that won't play: the next)
+  else { audio.pause(); setPlaying(false); status("◇ couldn't load it"); message("Couldn't play it", navigator.onLine ? "the preview didn't load: try again" : "you're offline: songs saved on this device still play"); }
+}
 // A stream that stops coming mid-song (the connection, its source): 20 s with no progress counts as failed (above)
 let fsLast = { t: -1, at: 0 };
 setInterval(() => {
@@ -5959,7 +6055,8 @@ async function playTrack(t, term = '', queued = false, stay = false, mixed = nul
   if (!navigator.onLine && fullSongs) {
     const after = [...queue.slice(qi + 1), ...(repeat === 'all' ? queue.slice(0, qi) : [])], later = after.find(x => saved.has(x.trackId) && x.trackId !== t.trackId);
     if (later && stay) { toast(`Offline: ${t.trackName} isn't saved here, so on to ${later.trackName}`); return playTrack(later, '', false, true); }
-    useEngine('audio'); audio.pause(); audio.removeAttribute('src'); audio.load(); setPlaying(false); status('◇ offline');
+    useEngine('audio'); audio.pause(); audio.removeAttribute('src'); audio.load(); setPlaying(false); status('◇ offline · it plays when the internet\'s back');
+    trouble.wait = { t, at: 0 }; // (and it does: see waitOnline)
     return message('You\'re offline', later ? `${t.trackName} isn't saved on this device. ${later.trackName}, later in the list, is.` : 'this song isn\'t saved on this device: the songs you save play with no connection');
   }
   message('Loading', fullSongs ? 'finding the full song' : 'finding a preview');
@@ -9863,8 +9960,12 @@ addEventListener('pagehide', keepLast);
 function resumeLast() {
   const { t, at } = lastSong;
   lastSong = null;
-  if (at > 3) for (const el of [audio, audioB]) el.addEventListener('loadedmetadata', function go() { for (const e of [audio, audioB]) e.removeEventListener('loadedmetadata', go); if (current === t && P.t < 1) P.seek(Math.min(at, P.dur - 5)); }); // (at its place before it's heard)
-  playTrack(t, '', false, true);
+  replay(t, at);
+}
+// a song played again from where it was (at its place before it's heard): a fresh start, a fresh stream
+function replay(t, at) {
+  if (at > 3) for (const el of [audio, audioB]) el.addEventListener('loadedmetadata', function go() { for (const e of [audio, audioB]) e.removeEventListener('loadedmetadata', go); if (current === t && P.t < 1) P.seek(Math.min(at, P.dur - 5)); });
+  playTrack(t, '', fromUpNext, true);
 }
 try {
   const l = JSON.parse(store.get(LAST) || 'null');
