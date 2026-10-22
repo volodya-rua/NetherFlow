@@ -2104,25 +2104,27 @@ class Space extends AudioWorkletProcessor {
 }
 registerProcessor('nf-space', Space);`;
 let spaceUrl = '';
-// MobiVib (Sound › MobiVib, a phone): the phone vibrates with the music — a rumble that follows it, the bass most,
-// surging on each kick (and, Strong, each snare and clap), none in a quiet part — screen on or off. Not taps: the user's
-// "I want vibrations, not taps". Its ears, on the sound's own thread (they hear on with the screen off, when the page's
-// frames stop): the song's lows (under ~150 Hz), its crack (1.5–5 kHz: a snare, a clap — more than a hat's hiss) and its
-// whole loudness, in 5 ms steps. Every 10 ms, how strong the vibration is (0–1): the lows (70%) and the loudness (30%),
-// each against its loudest lately and eased (a middling level is felt), none under a quarter, then from 30% — where a
-// phone's motor is felt at all — up; and a surge on each hit found (a band's level jumping well over where it's been
-// lately), dying away over ~40 ms. Sent to the page eight at a time with the moment the first is at (the engine's
-// clock); its output, silence (connected only so it's run). Measured (scratchpad vib-bench.js): on while the music
-// plays (97–100% of the time), about half strength, a kick 2.5× what's between; nothing in silence. The hits it finds
-// (hap-bench.js): a made-up drum track, every kick and snare, 4 ms after; real songs, 73–88% of their big low hits.
+// MobiVib (Sound › MobiVib, a phone): the phone vibrates with the music, screen on or off — a full pulse on each kick,
+// fading over ~100 ms; Strong, a shorter, sharper one on each snare and clap, and a ripple as each note starts in the
+// mids (a melody's, a voice's); a hum under a strong bass note; still between them; all as full as the song's part is
+// (a chorus fuller, a verse lighter: its loudness over ~1 s against its loudest in ~30 s). (The user's reports: taps
+// first — "it should not tap"; then a rumble that never stopped — "it just vibrates, nothing else". What's felt is the
+// change: the pulses with stillness between.) Its ears, on the sound's own thread (they hear on with the screen off,
+// when the page's frames stop): the song's lows (under ~150 Hz), its crack (1.5–5 kHz: more than a hat's hiss), its
+// mids (300 Hz–3 kHz) and its whole loudness, in 5 ms steps; a hit, a band's level jumping well over where it's been
+// lately. Every 10 ms, how strong the vibration is (0–1), sent to the page eight at a time with the moment the first is
+// at (the engine's clock); its output, silence (connected only so it's run). Measured (scratchpad vib-bench.js): a drum
+// track, 0.86 on a kick and 0.01 between (the rumble, 0.82 and 0.32); the CC0 songs, the strongest fifth of it 0.5–0.74
+// over the weaker half (the rumble, 0.27–0.37); nothing in silence. The hits it finds (hap-bench.js): a made-up drum
+// track, every kick and snare, 4 ms after; real songs, 73–88% of their big low hits.
 const HAPTIC_WORKLET = `class Haptics extends AudioWorkletProcessor {
   constructor(o) {
     super();
     const pole = f => 1 - Math.exp(-2 * Math.PI * f / sampleRate);
-    this.lo = pole(150); this.hi = pole(1500); this.top = pole(5000); this.z = new Float64Array(4);
+    this.lo = pole(150); this.hi = pole(1500); this.top = pole(5000); this.m1 = pole(300); this.m2 = pole(3000); this.z = new Float64Array(6);
     this.hop = Math.round(sampleRate * .005); this.n = 0; this.k = 0;
-    this.acc = new Float64Array(2); this.env = new Float64Array(2); this.avg = new Float64Array(2).fill(1e-4); this.peak = new Float64Array(2).fill(1e-4); this.last = new Float64Array(2).fill(-1);
-    this.body = 0; this.loud = 0; this.allPeak = 1e-4; this.accAll = 0; this.swell = 0; this.out = []; this.t0 = 0;
+    this.acc = new Float64Array(3); this.env = new Float64Array(3); this.avg = new Float64Array(3).fill(1e-4); this.peak = new Float64Array(3).fill(1e-4); this.last = new Float64Array(3).fill(-1);
+    this.body = 0; this.accAll = 0; this.kick = 0; this.snare = 0; this.ripple = 0; this.sec = 0; this.secPeak = 1e-4; this.out = []; this.t0 = 0;
     this.strong = o?.processorOptions?.mode !== 'Light';
     this.port.onmessage = e => { this.strong = e.data.mode !== 'Light'; };
   }
@@ -2132,33 +2134,38 @@ const HAPTIC_WORKLET = `class Haptics extends AudioWorkletProcessor {
     const L = i[0], R = i[1] || L, z = this.z;
     for (let s = 0; s < L.length; s++) {
       const x = (L[s] + R[s]) * .5;
-      z[0] += this.lo * (x - z[0]); z[1] += this.lo * (z[0] - z[1]); z[2] += this.hi * (x - z[2]); z[3] += this.top * (x - z[3]); // (two poles under 150 Hz; 1.5–5 kHz)
+      z[0] += this.lo * (x - z[0]); z[1] += this.lo * (z[0] - z[1]); z[2] += this.hi * (x - z[2]); z[3] += this.top * (x - z[3]); z[4] += this.m1 * (x - z[4]); z[5] += this.m2 * (x - z[5]); // (two poles under 150 Hz; 1.5–5 kHz; 300 Hz–3 kHz)
       const h = z[3] - z[2];
-      this.acc[0] += z[1] * z[1]; this.acc[1] += h * h; this.accAll += x * x;
+      const md = z[5] - z[4]; this.acc[0] += z[1] * z[1]; this.acc[1] += h * h; this.acc[2] += md * md; this.accAll += x * x;
       if (++this.n >= this.hop) { this.n = 0; this.step(); }
     }
     return true;
   }
   step() {
-    for (let b = 0; b < 2; b++) {
+    const hit = [0, 0, 0];
+    for (let b = 0; b < 3; b++) {
       const e = Math.sqrt(this.acc[b] / this.hop), was = this.env[b], avg = this.avg[b];
       this.acc[b] = 0; this.env[b] = e;
       this.avg[b] += (e - avg) * .03; // (where it's been lately: ~170 ms)
       this.peak[b] = Math.max(e, this.peak[b] * .9993); // (the loudest lately, falling away over ~7 s)
-      if (e > avg * 1.8 && e - was > avg * .4 && e > this.peak[b] * (b ? .45 : .3) && currentTime - this.last[b] > .11) {
-        this.last[b] = currentTime;
-        if (!b || this.strong) this.swell = Math.max(this.swell, (b ? .5 : 1) * Math.min(1, e / this.peak[b]));
+      if (e > avg * 1.8 && e - was > avg * .4 && e > this.peak[b] * (b === 1 ? .45 : b === 2 ? .35 : .3) && currentTime - this.last[b] > (b === 2 ? .09 : .11)) {
+        this.last[b] = currentTime; hit[b] = Math.min(1, e / this.peak[b]);
       }
     }
     const all = Math.sqrt(this.accAll / this.hop); this.accAll = 0;
-    this.body = Math.max(this.env[0], this.body * .97); this.loud = Math.max(all, this.loud * .97);
-    this.allPeak = Math.max(this.loud, this.allPeak * .9995);
+    this.body = Math.max(this.env[0], this.body * 0.97);
+    // (the song's part: its loudness over ~1 s against its loudest in ~30 s — a chorus fuller, a verse lighter)
+    this.sec += (all - this.sec) * .005; this.secPeak = Math.max(this.sec, this.secPeak * .99983);
+    // the hits: a kick, a full pulse fading over ~100 ms; a snare or a clap, a shorter, sharper one; a note starting in
+    // the mids (a melody's, a voice's), a ripple — the last two Strong only
+    this.kick = Math.max(this.kick * 0.93, hit[0]);
+    this.snare = Math.max(this.snare * 0.86, this.strong ? 0.7 * hit[1] : 0);
+    this.ripple = Math.max(this.ripple * 0.8, this.strong ? 0.3 * hit[2] : 0);
     if (++this.k % 2) return;
-    // each 10 ms: the rumble — the lows (most of it) and the whole song's loudness, each against its loudest lately, eased
-    // so a middling level is felt — none in a quiet part, then from where a phone's felt at all; and the swell on top
-    const lv = .7 * Math.pow(this.body / this.peak[0], .6) + (1 - .7) * Math.pow(this.loud / this.allPeak, .6), x = Math.max(0, (lv - .25) / (1 - .25));
-    const a = Math.min(1, (x > 0 ? .3 + (1 - .3) * x : 0) * .75 + this.swell * (this.strong ? .5 : .35));
-    this.swell *= .6;
+    // each 10 ms: the hits, a hum under a strong bass note, all as full as the song's part is
+    const x = Math.max(0, (this.body / this.peak[0] - 0.45) / (1 - 0.45)), hum = 0.35 * Math.pow(x, 1.2);
+    const dyn = 0.55 + (1 - 0.55) * Math.sqrt(Math.min(1, this.sec / this.secPeak));
+    const a = Math.min(1, (this.kick + this.snare + this.ripple + hum) * dyn);
     if (!this.out.length) this.t0 = currentTime;
     this.out.push(Math.round(a * 1000) / 1000);
     if (this.out.length === 8) { this.port.postMessage({ t: this.t0, a: this.out }); this.out = []; }
@@ -2338,14 +2345,13 @@ function qualityNow() {
 // Sing mode's voice remover (Sing: the voice turned down, the lyrics big), on the sound's own thread: a (0…1) of the
 // voice taken out, frequency by frequency (2048-sample frames, ~43 ms: its lateness, which the lyrics wait for — see
 // singLag). In each, what's the same in both ears — the singer's mixed in the middle — is its share of the middle (the
-// two sides' common power against the middle's), taken out of both sides; from 90–150 Hz up to 18–21 kHz, so the bass
-// stays and the "s" sounds go. And the voice's tail — its reverb and echoes, round both sides, which no look at the
-// middle finds — turned down where the voice was lately (each frequency, over ~1 s), as much as it was there against
-// what's left (down to 15%). (The user's report: "even at 0% I can still hear the singer". Measured, scratchpad
-// sing-bench.js, a made-up song whose voice is known: 16.6 dB of the voice taken out, against 5.5 dB by the browser's
-// mid/side filters before — they kept the voice's top at 70% and its reverb whole — the song without a voice changed
-// less, 11.6 dB down against 4.6, and a wide sound with no voice in it — a pad, the instruments' own reverb — kept within
-// 2.6 dB: its stats steadied over ~0.2 s, or the two sides' chance likeness read as a centre, the tail more so.)
+// two sides' common power against the middle's, steadied over ~0.2 s, eased so a part only partly in the middle loses
+// little), taken out of both sides; from 90–150 Hz up to 18–21 kHz, so the bass stays and the "s" sounds go. (The
+// user's reports: "even at 0% I can still hear the singer", then "the music gets low too". Measured, scratchpad
+// sing-bench.js, a made-up song whose voice and instruments are known: the singer's own voice 22.8 dB down — the
+// browser's mid/side filters before, 9.1 — while the music keeps its level: drums −0.6 dB, bass −1, a guitar to one side
+// −5 (it was −19), a wide pad −3 (−6). A turning down of the voice's reverb, tried, took the music under it down with
+// it, 11–21 dB: gone. What it can't take: the reverb round the sides, as no remover without the song's own parts can.)
 const SING_WORKLET = `const N = 2048, H = N / 4, B = N / 2 + 1, TAU = 2 * Math.PI;
 // a radix-2 FFT, in place (inv: the inverse, unscaled)
 const rev = new Uint16Array(N), wc = new Float64Array(N / 2), ws = new Float64Array(N / 2);
@@ -2368,13 +2374,13 @@ class Sing extends AudioWorkletProcessor {
     this.win = new F(N).map((_, i) => Math.sqrt(.5 - .5 * Math.cos(TAU * i / N)));
     this.xl = new F(N); this.xr = new F(N); this.al = new F(N); this.ar = new F(N); this.yl = new F(H); this.yr = new F(H); this.k = 0;
     this.re = new F(N); this.im = new F(N); this.el = new F(2 * B); this.er = new F(2 * B);
-    this.sLL = new F(B); this.sRR = new F(B); this.sX = new F(B); this.sM = new F(B); this.gone = new F(B); this.band = new F(B);
+    this.sLL = new F(B); this.sRR = new F(B); this.sX = new F(B); this.sM = new F(B);  this.band = new F(B);
     for (let k = 0; k < B; k++) { const f = k * sampleRate / N; this.band[k] = f < 90 ? 0 : f < 150 ? (f - 90) / (150 - 90) : f < 18000 ? 1 : f < 21000 ? 1 - (f - 18000) / (21000 - 18000) : 0; }
     this.a = this.to = o?.processorOptions?.a || 0; // (from the start: an offline render's messages come after it)
     this.port.onmessage = e => { this.to = e.data.a; };
   }
   frame() {
-    const { xl, xr, re, im, win, el, er, sLL, sRR, sX, sM, gone, band } = this;
+    const { xl, xr, re, im, win, el, er, sLL, sRR, sX, sM, band } = this;
     this.a += (this.to - this.a) * .3;
     const a = this.a;
     for (let i = 0; i < N; i++) { re[i] = xl[i] * win[i]; im[i] = xr[i] * win[i]; }
@@ -2386,11 +2392,8 @@ class Sing extends AudioWorkletProcessor {
       const cr = (lr + rr) * .5, ci = (li + ri) * .5;
       sM[k] = 0.95 * sM[k] + (1 - 0.95) * (cr * cr + ci * ci);
       const pc = Math.max(0, Math.min(sX[k], sLL[k], sRR[k])), w = Math.min(1, pc / (sM[k] + 1e-20)); // (how much of the middle is the same in both: the centre's share)
-      const m = a * band[k] * Math.pow(w, 0.8);
-      let oLr = lr - m * cr, oLi = li - m * ci, oRr = rr - m * cr, oRi = ri - m * ci;
-      gone[k] = Math.max(gone[k] * 0.99, m * m * (cr * cr + ci * ci));
-      const rest = oLr * oLr + oLi * oLi + oRr * oRr + oRi * oRi, g = Math.max(0.15, 1 - a * band[k] * 2.5 * gone[k] / (gone[k] + rest + 1e-20));
-      el[2 * k] = oLr * g; el[2 * k + 1] = oLi * g; er[2 * k] = oRr * g; er[2 * k + 1] = oRi * g;
+      const m = a * band[k] * Math.pow(w, 1.2);
+      el[2 * k] = lr - m * cr; el[2 * k + 1] = li - m * ci; er[2 * k] = rr - m * cr; er[2 * k + 1] = ri - m * ci;
     }
     el[1] = er[1] = el[2 * B - 1] = er[2 * B - 1] = 0;
     for (let k = 0; k < B; k++) { const a1 = el[2 * k], b1 = el[2 * k + 1], c1 = er[2 * k], d1 = er[2 * k + 1]; re[k] = a1 - d1; im[k] = b1 + c1; if (k && k < B - 1) { re[N - k] = a1 + d1; im[N - k] = c1 - b1; } }
@@ -3994,7 +3997,7 @@ function sinkRow() {
 function renderLoud() {
   $('eqLoud').replaceChildren(...(canSink && sinks.length > 1 ? [sinkRow()] : []),
     settingRow('Quality', QUALITIES, quality, setQuality, 'How songs stream. Best: the best YouTube has of each song (Opus, about 130–160 kbps). Normal: about 70 kbps, half the data. Data saver: about 50 kbps.' + (native ? ' Auto: Best on Wi-Fi, Normal on mobile data.' : '') + ' Songs you save for offline are always saved in Best.'),
-    ...(native && matchMedia('(pointer: coarse)').matches ? [settingRow('MobiVib', MOBIVIB, mobivib, setMobivib, 'Feel the music: your phone vibrates with it, rumbling with the bass and swelling on every beat, screen on or off. Light: softer, the bass and the kicks. Strong: fuller, the snares and claps too. Uses some battery. If you feel nothing, turn on Media vibration in your phone\'s Vibration & haptics settings.')] : []),
+    ...(native && matchMedia('(pointer: coarse)').matches ? [settingRow('MobiVib', MOBIVIB, mobivib, setMobivib, 'Feel the music: your phone pulses with every beat, still in between, fuller in a chorus than a verse, screen on or off. Light: the kicks and the bass. Strong: the snares, claps and the tune\'s notes too. Uses some battery. If you feel nothing, turn on Media vibration in your phone\'s Vibration & haptics settings.')] : []),
     settingRow('Loudness', ['Original', 'Levelled'], loud, v => { loud = v; store.set('netherflow.loud', v === 'Original' ? '' : v); renderLoud(); applyEq(); setVolume(volume); },
     'Original: each song at its own original loudness. Levelled: loud songs turned down so all play at about one level.'),
     settingRow('360 sound', SPACES, space, setSpace, 'On headphones. Orbit: the whole song going round your head, once every 10 seconds (the "8D" sound). The others set it round you, standing still — the voice in front, what\'s panned out to its side, the room and the reverb round you and behind, its sound and its bass as they were. Around: like good speakers in a room. Wide: further out. Hall: a concert hall.'),
@@ -4173,7 +4176,7 @@ function here() {
     const v = libView, name = $('libName').textContent;
     const keep = ['playlist', 'liked', 'saved'].includes(v.kind) ? { k: v.kind, id: v.id }
       : v.kind === 'list' && /^(pl|album):/.test(v.key || '') ? { k: 'yt', key: v.key, label: v.label, title: name, art: v.art } : null;
-    return { name, open: () => openLibrary(v), keep };
+    return { name, open: () => openLibrary({ ...v, back: true }), keep };
   }
   if ($('artistPage').open) {
     const name = $('apName').textContent, album = $('artistPage').classList.contains('of-album'), a = album ? apAlbum : apData?.artist;
@@ -4186,8 +4189,8 @@ const keptKey = r => [r.k, r.id ?? r.key ?? r.a?.collectionId ?? r.a?.artistId ?
 function openKept(r) {
   if (r.k === 'artist') return openArtist(r.a);
   if (r.k === 'album') return openAlbumPage(r.a);
-  if (r.k === 'yt') { const id = r.key.replace(/^\w+:/, ''); return r.key.startsWith('pl:') ? openYtList(id, r.title, r.art, r.label) : openYtAlbum({ id, title: r.title, art: r.art, kind: r.label }); }
-  openLibrary({ kind: r.k, id: r.id });
+  if (r.k === 'yt') { const id = r.key.replace(/^\w+:/, ''); r.key.startsWith('pl:') ? openYtList(id, r.title, r.art, r.label) : openYtAlbum({ id, title: r.title, art: r.art, kind: r.label }); if (libView) libView.back = true; return; }
+  openLibrary({ kind: r.k, id: r.id, back: true });
 }
 function paintFrom() {
   const on = !!playFrom && !fromUpNext && !auto.items.has(current) && queue.some(x => x.trackId === current?.trackId);
@@ -8726,7 +8729,9 @@ function openLibrary(view = null) {
   libView = view; libDrawn = undefined; // (opened: from its top)
   renderLibrary();
 }
-function libBack() { if (libView?.from) openLibrary(libView.from); else if (libView) openLibrary(null); else $('library').close(); } // (a page opened from another: back to that one)
+// (a page opened from another: back to that one; one opened from the player's "from" or the home screen's recently
+// played — back: back there at once, one press, not by way of the library's own front page)
+function libBack() { if (libView?.back) $('library').close(); else if (libView?.from) openLibrary(libView.from); else if (libView) openLibrary(null); else $('library').close(); }
 const mb = n => n >= 1e9 ? (n / 1e9).toFixed(1) + ' GB' : Math.max(1, Math.round(n / 1e6)) + ' MB';
 const coverOf = t => saved.get(t.trackId)?.coverUrl || artUrl(t, 300);
 // A tile (Liked songs, Downloads, New playlist, a playlist with no covers yet): a line icon, the name running
