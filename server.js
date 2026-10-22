@@ -27,8 +27,11 @@ const FILES = {
   '/legal.html': ['legal.html', 'text/html; charset=utf-8'],
   '/island.html': ['island.html', 'text/html; charset=utf-8'], // (the desktop app's island: see main.js)
   '/logo.png': ['logo.png', 'image/png'],
+  '/karaoke.js': ['karaoke.js', 'text/javascript'], // (Sing's AI voice remover: its worker — the engine and model in ai/)
 };
 for (const f of fs.readdirSync(path.join(__dirname, 'licenses'))) FILES['/licenses/' + f] = ['licenses/' + f, 'text/plain; charset=utf-8'];
+// (Sing's AI voice remover: ONNX Runtime Web and Spleeter's model, ai/ — built in by npm run ai, not in the repository)
+if (fs.existsSync(path.join(__dirname, 'ai'))) for (const f of fs.readdirSync(path.join(__dirname, 'ai'))) FILES['/ai/' + f] = ['ai/' + f, { js: 'text/javascript', mjs: 'text/javascript', wasm: 'application/wasm' }[f.split('.').pop()] || 'application/octet-stream'];
 for (const f of fs.readdirSync(path.join(__dirname, 'fonts'))) FILES['/fonts/' + f] = ['fonts/' + f, f.endsWith('.css') ? 'text/css' : 'font/woff2'];
 for (const f of fs.readdirSync(path.join(__dirname, 'emoji'))) FILES['/emoji/' + f] = ['emoji/' + f, f.endsWith('.webp') ? 'image/webp' : 'text/plain; charset=utf-8']; // (Extreme lyrics' emoji)
 // Redline's 3D races (race/: the renderer, three.js, the circuits, the cars; not in NetherFlow Lite)
@@ -122,6 +125,10 @@ async function keepHead(id, buf, s, total, era) {
     for (const [old] of aged.sort((a, b) => b[1] - a[1]).slice(KEPT)) dropKept(old); // (the oldest beyond 100 go)
   } catch {}
 }
+// Sing's AI karaoke pack: ONNX Runtime Web's engine and Spleeter's model, downloaded only when the user asks — from a
+// release of NetherFlow's own (a pre-release, so the update checks never take it for the app's latest)
+const AI_PACK_RELEASE = 'https://github.com/volodya-rua/NetherFlow/releases/download/ai-karaoke-1/';
+const AI_PACK_FILES = ['ort.wasm.min.js', 'ort-wasm-simd-threaded.mjs', 'ort-wasm-simd-threaded.wasm', 'spleeter-vocals.int8.onnx', 'spleeter-accompaniment.int8.onnx'];
 // a stream, forwarded as asked (a range of it: seeking); an address that stopped working asked for again, once
 async function flowMedia(req, res, url) {
   const id = url.searchParams.get('id') || '', video = url.searchParams.get('kind') === 'video', best = !video && qOf(url) === 'best';
@@ -180,6 +187,17 @@ async function handle(req, res) {
   // (what it answers is data, never a page that runs: an episode's host's "audio" that's really a web page, say)
   if (url.pathname.startsWith('/api/')) { res.setHeader('X-Content-Type-Options', 'nosniff'); res.setHeader('Content-Security-Policy', "sandbox; default-src 'none'"); }
   if (url.pathname === '/api/fs/media') return flowMedia(req, res, url);
+  if (url.pathname.startsWith('/api/aipack/')) { // (Sing's AI karaoke pack, asked for: its files from NetherFlow's own release — those five names only; the page checks each one's SHA-256)
+    const name = url.pathname.slice(12);
+    if (!AI_PACK_FILES.includes(name)) return send(res, 404, 'not found', 'text/plain');
+    try {
+      const r = await fetch(AI_PACK_RELEASE + name, { headers: { 'User-Agent': 'NetherFlow' }, signal: AbortSignal.timeout(10 * 60e3) });
+      if (!r.ok) return send(res, 502, 'not there', 'text/plain');
+      res.writeHead(200, { 'Content-Type': 'application/octet-stream', 'Content-Length': r.headers.get('content-length') || undefined, 'Cache-Control': 'no-store' });
+      for await (const c of r.body) { if (res.destroyed) break; if (!res.write(c)) await new Promise(ok => res.once('drain', ok)); }
+      return res.end();
+    } catch { return res.headersSent ? res.destroy() : send(res, 502, 'no answer', 'text/plain'); }
+  }
   if (url.pathname === '/api/fs/audio') { // a song's stream, described (the page then plays /api/fs/media)
     const id = url.searchParams.get('id') || '', q = qOf(url), kept = q === 'best' && keptMeta(id); // (a kept start: the best's)
     if (kept) { flowAudio(id).catch(() => {}); return send(res, 200, JSON.stringify({ itag: kept.itag, mime: kept.mime, bitrate: kept.bitrate || 0, loudnessDb: kept.loudnessDb, duration: kept.duration, via: 'FlowStream', kept: true })); } // (its start kept here: at once, its address asked for meanwhile)

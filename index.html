@@ -83,6 +83,9 @@ body.home .singbar { display: none; } /* (its voice slider is for the lyrics: no
 .singbar svg { width: 18px; height: 18px; fill: none; stroke: var(--a); stroke-width: 1.8; }
 .singbar .sl { width: min(220px, 40vw); --p: 20%; }
 .singbar b { min-width: 3.2em; text-align: right; font-weight: 600; }
+.singbar .sing-ai { color: var(--a); white-space: nowrap; }
+.singbar .sing-ai:empty { display: none; }
+.singbar .sing-get { color: var(--a); white-space: nowrap; }
 .singb[aria-pressed="true"] svg { stroke: var(--a); filter: drop-shadow(0 0 6px var(--a)); }
 #kin { display: none; position: fixed; inset: 0; z-index: 1; width: 100%; height: 100%; pointer-events: none; }
 .la-kinetic.has-song:not(.home):not(.view-cover):not(.still) #kin { display: block; }
@@ -1517,7 +1520,7 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
 <canvas id="kin" aria-hidden="true"></canvas><!-- Extreme lyrics: the music video (over the backdrop, under everything else) -->
 <canvas id="viz" aria-hidden="true"></canvas><!-- the beat ring: the whole window, so it's never cut off at the edge of the lyrics area -->
 
-<div id="singBar" class="singbar lbl" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg><span>Voice</span><input id="singVoice" class="sl" type="range" min="0" max="100" step="5" aria-label="How much of the voice stays"><b id="singPct"></b><button id="singOff" class="link">Done</button></div>
+<div id="singBar" class="singbar lbl" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg><span>Voice</span><input id="singVoice" class="sl" type="range" min="0" max="100" step="5" aria-label="How much of the voice stays"><b id="singPct"></b><small id="singAi" class="sing-ai"></small><button id="singGet" class="link sing-get" hidden></button><button id="singOff" class="link">Done</button></div>
 <div id="moods" class="moods" popover aria-label="Moods and background"></div>
 <div id="textPanel" class="moods textp" popover aria-label="Settings"></div>
 <div id="queuePanel" class="moods textp qpanel" popover aria-label="Queue"></div>
@@ -1870,6 +1873,7 @@ let lines = [], synced = false, drift = true, activeIdx = -2, curWords = [], wor
 let loadId = 0, userScroll = 0, offset = 0, lastLyr = null, current = null;
 // A song saved for offline: where its file starts in the song (lyric time = file time + this), and its length.
 let songShift = 0, savedDur = 0;
+const elGain = new WeakMap(); // (each song player's own gain into the sound: see initAudio)
 let ctx, analyser, freq, boostNode = null, limiterNode = null, boostLevel = 1, audioSrc = null, routed = null, singNode = null, spaceNode = null, toolNodes = null; // (the booster: see "volume"; singNode: Sing; spaceNode: 360 sound; toolNodes: the sound tools)
 // The sound's path here (previews, saved songs): this page's <audio> → the equalizer's bands, while it's on → analyser →
 // boost and limiter, while boosting → speakers. Only what's in use is in it (a node more is work
@@ -1888,7 +1892,7 @@ function routeAudio() {
   const useEq = eqState.on, boosting = boostLevel > 1, singing = singAmount(), spatial = space !== 'Off';
   const using = Object.keys(TOOLS).filter(k => tools[k] !== 'Off' && !(k === 'cross' && spatial)); // (crossfeed: not with 360 sound, which places the song itself)
   const key = +!!hpNodes.length + '' + +useEq + +boosting + +!!singing + +spatial + using.join();
-  singNode.set(singing);
+  singNode.set(ai.on ? 0 : singing); // (the AI's version playing: the filters stand aside — see aiSync)
   if (key === routed) return;
   routed = key;
   for (const n of [audioSrc, ...hpNodes, ...eqNodes, singNode.out, spaceNode.out, ...Object.values(toolNodes).map(t => t.out), analyser, boostNode, limiterNode]) n.disconnect();
@@ -3147,6 +3151,7 @@ function renderTextPanel() {
     settingRow('Autoplay', ['On', 'Off'], autoOn ? 'On' : 'Off', setAutoplay, 'When the list runs out, songs like the one playing carry on, as on YouTube Music: from its radio for the song, ranked to what you\'re listening to — the same language and era, songs that fit the last few, more of the artists you play through or like and less of those you skip, never one you just heard.'),
     settingRow('Instant start', ['On', 'Off'], instantOn ? 'On' : 'Off', setInstant, 'The first few seconds of the last 100 songs you played are kept on this device (about 25 MB, never synced), so they start the moment you press play. Off: they\'re deleted, and nothing more is kept.'),
     ...(instantOn ? [settingRow('Kept song starts', ['Clear'], '', () => { forgetKept(); toast('Cleared: songs start as usual till you play them again'); }, 'Deletes them now (they\'re kept again as you play).')] : []),
+    Object.assign(aiRow(), { id: 'aiRow' }),
     settingRow('Smooth mix', ['Off', 'On'], smoothMix ? 'On' : 'Off', setSmoothMix, 'Songs blend into each other like a DJ mix: the next one starts on a beat and fades in over the last 8 seconds, and a quiet or silent ending is skipped.'),
     ...(native || window.netherflowApp?.syncOpen ? [settingRow(native ? 'Sync with computer' : 'Sync with phone', ['Start'], '', () => { $('textPanel').hidePopover(); $('syncPanel').showPopover(); },
       'Your liked songs, playlists, history and stats, swapped between your phone and computer over your Wi-Fi: no account.')] : []),
@@ -3884,7 +3889,7 @@ function initAudio() { // created lazily: browsers want a user gesture first
     return b;
   });
   audioSrc = ctx.createGain(); // (both songs' players into it: see Smooth mix)
-  for (const el of [audio, audioB]) ctx.createMediaElementSource(el).connect(audioSrc);
+  for (const el of [audio, audioB]) { const g = ctx.createGain(); ctx.createMediaElementSource(el).connect(g); g.connect(audioSrc); elGain.set(el, g); } // (each its own gain: Sing's AI, see aiSync)
   // then the volume booster: a gain, and a limiter so a boosted song never distorts
   boostNode = ctx.createGain(); limiterNode = ctx.createDynamicsCompressor(); singNode = makeSing(ctx); spaceNode = makeSpace(ctx); spaceNode.set(space);
   toolNodes = { cross: makeCross(ctx), clarity: makeClarity(ctx), lowvol: makeLowVol(ctx), night: makeNight(ctx) };
@@ -4031,8 +4036,186 @@ function setSing(on) {
   body.classList.toggle('sing', on); $('singBtn').setAttribute('aria-pressed', on); $('singBar').hidden = !on;
   root.style.setProperty('--ls', on ? Math.max(1.3, LSIZE[lsize]) : LSIZE[lsize]); fitDeck();
   if (on && view !== 'Lyrics') setView('Lyrics');
-  applyEq();
+  applyEq(); aiSync(true); aiShow();
   toast(on ? 'Sing: the voice turned down' : 'Sing off');
+}
+// ---------- Sing's AI voice remover (karaoke.js, a worker): the song taken apart on this device — its music, its voice —
+// by Spleeter, a part (11.9 s) at a time from where it's playing; each part ready played as its music with as much of its
+// voice as the slider says, in time with the song's own player, which goes on silent (the lyrics, the time, seeking: as
+// ever). A part not ready yet, or no AI here (its files not built in, a worker that won't start): the filters, as before.
+// (The user's report: the filters left the singer audible and the music wrong. Separating needs the whole song: fetched
+// once more from where it plays, or the saved file.) ----------
+const ai = { worker: null, init: null, broken: false, song: null, parts: new Map(), total: 0, got: 0, job: null, srcs: [], gain: null, on: false, t0: 0, at: 0, end: 0, voice: -1 };
+// The AI karaoke pack (~67 MB: ONNX Runtime Web 1.30.0; Spleeter's 2-stem model as sherpa-onnx's int8 ONNX, from
+// huggingface.co/csukuangfj/sherpa-onnx-spleeter-2stems-int8 at commit f315b4e699f7eab644977c7e69988733d877f6ee) isn't
+// in the app: downloaded when the user asks (Sing's bar: Get AI karaoke; Settings › AI karaoke) from a release of
+// NetherFlow's own — a page can't read GitHub's release downloads, so the computer's app server or the phone's own
+// download fetches them — each file checked against its SHA-256 here before it's kept or used (one that isn't ours,
+// never run; the record, too, of exactly what's handed out), kept on this device (the browser's cache storage), and
+// removed there (Settings › AI karaoke › Remove). (A computer's own copy beside the app — as when it's being made —
+// tried first.) Legal: approved (b9ebbf1), MIT both, the credits in licenses/ and legal.html.
+const AI_PACK = 'netherflow-ai-1', AI_RELEASE = 'https://github.com/volodya-rua/NetherFlow/releases/download/ai-karaoke-1/';
+const AI_FILES = {
+  'ort.wasm.min.js': [50196, 'faece07e84faa9001f5104bbe4e5c70861d06cb2376a0dea1fa0ad33a67adc81', 'text/javascript'],
+  'ort-wasm-simd-threaded.mjs': [24381, 'e13f7f94fc51b4ca72b12faeb1ee95f4ace6dfbc8939bc718aabdc0a27c4299b', 'text/javascript'],
+  'ort-wasm-simd-threaded.wasm': [14239897, '3398c10d07d229bd91b364548e130e0e51a8e5704b88c7c083ebbeb78842dee2', 'application/wasm'],
+  'spleeter-vocals.int8.onnx': [26238864, '6e9721864c0c1a6d86eaae92de71637b2daeb3df769c9c536053b46be8dd10aa', 'application/octet-stream'],
+  'spleeter-accompaniment.int8.onnx': [26238869, '53a96a0d1520b45b8f3cc53262e3725defb686fc3a17490932f050721f4583f1', 'application/octet-stream'],
+};
+const AI_MB = Math.round(Object.values(AI_FILES).reduce((a, f) => a + f[0], 0) / 1e6);
+const aiPack = { ready: false, getting: 0 };
+async function aiPackCheck() {
+  try { const c = await caches.open(AI_PACK); aiPack.ready = (await Promise.all(Object.keys(AI_FILES).map(n => c.match(n)))).every(Boolean); } catch { aiPack.ready = false; }
+  aiShow(); return aiPack.ready;
+}
+async function aiPackGet() {
+  if (aiPack.getting || aiPack.ready) return;
+  const total = AI_MB * 1e6; let had = 0;
+  aiPack.getting = .001; aiShow();
+  try {
+    const c = await caches.open(AI_PACK);
+    for (const [name, [size, sha, type]] of Object.entries(AI_FILES)) {
+      if (await c.match(name)) { had += size; continue; }
+      let buf = null;
+      const seen = n => { aiPack.getting = Math.max(.001, (had + n) / total); aiShow(); renderAiRow(); };
+      for (const from of native ? ['phone'] : ['/ai/', '/api/aipack/']) {
+        try {
+          let b;
+          if (from === 'phone') { // (the phone's own download, then read here)
+            const key = 'ai' + Math.random().toString(36).slice(2); dlFrac.set(key, f => seen(f * size));
+            try { const f = await Files.file({ url: AI_RELEASE + name, key }); b = await (await fetch(Capacitor.convertFileSrc(f.path))).arrayBuffer(); Files.remove({ path: f.path }).catch(() => {}); }
+            finally { dlFrac.delete(key); }
+          } else {
+            const r = await fetch(from + name); if (!r.ok) continue;
+            const rd = r.body.getReader(), got = []; let n = 0;
+            for (;;) { const { done, value } = await rd.read(); if (done) break; got.push(value); n += value.length; seen(n); }
+            b = await new Blob(got).arrayBuffer();
+          }
+          if (b.byteLength === size && await sha256hex(b) === sha) { buf = b; break; }
+        } catch {}
+      }
+      if (!buf) throw new Error(name);
+      await c.put(name, new Response(buf, { headers: { 'Content-Type': type } }));
+      had += size;
+    }
+    aiPack.ready = true; ai.broken = false;
+    toast('AI karaoke is ready: the singer goes, the music stays');
+  } catch { toast('Couldn\'t get AI karaoke: check the internet and try again', 6000); }
+  aiPack.getting = 0; aiShow(); renderAiRow(); aiSync(true);
+}
+async function aiPackRemove() {
+  aiStop(); ai.worker?.terminate(); Object.assign(ai, { worker: null, init: null, song: null, parts: new Map() });
+  await caches.delete(AI_PACK).catch(() => {});
+  aiPack.ready = false; aiShow(); renderAiRow(); toast('AI karaoke removed: Sing uses the standard voice remover');
+}
+// its row in Settings: Get, how far it's got, or Remove
+const aiRow = () => settingRow('AI karaoke', [aiPack.ready ? 'Remove' : aiPack.getting ? `Getting… ${Math.round(100 * aiPack.getting)}%` : `Get · ${AI_MB} MB`], '', () => aiPack.ready ? aiPackRemove() : aiPackGet(),
+  'For Sing: the singer taken out properly, by an AI on this device — the song never leaves it. A one-time download, kept on this device till you remove it here: ONNX Runtime (Microsoft) and Spleeter (Deezer). Without it, Sing uses the standard voice remover.');
+function renderAiRow() { const r = document.getElementById('aiRow'); if (r) r.replaceChildren(...aiRow().childNodes); }
+aiPackCheck();
+const AI_SR = 44100, AI_SEG = 512 * 1024, AI_N = 4096;
+const aiPartAt = t => Math.floor((t * AI_SR + AI_N) / AI_SEG), aiPartStart = p => (p * AI_SEG - AI_N) / AI_SR;
+const aiWanted = () => singOn && aiPack.ready && !ai.broken && engine === 'audio' && !!current && current.kind !== 'episode' && !!audio.getAttribute('src') && !/mzstatic|apple\.com/.test(audio.src);
+function aiWorker() {
+  if (ai.worker) return ai.worker;
+  try { ai.worker = new Worker('karaoke.js'); } catch { ai.broken = true; return null; }
+  ai.worker.onerror = () => { aiBroke(); };
+  // (its engine and model, from the pack kept here: the engine's files as addresses, the model's nets as they are)
+  ai.init = (async () => {
+    const c = await caches.open(AI_PACK), bytes = async n => (await c.match(n)).arrayBuffer(), url = async n => URL.createObjectURL(new Blob([await bytes(n)], { type: AI_FILES[n][2] }));
+    const init = { ort: await url('ort.wasm.min.js'), mjs: await url('ort-wasm-simd-threaded.mjs'), wasm: await url('ort-wasm-simd-threaded.wasm'), vocals: await bytes('spleeter-vocals.int8.onnx'), accompaniment: await bytes('spleeter-accompaniment.int8.onnx') };
+    ai.worker?.postMessage({ init }, [init.vocals, init.accompaniment]);
+  })().catch(() => aiBroke());
+  ai.worker.onmessage = ({ data: d }) => {
+    if (d.error && !d.song) return aiBroke(); // (its engine wouldn't start)
+    if (d.song !== ai.song) return;
+    if (d.error) return aiBroke();
+    if (d.done) return aiShow();
+    const q = x => { const o = new Int16Array(x.length); for (let i = 0; i < x.length; i++) o[i] = Math.max(-32767, Math.min(32767, x[i] * 32767)); return o; }; // (kept as 16-bit: half the room)
+    ai.parts.set(d.part, { L: q(d.acc[0]), R: q(d.acc[1]), V: q(d.voice), buf: null });
+    aiShow(); aiSync();
+  };
+  return ai.worker;
+}
+function aiBroke() {
+  if (ai.broken) return;
+  ai.broken = true; aiStop(); ai.worker?.terminate(); ai.worker = null;
+  toast('AI karaoke isn\'t available here: Sing goes on with the standard voice remover', 6000);
+}
+// the song, to the worker: the saved file, or fetched once more from where it plays; at 44.1 kHz, as the model hears
+async function aiStart() {
+  const t = current, id = t.trackId, src = audio.src;
+  ai.job?.cancel?.(); Object.assign(ai, { song: id, parts: new Map(), total: 0, got: 0, job: {} }); aiStop(); aiShow();
+  const w = aiWorker(); if (!w) return;
+  try {
+    const kept = saved.has(id) ? await idb.get(id).catch(() => null) : null;
+    const bytes = await (kept?.audio ? kept.audio.arrayBuffer() : fetchWhole(ai.job, src, f => { ai.got = f; aiShow(); }, 'it didn\'t come', 10 << 20).then(b => b.arrayBuffer())); // (in pieces, as a download is: YouTube sends one in one go slowly)
+    if (ai.song !== id) return;
+    const b = await new OfflineAudioContext(2, 1, AI_SR).decodeAudioData(bytes);
+    if (ai.song !== id) return;
+    const L = b.getChannelData(0).slice(), R = (b.numberOfChannels > 1 ? b.getChannelData(1) : b.getChannelData(0)).slice();
+    ai.total = Math.ceil((L.length + AI_N) / AI_SEG);
+    await ai.init; if (ai.song !== id || ai.worker !== w) return; // (its engine handed over first)
+    w.postMessage({ song: id, L, R, from: Math.max(0, aiPartAt(P.t)) }, [L.buffer, R.buffer]);
+    aiShow();
+  } catch (e) { if (ai.song === id) { console.warn('AI karaoke:', e); ai.song = null; aiShow(); } }
+}
+// a part as sound, its voice as the slider has it
+function aiBuffer(p) {
+  const part = ai.parts.get(p), v = singVoice / 100;
+  if (part.buf && part.v === v) return part.buf;
+  const b = new AudioBuffer({ numberOfChannels: 2, length: AI_SEG, sampleRate: AI_SR }), l = b.getChannelData(0), r = b.getChannelData(1), k = 1 / 32767;
+  for (let i = 0; i < AI_SEG; i++) { const vo = part.V[i] * v; l[i] = (part.L[i] + vo) * k; r[i] = (part.R[i] + vo) * k; }
+  for (const [q, o] of ai.parts) if (o.buf && Math.abs(q - p) > 2) o.buf = null; // (only those near what plays as sound: the rest as 16-bit)
+  part.buf = b; part.v = v;
+  return b;
+}
+// (silent: the song's own player left silent — paused, or begun again at once — so not a moment of the singer between)
+function aiStop(silent = false) {
+  for (const s of ai.srcs) { try { s.stop(); } catch {} s.disconnect(); }
+  ai.srcs = [];
+  const was = ai.on; ai.on = false;
+  if (!silent && ctx) aiHear();
+  if (was && ctx) routeAudio();
+}
+const aiHear = () => { const g = elGain.get(audio); if (g && g.gain.value < 1) g.gain.setTargetAtTime(1, ctx.currentTime, .015); }; // (the song's own player again)
+// where the AI's version is in the song now (playing), by the sound's own clock
+const aiPos = () => ai.t0 + (ctx.currentTime - ai.at);
+// Keep the AI's version with the song: playing from where the song is, the song's own player silent; parts ahead added as
+// they're ready; back to the song (and the filters) where none is. Called on play, pause, a seek, a part ready, the
+// voice's slider, and every half second.
+function aiSync(again = false) {
+  if (!aiWanted() || !ctx) { aiStop(); if (!singOn && ai.song) { ai.job?.cancel?.(); ai.worker?.postMessage({ stop: true }); ai.song = null; ai.parts.clear(); aiShow(); } return; }
+  if (current.trackId !== ai.song) { if (!audio.paused) aiStart(); return; }
+  if (audio.paused) return aiStop(true);
+  const v = singVoice / 100;
+  if (ai.on && (again || v !== ai.voice || Math.abs(aiPos() - P.t) > .15 || ctx.currentTime > ai.end - .05)) aiStop(true); // (a seek, the slider, out of step, or run out: begun again)
+  const now = ctx.currentTime;
+  if (!ai.on) {
+    const t = P.t + .06, p = aiPartAt(t);
+    if (!ai.parts.has(p)) { aiHear(); ai.worker?.postMessage({ song: ai.song, from: Math.max(0, p) }); return; } // (not ready: the filters till it is — and that part next)
+    ai.gain ||= (() => { const g = ctx.createGain(); g.connect(audioSrc); return g; })();
+    if (ai.gain.context !== ctx) { ai.gain = ctx.createGain(); ai.gain.connect(audioSrc); } // (a new sound engine since: see freshSound)
+    Object.assign(ai, { on: true, t0: t, at: now + .06, end: now + .06, voice: v });
+    const s = ctx.createBufferSource(); s.buffer = aiBuffer(p); s.connect(ai.gain); s.start(ai.at, t - aiPartStart(p));
+    ai.srcs.push(s); ai.end = ai.at + (aiPartStart(p + 1) - t); s.onended = () => { ai.srcs = ai.srcs.filter(x => x !== s); };
+    elGain.get(audio)?.gain.setTargetAtTime(0, ai.at, .01); routeAudio();
+  }
+  ai.gain.gain.value = audio.volume;
+  // the next part, if it's ready, right after (a part's sound ends exactly where the next one's begins)
+  const next = aiPartAt(ai.t0 + (ai.end - ai.at) + .001);
+  if (ai.end - now < 6 && ai.parts.has(next)) {
+    const s = ctx.createBufferSource(); s.buffer = aiBuffer(next); s.connect(ai.gain); s.start(ai.end);
+    ai.srcs.push(s); ai.end += AI_SEG / AI_SR; s.onended = () => { ai.srcs = ai.srcs.filter(x => x !== s); };
+  } else if (ai.end - now < 6 && !ai.parts.has(next) && next < ai.total) ai.worker?.postMessage({ song: ai.song, from: next });
+}
+setInterval(() => { if (singOn) aiSync(); }, 500);
+// how it's going, by the voice's slider: the parts ready of the song's
+function aiShow() {
+  const n = ai.parts.size, all = ai.total;
+  $('singGet').hidden = !singOn || aiPack.ready;
+  $('singGet').textContent = aiPack.getting ? `Getting AI karaoke… ${Math.round(100 * aiPack.getting)}%` : `Get AI karaoke · ${AI_MB} MB`;
+  $('singAi').textContent = !singOn || ai.broken || !ai.song ? '' : !all ? `AI: getting the song${ai.got ? ` ${Math.round(100 * ai.got)}%` : '…'}` : n < all ? `AI: ${Math.round(100 * n / all)}%` : 'AI';
 }
 // The sound's output (computers): the speakers or headphones it plays on, kept by their id; one that's gone (unplugged)
 // is the computer's default till it's back. Its devices by their own names, the driver's part in brackets left off
@@ -4149,8 +4332,9 @@ $('eqPanel').addEventListener('toggle', e => { if (e.newState === 'open') render
 function wirePlayers() {
   for (const el of [audio, audioB]) {
     el.crossOrigin = 'anonymous';
-    el.onplay = () => { if (el !== audio) return; initAudio(); if (engine === 'audio') setPlaying(true); };
-    el.onpause = () => { if (el === audio && engine === 'audio') { setPlaying(false); if (native) pausedBy(); } };
+    el.onplay = () => { if (el !== audio) return; initAudio(); if (engine === 'audio') setPlaying(true); aiSync(); };
+    el.onseeked = () => { if (el === audio) aiSync(true); };
+    el.onpause = () => { if (el === audio && engine === 'audio') { setPlaying(false); if (native) pausedBy(); } if (el === audio) aiSync(); };
     el.onended = () => { if (el === audio && engine === 'audio') { if (mix.ready && !mix.fade && !mix.on) return mixBegin(); setPlaying(false); songEnded(); } }; // (gapless: the next, readied, at once)
     el.onerror = () => playerError(el);
   }
@@ -4642,7 +4826,7 @@ function mixTick() {
   if (mix.on) { mixStep(); return 50; }
   if (engine !== 'audio' || !fsVid || !current || (native && place === 0) || P.paused) return 1000; // (a phone in the background: as usual)
   const [next, up] = nextUp(), seamless = albumNext(current, next);
-  if (!(smoothMix || seamless)) return 1000;
+  if (!(smoothMix || seamless) || singOn) return 1000; // (singing: one song at a time)
   if (mix.for && mix.for !== current.trackId) mixReset(); // (another song since)
   const left = P.dur - P.t, soon = left < 27 ? 50 : 1000;
   if (!mix.for) {
@@ -6775,8 +6959,9 @@ $('togetherPanel').addEventListener('toggle', e => { if (e.newState === 'open') 
 $('syncPanel').addEventListener('toggle', e => { if (e.newState === 'open') syncRender(); });
 $('singBtn').onclick = () => setSing(!singOn);
 $('singOff').onclick = () => setSing(false);
+$('singGet').onclick = () => aiPackGet();
 const singShow = () => { $('singVoice').value = singVoice; $('singVoice').style.setProperty('--p', singVoice + '%'); $('singPct').textContent = singVoice ? singVoice + '%' : 'off'; };
-$('singVoice').oninput = e => { singVoice = +e.target.value; store.set('netherflow.voice', String(singVoice)); singShow(); applyEq(); };
+$('singVoice').oninput = e => { singVoice = +e.target.value; store.set('netherflow.voice', String(singVoice)); singShow(); applyEq(); aiSync(); };
 singShow();
 // ---------- where a song comes from: its YouTube video, opened in the browser (or the YouTube app on a phone) ----------
 async function openSource(t) {

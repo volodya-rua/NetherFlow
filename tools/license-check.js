@@ -42,7 +42,7 @@ for (const f of execFileSync('git', ['ls-files', '*.js', '*.html', '*.java', '*.
 for (const c of JSON.parse(read('race/cars.json'))) if (!legal.includes(c.by)) problems.push(`race/cars.json: ${c.by} (${c.name}) isn't credited on legal.html`);
 
 // 7. Every npm package the apps ship has a row on the legal page (build-only tools don't ship)
-const SHIPPED_AS = { electron: 'Electron', 'electron-updater': 'electron-updater', three: 'three.js', '@capacitor/core': 'Capacitor', '@capacitor/android': 'Capacitor', '@capacitor/app': 'Capacitor', jsqr: 'jsQR' };
+const SHIPPED_AS = { electron: 'Electron', 'electron-updater': 'electron-updater', three: 'three.js', '@capacitor/core': 'Capacitor', '@capacitor/android': 'Capacitor', '@capacitor/app': 'Capacitor', jsqr: 'jsQR', 'onnxruntime-web': 'ONNX Runtime Web' };
 const BUILD_ONLY = ['@capacitor/cli', 'electron-builder'];
 const pkg = JSON.parse(read('package.json'));
 for (const name of Object.keys({ ...pkg.dependencies, ...pkg.devDependencies }).filter(n => !BUILD_ONLY.includes(n))) {
