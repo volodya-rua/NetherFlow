@@ -449,6 +449,10 @@ body.home .singbar { display: none; } /* (its voice slider is for the lyrics: no
 .artist-link { font: inherit; letter-spacing: inherit; text-transform: inherit; white-space: nowrap; transition: color .2s, opacity .2s; }
 .artist-link:hover { color: var(--a); opacity: 1 !important; }
 .status { color: var(--a); overflow: hidden; text-overflow: ellipsis; }
+.from-link { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; opacity: .55; }
+.from-link .from-w { opacity: .6; }
+.ritem.here > .row { animation: here 2.6s ease-out; } /* (the song playing, found in its list by "from") */
+@keyframes here { 0%, 30% { background: color-mix(in srgb, var(--a) 28%, transparent); } }
 .time { display: grid; justify-items: end; gap: 6px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 #dur { opacity: .45; }
 .nudge { display: flex; align-items: center; gap: 8px; opacity: .75; }
@@ -874,14 +878,30 @@ body.home .singbar { display: none; } /* (its voice slider is for the lyrics: no
    playing or not, and never on the song's own page (they're part of the home screen, shown and hidden with it) */
 .folders { display: none; gap: 12px; overflow-x: auto; padding: 4px 2px 10px; scrollbar-width: none; flex: none; animation: fade .6s both; }
 .folders-on .folders { display: flex; }
-.folders .album { flex: none; width: 112px; padding: 6px; }
+:is(.folders, .recent-row) .album { flex: none; width: 112px; padding: 6px; }
 .hist-h .link.armed { color: #ff5d6c; animation: pulse-armed 1s ease-in-out infinite alternate; }
 @keyframes pulse-armed { to { opacity: .55; } }
-.folders .album b { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+:is(.folders, .recent-row) .album b { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+:is(.folders, .recent-row) .album small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* recently played (the home screen, at its foot): the lists songs were played from, then the songs */
+.recent { flex: none; min-width: 0; animation: fade .6s both; }
+.recent:empty { display: none; }
+.recent .hist-h { padding: 6px 2px 2px; }
+.recent-row .round .pc-art { border-radius: 50%; }
+.recent-row { display: flex; gap: 10px; overflow-x: auto; padding: 2px 2px 6px; scrollbar-width: none; }
+.home-stage:has(.recent:not(:empty)) { justify-content: flex-start; }
+.home-stage:has(.recent:not(:empty)) .deck { margin-block: auto; }
+@media (max-height: 640px) { .recent { display: none; } } /* (a phone sideways, a short window: the welcome alone) */
+@media (min-width: 1000px) { /* (wide: beside the welcome, not under it — under it, the headline shrank to nothing) */
+  :is(body:not(.has-song), body.home) .home-stage:has(.recent:not(:empty)) { display: grid; grid-template: auto minmax(0, 1fr) / minmax(0, 1fr) min(42%, 600px); align-items: center; column-gap: 56px; }
+  .home-stage .folders { grid-column: 1 / -1; }
+  .home-stage:has(.recent:not(:empty)) :is(.deck, .recent) { grid-row: 2; margin-block: 0; }
+  .home-stage:has(.recent:not(:empty)) .msg { font-size: clamp(44px, min(7.5vw, 14vh), 170px); }
+}
 .folders-on .home-stage { justify-content: flex-start; }
 .folders-on .home-stage .deck { margin-block: auto; } /* (the welcome stays in the middle of what's left) */
 body.folders-on .home-stage .msg, body.folders-on.home .home-stage .msg { font-size: clamp(44px, min(11vw, 16cqh), 190px); }
-@media (max-width: 720px) { .folders .album { width: 96px; } }
+@media (max-width: 720px) { :is(.folders, .recent-row) .album { width: 96px; } }
 body:not(.has-song) .home-stage, body.home .home-stage { display: flex; }
 body.home #stage, body.home .cover-stage, body.home #viz, body.home .map { display: none !important; }
 body.home .mid { grid-template: minmax(0, 1fr) / minmax(0, 1fr); } /* (the song map's row and column go too) */
@@ -1021,6 +1041,8 @@ body.home .home-now { display: flex; }
   border-radius: 999px; background: var(--ink); color: var(--bg); font: 500 10.5px/1.35 var(--mono); letter-spacing: .1em; text-transform: uppercase;
   box-shadow: 0 16px 50px rgba(0,0,0,.5); pointer-events: none; }
 .toast:popover-open { animation: fade .3s both; }
+.toast.with-act { pointer-events: auto; border-radius: 18px; }
+.toast-act { display: block; margin: 9px auto 0; padding: 6px 14px; border-radius: 999px; background: var(--a); color: var(--bg); font: inherit; letter-spacing: inherit; text-transform: inherit; }
 
 /* the Settings panel (the gear): lyrics or cover, beat, lyrics size and alignment, skipping */
 .textp { inset: 64px var(--pad) auto auto; translate: none; width: min(380px, calc(100vw - 32px)); }
@@ -1104,6 +1126,7 @@ body.home .home-now { display: flex; }
   .map { order: -1; align-self: end; }
   .mid:has(.map:empty) { grid-template-rows: minmax(0, 1fr); } /* nothing playing: the stage gets the full height */
   .sub > :first-child { max-width: none; }
+  .sub:has(.from-link:not([hidden])) > :first-child { max-width: 48%; }
   .cur { font-size: calc(clamp(26px, min(calc(680cqi / (var(--n) + 4)), 9.5vh), 80px) * var(--ls, 1)); }
   .row { grid-template-columns: 48px minmax(0, 1fr) auto; gap: 12px; padding: 8px 4px; }
   .row img { width: 48px; height: 48px; }
@@ -1555,6 +1578,7 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
         <p id="hint" class="hint lbl">Press <b>/</b> anytime to search · <b>F</b> for full screen</p>
         <p class="legal-line lbl">© 2026 Volodya.rua · <button class="inline-link" data-legal="terms">Terms</button> · <button class="inline-link" data-legal="privacy">Privacy</button> · <button class="inline-link" data-legal="licenses">Licenses</button></p>
       </div>
+      <section id="recent" class="recent" aria-label="Recently played"></section>
     </div>
     </div>
     <aside id="map" class="map" aria-label="Song sections"></aside>
@@ -1590,7 +1614,7 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
         <button id="nowCover" class="now-cover" aria-label="Show the cover" hidden></button>
         <div class="now-l">
           <div id="title" class="title">Silence, for now</div>
-          <div class="sub lbl"><button id="artist" class="artist-link" aria-label="Open artist page">Nobody yet</button><span id="status" class="status" aria-live="polite"></span></div>
+          <div class="sub lbl"><button id="artist" class="artist-link" aria-label="Open artist page">Nobody yet</button><button id="fromBtn" class="artist-link from-link" hidden><span class="from-w">from</span> <span id="fromName"></span></button><span id="status" class="status" aria-live="polite"></span></div>
         </div>
         <button id="likeBtn" class="icon-btn like" aria-label="Like" aria-pressed="false" disabled><svg viewBox="0 0 24 24"><path d="M12 20.5s-7.5-4.6-9.3-9.2C1.5 8.1 3.6 4.5 7.2 4.5c2.1 0 3.6 1.2 4.8 2.9 1.2-1.7 2.7-2.9 4.8-2.9 3.6 0 5.7 3.6 4.5 6.8-1.8 4.6-9.3 9.2-9.3 9.2z"/></svg></button>
         <button id="singBtn" class="icon-btn singb" aria-label="Sing: the voice turned down, the lyrics big" aria-pressed="false"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg></button>
@@ -1880,24 +1904,30 @@ function routeAudio() {
 // sphere's shadow, Brown and Duda's model; no measured head's peaks and dips to colour it); and each kept exactly as loud,
 // in every band, as it was (both ears together): nothing duller, thinner or boomier. Below 300 Hz it's left as it is,
 // untouched (the bass and the low-mids give little direction anyway). Then a room round it all: early reflections, and a
-// tail that fades darker (a feedback delay network), with no bass in or out. Orbit: everything turns round the head, once
-// every 16 seconds. Measured (scratchpad space-bench.js, qa/s-space360.js): on real songs each band within about half a
+// tail that fades darker (a feedback delay network), with no bass in or out. Orbit: everything goes round the head, once
+// every 10 seconds, nearly all of it in the near ear at each side (see MODES). Measured (scratchpad space-bench.js, qa/s-space360.js): on real songs each band within about half a
 // dB of the song's own (Hall a little more: its room), the bass to 0.03 dB. The browser's own 3D filters, used before,
 // coloured it 4–11 dB (round 800 Hz and 9 kHz; a wide sound's low-mids). Its cost: 1024 samples late (~21 ms; the lyrics
 // wait for it, see spaceLag), and ~2.5% of a computer's core.
-const SPACES = ['Off', 'Around', 'Wide', 'Hall', 'Orbit'];
+const SPACES = ['Off', 'Orbit', 'Around', 'Wide', 'Hall']; // (Orbit first: what people mean by 360 — "Around" read as it, and stood still)
 let space = SPACES.includes(store.get('netherflow.space')) ? store.get('netherflow.space') : 'Off';
 function setSpace(v) { space = v; store.set('netherflow.space', v === 'Off' ? '' : v); spaceNode?.set(v); routeAudio(); renderLoud(); }
 const SPACE_N = 1024; // (its frames: its lateness)
 const spaceLag = () => space !== 'Off' ? spaceNode?.lag || 0 : 0;
 const SPACE_WORKLET = `const N = ${SPACE_N}, H = N / 4, B = N / 2 + 1, TAU = 2 * Math.PI, A_C = .0875 / 343; // (frames, hop, bands; head radius ÷ speed of sound, s)
 // each mode: the front's reach (degrees each side), where the wide sounds go, the room (its echo's level, how long it
-// rings, how dark), how fast it turns (turns a second), how much darker behind
+// rings, how dark), how fast it turns (turns a second), how much darker behind; pan: how far over a sound to one side
+// goes, every pitch of it (0: as a real head hears it — a few dB, mostly the highs; .9: nearly all in the near ear, as
+// "8D" songs do); low: below it, left as it was (Hz); dip: how much quieter behind
 const MODES = {
-  Around: { front: 30, amb: 110, wet: .38, decay: .4, damp: 7000, turn: 0, rear: .3 },
-  Wide: { front: 55, amb: 130, wet: .3, decay: .35, damp: 8000, turn: 0, rear: .3 },
-  Hall: { front: 35, amb: 120, wet: .36, decay: 1.9, damp: 4500, turn: 0, rear: .3 },
-  Orbit: { front: 30, amb: 110, wet: .28, decay: .4, damp: 7000, turn: 1 / 16, rear: 1 },
+  Around: { front: 30, amb: 110, wet: .38, decay: .4, damp: 7000, turn: 0, rear: .3, pan: 0, low: 300, dip: 0 },
+  Wide: { front: 55, amb: 130, wet: .3, decay: .35, damp: 8000, turn: 0, rear: .3, pan: 0, low: 300, dip: 0 },
+  Hall: { front: 35, amb: 120, wet: .36, decay: 1.9, damp: 4500, turn: 0, rear: .3, pan: 0, low: 300, dip: 0 },
+  // (all of the song as one, a little wide, going round the head once every 10 s: nearly all in one ear at the side, darker
+  // and quieter behind, the bass staying in the middle; a smaller room, its echo in both ears filled in the far one.
+  // Measured, scratchpad orbit-bench.js: the ears now ±13 dB apart at 250 Hz–1 kHz, ±16 to 4 kHz, ±19 above — it was ±2.5,
+  // ±9, ±15, the user's "doesn't feel like 360")
+  Orbit: { front: 12, amb: 35, wet: .18, decay: .9, damp: 6000, turn: 1 / 10, rear: 1.6, pan: .95, low: 120, dip: .5 },
 };
 // a radix-2 FFT, in place (inv: the inverse, unscaled)
 const rev = new Uint16Array(N), wc = new Float64Array(N / 2), ws = new Float64Array(N / 2);
@@ -1914,20 +1944,22 @@ function fft(re, im, inv) {
   }
 }
 // The head (Brown and Duda's sphere): a sound from angle th (radians, 0 ahead, + to the right), into e at o: each ear's
-// shadow (alpha: 2 facing it, 0.1 behind the head from it), each ear's delay (s), and how far behind it is (0 ahead or to
-// the side, 1 straight behind) times rear (how much darker that makes it)
-function ears(th, rear, e, o) {
+// shadow (alpha: 2 facing it, 0.1 behind the head from it), each ear's delay (s), how far behind it is (0 ahead or to
+// the side, 1 straight behind) times rear (how much darker that makes it), and each ear's share, every pitch (pan)
+function ears(th, rear, pan, e, o) {
   for (let k = 0; k < 2; k++) {
     let d = th + (k ? -Math.PI / 2 : Math.PI / 2); d = Math.abs(Math.atan2(Math.sin(d), Math.cos(d))); // (from that ear's own direction)
     e[o + k] = 1.05 + .95 * Math.cos(d * 1.2); e[o + k + 2] = d < Math.PI / 2 ? -A_C * Math.cos(d) : A_C * (d - Math.PI / 2);
   }
   const t = Math.abs(Math.atan2(Math.sin(th), Math.cos(th))); e[o + 4] = 1 - Math.exp(-.3454 * (t > Math.PI / 2 ? (t - Math.PI / 2) / (Math.PI / 2) * rear : 0)); // (as 1 − its gain in the highs: 6 dB down straight behind)
+  const side = Math.sin(th); e[o + 5] = Math.sqrt(.5 * (1 - pan * side)); e[o + 6] = Math.sqrt(.5 * (1 + pan * side));
 }
-// a place's two ears in this band (x2: the band's pitch against the head's, squared; rx: how much "darker behind" it gets):
-// the shadow's gains, the two together as loud as the sound itself, 6 dB darker in the highs straight behind
-function gains(e, o, x2, rx, g) {
-  const gL = Math.sqrt((1 + e[o] * e[o] * x2) / (1 + x2)), gR = Math.sqrt((1 + e[o + 1] * e[o + 1] * x2) / (1 + x2));
-  const n = (1 - e[o + 4] * rx) / Math.sqrt(gL * gL + gR * gR); g[0] = gL * n; g[1] = gR * n;
+// a place's two ears in this band (x2: the band's pitch against the head's, squared; rx: how much "darker behind" it gets;
+// dip: how much quieter behind): the shadow's gains and each ear's share, the two together as loud as the sound itself,
+// darker in the highs (and quieter, by dip) behind
+function gains(e, o, x2, rx, dip, g) {
+  const gL = e[o + 5] * Math.sqrt((1 + e[o] * e[o] * x2) / (1 + x2)), gR = e[o + 6] * Math.sqrt((1 + e[o + 1] * e[o + 1] * x2) / (1 + x2));
+  const n = (1 - e[o + 4] * rx) * (1 - e[o + 4] * dip) / Math.sqrt(gL * gL + gR * gR); g[0] = gL * n; g[1] = gR * n;
 }
 class Space extends AudioWorkletProcessor {
   constructor(options) {
@@ -1942,11 +1974,11 @@ class Space extends AudioWorkletProcessor {
       const f = k * sr / N, cosine = (a, b) => f <= a ? 1 : f >= b ? 0 : .5 + .5 * Math.cos(Math.PI * (f - a) / (b - a)), xk = TAU * f * A_C / 2;
       // (w: the delay as a turn of phase, only up to 1–2 kHz: above, ears hear where a sound is by its level alone, and a
       // turn that changed moment to moment there undid some of itself)
-      this.w[k] = TAU * f * cosine(1000, 2000); this.x2[k] = xk * xk; this.lowP[k] = cosine(300, 500); // (lowP: below 300 Hz all of it as it was, blended over by 500)
+      this.w[k] = TAU * f * cosine(1000, 2000); this.x2[k] = xk * xk;
       this.rearX[k] = (f * f) / (f * f + 4000 * 4000); // (how much of "darker behind" this band gets: the highs)
     }
-    this.pt = new F(129 * 5); this.at = new F(4).fill(NaN); this.ea = new F(10); this.g = new F(2); this.ph = new F(16);
-    this.m = { ...first }; this.to = first; this.turn = 0;
+    this.pt = new F(129 * 7); this.at = new F(5).fill(NaN); this.ea = new F(14); this.g = new F(2); this.ph = new F(16);
+    this.m = { ...first }; this.to = first; this.turn = 0; this.lows();
     // the room: the song, as late as the rest (N), without its bass (a 200 Hz high-pass), into early reflections and a tail
     this.dl = new F(N); this.dr = new F(N); this.di = 0;
     const hp = 2 * Math.PI * 200 / sr, q = Math.SQRT1_2, al = Math.sin(hp) / (2 * q), a0 = 1 + al, cs = Math.cos(hp);
@@ -1959,6 +1991,9 @@ class Space extends AudioWorkletProcessor {
     this.wet = 0; this.fb = new F(8); this.damp = 0; this.room(); // (its echo's level glides: see process)
     this.port.onmessage = e => { const m = MODES[e.data.mode]; if (m) this.to = m; };
   }
+  lows() { // (lowP: below the mode's low all of it as it was, blended over to 5/3 of it)
+    for (let k = 0; k < B; k++) { const f = k * sampleRate / N, a = this.m.low, b = a * 5 / 3; this.lowP[k] = f <= a ? 1 : f >= b ? 0 : .5 + .5 * Math.cos(Math.PI * (f - a) / (b - a)); }
+  }
   room() { // the tail's ring and darkness, for the mode as it is now
     const sr = sampleRate;
     for (let i = 0; i < 8; i++) this.fb[i] = Math.pow(10, -3 * this.len[i] / (sr * this.m.decay));
@@ -1968,20 +2003,22 @@ class Space extends AudioWorkletProcessor {
     const { xl, xr, re, im, win, el, er, sLL, sRR, sX, w, x2, lowP, rearX, m, pt, ea, g, ph } = this;
     // the mode glides over (a step a frame, ~70 ms), and Orbit turns
     let moved = false;
-    for (const key of ['front', 'amb', 'wet', 'decay', 'damp', 'rear']) { const d = this.to[key] - m[key]; if (Math.abs(d) > 1e-6) { m[key] += d * .08; moved = true; } }
+    let low = false;
+    for (const key of ['front', 'amb', 'wet', 'decay', 'damp', 'rear', 'pan', 'low', 'dip']) { const d = this.to[key] - m[key]; if (Math.abs(d) > 1e-6) { m[key] += d * .08; moved = true; low ||= key === 'low'; } }
     if (moved) this.room();
+    if (low) this.lows();
     this.turn = this.to.turn ? (this.turn + TAU * this.to.turn * H / sampleRate) % TAU : Math.atan2(Math.sin(this.turn), Math.cos(this.turn)) * .92; // (back to the front, the short way, when it stops)
     const turn = this.turn, front = m.front * Math.PI / 180, amb = m.amb * Math.PI / 180;
     // the places: the panned sounds' (129 steps from left to right), and the wide sounds' two (worked out again only when
     // they've moved: Orbit turning, a mode gliding over)
-    if (turn !== this.at[0] || m.front !== this.at[1] || m.amb !== this.at[2] || m.rear !== this.at[3]) {
-      this.at[0] = turn; this.at[1] = m.front; this.at[2] = m.amb; this.at[3] = m.rear;
-      for (let i = 0; i <= 128; i++) ears(turn - (i / 64 - 1) * front, m.rear, pt, i * 5);
-      ears(turn - amb, m.rear, ea, 0); ears(turn + amb, m.rear, ea, 5);
+    if (turn !== this.at[0] || m.front !== this.at[1] || m.amb !== this.at[2] || m.rear !== this.at[3] || m.pan !== this.at[4]) {
+      this.at[0] = turn; this.at[1] = m.front; this.at[2] = m.amb; this.at[3] = m.rear; this.at[4] = m.pan;
+      for (let i = 0; i <= 128; i++) ears(turn - (i / 64 - 1) * front, m.rear, m.pan, pt, i * 7);
+      ears(turn - amb, m.rear, m.pan, ea, 0); ears(turn + amb, m.rear, m.pan, ea, 7);
     }
     // (the wide sounds' delays, as a turn of phase that steps on band by band: [cos, sin] now, then the step, for each ear)
     const dw = TAU * sampleRate / N;
-    for (let q = 0; q < 4; q++) { const t = ea[(q >> 1) * 5 + 2 + (q & 1)]; ph[q * 4] = 1; ph[q * 4 + 1] = 0; ph[q * 4 + 2] = Math.cos(dw * t); ph[q * 4 + 3] = -Math.sin(dw * t); }
+    for (let q = 0; q < 4; q++) { const t = ea[(q >> 1) * 7 + 2 + (q & 1)]; ph[q * 4] = 1; ph[q * 4 + 1] = 0; ph[q * 4 + 2] = Math.cos(dw * t); ph[q * 4 + 3] = -Math.sin(dw * t); }
     for (let i = 0; i < N; i++) { re[i] = xl[i] * win[i]; im[i] = xr[i] * win[i]; }
     fft(re, im, false);
     for (let k = 0; k < B; k++) {
@@ -1992,7 +2029,7 @@ class Space extends AudioWorkletProcessor {
       sLL[k] = .8 * sLL[k] + .2 * (lr * lr + li * li); sRR[k] = .8 * sRR[k] + .2 * (rr * rr + ri * ri); sX[k] = .8 * sX[k] + .2 * (lr * rr + li * ri);
       const pL = sLL[k], pR = sRR[k], psi = (pL - pR) / (pL + pR + 1e-20), alike = Math.max(0, sX[k]) / Math.sqrt(pL * pR + 1e-30);
       // its wide part (unlike on the two sides, both sides heard) and the rest, split by their power: together as loud as it was
-      const lp = lowP[k], wk = w[k], xx = x2[k], rx = rearX[k];
+      const lp = lowP[k], wk = w[k], xx = x2[k], rx = rearX[k], dip = m.dip;
       const wide = Math.min(1, Math.max(0, (1 - alike) * (1 - psi * psi))), pa = Math.sqrt(1 - wide), wa = Math.sqrt(wide);
       let oLr = 0, oLi = 0, oRr = 0, oRi = 0;
       if (lp < 1) {
@@ -2001,7 +2038,7 @@ class Space extends AudioWorkletProcessor {
         let sr_ = plr + prr, si_ = pli + pri; const m2 = sr_ * sr_ + si_ * si_;
         if (m2 < power * 1e-3) { const left = plr * plr + pli * pli >= prr * prr + pri * pri; sr_ = left ? plr : prr; si_ = left ? pli : pri; } // (in step but opposite: by its louder side)
         const sm = Math.sqrt(sr_ * sr_ + si_ * si_), fS = sm > 1e-20 ? Math.sqrt(power) / sm : 0, sR = sr_ * fS, sI = si_ * fS;
-        const dir = this.dir[k] += (psi - this.dir[k]) * .25, o = Math.round((dir + 1) * 64) * 5; gains(pt, o, xx, rx, g); // (where it is, steadied over ~100 ms: a place that wavered, its turn of phase changing moment to moment, undid some of itself)
+        const dir = this.dir[k] += (psi - this.dir[k]) * .25, o = Math.round((dir + 1) * 64) * 7; gains(pt, o, xx, rx, dip, g); // (where it is, steadied over ~100 ms: a place that wavered, its turn of phase changing moment to moment, undid some of itself)
         let cL = 1, sL = 0, cR = 1, sR2 = 0;
         if (wk) { cL = Math.cos(wk * pt[o + 2]); sL = -Math.sin(wk * pt[o + 2]); cR = Math.cos(wk * pt[o + 3]); sR2 = -Math.sin(wk * pt[o + 3]); } // (none above 2 kHz)
         oLr = g[0] * (sR * cL - sI * sL); oLi = g[0] * (sR * sL + sI * cL); oRr = g[1] * (sR * cR - sI * sR2); oRi = g[1] * (sR * sR2 + sI * cR);
@@ -2010,7 +2047,7 @@ class Space extends AudioWorkletProcessor {
         // theirs simply summed (a scatter of phase, tried, left the bands 1–1.5 dB out), and an opposite left and right not
         // cancelling either
         for (let side = 0; side < 2; side++) {
-          const p0 = side * 8, xr_ = side ? wa * ri : -wa * li, xi_ = side ? -wa * rr : wa * lr; gains(ea, side * 5, xx, rx, g);
+          const p0 = side * 8, xr_ = side ? wa * ri : -wa * li, xi_ = side ? -wa * rr : wa * lr; gains(ea, side * 7, xx, rx, dip, g);
           const c1 = ph[p0], s1 = ph[p0 + 1], c2 = ph[p0 + 4], s2 = ph[p0 + 5];
           oLr += g[0] * (xr_ * c1 - xi_ * s1); oLi += g[0] * (xr_ * s1 + xi_ * c1);
           oRr += g[1] * (xr_ * c2 - xi_ * s2); oRi += g[1] * (xr_ * s2 + xi_ * c2);
@@ -2545,13 +2582,14 @@ function applySkin() {
 // header; filling it exactly, its letters touched the header). Again whenever the welcome's room, or what's in it (the
 // song playing shown), changes, and once its font has come.
 function fitHome() {
-  const st = $('home'), deck = st.querySelector('.deck'), msg = st.querySelector('.msg'), room = st.clientHeight - 24;
+  const st = $('home'), deck = st.querySelector('.deck'), msg = st.querySelector('.msg');
+  const room = st.clientHeight - 24 - [...st.children].reduce((a, c) => a + (c === deck || c.offsetLeft > deck.offsetLeft + 40 ? 0 : c.offsetHeight), 0); // (less the folders and recently played, when under it)
   if (!deck || !msg) return;
   msg.style.fontSize = '';
   for (let i = 0; i < 3 && st.clientHeight && deck.offsetHeight > room + 1; i++)
     msg.style.fontSize = Math.max(28, parseFloat(getComputedStyle(msg).fontSize) * Math.max(.3, 1 - (deck.offsetHeight - room) / msg.offsetHeight)) + 'px';
 }
-{ const ro = new ResizeObserver(() => fitHome()); ro.observe($('home')); ro.observe($('home').querySelector('.home-now')); } // (not the headline's own box: fitting it, it'd ask again)
+{ const ro = new ResizeObserver(() => fitHome()); ro.observe($('home')); ro.observe($('home').querySelector('.home-now')); ro.observe($('recent')); } // (not the headline's own box: fitting it, it'd ask again)
 document.fonts?.ready.then(() => fitHome());
 function setSkin(name) {
   const need = SKINS[name]?.needs;
@@ -2862,6 +2900,7 @@ function renderTextPanel() {
     ...(castInTv ? [settingRow('Let phones and computers on this Wi-Fi play here', ['On', 'Off'], castInOn ? 'On' : 'Off', setCastIn,
       'While NetherFlow is open on this TV, it shows in their Play on a TV or speaker list. Anyone on the same Wi-Fi can play on it (each time, this TV says who): on a shared Wi-Fi — a hotel, a dorm — turn it off.')] : []),
     ...(native ? [settingRow('Lyrics on the lock screen', ['Off', 'On'], lockLyrics ? 'On' : 'Off', setLockLyrics, 'The line being sung under the song\'s name on the lock screen, in the notification, on the widget and on a car\'s display.')] : []),
+    ...(native && matchMedia('(pointer: coarse)').matches ? [settingRow('Home-screen widget', ['Add'], '', addWidget, 'The song playing, its cover and its buttons, on your phone\'s home screen. Or: touch and hold the home screen, then Widgets, then NetherFlow.')] : []),
     settingRow('Liked songs offline', ['Off', 'On Wi-Fi'], likedOffline ? 'On Wi-Fi' : 'Off', setLikedOffline, 'Songs you like are saved on this device by themselves, a few at a time, only on Wi-Fi: they play with no connection.'),
     settingRow('Imported playlists', ['Kept in sync', 'As imported'], syncLists ? 'Kept in sync' : 'As imported', setSyncLists, 'Kept in sync: about once a day, NetherFlow reads each playlist you imported again from where it came from (Spotify, Apple Music or YouTube, which see your IP address when it does) and adds the songs new in it. Songs you took out stay out. As imported: never read again.'),
     settingRow('Folders on the home screen', ['Off', 'On'], folders ? 'On' : 'Off', setFolders, 'Liked songs, downloads and your playlists, under the buttons at the top of the home screen. Hidden while a song plays.'),
@@ -3212,7 +3251,7 @@ function notifyNative() {
       title: $('title').textContent, artist: $('artist').textContent, album: current.collectionName || '',
       art,
       duration: Math.round(P.dur * 1000), position: Math.round(P.t * 1000), playing: !P.paused, hasNext: hasNext(),
-      lyric: lockLyrics && synced && lyrDisp(lines[activeIdx]).text.trim() || '',
+      lyric: lockLyrics && synced && lyrDisp(lines[lockIdx()]).text.trim() || '',
     });
   }, 150);
 }
@@ -3371,29 +3410,57 @@ const A = () => engine === 'ep' ? epAudio : engine === 'cast' ? castEl : audio; 
 // then): the song looked to be playing, and nothing was heard. Every 2 s while one plays — the timers run with the app
 // away too — the engine is started again, and a song stuck 8 s is picked up afresh from where it was, as a stream's
 // error is (a fresh address, the same moment). Coming back to the app: looked at at once.
-const stuck = { t: -1, at: 0 };
-function checkPlaying() {
+// (The user's report: "the music stops, the app shows it playing, the time doesn't move, I have to restart the app".
+// Stuck 5 s now — 2 s when the app's just back in front — and a saved song picked up again too, not only a stream; a
+// mix that never finished, dropped; and still stuck after three tries: shown as it is — paused, with a word — never
+// "playing" with nothing heard.)
+const stuck = { t: -1, at: 0, tries: 0 };
+function checkPlaying(back = false) {
   if (engine === 'cast') return; // (the device's own business)
   const el = A();
   if (ctx && ctx.state !== 'running' && ctx.state !== 'closed' && !el.paused) ctx.resume().catch(() => {});
-  if (el.paused || !el.getAttribute('src') || el.currentTime < .5 || mix.on || !navigator.onLine) { stuck.t = -1; return; } // (not started yet: loading, not stuck)
-  if (el.currentTime !== stuck.t) { stuck.t = el.currentTime; stuck.at = Date.now(); return; }
-  if (Date.now() - stuck.at < 8000) return;
-  stuck.at = Date.now(); restartStream();
+  if (mix.on && performance.now() - mix.t0 > (mix.fade + 6) * 1000) mixAbort(); // (a mix that never finished: not a reason to stop looking)
+  if (el.paused || !el.getAttribute('src') || mix.on || !navigator.onLine) { stuck.t = -1; stuck.tries = 0; return; }
+  const t = el.currentTime < .5 ? 0 : el.currentTime; // (not started yet — loading — counts as stuck only after 12 s: a stream that hangs at its very start shows playing too)
+  if (t !== stuck.t) { if (stuck.tries && t > stuck.t + 1) stuck.tries = 0; stuck.t = t; stuck.at = Date.now(); return; }
+  if (Date.now() - stuck.at < (!t ? 12000 : back ? 2000 : 5000)) return;
+  stuck.at = Date.now();
+  if (++stuck.tries > 3) { // (picked up three times, and still nothing: said so, the song paused where it was — Play tries again)
+    stuck.tries = 0; el.pause(); setPlaying(false);
+    return toast('The sound stopped and wouldn\'t come back. Tap Play to carry on.', 6000);
+  }
+  restartStream();
 }
 function restartStream() {
   const el = A(), at = el.currentTime, id = loadId;
   if (engine === 'audio' && fsVid && el.src.includes('fs/media')) { const vid = fsVid; flowPage?.forget(vid); return fsPlay({ id: vid }, id).then(() => { if (id === loadId && at > 1) P.seek(at); }).catch(() => {}); }
-  if (/^https?:/.test(el.src)) { const src = el.src; el.src = src; el.addEventListener('loadedmetadata', () => { if (id === loadId) el.currentTime = at; }, { once: true }); el.play().catch(() => {}); }
+  if (/^(https?|blob):/.test(el.src)) { const src = el.src; el.src = src; el.addEventListener('loadedmetadata', () => { if (id === loadId) el.currentTime = at; }, { once: true }); el.play().catch(() => {}); } // (a saved song too: its own recording, loaded again)
 }
 setInterval(checkPlaying, 2000);
+// Away and back (Android): playing when it went, and the song hardly moved while it was away — the phone stopped the
+// app in the background (a phone saving battery does). Picked up at once; and, once, the way to keep it from happening.
+const away = { at: 0, t: 0, playing: false };
+function backFromAway() {
+  const gone = (Date.now() - away.at) / 1000, moved = P.t - away.t;
+  checkPlaying(true);
+  if (!away.playing || gone < 20 || moved > gone * .5 || store.get('netherflow.batterytip')) return;
+  Capacitor.Plugins.Playback.battery().then(({ free }) => {
+    if (free) return;
+    store.set('netherflow.batterytip', '1');
+    toast('Your phone stopped NetherFlow while it was in the background. To keep music playing: Battery › Unrestricted, in NetherFlow\'s settings.', 12000, 'Open settings', () => Capacitor.Plugins.Playback.appSettings().catch(() => {}));
+  }).catch(() => {});
+}
 const P = {
   get paused() { return A().paused; },
   get t() { return A().currentTime || 0; },
   // recordings saved for offline don't carry their length in the file: the length saved with them stands in
   get dur() { return (isFinite(A().duration) ? A().duration : savedDur) || 0; },
   get loaded() { return !!A().src; },
-  play() { A().play().catch(() => {}); },
+  play() { // (pressed mid-song and the song doesn't move on, though it has what it needs: its player stuck — picked up again)
+    const el = A(), t0 = el.currentTime;
+    el.play().catch(() => {});
+    if (t0 > .5 && engine !== 'cast') setTimeout(() => { if (A() === el && !el.paused && el.currentTime === t0 && el.readyState >= 2) restartStream(); }, 3000);
+  },
   pause() { mixAbort(); A().pause(); },
   seek(t) {
     mixAbort();
@@ -3427,7 +3494,11 @@ function setPlace(v) {
   if (v > 0 && !looping) { looping = true; requestAnimationFrame(frame); }
 }
 window.netherflowApp?.onShown?.(v => setPlace(+v));
-if (native) Capacitor.Plugins.App.addListener('appStateChange', ({ isActive }) => { setPlace(isActive ? 2 : 0); if (isActive) setTimeout(checkPlaying, 800); }); // (back: the song looked at at once)
+if (native) Capacitor.Plugins.App.addListener('appStateChange', ({ isActive }) => {
+  setPlace(isActive ? 2 : 0);
+  if (isActive) setTimeout(backFromAway, 800); // (back: the song looked at at once)
+  else Object.assign(away, { at: Date.now(), t: P.t, playing: !P.paused && engine !== 'cast' });
+});
 function setPlaying(on) {
   body.classList.toggle('playing', on);
   if (!on) store.set('netherflow.playingat', ''); // (stopped: nothing to carry on by itself)
@@ -3635,7 +3706,7 @@ function sinkRow() {
 function renderLoud() {
   $('eqLoud').replaceChildren(...(canSink && sinks.length > 1 ? [sinkRow()] : []), settingRow('Loudness', ['Original', 'Levelled'], loud, v => { loud = v; store.set('netherflow.loud', v === 'Original' ? '' : v); renderLoud(); applyEq(); setVolume(volume); },
     'Original: each song at its own original loudness. Levelled: loud songs turned down so all play at about one level.'),
-    settingRow('360 sound', SPACES, space, setSpace, 'The song set round you, on headphones: the voice in front, what\'s panned out to its side, the room and the reverb round you and behind, its sound and its bass as they were. Around: like good speakers in a room. Wide: further out. Hall: a concert hall. Orbit: all of it circling your head (the "8D" sound).'),
+    settingRow('360 sound', SPACES, space, setSpace, 'On headphones. Orbit: the whole song going round your head, once every 10 seconds (the "8D" sound). The others set it round you, standing still — the voice in front, what\'s panned out to its side, the room and the reverb round you and behind, its sound and its bass as they were. Around: like good speakers in a room. Wide: further out. Hall: a concert hall.'),
     settingRow('Crossfeed', TOOLS.cross, tools.cross, v => setTool('cross', v), 'For headphones: a little of each side into the other, softened and a moment late, as speakers reach both ears. Easier on long listens.' + (space !== 'Off' ? ' (Not with 360 sound on: that places the song itself.)' : '')),
     settingRow('Clarity', TOOLS.clarity, tools.clarity, v => setTool('clarity', v), 'Brings back some of the airy top end that streaming squeezes out of a song.'),
     settingRow('Loudness at low volume', TOOLS.lowvol, tools.lowvol, v => setTool('lowvol', v), 'Ears hear less bass and treble when it\'s quiet: this turns them up as you turn the volume down, and leaves them be at full volume.'),
@@ -3795,6 +3866,49 @@ function shuffleList(tracks, p = null) {
 // the playlist the queue was taken from (its rows, Play all, Shuffle), while it's still that queue: songs it gains
 // (an import filling in) join the queue too
 let queueFrom = null;
+// Where the songs playing were picked from (a playlist, Liked songs, an album, an artist, a search), read off the page
+// shown as one's picked: { name, open, keep }. The player's "from" link opens it again, the song playing found in it —
+// not for a song played next by hand, or one Autoplay found after the list. keep: the page as plain data, for the
+// home screen's recently played (see rememberList) — not a search, or a page made up on the spot (a mood, a mix).
+let playFrom = null;
+function here() {
+  if ($('library').open && libView) {
+    const v = libView, name = $('libName').textContent;
+    const keep = ['playlist', 'liked', 'saved'].includes(v.kind) ? { k: v.kind, id: v.id }
+      : v.kind === 'list' && /^(pl|album):/.test(v.key || '') ? { k: 'yt', key: v.key, label: v.label, title: name, art: v.art } : null;
+    return { name, open: () => openLibrary(v), keep };
+  }
+  if ($('artistPage').open) {
+    const name = $('apName').textContent, album = $('artistPage').classList.contains('of-album'), a = album ? apAlbum : apData?.artist;
+    return a ? { name, open: () => album ? openAlbumPage(a) : openArtist(a), keep: { k: album ? 'album' : 'artist', a, title: name } } : null;
+  }
+  const q = dlg.open && $('q').value.trim();
+  return q ? { name: `“${q}”`, open: () => { $('q').value = q; openSearch(); runSearch(q); } } : null;
+}
+const keptKey = r => [r.k, r.id ?? r.key ?? r.a?.collectionId ?? r.a?.artistId ?? r.title].join(':');
+function openKept(r) {
+  if (r.k === 'artist') return openArtist(r.a);
+  if (r.k === 'album') return openAlbumPage(r.a);
+  if (r.k === 'yt') { const id = r.key.replace(/^\w+:/, ''); return r.key.startsWith('pl:') ? openYtList(id, r.title, r.art, r.label) : openYtAlbum({ id, title: r.title, art: r.art, kind: r.label }); }
+  openLibrary({ kind: r.k, id: r.id });
+}
+function paintFrom() {
+  const on = !!playFrom && !fromUpNext && !auto.items.has(current) && queue.some(x => x.trackId === current?.trackId);
+  $('fromBtn').hidden = !on;
+  if (on) { $('fromName').textContent = playFrom.name; $('fromBtn').setAttribute('aria-label', `Playing from ${playFrom.name}: open it`); }
+}
+$('fromBtn').onclick = () => {
+  if (!playFrom) return;
+  playFrom.open();
+  const sel = `dialog[open] .ritem[data-tid="${CSS.escape(String(current?.trackId))}"]`;
+  let n = 0;
+  const find = () => { // (the list drawn — at once, or an album still loading)
+    const r = document.querySelector(sel);
+    if (!r) return ++n < 25 && setTimeout(find, 160);
+    r.scrollIntoView({ block: 'center' }); r.classList.remove('here'); void r.offsetWidth; r.classList.add('here');
+  };
+  setTimeout(find, 60);
+};
 // ---- casting: the devices, the song handed to one and back
 let caster = null;
 const castCan = !!window.NFCast && (!!window.netherflowApp?.castNet || native && !!Capacitor.Plugins?.Cast);
@@ -5088,6 +5202,11 @@ function songTime() {
   else clock.t = Math.max(prev, playing ? guess + d * (d > 0 ? .25 : .08) : raw); // follow, never a hair back
   return clock.t;
 }
+// the synced line being sung at t (-1: before the first; the first counts from when it starts, so at 0:00 it's the intro)
+function lineAt(t) { let idx = -1; for (let i = 0; i < lines.length && lines[i].t <= t + (i ? LEAD : 0); i++) idx = i; return idx; }
+// the line being sung by the song's own time, not the screen's: the lyrics' frame loop stops with the screen off (the
+// lock screen's line stuck on the one sung as it went off — the user's report)
+const lockIdx = () => lineAt(P.t + offset - soundLag() - spaceLag() + songShift);
 function syncLyrics() {
   if (!lines.length) return;
   const t = lyrNow = songTime() + offset - soundLag() - spaceLag() + songShift; // (the sound reaches the speakers a little after the clock, and 360 sound adds its own wait)
@@ -5097,8 +5216,7 @@ function syncLyrics() {
       s.scrollTop = (P.t / P.dur) * (s.scrollHeight - s.clientHeight);
     return;
   }
-  let idx = -1;
-  for (let i = 0; i < lines.length && lines[i].t <= t + (i ? LEAD : 0); i++) idx = i; // (the first: when it starts, so at 0:00 it's the intro)
+  const idx = lineAt(t);
   if (idx !== activeIdx) { activeIdx = idx; buildStage(idx); $('csLine').textContent = $('dvLine').textContent = lyrDisp(lines[idx]).text; fitCover(); }
 
   if (introDeck) { // record slides out + countdown to the first line
@@ -5811,6 +5929,7 @@ function alignTo(ls, ref) {
 // mixed: Smooth mix has it playing already (its uploads, the first the one playing)
 async function playTrack(t, term = '', queued = false, stay = false, mixed = null) {
   if (!t || tgIntercept('play', t)) return; // (no song: Play all on an empty list)
+  if (!stay) { playFrom = here(); if (playFrom?.keep) rememberList(playFrom.keep, t); } // (picked: from the page it was picked on — before it's closed)
   if (!mixed) mixAbort();
   lastSong = null; // (another song picked: the last one's no longer waiting)
   importYield = Date.now() + 6000;
@@ -5830,7 +5949,7 @@ async function playTrack(t, term = '', queued = false, stay = false, mixed = nul
   updateSkips(); updateLikeBtn();
   if (!stay) for (const d of [dlg, $('artistPage'), $('library')]) if (d.open) d.close();
   const kept = saved.get(t.trackId);
-  setNow(t.trackName, t.artistName, kept?.coverUrl || artUrl(t, 600), t.collectionName);
+  setNow(t.trackName, t.artistName, kept?.coverUrl || artUrl(t, 600), t.collectionName); paintFrom();
   if (ep) return playEpisode(t, id);
   if (t.castUri) return playCastIn(t, id);
   audio.playbackRate = audio.defaultPlaybackRate = 1;
@@ -5950,7 +6069,7 @@ async function playSaved(t, id) {
 const HIST = 'netherflow.history';
 let hist;
 try { hist = JSON.parse(store.get(HIST) || '{}'); } catch { hist = {}; }
-hist.tracks ||= []; hist.terms ||= [];
+hist.tracks ||= []; hist.terms ||= []; hist.lists ||= [];
 // what's kept of a song (history, playlists, saved songs): enough to show it and play it again
 const TRACK_KEYS = ['trackId', 'trackName', 'artistId', 'artistName', 'collectionName', 'trackNumber', 'discNumber', 'artworkUrl100', 'trackTimeMillis', 'previewUrl', 'releaseDate', 'primaryGenreName', 'kind', 'ytId', 'ytTitle', 'epUrl', 'epShow', 'epBook', 'epAbout', 'epLive', 'epNoSave'];
 const slim = t => Object.fromEntries(TRACK_KEYS.map(k => [k, t[k]]));
@@ -5959,6 +6078,32 @@ function remember(t, term) {
   if (term) hist.terms = [term, ...hist.terms.filter(x => x.toLowerCase() !== term.toLowerCase())].slice(0, 8);
   store.set(HIST, JSON.stringify(hist));
   carLibrary?.(); // (recently played, on a car's screen)
+  renderRecent();
+}
+// a list a song was picked from (see here): first among the recently played lists, with that song's cover
+function rememberList(r, t) {
+  const k = keptKey(r);
+  hist.lists = [{ ...r, cover: artUrl(t, 300) }, ...hist.lists.filter(x => keptKey(x) !== k)].slice(0, 10);
+  store.set(HIST, JSON.stringify(hist));
+}
+// Recently played, at the foot of the home screen: the lists songs were last picked from (a tap opens one), then the
+// songs (a tap plays them from there). Narrow (a phone), in one row: two, the welcome had no room.
+const RECENT_NARROW = '(max-width: 999px)';
+matchMedia(RECENT_NARROW).addEventListener('change', () => renderRecent());
+function renderRecent() {
+  const out = [], card = (art, name, sub, go, round) => { const c = libCard(art, name, sub, go); if (round) c.classList.add('round'); return c; };
+  const pic = u => { if (!u) return tile('note', ''); const b = el('div', 'pc-art one'), i = el('img'); i.alt = ''; i.loading = 'lazy'; i.src = u; b.append(i); return b; };
+  const lists = hist.lists.map(r => {
+    if (r.k === 'liked') return card(tile('heart', 'Liked songs', library.liked.length), 'Liked songs', `${library.liked.length} songs`, () => openKept(r));
+    if (r.k === 'saved') return card(tile('down', 'Downloads', saved.size), 'Downloads', `${saved.size} offline`, () => openKept(r));
+    if (r.k === 'playlist') { const p = library.playlists.find(x => x.id === r.id); return p && card(mosaic(p.tracks, () => tile('note', p.name, p.tracks.length)), p.name, `${p.tracks.length} songs`, () => openKept(r)); }
+    return card(pic(r.k === 'yt' ? r.art || r.cover : r.cover), r.title, r.k === 'artist' ? 'Artist' : r.label || 'Album', () => openKept(r), r.k === 'artist');
+  }).filter(Boolean).slice(0, 8);
+  const songs = hist.tracks.map(t => card(pic(saved.get(t.trackId)?.coverUrl || artUrl(t, 300)), t.trackName, t.artistName, () => { queue = hist.tracks.slice(); playTrack(t); }));
+  const strip = (head, cards) => { if (!cards.length) return; const row = el('div', 'recent-row'); row.append(...cards); out.push(sectionHead(head), row); };
+  if (matchMedia(RECENT_NARROW).matches) strip('Recently played', [...lists.slice(0, 4), ...songs]);
+  else { strip('Jump back in', lists); strip('Recently played', songs); }
+  $('recent').replaceChildren(...out);
 }
 function sectionHead(text, actionText, onAction) {
   const h = el('div', 'hist-h lbl');
@@ -5989,7 +6134,7 @@ function showHistory() {
       clearTimeout(b.disarm); b.disarm = setTimeout(() => { b.classList.remove('armed'); b.textContent = 'Clear history'; }, 3500);
       return;
     }
-    hist = { tracks: [], terms: [] }; store.set(HIST, ''); vidKept.clear(); store.set(VIDS, ''); showHistory(); $('q').focus();
+    hist = { tracks: [], terms: [], lists: [] }; store.set(HIST, ''); renderRecent(); vidKept.clear(); store.set(VIDS, ''); showHistory(); $('q').focus();
   });
   if (hist.terms.length) {
     const chips = el('div', 'chips');
@@ -6040,6 +6185,7 @@ libStore('readonly', kv => kv.get(LIB)).catch(() => null).then(s => {
 // the start. Only on the home screen, a song playing or not (see the CSS).
 function setFolders(v) { folders = v === 'On'; store.set('netherflow.folders', folders ? 'On' : ''); body.classList.toggle('folders-on', folders); renderFolders(); renderTextPanel(); }
 function renderFolders() {
+  renderRecent(); // (the library changed: its lists there too)
   body.classList.toggle('folders-on', folders);
   if (!folders) return $('folders').replaceChildren();
   const listTile = p => () => tile('note', p.name, p.tracks.length);
@@ -6090,9 +6236,11 @@ function removeFromPlaylist(p, t) {
 
 // a short note at the bottom of the screen; shown again each time so it sits above whatever opened since
 let toastTimer;
-function toast(text, ms = 2800) {
+function toast(text, ms = 2800, act, onAct) { // (act: a button's words, onAct: what it does — the toast then takes taps)
   const t = $('toast');
   t.textContent = text;
+  t.classList.toggle('with-act', !!act);
+  if (act) { const b = el('button', 'toast-act', act); b.onclick = () => { t.hidePopover(); onAct(); }; t.append(b); }
   if (t.matches(':popover-open')) t.hidePopover();
   t.showPopover();
   clearTimeout(toastTimer);
@@ -8254,10 +8402,15 @@ function syncRender() {
 }
 // ---------- Android extras: the line being sung on the lock screen (and the widget, and a car's display); liked songs
 // saved for offline by themselves, on Wi-Fi ----------
+// the widget, put on the home screen from here: the phone asks where (most do; one that doesn't, told the way by hand)
+function addWidget() {
+  Capacitor.Plugins.Playback.pinWidget().then(r => r.asked ? $('textPanel').hidePopover() : Promise.reject())
+    .catch(() => toast('Your phone doesn\'t let apps add it: touch and hold your home screen, then Widgets, then NetherFlow', 7000));
+}
 function setLockLyrics(v) { lockLyrics = v === 'On'; store.set('netherflow.locklyrics', lockLyrics ? 'On' : ''); notifyNative(); renderTextPanel(); }
 function setLikedOffline(v) { likedOffline = v === 'On Wi-Fi'; store.set('netherflow.likedoff', likedOffline ? 'On' : ''); renderTextPanel(); if (likedOffline) autoSaveLiked(); }
 let lockLine = -2;
-setInterval(() => { if (native && lockLyrics && current && activeIdx !== lockLine) { lockLine = activeIdx; notifyNative(); } }, 400);
+setInterval(() => { if (!native || !lockLyrics || !current || !synced) return; const i = lockIdx(); if (i !== lockLine) { lockLine = i; notifyNative(); } }, 400);
 const autoTried = new Set();
 // a few liked songs at a time, when nothing else is downloading — only on Wi-Fi (or a cable), never on mobile data (a
 // phone: Android says; a computer: always)
@@ -9502,8 +9655,9 @@ function renderArtist() {
   $('apList').replaceChildren(...list);
   $('apList').scrollTop = apData.at || 0;
 }
+let apAlbum = null; // (the album shown: see here)
 async function openAlbum(album) {
-  const id = ++apLoad;
+  const id = ++apLoad; apAlbum = album;
   apHeader('Album', album.collectionName, [album.artistName, (album.releaseDate || '').slice(0, 4)].filter(Boolean).join(' · '), artUrl(album, 600), false);
   $('apStat').textContent = '● loading';
   $('apList').replaceChildren();
@@ -9601,7 +9755,10 @@ const openSearch = () => {
 };
 for (const d of document.querySelectorAll('dialog')) d.addEventListener('close', () => {
   placeWinctl();
-  if (matchMedia('(pointer: coarse)').matches) document.activeElement?.blur(); // no leftover focus box on touch screens
+  // (the browser gives a closed screen's focus back to the button that opened it: with the mouse or touch, dropped — else
+  // Enter pressed it again, the screen opening once more (the user's report); by keyboard or a TV's remote, kept: it's
+  // where they were)
+  if (!tabbing || matchMedia('(pointer: coarse)').matches) document.activeElement?.blur();
 });
 
 // ---------- legal: terms / privacy / licenses (legal.html), and agreeing to them on first launch ----------

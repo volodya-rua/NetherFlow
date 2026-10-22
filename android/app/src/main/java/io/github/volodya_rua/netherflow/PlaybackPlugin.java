@@ -65,6 +65,35 @@ public class PlaybackPlugin extends Plugin {
         call.resolve();
     }
 
+    // Whether the phone lets the app run freely in the background ({ free }): a phone saving battery may stop it there,
+    // song and all (the page tells the user, once, with the way to change it — see appSettings)
+    @PluginMethod
+    public void battery(PluginCall call) {
+        android.os.PowerManager pm = getContext().getSystemService(android.os.PowerManager.class);
+        JSObject out = new JSObject();
+        out.put("free", pm != null && pm.isIgnoringBatteryOptimizations(getContext().getPackageName()));
+        call.resolve(out);
+    }
+
+    // the app's own page in the phone's settings (Battery › Unrestricted, there, lets it play on in the background)
+    @PluginMethod
+    public void appSettings(PluginCall call) {
+        try {
+            getActivity().startActivity(new Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, android.net.Uri.fromParts("package", getContext().getPackageName(), null)));
+            call.resolve();
+        } catch (RuntimeException e) { call.reject("no settings page"); }
+    }
+
+    // the home-screen widget, put there from the app: the phone's own question, where to (where it lets apps ask — { asked })
+    @PluginMethod
+    public void pinWidget(PluginCall call) {
+        android.appwidget.AppWidgetManager m = android.appwidget.AppWidgetManager.getInstance(getContext());
+        JSObject out = new JSObject();
+        out.put("asked", Build.VERSION.SDK_INT >= 26 && m.isRequestPinAppWidgetSupported()
+            && m.requestPinAppWidget(new ComponentName(getContext(), NowPlayingWidget.class), null, null));
+        call.resolve(out);
+    }
+
     @PluginMethod
     public void library(PluginCall call) {
         PlaybackService.setLibrary(getContext(), call.getString("json", "{}"));
