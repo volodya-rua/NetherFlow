@@ -85,6 +85,23 @@ public class PlaybackPlugin extends Plugin {
         call.resolve(out);
     }
 
+    // MobiVib: one tap of the phone's vibration motor ({ ms, amp 1–255 }), as music's (the phone's own Media vibration
+    // setting has the last word); a motor that can't set its strength: its own
+    @PluginMethod
+    public void vibe(PluginCall call) {
+        android.os.Vibrator v = Build.VERSION.SDK_INT >= 31 ? getContext().getSystemService(android.os.VibratorManager.class).getDefaultVibrator() : getContext().getSystemService(android.os.Vibrator.class);
+        int ms = Math.max(5, Math.min(200, call.getInt("ms", 30))), amp = Math.max(1, Math.min(255, call.getInt("amp", 200)));
+        if (v != null && v.hasVibrator()) try {
+            if (Build.VERSION.SDK_INT < 26) v.vibrate(ms);
+            else {
+                android.os.VibrationEffect e = android.os.VibrationEffect.createOneShot(ms, v.hasAmplitudeControl() ? amp : android.os.VibrationEffect.DEFAULT_AMPLITUDE);
+                if (Build.VERSION.SDK_INT >= 33) v.vibrate(e, android.os.VibrationAttributes.createForUsage(android.os.VibrationAttributes.USAGE_MEDIA));
+                else v.vibrate(e, new android.media.AudioAttributes.Builder().setUsage(android.media.AudioAttributes.USAGE_MEDIA).setContentType(android.media.AudioAttributes.CONTENT_TYPE_MUSIC).build());
+            }
+        } catch (RuntimeException ignored) {}
+        call.resolve();
+    }
+
     // the app's own page in the phone's settings (Battery › Unrestricted, there, lets it play on in the background)
     @PluginMethod
     public void appSettings(PluginCall call) {

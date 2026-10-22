@@ -75,7 +75,8 @@ async function fetchOut(href, headers, signal) {
 // (its own, shorter waits: an address answers in ~0.15–0.35 s, so one not in by 0.9 s is asked for alongside, 4.5 s in all,
 // and FlowStream itself asks once more after that — see flowstream.js; YouTube Music's, as above)
 const flow = FlowStream.create({ post: guard.wrap((url, body, headers) => (url.includes('music.youtube.com') ? ytmRead : playerRead)(url, body, headers)) });
-const flowAudio = id => flow.audio(id);
+const flowAudio = (id, q = 'best') => flow.audio(id, { quality: q }); // (q: Sound › Quality — best, normal, low)
+const qOf = url => ['normal', 'low'].includes(url.searchParams.get('q')) ? url.searchParams.get('q') : 'best';
 // casting: a song's stream for a TV or a speaker to fetch itself (AAC first: every one plays it; Opus after)
 const CAST_FMT = [140, 251, 250, 249, 139];
 // The next song's first 256 KB (about 15 s), fetched ahead into memory, so it starts the moment it's asked for (the
@@ -123,13 +124,13 @@ async function keepHead(id, buf, s, total, era) {
 }
 // a stream, forwarded as asked (a range of it: seeking); an address that stopped working asked for again, once
 async function flowMedia(req, res, url) {
-  const id = url.searchParams.get('id') || '', video = url.searchParams.get('kind') === 'video';
-  const pick = () => video ? flow.video(id, { height: +url.searchParams.get('h') || 1080, fps: +url.searchParams.get('fps') || 60, codecs: (url.searchParams.get('codecs') || 'av01,vp9,avc1').split(',') }) : flowAudio(id);
+  const id = url.searchParams.get('id') || '', video = url.searchParams.get('kind') === 'video', best = !video && qOf(url) === 'best';
+  const pick = () => video ? flow.video(id, { height: +url.searchParams.get('h') || 1080, fps: +url.searchParams.get('fps') || 60, codecs: (url.searchParams.get('codecs') || 'av01,vp9,avc1').split(',') }) : flowAudio(id, qOf(url));
   const stop = new AbortController();
   res.on('close', () => stop.abort());
   // its start, kept here or fetched ahead: answered from the disk or memory (the player asks for the rest next). The
   // kept one first: one fetched ahead may still be on its way.
-  const first = !video && /^bytes=0-/.test(req.headers.range || ''), kept = first && keptMeta(id);
+  const first = best && /^bytes=0-/.test(req.headers.range || ''), kept = first && keptMeta(id); // (kept and fetched ahead: the best's starts)
   const head = first && !kept && await flowHeads.get(id)?.catch(() => null);
   const start = kept ? { ...kept, buf: await fs.promises.readFile(keptFile(id, '.head')).catch(() => null) } : head && head.until > Date.now() && head;
   if (start?.buf) {
@@ -152,14 +153,14 @@ async function flowMedia(req, res, url) {
       flow.forget(id); await new Promise(ok => setTimeout(ok, tries ? 1500 : 300)); s = await pick();
     }
     if (!r?.ok) { console.warn('stream', id, why); return send(res, 502, JSON.stringify({ error: why })); }
-    const total = +(r.headers.get('content-range') || '').split('/')[1] || +r.headers.get('content-length') || 0, had = !video && keptMeta(id);
+    const total = +(r.headers.get('content-range') || '').split('/')[1] || +r.headers.get('content-length') || 0, had = best && keptMeta(id);
     if (had && total && had.total !== total) { dropKept(id); if (!/^bytes=0-/.test(req.headers.range || '')) return send(res, 502, JSON.stringify({ error: 'the kept start was another file' })); }
     const head = { 'Content-Type': s.mime.split(';')[0], 'Accept-Ranges': 'bytes', 'Cache-Control': 'no-store' };
     for (const k of ['content-length', 'content-range']) if (r.headers.get(k)) head[k] = r.headers.get(k);
     res.writeHead(r.status, head);
     // its start, kept: a copy fetched alongside (the player reads only a little from the start before it asks for the end)
     const era = url.searchParams.get('g');
-    if (!video && !had && keptFile(id, '') && /^(bytes=0-.*)?$/.test(req.headers.range || ''))
+    if (best && !had && keptFile(id, '') && /^(bytes=0-.*)?$/.test(req.headers.range || ''))
       fetch(s.url, { headers: { Range: `bytes=0-${HEAD - 1}` }, signal: AbortSignal.timeout(15000) }).then(async k => k.status === 206 && keepHead(id, Buffer.from(await k.arrayBuffer()), s, total, era)).catch(() => {});
     for await (const c of r.body) { // (as /api/media, by hand)
       if (res.destroyed) break;
@@ -180,9 +181,9 @@ async function handle(req, res) {
   if (url.pathname.startsWith('/api/')) { res.setHeader('X-Content-Type-Options', 'nosniff'); res.setHeader('Content-Security-Policy', "sandbox; default-src 'none'"); }
   if (url.pathname === '/api/fs/media') return flowMedia(req, res, url);
   if (url.pathname === '/api/fs/audio') { // a song's stream, described (the page then plays /api/fs/media)
-    const id = url.searchParams.get('id') || '', kept = keptMeta(id);
+    const id = url.searchParams.get('id') || '', q = qOf(url), kept = q === 'best' && keptMeta(id); // (a kept start: the best's)
     if (kept) { flowAudio(id).catch(() => {}); return send(res, 200, JSON.stringify({ itag: kept.itag, mime: kept.mime, bitrate: kept.bitrate || 0, loudnessDb: kept.loudnessDb, duration: kept.duration, via: 'FlowStream', kept: true })); } // (its start kept here: at once, its address asked for meanwhile)
-    try { const s = await flowAudio(url.searchParams.get('id') || ''); return send(res, 200, JSON.stringify({ itag: s.itag, mime: s.mime, bitrate: s.bitrate || 0, loudnessDb: s.loudnessDb, duration: s.duration || 0, via: s.via, why: s.why || '' })); }
+    try { const s = await flowAudio(id, q); return send(res, 200, JSON.stringify({ itag: s.itag, mime: s.mime, bitrate: s.bitrate || 0, loudnessDb: s.loudnessDb, duration: s.duration || 0, via: s.via, why: s.why || '' })); }
     catch (e) { return send(res, 502, JSON.stringify({ error: e.code || e.message })); }
   }
   if (url.pathname === '/api/fs/cast') {

@@ -8,6 +8,7 @@
 //
 //   const fs = FlowStream.create({ post })
 //   await fs.audio(id)        { url, itag, mime, size, bitrate, loudnessDb, duration, expires, client (the one given it) }
+//   await fs.audio(id, { quality: 'normal' })   a smaller one: 'best' (the default), 'normal' (~70 kbps), 'low' (~50 kbps)
 //   await fs.video(id, { height: 1080, fps: 60, codecs: ['av01', 'vp9', 'avc1'] })   { url, itag, mime, width, height, fps, expires }
 //   fs.prefetch([id, id, id]) the next songs, looked up ahead;  fs.forget(id) after its address stopped working
 //
@@ -26,7 +27,9 @@
       userAgent: 'com.google.android.apps.youtube.vr.oculus/1.65.10 (Linux; U; Android 12L; eureka-user Build/SQ3A.220605.009.A1) gzip' } },
   ];
   const WEB_VERSION = '2.20261001.00.00';
-  const AUDIO = [251, 140, 250, 249, 139]; // the best first: Opus (~130–160 kbps), then AAC, then the smaller ones
+  // the formats taken in turn, by quality: best — Opus (~130–160 kbps), then AAC, then the smaller ones; normal — Opus at
+  // ~70 kbps (about half the data); low — Opus at ~50 kbps (a data saver); each then the nearest there is
+  const AUDIO = { best: [251, 140, 250, 249, 139], normal: [250, 249, 251, 140, 139], low: [249, 250, 139, 251, 140] };
   const KEEP = 100; // answers kept, at most (the oldest go first)
 
   class FlowError extends Error { constructor(code, message) { super(message); this.name = 'FlowStream.Error'; this.code = code; } }
@@ -119,11 +122,11 @@
       return { id, client: client.clientName, formats, duration: +j.videoDetails?.lengthSeconds || 0, expires: Date.now() + (+j.streamingData.expiresInSeconds || 21600) * 1000 };
     }
 
-    // the best public audio stream
-    async audio(id) {
-      const p = await this.player(id);
-      const f = AUDIO.map(i => p.formats.find(x => x.itag === i)).find(Boolean)
-        || p.formats.filter(x => x.mimeType.startsWith('audio/')).sort((a, b) => b.bitrate - a.bitrate)[0];
+    // the best public audio stream (or, asked, a smaller one)
+    async audio(id, { quality = 'best' } = {}) {
+      const p = await this.player(id), order = AUDIO[quality] || AUDIO.best, most = order === AUDIO.best ? -1 : 1;
+      const f = order.map(i => p.formats.find(x => x.itag === i)).find(Boolean)
+        || p.formats.filter(x => x.mimeType.startsWith('audio/')).sort((a, b) => most * (a.bitrate - b.bitrate))[0];
       if (!f) throw new FlowError('unplayable', 'no audio stream for ' + id);
       return { id, url: f.url, itag: f.itag, mime: f.mimeType, size: +f.contentLength || 0, bitrate: f.averageBitrate || f.bitrate,
         loudnessDb: typeof f.loudnessDb === 'number' ? f.loudnessDb : null, duration: p.duration, expires: p.expires, client: p.client };

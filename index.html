@@ -1894,6 +1894,7 @@ function routeAudio() {
   for (const n of [audioSrc, ...hpNodes, ...eqNodes, singNode.out, spaceNode.out, ...Object.values(toolNodes).map(t => t.out), analyser, boostNode, limiterNode]) n.disconnect();
   [audioSrc, ...hpNodes, ...(useEq ? eqNodes : []), ...(singing ? [singNode] : []), ...(spatial ? [spaceNode] : []), ...using.map(k => toolNodes[k]), analyser, ...(boosting ? [boostNode] : []),
     ...(useEq || boosting || hpNodes.length || using.length || spatial ? [limiterNode] : []), ctx.destination].reduce((a, b) => (a.connect(b.inp || b), b.out || b));
+  hapWire(); // (its ears were let go with the rest)
 }
 // 360 sound (the Equalizer panel): the song taken apart and set round the listener, on the sound's own thread (an
 // AudioWorklet, SPACE_WORKLET). Best on headphones. Every moment of the song, in 512 bands of pitch:
@@ -2102,6 +2103,82 @@ class Space extends AudioWorkletProcessor {
 }
 registerProcessor('nf-space', Space);`;
 let spaceUrl = '';
+// MobiVib (Sound › MobiVib, a phone): the phone taps with the music, as Apple Music's Music Haptics does — a firm tap on
+// each kick, a lighter one on each snare or clap (Strong) — screen on or off. Its ears, on the sound's own thread (so
+// they hear on with the screen off, when the page's frames stop): the song's kicks (its lows, under ~150 Hz) and its
+// snares and claps (their crack, 1.5–5 kHz: more than a hat's hiss), each found as that band's level jumps well over
+// where it's been lately, in 5 ms steps, at most one each ~110 ms (a snare: only one near the loudest lately); told to the
+// page with its strength (0–1, against the loudest lately) and the moment it's at (the engine's clock). Its output:
+// silence (connected only so it's run). Measured (scratchpad hap-bench.js; qa/s-mobivib.js): a made-up drum track, every
+// kick and snare found, 4 ms after it, 2 taps more of each in 16 s; the CC0 songs, 73% and 88% of their big low hits
+// tapped, 74% and 91% of the taps on one. (Smoothed, or tied to a beat found in the song, it scored worse.)
+const HAPTIC_WORKLET = `class Haptics extends AudioWorkletProcessor {
+  constructor() {
+    super();
+    const pole = f => 1 - Math.exp(-2 * Math.PI * f / sampleRate);
+    this.lo = pole(150); this.hi = pole(1500); this.top = pole(5000); this.z = new Float64Array(4);
+    this.hop = Math.round(sampleRate * .005); this.n = 0;
+    this.acc = new Float64Array(2); this.env = new Float64Array(2); this.avg = new Float64Array(2).fill(1e-4); this.peak = new Float64Array(2).fill(1e-4); this.last = new Float64Array(2).fill(-1);
+  }
+  process(ins) {
+    const i = ins[0];
+    if (!i || !i.length) return true;
+    const L = i[0], R = i[1] || L, z = this.z;
+    for (let s = 0; s < L.length; s++) {
+      const x = (L[s] + R[s]) * .5;
+      z[0] += this.lo * (x - z[0]); z[1] += this.lo * (z[0] - z[1]); z[2] += this.hi * (x - z[2]); z[3] += this.top * (x - z[3]); // (two poles under 150 Hz; 1.5–5 kHz)
+      const h = z[3] - z[2];
+      this.acc[0] += z[1] * z[1]; this.acc[1] += h * h;
+      if (++this.n >= this.hop) { this.n = 0; this.step(); }
+    }
+    return true;
+  }
+  step() {
+    for (let b = 0; b < 2; b++) {
+      const e = Math.sqrt(this.acc[b] / this.hop), was = this.env[b], avg = this.avg[b];
+      this.acc[b] = 0; this.env[b] = e;
+      this.avg[b] += (e - avg) * .03; // (where it's been lately: ~170 ms)
+      this.peak[b] = Math.max(e, this.peak[b] * .9993); // (the loudest lately, falling away over ~7 s)
+      if (e > avg * 1.8 && e - was > avg * .4 && e > this.peak[b] * (b ? .45 : .3) && currentTime - this.last[b] > .11) {
+        this.last[b] = currentTime;
+        this.port.postMessage({ b, s: Math.min(1, e / this.peak[b]), t: currentTime });
+      }
+    }
+  }
+}
+registerProcessor('nf-haptics', Haptics);`;
+let hapUrl = '';
+function makeHaptics(c, onTap) {
+  const h = { node: null };
+  h.ready = (c.audioWorklet ? c.audioWorklet.addModule(hapUrl ||= URL.createObjectURL(new Blob([HAPTIC_WORKLET], { type: 'text/javascript' }))) : Promise.reject(new Error('no AudioWorklet'))).then(() => {
+    h.node = new AudioWorkletNode(c, 'nf-haptics', { numberOfOutputs: 1, outputChannelCount: [1] });
+    h.node.connect(c.destination);
+    h.node.port.onmessage = e => onTap(e.data);
+  }).catch(e => console.warn('MobiVib:', e));
+  return h;
+}
+const MOBIVIB = ['Off', 'Light', 'Strong'];
+let mobivib = MOBIVIB.includes(store.get('netherflow.mobivib')) ? store.get('netherflow.mobivib') : 'Off', hapNode = null;
+function setMobivib(v) {
+  mobivib = v; store.set('netherflow.mobivib', v === 'Off' ? '' : v); hapWire(); renderLoud();
+  if (v !== 'Off') Capacitor.Plugins.Playback.vibe({ ms: 40, amp: v === 'Strong' ? 230 : 140 }).catch(() => {}); // (a taste of it)
+}
+// its ears on the song (before the equalizer: the music itself), while it's on
+function hapWire() {
+  if (!hapNode?.node || !audioSrc) return;
+  try { audioSrc.disconnect(hapNode.node); } catch {}
+  if (mobivib !== 'Off') audioSrc.connect(hapNode.node);
+}
+// a kick (b 0) or a snare (b 1) heard: its tap, when it reaches the ears (the sound's out a little after the engine has
+// it: its latency) — Light, the kicks alone, softer
+let hapKick = -1;
+function hapTap({ b, s, t }) {
+  if (mobivib === 'Off' || !ctx || P.paused || (b && mobivib !== 'Strong')) return;
+  if (b ? t - hapKick < .06 : (hapKick = t, false)) return; // (a snare with a kick: the kick's tap alone)
+  const strong = mobivib === 'Strong', ms = b ? 14 : strong ? 36 : 26, amp = Math.round(b ? 60 + 110 * s : strong ? 90 + 165 * s : 50 + 110 * s);
+  const wait = (t + (ctx.baseLatency || 0) + (ctx.outputLatency || 0) - ctx.currentTime) * 1000 - 12; // (12 ms: the tap's own way to the motor)
+  if (wait > -80) setTimeout(() => Capacitor.Plugins.Playback.vibe({ ms, amp }).catch(() => {}), Math.max(0, wait)); // (later than that: not felt with it)
+}
 // the 360 sound's place in the sound's path: as it is (passed straight through) till its worklet's loaded, then the worklet
 function makeSpace(c) {
   const inp = c.createGain(), out = c.createGain();
@@ -3348,20 +3425,31 @@ function noteLimited(e) {
   if (Date.now() - ytLimitedSaid > 10 * 60e3) { ytLimitedSaid = Date.now(); toast('YouTube is limiting your internet connection right now, so songs can take a while to start. It passes by itself.', 9000); }
   return true;
 }
-async function fsStream(vid) { // → { src (for a player, or a download), loudnessDb, dur }
+// Sound › Quality: the song's stream from YouTube. Best: Opus at ~130–160 kbps, the best there is. Normal: ~70 kbps, about
+// half the data. Data saver: ~50 kbps. Auto (a phone): the best on Wi-Fi, Normal on mobile data. A song saved for offline:
+// always the best (it's fetched once). A kept start (Instant start) is the best's: other qualities start as they come.
+const QUALITIES = native ? ['Best', 'Auto', 'Normal', 'Data saver'] : ['Best', 'Normal', 'Data saver'];
+let quality = QUALITIES.includes(store.get('netherflow.quality')) ? store.get('netherflow.quality') : 'Best';
+const streamQ = () => ({ Best: 'best', Normal: 'normal', 'Data saver': 'low', Auto: prepNet ? 'best' : 'normal' })[quality] || 'best';
+function setQuality(v) {
+  quality = v; store.set('netherflow.quality', v === 'Best' ? '' : v); renderLoud();
+  if (engine === 'audio' && fsVid && audio.src.includes('fs/media') && !audio.paused) restartStream(); // (the song playing: in it now, from where it was)
+}
+async function fsStream(vid, q = streamQ()) { // → { src (for a player, or a download), loudnessDb, dur }
+  const best = q === 'best';
   if (native) {
-    const k = instantOn && fsKept.get(vid);
+    const k = instantOn && best && fsKept.get(vid);
     if (k) { // its start kept here: played from there at once, its address found meanwhile and handed to the app
       const t = Math.random().toString(36).slice(2);
       flowPage.audio(vid).then(s => s.url, () => '').then(u => fetch('/_fs/url?' + new URLSearchParams({ t, u })));
       return { src: '/_fs/media?' + new URLSearchParams({ id: vid, m: k[0], t, g: keptG() }), loudnessDb: k[1], dur: k[2], fmt: { mime: k[0] } };
     }
-    const s = await flowPage.audio(vid);
-    fsKeep(vid, s); // (the app keeps its start as it plays)
-    return { src: '/_fs/media?' + new URLSearchParams({ u: s.url, m: s.mime.split(';')[0], id: vid, g: keptG() }), loudnessDb: s.loudnessDb || 0, dur: s.duration || 0, fmt: { itag: s.itag, mime: s.mime, bitrate: s.bitrate || 0 } };
+    const s = await flowPage.audio(vid, { quality: q });
+    if (best) fsKeep(vid, s); // (the app keeps its start as it plays)
+    return { src: '/_fs/media?' + new URLSearchParams({ u: s.url, m: s.mime.split(';')[0], id: vid, g: best ? keptG() : 'off' }), loudnessDb: s.loudnessDb || 0, dur: s.duration || 0, fmt: { itag: s.itag, mime: s.mime, bitrate: s.bitrate || 0 } };
   }
-  const s = await fetch('/api/fs/audio?' + new URLSearchParams({ id: vid })).then(async r => r.ok ? r.json() : Promise.reject(Object.assign(new Error('no stream'), { code: (await r.json().catch(() => ({}))).error })));
-  return { src: '/api/fs/media?' + new URLSearchParams({ id: vid, g: keptG() }), loudnessDb: s.loudnessDb || 0, dur: s.duration || 0, fmt: { itag: s.itag, mime: s.mime || '', bitrate: s.bitrate || 0 } };
+  const s = await fetch('/api/fs/audio?' + new URLSearchParams({ id: vid, q })).then(async r => r.ok ? r.json() : Promise.reject(Object.assign(new Error('no stream'), { code: (await r.json().catch(() => ({}))).error })));
+  return { src: '/api/fs/media?' + new URLSearchParams({ id: vid, q, g: best ? keptG() : 'off' }), loudnessDb: s.loudnessDb || 0, dur: s.duration || 0, fmt: { itag: s.itag, mime: s.mime || '', bitrate: s.bitrate || 0 } };
 }
 async function fsPlay(v, id) {
   const s = await fsStream(v.id);
@@ -3624,6 +3712,7 @@ function initAudio() { // created lazily: browsers want a user gesture first
   // then the volume booster: a gain, and a limiter so a boosted song never distorts
   boostNode = ctx.createGain(); limiterNode = ctx.createDynamicsCompressor(); singNode = makeSing(ctx); spaceNode = makeSpace(ctx); spaceNode.set(space);
   toolNodes = { cross: makeCross(ctx), clarity: makeClarity(ctx), lowvol: makeLowVol(ctx), night: makeNight(ctx) };
+  if (native) { hapNode = makeHaptics(ctx, hapTap); hapNode.ready.then(hapWire); } // (MobiVib)
   for (const k in toolNodes) toolNodes[k].set(tools[k]);
   limiterNode.knee.value = 10; limiterNode.ratio.value = 16; limiterNode.attack.value = 0.003; limiterNode.release.value = 0.16; // (till the master's loaded, or with none)
   ctx.audioWorklet?.addModule(URL.createObjectURL(new Blob([MASTER_WORKLET], { type: 'text/javascript' }))).then(() => { // (the master in its place: see MASTER_WORKLET)
@@ -3793,7 +3882,10 @@ function sinkRow() {
   return q;
 }
 function renderLoud() {
-  $('eqLoud').replaceChildren(...(canSink && sinks.length > 1 ? [sinkRow()] : []), settingRow('Loudness', ['Original', 'Levelled'], loud, v => { loud = v; store.set('netherflow.loud', v === 'Original' ? '' : v); renderLoud(); applyEq(); setVolume(volume); },
+  $('eqLoud').replaceChildren(...(canSink && sinks.length > 1 ? [sinkRow()] : []),
+    settingRow('Quality', QUALITIES, quality, setQuality, 'How songs stream. Best: the best YouTube has of each song (Opus, about 130–160 kbps). Normal: about 70 kbps, half the data. Data saver: about 50 kbps.' + (native ? ' Auto: Best on Wi-Fi, Normal on mobile data.' : '') + ' Songs you save for offline are always saved in Best.'),
+    ...(native && matchMedia('(pointer: coarse)').matches ? [settingRow('MobiVib', MOBIVIB, mobivib, setMobivib, 'Feel the music: your phone taps with it, a firm tap on each kick (Light) and a lighter one on each snare and clap too (Strong), screen on or off. Uses some battery. If you feel nothing, turn on Media vibration in your phone\'s Vibration & haptics settings.')] : []),
+    settingRow('Loudness', ['Original', 'Levelled'], loud, v => { loud = v; store.set('netherflow.loud', v === 'Original' ? '' : v); renderLoud(); applyEq(); setVolume(volume); },
     'Original: each song at its own original loudness. Levelled: loud songs turned down so all play at about one level.'),
     settingRow('360 sound', SPACES, space, setSpace, 'On headphones. Orbit: the whole song going round your head, once every 10 seconds (the "8D" sound). The others set it round you, standing still — the voice in front, what\'s panned out to its side, the room and the reverb round you and behind, its sound and its bass as they were. Around: like good speakers in a room. Wide: further out. Hall: a concert hall.'),
     settingRow('Crossfeed', TOOLS.cross, tools.cross, v => setTool('cross', v), 'For headphones: a little of each side into the other, softened and a moment late, as speakers reach both ears. Easier on long listens.' + (space !== 'Off' ? ' (Not with 360 sound on: that places the song itself.)' : '')),
@@ -4558,7 +4650,7 @@ function prefetchNext() {
   if (ytLimited()) return; // (YouTube limiting this connection: only the song playing)
   const n = nextUp()[0];
   if (!n || !fullSongs || saved.has(n.trackId)) return;
-  videosFor(n).then(v => { if (!v[0]) return; ytmLyricsFor(v[0].id); native ? flowPage?.audio(v[0].id).then(s => { fsKeep(v[0].id, s); return fetch('/_fs/ahead?' + new URLSearchParams({ u: s.url, id: v[0].id, g: keptG() })); }).catch(() => {}) : fetch('/api/fs/ahead?' + new URLSearchParams({ ids: v[0].id, g: keptG() })).catch(() => {}); }).catch(() => {}); // (FlowStream: its stream looked up ahead too)
+  videosFor(n).then(v => { if (!v[0]) return; ytmLyricsFor(v[0].id); if (streamQ() !== 'best') return native ? flowPage?.audio(v[0].id, { quality: streamQ() }).catch(() => {}) : null; native ? flowPage?.audio(v[0].id).then(s => { fsKeep(v[0].id, s); return fetch('/_fs/ahead?' + new URLSearchParams({ u: s.url, id: v[0].id, g: keptG() })); }).catch(() => {}) : fetch('/api/fs/ahead?' + new URLSearchParams({ ids: v[0].id, g: keptG() })).catch(() => {}); }).catch(() => {}); // (FlowStream: its stream looked up ahead too)
   audiusFor(n);
   lyricsFor(n);
 }
@@ -6073,7 +6165,7 @@ async function playTrack(t, term = '', queued = false, stay = false, mixed = nul
     const vp = videosFor(t).catch(e => { if (!noteLimited(e)) why = e.message; return []; }), ap = audiusFor(t);
     // (its stream looked up meanwhile: the wait for Audius and that lookup at once, not one after the other — both
     // FlowStream's and the server's answers are kept, so fsPlay then has it at once)
-    const warm = v => { if (v[0] && !v[0].cache && !ytLimited()) native ? flowPage?.audio(v[0].id).catch(() => {}) : fetch('/api/fs/audio?' + new URLSearchParams({ id: v[0].id })).catch(() => {}); };
+    const warm = v => { if (v[0] && !v[0].cache && !ytLimited()) native ? flowPage?.audio(v[0].id, { quality: streamQ() }).catch(() => {}) : fetch('/api/fs/audio?' + new URLSearchParams({ id: v[0].id, q: streamQ() })).catch(() => {}); };
     [au, vids] = await Promise.all([Promise.race([ap, vp.then(v => { warm(v); return v.length ? new Promise(r => setTimeout(r, 250, null)) : ap; })]), vp]); // (found on YouTube: that video)
     if (id !== loadId) return;
     if (!t.artworkUrl100 && vids[0]?.art) { t.artworkUrl100 = vids[0].art; setNow(t.trackName, t.artistName, artUrl(t, 600), t.collectionName); } // (an imported song with no cover yet: its YouTube Music one, at once)
@@ -7001,7 +7093,7 @@ async function downloadSong(job, vids, onFrac) {
     for (const vid of vids.slice(0, 3)) { // (an upload that won't download: the next)
       // FlowStream's stream, the one it plays (the best there is: Opus), saved as it comes
       try {
-        const s = await fsStream(vid.id);
+        const s = await fsStream(vid.id, 'best'); // (saved: the best, whatever Sound › Quality is)
         if (cancelled) throw new Error('cancelled');
         return { vid: vid.id, blob: await fetchWhole(job, s.src, onFrac, 'it didn\'t download', 10 << 20), dur: s.dur || vid.dur || job.dur || 0 };
       } catch (e) {
