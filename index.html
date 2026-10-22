@@ -1915,6 +1915,7 @@ let space = SPACES.includes(store.get('netherflow.space')) ? store.get('netherfl
 function setSpace(v) { space = v; store.set('netherflow.space', v === 'Off' ? '' : v); spaceNode?.set(v); routeAudio(); renderLoud(); }
 const SPACE_N = 1024; // (its frames: its lateness)
 const spaceLag = () => space !== 'Off' ? spaceNode?.lag || 0 : 0;
+const singLag = () => singAmount() ? singNode?.lag || 0 : 0; // (Sing's voice remover: its own wait — see makeSing)
 const SPACE_WORKLET = `const N = ${SPACE_N}, H = N / 4, B = N / 2 + 1, TAU = 2 * Math.PI, A_C = .0875 / 343; // (frames, hop, bands; head radius ÷ speed of sound, s)
 // each mode: the front's reach (degrees each side), where the wide sounds go, the room (its echo's level, how long it
 // rings, how dark), how fast it turns (turns a second), how much darker behind; pan: how far over a sound to one side
@@ -2334,11 +2335,91 @@ function qualityNow() {
   const kbps = real || KBPS[fsFmt.itag] || (codec === 'Opus' ? 160 : 128), best = fsFmt.itag === 251 || (!fsFmt.itag && codec === 'Opus');
   return `${codec} at ${real ? '' : 'up to '}${kbps} kbps${best ? ': the best YouTube has of this song' : ''}`;
 }
-// Sing mode's voice remover: the middle of the stereo picture between the
-// bass and the sizzle, where a singer's mixed, turned down by a (0…1); the sides and the middle's bass and top kept
+// Sing mode's voice remover (Sing: the voice turned down, the lyrics big), on the sound's own thread: a (0…1) of the
+// voice taken out, frequency by frequency (2048-sample frames, ~43 ms: its lateness, which the lyrics wait for — see
+// singLag). In each, what's the same in both ears — the singer's mixed in the middle — is its share of the middle (the
+// two sides' common power against the middle's), taken out of both sides; from 90–150 Hz up to 18–21 kHz, so the bass
+// stays and the "s" sounds go. And the voice's tail — its reverb and echoes, round both sides, which no look at the
+// middle finds — turned down where the voice was lately (each frequency, over ~1 s), as much as it was there against
+// what's left (down to 15%). (The user's report: "even at 0% I can still hear the singer". Measured, scratchpad
+// sing-bench.js, a made-up song whose voice is known: 16.6 dB of the voice taken out, against 5.5 dB by the browser's
+// mid/side filters before — they kept the voice's top at 70% and its reverb whole — the song without a voice changed
+// less, 11.6 dB down against 4.6, and a wide sound with no voice in it — a pad, the instruments' own reverb — kept within
+// 2.6 dB: its stats steadied over ~0.2 s, or the two sides' chance likeness read as a centre, the tail more so.)
+const SING_WORKLET = `const N = 2048, H = N / 4, B = N / 2 + 1, TAU = 2 * Math.PI;
+// a radix-2 FFT, in place (inv: the inverse, unscaled)
+const rev = new Uint16Array(N), wc = new Float64Array(N / 2), ws = new Float64Array(N / 2);
+for (let i = 0, bits = Math.log2(N); i < N; i++) { let r = 0; for (let b = 0, x = i; b < bits; b++, x >>= 1) r = (r << 1) | (x & 1); rev[i] = r; }
+for (let i = 0; i < N / 2; i++) { wc[i] = Math.cos(TAU * i / N); ws[i] = Math.sin(TAU * i / N); }
+function fft(re, im, inv) {
+  for (let i = 0; i < N; i++) { const j = rev[i]; if (j > i) { let t = re[i]; re[i] = re[j]; re[j] = t; t = im[i]; im[i] = im[j]; im[j] = t; } }
+  for (let size = 2; size <= N; size <<= 1) {
+    const half = size >> 1, step = N / size, sg = inv ? 1 : -1;
+    for (let i = 0; i < N; i += size) for (let j = 0, k = 0; j < half; j++, k += step) {
+      const a = i + j, b = a + half, c = wc[k], s = sg * ws[k], tr = re[b] * c - im[b] * s, ti = re[b] * s + im[b] * c;
+      re[b] = re[a] - tr; im[b] = im[a] - ti; re[a] += tr; im[a] += ti;
+    }
+  }
+}
+class Sing extends AudioWorkletProcessor {
+  constructor(o) {
+    super();
+    const F = Float64Array;
+    this.win = new F(N).map((_, i) => Math.sqrt(.5 - .5 * Math.cos(TAU * i / N)));
+    this.xl = new F(N); this.xr = new F(N); this.al = new F(N); this.ar = new F(N); this.yl = new F(H); this.yr = new F(H); this.k = 0;
+    this.re = new F(N); this.im = new F(N); this.el = new F(2 * B); this.er = new F(2 * B);
+    this.sLL = new F(B); this.sRR = new F(B); this.sX = new F(B); this.sM = new F(B); this.gone = new F(B); this.band = new F(B);
+    for (let k = 0; k < B; k++) { const f = k * sampleRate / N; this.band[k] = f < 90 ? 0 : f < 150 ? (f - 90) / (150 - 90) : f < 18000 ? 1 : f < 21000 ? 1 - (f - 18000) / (21000 - 18000) : 0; }
+    this.a = this.to = o?.processorOptions?.a || 0; // (from the start: an offline render's messages come after it)
+    this.port.onmessage = e => { this.to = e.data.a; };
+  }
+  frame() {
+    const { xl, xr, re, im, win, el, er, sLL, sRR, sX, sM, gone, band } = this;
+    this.a += (this.to - this.a) * .3;
+    const a = this.a;
+    for (let i = 0; i < N; i++) { re[i] = xl[i] * win[i]; im[i] = xr[i] * win[i]; }
+    fft(re, im, false);
+    for (let k = 0; k < B; k++) {
+      const j = (N - k) % N, zr = re[k], zi = im[k], yr = re[j], yi = im[j];
+      const lr = (zr + yr) / 2, li = (zi - yi) / 2, rr = (zi + yi) / 2, ri = (yr - zr) / 2;
+      sLL[k] = 0.95 * sLL[k] + (1 - 0.95) * (lr * lr + li * li); sRR[k] = 0.95 * sRR[k] + (1 - 0.95) * (rr * rr + ri * ri); sX[k] = 0.95 * sX[k] + (1 - 0.95) * (lr * rr + li * ri);
+      const cr = (lr + rr) * .5, ci = (li + ri) * .5;
+      sM[k] = 0.95 * sM[k] + (1 - 0.95) * (cr * cr + ci * ci);
+      const pc = Math.max(0, Math.min(sX[k], sLL[k], sRR[k])), w = Math.min(1, pc / (sM[k] + 1e-20)); // (how much of the middle is the same in both: the centre's share)
+      const m = a * band[k] * Math.pow(w, 0.8);
+      let oLr = lr - m * cr, oLi = li - m * ci, oRr = rr - m * cr, oRi = ri - m * ci;
+      gone[k] = Math.max(gone[k] * 0.99, m * m * (cr * cr + ci * ci));
+      const rest = oLr * oLr + oLi * oLi + oRr * oRr + oRi * oRi, g = Math.max(0.15, 1 - a * band[k] * 2.5 * gone[k] / (gone[k] + rest + 1e-20));
+      el[2 * k] = oLr * g; el[2 * k + 1] = oLi * g; er[2 * k] = oRr * g; er[2 * k + 1] = oRi * g;
+    }
+    el[1] = er[1] = el[2 * B - 1] = er[2 * B - 1] = 0;
+    for (let k = 0; k < B; k++) { const a1 = el[2 * k], b1 = el[2 * k + 1], c1 = er[2 * k], d1 = er[2 * k + 1]; re[k] = a1 - d1; im[k] = b1 + c1; if (k && k < B - 1) { re[N - k] = a1 + d1; im[N - k] = c1 - b1; } }
+    fft(re, im, true);
+    const { al, ar, yl, yr } = this, s = .5 / N;
+    for (let i = 0; i < N; i++) { al[i] += re[i] * win[i] * s; ar[i] += im[i] * win[i] * s; }
+    for (let i = 0; i < H; i++) { yl[i] = al[i]; yr[i] = ar[i]; }
+    al.copyWithin(0, H); ar.copyWithin(0, H); al.fill(0, N - H); ar.fill(0, N - H);
+    xl.copyWithin(0, H); xr.copyWithin(0, H);
+  }
+  process(ins, outs) {
+    const i = ins[0], o = outs[0], L = i[0], R = i[1] || i[0], oL = o[0], oR = o[1] || o[0], n = oL.length;
+    const { xl, xr, yl, yr } = this;
+    for (let s = 0; s < n; s++) {
+      const k = this.k;
+      xl[N - H + k] = L ? L[s] : 0; xr[N - H + k] = R ? R[s] : 0;
+      oL[s] = yl[k]; if (oR !== oL) oR[s] = yr[k];
+      if (++this.k === H) { this.k = 0; this.frame(); }
+    }
+    return true;
+  }
+}
+registerProcessor('nf-sing', Sing);`;
+let singUrl = '';
+// (till it's loaded, or with no AudioWorklet: the browser's own filters — the middle of the stereo picture between the
+// bass and the sizzle turned down by a; the sides and the middle's bass and top kept)
 function makeSing(c) {
   const g = v => { const n = c.createGain(); n.gain.value = v; return n; }, mono = n => { n.channelCount = 1; n.channelCountMode = 'explicit'; return n; };
-  const inp = g(1), split = c.createChannelSplitter(2), out = c.createChannelMerger(2), low = c.createBiquadFilter(), high = c.createBiquadFilter();
+  const inp = g(1), split = c.createChannelSplitter(2), merge = c.createChannelMerger(2), out = g(1), low = c.createBiquadFilter(), high = c.createBiquadFilter();
   const mid = mono(g(.5)), side = mono(g(.5)), flip = mono(g(-1)), keep = mono(g(1)), lowG = mono(g(0)), highG = mono(g(0)), m2 = mono(g(1)), sNeg = mono(g(-1));
   inp.channelCount = 2; inp.channelCountMode = 'explicit'; inp.channelInterpretation = 'speakers';
   inp.connect(split);
@@ -2346,8 +2427,14 @@ function makeSing(c) {
   low.type = 'lowpass'; low.frequency.value = 160; high.type = 'highpass'; high.frequency.value = 6500;
   mid.connect(keep); mid.connect(low); low.connect(lowG); mid.connect(high); high.connect(highG);
   for (const n of [keep, lowG, highG]) n.connect(m2);
-  m2.connect(out, 0, 0); m2.connect(out, 0, 1); side.connect(out, 0, 0); side.connect(sNeg); sNeg.connect(out, 0, 1);
-  return { inp, out, set: a => { const t = c.currentTime; keep.gain.setTargetAtTime(1 - a, t, .05); lowG.gain.setTargetAtTime(a, t, .05); highG.gain.setTargetAtTime(a * .7, t, .05); } };
+  m2.connect(merge, 0, 0); m2.connect(merge, 0, 1); side.connect(merge, 0, 0); side.connect(sNeg); sNeg.connect(merge, 0, 1); merge.connect(out);
+  let node = null, now = 0;
+  const sp = { inp, out, lag: 0, set: a => { const t = c.currentTime; now = a; keep.gain.setTargetAtTime(1 - a, t, .05); lowG.gain.setTargetAtTime(a, t, .05); highG.gain.setTargetAtTime(a * .7, t, .05); node?.port.postMessage({ a }); } };
+  sp.ready = (c.audioWorklet ? c.audioWorklet.addModule(singUrl ||= URL.createObjectURL(new Blob([SING_WORKLET], { type: 'text/javascript' }))) : Promise.reject(new Error('no AudioWorklet'))).then(() => {
+    node = new AudioWorkletNode(c, 'nf-sing', { outputChannelCount: [2], channelCount: 2, channelCountMode: 'explicit', processorOptions: { a: now } });
+    inp.disconnect(); inp.connect(node); node.connect(out); sp.lag = 2048 / c.sampleRate;
+  }).catch(e => console.warn('Sing:', e));
+  return sp;
 }
 
 // Played with the mouse, touch and the shortcut keys; or by keyboard alone: Tab goes round the controls (each shown with a
@@ -5417,10 +5504,10 @@ function songTime() {
 function lineAt(t) { let idx = -1; for (let i = 0; i < lines.length && lines[i].t <= t + (i ? LEAD : 0); i++) idx = i; return idx; }
 // the line being sung by the song's own time, not the screen's: the lyrics' frame loop stops with the screen off (the
 // lock screen's line stuck on the one sung as it went off — the user's report)
-const lockIdx = () => lineAt(P.t + offset - soundLag() - spaceLag() + songShift);
+const lockIdx = () => lineAt(P.t + offset - soundLag() - spaceLag() - singLag() + songShift);
 function syncLyrics() {
   if (!lines.length) return;
-  const t = lyrNow = songTime() + offset - soundLag() - spaceLag() + songShift; // (the sound reaches the speakers a little after the clock, and 360 sound adds its own wait)
+  const t = lyrNow = songTime() + offset - soundLag() - spaceLag() - singLag() + songShift; // (the sound reaches the speakers a little after the clock, and 360 sound and Sing add their own waits)
   if (!synced) { // plain lyrics: drift the sheet along with the song
     const s = stage.firstElementChild;
     if (drift && P.dur && performance.now() - userScroll > 4000)
