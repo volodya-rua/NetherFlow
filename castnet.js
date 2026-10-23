@@ -2,19 +2,24 @@
 // The house's network for casting (cast.js, in the page, through preload.js): a question sent to the devices in the house
 // (UDP, its answers gathered for a moment), a Cast device's TLS connection (its own certificate taken: a TV's is made by
 // itself), and HTTP to a DLNA device. Only to addresses in the house — never anywhere on the internet.
-const dgram = require('dgram'), tls = require('tls'), http = require('http');
+const dgram = require('dgram'), tls = require('tls'), http = require('http'), os = require('os');
 const privateHost = h => /^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.)\d+\.\d+(\.\d+)?$/.test(h || '');
 const GROUPS = new Set(['224.0.0.251:5353', '239.255.255.250:1900']); // (mDNS, SSDP: the only questions it asks)
 
+// The question asked on each of this computer's networks in the house (its Wi-Fi, a cable): asked the system's own way it
+// went out on one only, as often as not a virtual one (WSL's, a VPN's, an emulator's) that no TV is on — and nothing was
+// ever found (a Fire TV on the Wi-Fi, answering at once when asked there).
 function udp(group, port, bytes, ms) {
   if (!GROUPS.has(group + ':' + port)) return Promise.reject(new Error('not a question it asks'));
-  return new Promise(res => {
-    const got = [], s = dgram.createSocket({ type: 'udp4', reuseAddr: true });
+  const nets = [...new Set(Object.values(os.networkInterfaces()).flat().filter(x => x && x.family === 'IPv4' && !x.internal && privateHost(x.address)).map(x => x.address))];
+  const wait = Math.min(Math.max(ms || 2500, 500), 8000), got = [];
+  return Promise.all((nets.length ? nets : ['']).map(at => new Promise(res => {
+    const s = dgram.createSocket({ type: 'udp4', reuseAddr: true });
     s.on('message', (m, r) => { if (privateHost(r.address) && got.length < 200) got.push({ from: r.address, data: new Uint8Array(m) }); });
-    s.on('error', () => { try { s.close(); } catch {} res(got); });
-    s.bind(0, () => { try { s.setMulticastTTL(2); } catch {} for (const at of [0, 600, 1300]) setTimeout(() => { try { s.send(Buffer.from(bytes), port, group); } catch {} }, at); });
-    setTimeout(() => { try { s.close(); } catch {} res(got); }, Math.min(Math.max(ms || 2500, 500), 8000));
-  });
+    s.on('error', () => { try { s.close(); } catch {} res(); });
+    s.bind(0, at || undefined, () => { try { s.setMulticastTTL(2); if (at) s.setMulticastInterface(at); } catch {} for (const t of [0, 600, 1300]) setTimeout(() => { try { s.send(Buffer.from(bytes), port, group); } catch {} }, t); });
+    setTimeout(() => { try { s.close(); } catch {} res(); }, wait);
+  }))).then(() => got);
 }
 function tlsOpen(host, port, onData, onClose) {
   return new Promise((ok, no) => {
@@ -34,7 +39,7 @@ function httpReq(method, url, headers, body) {
     const req = http.request(u, { method, headers: { ...headers, ...(body && { 'Content-Length': Buffer.byteLength(body) }) }, timeout: 8000 }, r => {
       const parts = []; let n = 0;
       r.on('data', c => { n += c.length; if (n < 2e6) parts.push(c); }); // (a description or an answer: small)
-      r.on('end', () => ok({ status: r.statusCode, text: Buffer.concat(parts).toString('utf8') }));
+      r.on('end', () => ok({ status: r.statusCode, headers: r.headers, text: Buffer.concat(parts).toString('utf8') })); // (headers: a TV's DIAL address is one)
     });
     req.on('timeout', () => req.destroy(new Error('the device didn\'t answer'))); req.on('error', no);
     req.end(body || undefined);

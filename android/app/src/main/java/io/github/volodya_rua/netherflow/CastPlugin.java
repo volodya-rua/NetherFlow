@@ -58,7 +58,7 @@ import javax.net.ssl.X509TrustManager;
 //  - Cast.udp({ group, port, data (base64), ms }) → { answers: [{ from, data (base64) }] }
 //  - Cast.tlsOpen({ host, port }) → { id }; then the events "tlsData" { id, data (base64) } and "tlsClose" { id }
 //  - Cast.tlsWrite({ id, data (base64) }) · Cast.tlsClose({ id })
-//  - Cast.http({ method (GET, POST), url, headers, body }) → { status, text }
+//  - Cast.http({ method (GET, POST), url, headers, body }) → { status, headers (lowercase names), text }
 // And on a TV (Fire TV, Android TV), this app as a TV the others cast to: see "the receiver", below.
 @CapacitorPlugin(name = "Cast")
 public class CastPlugin extends Plugin {
@@ -197,8 +197,10 @@ public class CastPlugin extends Plugin {
                     String[] st = line(in).split(" ");
                     int code = st.length > 1 ? Integer.parseInt(st[1]) : 0, len = -1;
                     boolean chunked = false;
+                    JSObject got = new JSObject();
                     for (String l; !(l = line(in)).isEmpty();) {
                         String lo = l.toLowerCase(Locale.ROOT);
+                        int c = l.indexOf(':'); if (c > 0 && got.length() < 40) got.put(lo.substring(0, c).trim(), l.substring(c + 1).trim());
                         if (lo.startsWith("content-length:")) len = Integer.parseInt(lo.substring(15).trim());
                         if (lo.startsWith("transfer-encoding:") && lo.contains("chunked")) chunked = true;
                     }
@@ -207,6 +209,7 @@ public class CastPlugin extends Plugin {
                     else copy(in, out, len >= 0 ? len : MAX);
                     JSObject r = new JSObject();
                     r.put("status", code);
+                    r.put("headers", got);
                     r.put("text", out.toString("UTF-8"));
                     call.resolve(r);
                 }
@@ -271,18 +274,44 @@ public class CastPlugin extends Plugin {
                 WifiManager w = (WifiManager) getContext().getApplicationContext().getSystemService(Context.WIFI_SERVICE);
                 if (w != null) { rLock = w.createMulticastLock("NetherFlow"); rLock.setReferenceCounted(false); rLock.acquire(); } // (or the Wi-Fi drops the searches)
                 rHttp = new ServerSocket(0);
-                rSsdp = new MulticastSocket(null);
-                rSsdp.setReuseAddress(true);
-                rSsdp.bind(new InetSocketAddress(1900));
-                rSsdp.joinGroup(InetAddress.getByName("239.255.255.250"));
-                ServerSocket h = rHttp; MulticastSocket s = rSsdp;
+                ServerSocket h = rHttp;
                 pool.execute(() -> serveHttp(h));
-                pool.execute(() -> serveSsdp(s));
+                // Found two ways: SSDP (as DLNA's are), on its usual port — which a Fire TV's own DIAL may hold, so if it
+                // can't be had, the other way alone — and mDNS (_netherflow._tcp, by Android's own announcer: nothing
+                // else holds it). Once, it all hung on the first: a Fire TV it couldn't get, never found.
+                try {
+                    rSsdp = new MulticastSocket(null);
+                    rSsdp.setReuseAddress(true);
+                    if (call.getBoolean("occupied", false) && (getContext().getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0) throw new IOException("held (a test)"); // (a test build: as on a Fire TV whose port's taken)
+                    rSsdp.bind(new InetSocketAddress(1900));
+                    rSsdp.joinGroup(InetAddress.getByName("239.255.255.250"));
+                    MulticastSocket s = rSsdp;
+                    pool.execute(() -> serveSsdp(s));
+                } catch (Exception e) { if (rSsdp != null) rSsdp.close(); rSsdp = null; }
+                announce(h.getLocalPort());
             } catch (Exception e) { stopReceiver(); call.reject("couldn't listen on the Wi-Fi"); return; }
         }
         r.put("on", rHttp != null);
         r.put("name", rName);
+        r.put("ssdp", rSsdp != null);
         call.resolve(r);
+    }
+
+    // mDNS: _netherflow._tcp, its port, its name (TXT fn) — by Android's own announcer (NsdManager), as Google Cast's are
+    private android.net.nsd.NsdManager.RegistrationListener rNsd;
+    private void announce(int port) {
+        android.net.nsd.NsdManager nsd = (android.net.nsd.NsdManager) getContext().getSystemService(Context.NSD_SERVICE);
+        if (nsd == null) return;
+        android.net.nsd.NsdServiceInfo i = new android.net.nsd.NsdServiceInfo();
+        i.setServiceName(rName); i.setServiceType("_netherflow._tcp"); i.setPort(port);
+        i.setAttribute("fn", rName); i.setAttribute("id", rUuid);
+        rNsd = new android.net.nsd.NsdManager.RegistrationListener() {
+            @Override public void onServiceRegistered(android.net.nsd.NsdServiceInfo s) {}
+            @Override public void onRegistrationFailed(android.net.nsd.NsdServiceInfo s, int e) { rNsd = null; }
+            @Override public void onServiceUnregistered(android.net.nsd.NsdServiceInfo s) {}
+            @Override public void onUnregistrationFailed(android.net.nsd.NsdServiceInfo s, int e) {}
+        };
+        try { nsd.registerService(i, android.net.nsd.NsdManager.PROTOCOL_DNS_SD, rNsd); } catch (Exception e) { rNsd = null; }
     }
 
     @PluginMethod
@@ -297,6 +326,7 @@ public class CastPlugin extends Plugin {
     }
 
     private void stopReceiver() {
+        if (rNsd != null) { try { ((android.net.nsd.NsdManager) getContext().getSystemService(Context.NSD_SERVICE)).unregisterService(rNsd); } catch (Exception ignored) {} rNsd = null; }
         try { if (rHttp != null) rHttp.close(); } catch (IOException ignored) {}
         if (rSsdp != null) rSsdp.close();
         if (rLock != null && rLock.isHeld()) rLock.release();

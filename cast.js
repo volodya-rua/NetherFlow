@@ -9,7 +9,8 @@
 //   tls(host, port, onData(bytes), onClose()) → { write(bytes), close() }   a Cast device (its own certificate taken)
 //   http(method, url, headers, body) → { status, text }   a DLNA device
 //
-//   const c = NFCast.create({ net, from });  await c.devices(ms) → [{ id, kind ('cast' | 'dlna'), name, model, … }]
+//   const c = NFCast.create({ net, from });  await c.devices(ms) → [{ id, kind ('cast' | 'dlna' | 'firetv'), name, model, … }]
+//   (firetv: a Fire TV without NetherFlow open on it — not played on; await c.wake(d) → 'opened' | 'missing' | 'off')
 //   const s = await c.open(device);  await s.load({ url, mime, title, artist, album, art, at });  s.play() s.pause()
 //   s.seek(t) s.volume(0–1) s.close();  s.onstatus = { state ('playing' 'paused' 'buffering' 'idle' 'ended' 'error'), t, dur }
 //   s.onclose = () => …  (the device let go: turned off, another phone took it)
@@ -33,8 +34,9 @@
     b.push(0, 0, 12, 0x80, 1); // (PTR, class IN with the unicast-answer bit)
     return new Uint8Array(b);
   }
-  // an mDNS answer → { name (its TXT fn), model (md), port (its SRV's) }, or null
-  function mdnsParse(d) {
+  // an mDNS answer for the service svc (Google Cast's, or a TV running NetherFlow's) → { name (its TXT fn), model (md),
+  // port (its SRV's) }, or null
+  function mdnsParse(d, svc = '_googlecast') {
     if (!d || d.length < 12) return null;
     const v = new DataView(d.buffer, d.byteOffset, d.byteLength), n16 = i => v.getUint16(i);
     const name = (i, hops = 0) => { const parts = []; for (;;) { if (i >= d.length) return [parts.join('.'), i]; const l = d[i];
@@ -46,7 +48,7 @@
     const out = { name: '', model: '', port: 8009, cast: false, id: '' };
     for (let r = n16(6) + n16(8) + n16(10); r > 0 && i + 10 <= d.length; r--) {
       const [rn, j] = name(i), type = n16(j), len = n16(j + 8), at = j + 10;
-      if (/_googlecast\._tcp/i.test(rn)) out.cast = true;
+      if (rn.toLowerCase().includes(svc + '._tcp')) out.cast = true;
       if (type === 33 && at + 6 <= d.length) out.port = n16(at + 4); // SRV
       if (type === 16) for (let k = at; k < at + len && k < d.length;) { const l = d[k], s = dec.decode(d.subarray(k + 1, k + 1 + l)); k += 1 + l; // TXT
         const [key, ...val] = s.split('='); if (key === 'fn') out.name = val.join('='); if (key === 'md') out.model = val.join('='); if (key === 'id') out.id = val.join('='); }
@@ -55,6 +57,8 @@
     return out.cast ? out : null;
   }
   const SSDP = 'M-SEARCH * HTTP/1.1\r\nHOST: 239.255.255.250:1900\r\nMAN: "ssdp:discover"\r\nMX: 2\r\nST: urn:schemas-upnp-org:device:MediaRenderer:1\r\n\r\n';
+  // (DIAL: a TV's own casting — how a Fire TV is found when NetherFlow isn't open on it, and how NetherFlow's opened there)
+  const DIAL = SSDP.replace('urn:schemas-upnp-org:device:MediaRenderer:1', 'urn:dial-multiscreen-org:service:dial:1');
   // a DLNA renderer's description (its LOCATION) → its name, and where to send its AVTransport and RenderingControl commands
   async function dlnaDescribe(net, location) {
     const r = await net.http('GET', location, {}, '');
@@ -195,23 +199,48 @@
   class Caster {
     constructor({ net, from = '' }) { this.net = net; this.from = from; }
     // the TVs and speakers that answer within ms (a device both Cast and DLNA: Cast's, the better of the two)
+    // TVs running NetherFlow: by SSDP, or by mDNS (_netherflow._tcp: a Fire TV's own DIAL may hold SSDP's port there).
+    // Fire TVs without it open: by DIAL, shown so they're found ("Open NetherFlow on it": wake) — not when they have it.
     async devices(ms = 2500) {
-      const [casts, renderers] = await Promise.all([
+      const [casts, ours, renderers, dials] = await Promise.all([
         this.net.udp('224.0.0.251', 5353, mdnsQuery('_googlecast._tcp.local'), ms).catch(() => []),
+        this.net.udp('224.0.0.251', 5353, mdnsQuery('_netherflow._tcp.local'), ms).catch(() => []),
         this.net.udp('239.255.255.250', 1900, enc.encode(SSDP), ms).catch(() => []),
+        this.net.udp('239.255.255.250', 1900, enc.encode(DIAL), ms).catch(() => []),
       ]);
       const out = new Map();
       for (const a of casts) { if (!privateHost(a.from)) continue; const c = mdnsParse(a.data); if (c && !out.has('cast:' + a.from)) out.set('cast:' + a.from, { id: 'cast:' + a.from, kind: 'cast', name: c.name || 'Cast device', model: c.model, host: a.from, port: c.port }); }
       const locs = new Map();
       for (const a of renderers) { const loc = (dec.decode(a.data).match(/^LOCATION:\s*(\S+)/im) || [])[1]; try { if (loc && privateHost(new URL(loc).hostname) && !locs.has(loc)) locs.set(loc, a.from); } catch {} }
-      await Promise.all([...locs].map(async ([loc, host]) => {
+      for (const a of ours) { // (found by mDNS: its description where its port is — once, if SSDP found it too)
+        const c = privateHost(a.from) && mdnsParse(a.data, '_netherflow');
+        if (c && c.port && ![...locs.values()].includes(a.from)) locs.set(`http://${a.from}:${c.port}/desc.xml`, a.from);
+      }
+      const tvs = [], dl = new Map();
+      for (const a of dials) { const loc = (dec.decode(a.data).match(/^LOCATION:\s*(\S+)/im) || [])[1]; try { if (loc && privateHost(new URL(loc).hostname)) dl.set(a.from, loc); } catch {} }
+      const fire = Promise.all([...dl].map(async ([host, loc]) => {
+        const r = await Promise.race([this.net.http('GET', loc, {}, '').catch(() => null), sleep(3000).then(() => null)]);
+        if (!r || r.status >= 400 || !/amazon/i.test(tag(r.text, 'manufacturer'))) return;
+        const h = r.headers || {}, apps = h['application-url'] || h['Application-URL'] || '';
+        tvs.push({ id: 'firetv:' + host, kind: 'firetv', host, name: tag(r.text, 'friendlyName') || 'Fire TV', model: 'Fire TV', apps });
+      }));
+      await Promise.all([...[...locs].map(async ([loc, host]) => {
         if (out.has('cast:' + host)) return;
         const d = await Promise.race([dlnaDescribe(this.net, loc).catch(() => null), sleep(3000).then(() => null)]);
         if (d) out.set('dlna:' + loc, { id: 'dlna:' + loc, kind: 'dlna', host, ...d });
-      }));
+      }), fire]);
+      for (const t of tvs) if (![...out.values()].some(d => d.host === t.host)) out.set(t.id, t); // (with NetherFlow open on it: that, not this)
       return [...out.values()].sort((a, b) => a.name.localeCompare(b.name));
     }
-    open(d) { if (!privateHost(d.host)) throw new Error('not a device in the house'); return d.kind === 'cast' ? castOpen(this.net, d) : dlnaOpen(this.net, d, this.from); }
+    // a Fire TV: NetherFlow opened on it, by DIAL's launch (its app's name: NetherFlow, see whisperplay.xml) → 'opened',
+    // 'missing' (not on it, or won't be opened that way), or 'off' (no answer)
+    async wake(d) {
+      let url; try { url = new URL(d.apps.replace(/\/?$/, '/') + 'NetherFlow'); } catch { return 'missing'; }
+      if (d.kind !== 'firetv' || url.protocol !== 'http:' || !privateHost(url.hostname)) return 'missing';
+      const r = await this.net.http('POST', url.href, { 'Content-Type': 'text/plain; charset=utf-8', Origin: 'package:io.github.volodya_rua.netherflow' }, '').catch(() => null); // (who asks: the origin whisperplay.xml allows)
+      return !r ? 'off' : r.status === 200 || r.status === 201 ? 'opened' : 'missing';
+    }
+    open(d) { if (!privateHost(d.host) || d.kind === 'firetv') throw new Error('not a device in the house'); return d.kind === 'cast' ? castOpen(this.net, d) : dlnaOpen(this.net, d, this.from); }
   }
   out.create = opts => new Caster(opts);
   out._test = { mdnsQuery, mdnsParse, castFrame, castRead, privateHost, hms, secs }; // (for its checks)

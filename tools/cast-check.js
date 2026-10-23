@@ -39,5 +39,35 @@ NFCast.create({ net }).devices(10).then(list => {
   assert.deepStrictEqual(list.map(d => [d.kind, d.name, d.host]), [['dlna', 'Bedroom & Speaker', '192.168.1.30'], ['cast', 'Living Room TV', '192.168.1.20']]);
   assert.deepStrictEqual([list[0].av, list[0].rc, list[0].model], ['http://192.168.1.30:49152/av', 'http://192.168.1.30:49152/rc', 'Acme One']);
   assert.throws(() => NFCast.create({ net }).open({ kind: 'cast', host: '8.8.8.8' }), /not a device in the house/);
-  console.log('cast.js: ok');
-});
+  return fireTvs();
+}).then(() => console.log('cast.js: ok'));
+
+// TVs running NetherFlow found by mDNS (_netherflow._tcp: a Fire TV's own DIAL may hold SSDP's port); Fire TVs by DIAL —
+// one with NetherFlow open on it shown once, as that; one without: "firetv", and NetherFlow opened on it by DIAL's launch
+async function fireTvs() {
+  const nfInst = 'NetherFlow on Fire TV._netherflow._tcp.local';
+  const nfAnswer = new Uint8Array(Buffer.concat([head, rr('_netherflow._tcp.local', 12, name(nfInst)), rr(nfInst, 33, Buffer.concat([Buffer.from([0, 0, 0, 0, 0xa0, 0xad]), name('tv.local')])), rr(nfInst, 16, txt(['fn=NetherFlow on Fire TV'])), rr('tv.local', 1, Buffer.from([192, 168, 1, 40]))]));
+  const dial = loc => new TextEncoder().encode(`HTTP/1.1 200 OK\r\nLOCATION: ${loc}\r\nST: urn:dial-multiscreen-org:service:dial:1\r\n\r\n`);
+  const nfDesc = desc.replace('Bedroom &amp; Speaker', 'NetherFlow on Fire TV').replace('Acme', 'NetherFlow');
+  const fireDesc = h => `<root><device><friendlyName>Living Room Fire TV ${h}</friendlyName><manufacturer>Amazon</manufacturer><modelName>AFTMM</modelName></device></root>`;
+  const posts = [];
+  const net2 = {
+    udp: async (g, port, bytes) => { const q = new TextDecoder('latin1').decode(bytes);
+      return port === 5353 ? (q.includes('_netherflow') ? [{ from: '192.168.1.40', data: nfAnswer }] : [])
+        : q.includes('dial-multiscreen') ? [{ from: '192.168.1.40', data: dial('http://192.168.1.40:60000/dd.xml') }, { from: '192.168.1.50', data: dial('http://192.168.1.50:60000/dd.xml') }] : []; },
+    http: async (method, url, headers) => {
+      const u = new URL(url); assert(privateHost(u.hostname), 'asked the internet: ' + url);
+      if (method === 'POST') { posts.push([url, headers.Origin]); return { status: u.hostname === '192.168.1.50' ? 201 : 404, headers: {}, text: '' }; }
+      if (u.port === '41133') return { status: 200, headers: {}, text: nfDesc };
+      return { status: 200, headers: { 'application-url': `http://${u.hostname}:8009/apps/` }, text: fireDesc(u.hostname) };
+    },
+  };
+  const c = NFCast.create({ net: net2 }), list = await c.devices(10);
+  assert.deepStrictEqual(list.map(d => [d.kind, d.name, d.host]), [['firetv', 'Living Room Fire TV 192.168.1.50', '192.168.1.50'], ['dlna', 'NetherFlow on Fire TV', '192.168.1.40']]);
+  assert.strictEqual(list[1].av, 'http://192.168.1.40:41133/av');
+  assert.strictEqual(await c.wake(list[0]), 'opened');
+  assert.deepStrictEqual(posts, [['http://192.168.1.50:8009/apps/NetherFlow', 'package:io.github.volodya_rua.netherflow']]);
+  assert.strictEqual(await c.wake({ ...list[0], apps: 'http://192.168.1.40:8009/apps' }), 'missing'); // (not on it: 404)
+  assert.strictEqual(await c.wake({ ...list[0], apps: 'http://93.184.216.34/apps/' }), 'missing'); // (never the internet)
+  assert.throws(() => c.open(list[0]), /not a device in the house/); // (not played on: opened first)
+}

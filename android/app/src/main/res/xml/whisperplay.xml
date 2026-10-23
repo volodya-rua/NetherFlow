@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Fire TV: NetherFlow opened on the TV from a phone or a computer on the same Wi-Fi ("Open NetherFlow on it", in their
+     Play on a TV or speaker list), by DIAL, Amazon's way for an app on a Fire TV to be started from another device.
+     Nothing is passed to it: once open, the TV is in their list (CastPlugin's receiver) and they play on it as usual. -->
+<whisperplay>
+    <dial>
+        <application>
+            <dialid>NetherFlow</dialid>
+            <authorizedOrigins>
+                <origin>package:io.github.volodya_rua.netherflow</origin>
+            </authorizedOrigins>
+        </application>
+    </dial>
+</whisperplay>

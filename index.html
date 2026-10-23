@@ -4581,6 +4581,24 @@ function castStatus(st) { // what the device says: its own remote's pause and pl
   else if (st.state === 'paused' && cast.want) { cast.want = false; setPlaying(false); }
   else if (st.state === 'error' && cast.want) { cast.want = false; setPlaying(false); toast(`${cast.dev.name} couldn't play this one`); }
 }
+// A Fire TV without NetherFlow open on it (found by its own casting, DIAL): NetherFlow opened on it from here, then played
+// on as soon as it's in the list; not on it (or it won't be opened that way): how to put it there
+async function castWake(d) {
+  cast.note = `Opening NetherFlow on ${d.name}…`; castRender();
+  const got = await castMake().wake(d);
+  if (got !== 'opened') {
+    cast.note = got === 'off' ? `Couldn't reach ${d.name}: it may be asleep, or on another Wi-Fi.`
+      : `Open NetherFlow on ${d.name}, and it shows here. Not on it yet? On the Fire TV: Find › search "Downloader", install and open it, go to github.com/volodya-rua/NetherFlow/releases/latest and install NetherFlow's APK (Settings › My Fire TV › Developer options › Install unknown apps › Downloader: on).`;
+    return castRender();
+  }
+  for (let i = 0; i < 8; i++) { // (opened: a few seconds for it to start, then in the list)
+    await new Promise(r => setTimeout(r, 2500));
+    const list = await castMake().devices(2000).catch(() => []), it = list.find(x => x.host === d.host && x.kind !== 'firetv');
+    if (it) { cast.list = list; return castTo(it); }
+  }
+  cast.note = `NetherFlow opened on ${d.name}, but it isn't answering: in NetherFlow on the TV, Settings › "Let phones and computers on this Wi-Fi play here" must be on.`;
+  castRender();
+}
 async function castTo(d) { // the song moves to the device, from where it is
   if (cast.dev?.id === d.id) return;
   cast.note = `Connecting to ${d.name}…`; castRender();
@@ -4625,7 +4643,8 @@ function castRender() {
   if (!$('castPanel').matches(':popover-open')) return;
   const here = native ? 'phone' : 'computer', row = (name, sub, on, go) => { const b = el('button', 'cast-dev' + (on ? ' on' : ''), name); b.append(el('small', 'lbl', sub)); b.onclick = go; return b; };
   const out = [sectionHead('Play on', cast.looking ? '' : 'Look again', castLook), row('This ' + here, cast.s ? '' : 'playing here', !cast.s, () => castStop())];
-  for (const d of cast.list) out.push(row(d.name, cast.dev?.id === d.id ? 'playing here' : d.model || 'TV or speaker', cast.dev?.id === d.id, () => castTo(d)));
+  for (const d of cast.list) out.push(d.kind === 'firetv' ? row(d.name, 'Open NetherFlow on it', false, () => castWake(d))
+    : row(d.name, cast.dev?.id === d.id ? 'playing here' : d.model || 'TV or speaker', cast.dev?.id === d.id, () => castTo(d)));
   out.push(el('p', 'q-empty lbl', cast.note || (cast.looking ? 'Looking for TVs and speakers on your Wi-Fi…'
     : !cast.list.length ? `None found. A TV or a speaker shows here when it's on, and on the same Wi-Fi as this ${here}.`
     : cast.s ? `The song plays on ${cast.dev.name}. The lyrics, the queue and the controls stay here.` : 'Pick one: the song moves there, from where it is.')));
