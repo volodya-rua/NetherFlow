@@ -2220,7 +2220,7 @@ function hapWire() {
 // Nothing to feel, nothing sent.
 const hap = { line: [], now: 0 };
 function hapFrames({ t, a }) {
-  if (mobivib === 'Off' || !ctx || P.paused) { hap.line.length = 0; return; }
+  if (mobivib === 'Off' || !ctx || P.paused || car.on) { hap.line.length = 0; return; } // (in the car: a phone in its holder)
   const top = mobivib === 'Strong' ? 255 : 170, lat = (ctx.baseLatency || 0) + (ctx.outputLatency || 0), now = ctx.currentTime;
   const at = Math.max(t + lat, now + .015);
   a.forEach((v, i) => hap.line.push({ at: at + i * .01, a: Math.round(v * top) })); // (each motor told anew stops and starts: told less often, fewer gaps)
@@ -2888,6 +2888,9 @@ let view = VIEWS.includes(store.get('netherflow.view')) ? store.get('netherflow.
 // Tapped (or V): its words after all, for this song (coverSkip).
 let autoCover = false, coverSkip = null;
 // the visualiser's looks (Settings › Visualiser; Auto: a new one with each song; a tap on it: the next)
+// (in the car, Android: see "in the car")
+const CARS = 'netherflow.cars', car = { on: false, route: null, drove: false, asked: new Set(), self: false };
+let carDrive = store.get('netherflow.cardrive') !== 'Off', playOnConnect = store.get('netherflow.connectplay') !== 'Off';
 const VIS = ['Fold', 'Mirror', 'Ether', 'Spiral', 'Portal', 'Lace', 'Veil', 'Nova'];
 const VIS_NOTE = 'Fold: glowing fractal threads, bent by the music. Mirror: a kaleidoscope looking into itself. Ether: smoke that flows. Spiral: a whirlpool of light. Portal: a tunnel of light you fly down. Lace: a fractal\'s glowing edge, reshaped by every beat. Veil: an aurora rising from the music. Nova: a star bursting with it.';
 let visPick = VIS.includes(store.get('netherflow.vis')) ? store.get('netherflow.vis') : 'Auto', visNow = Math.max(0, VIS.indexOf(visPick)), visSong = null;
@@ -3180,7 +3183,16 @@ function renderTextPanel() {
       settingRow('Island position', [islandMoving ? 'Done' : 'Move it', 'Top middle'], '', v => netherflowApp.islandPlace(v === 'Top middle' ? 'reset' : 'move'),
         'Drag the island anywhere on your screen, and it stays there. Ctrl+Alt+I moves it from any app; press it again, or Done on the island, when it\'s where you want it.')] : []),
     ...(pcOnly ? [settingRow('Cursor', ['Glow', 'System'], cursorPref(), setCursorPref, 'Glow: a glowing arrow in the mood\'s colours. System: your computer\'s own pointer. (A theme keeps its own.)')] : []),
-    settingRow('Drive mode', ['Start'], '', () => { $('textPanel').hidePopover(); openDrive(); }, 'Big, simple controls for the road: play, pause, next and previous, and the song\'s name in large type. Swipe left or right to change songs.'));
+    settingRow('Drive mode', ['Start'], '', () => { $('textPanel').hidePopover(); openDrive(); }, 'Big, simple controls for the road: play, pause, next and previous, and the song\'s name in large type. Swipe left or right to change songs.'),
+    ...(native ? [
+      settingRow('In the car', ['Drive mode', 'Off'], carDrive ? 'Drive mode' : 'Off', setCarDrive, 'With Android Auto, or the Bluetooth of a car you\'ve said is yours: Drive mode comes up on the phone by itself, with nothing else drawing (more of the phone for the music), and no vibration. Back as it was when the car goes.'),
+      settingRow('Play when connected', ['On', 'Off'], playOnConnect ? 'On' : 'Off', setPlayOnConnect, 'The song you paused carries on when you connect Bluetooth (your car, headphones), plug in a cable (AUX) or USB, or Android Auto starts.'),
+      ...(car.route?.bt && !car.route.car ? [settingRow(`Is ${car.route.bt} your car?`, ['Yes', 'No'], myCars()[car.route.bt] === true ? 'Yes' : myCars()[car.route.bt] === false ? 'No' : '', v => markCar(car.route.bt, v === 'Yes'),
+        'Connected now. Yes: whenever it connects, NetherFlow knows it\'s in the car (In the car, above).')] : []),
+      settingRow('Start by itself in the car', [car.self ? 'Allowed' : 'Allow'], car.self ? 'Allowed' : '', () => Capacitor.Plugins.Playback.allowSelfStart().catch(() => {}),
+        'When Android Auto connects, or the car asks for a song, NetherFlow opens by itself behind what\'s on the phone and plays: no need to open it first. Android allows that only with NetherFlow\'s "Display over other apps" switched on (it never draws over other apps: it\'s the one way Android lets a music app wake itself).'),
+      settingRow('Android Auto', ['Its settings'], '', () => Capacitor.Plugins.Playback.carSettings().catch(() => toast('Android Auto isn\'t on this phone')),
+        'NetherFlow isn\'t from the Play Store, so Android Auto lists it only once you allow that: in Android Auto\'s settings, tap Version 10 times (developer settings), then ⋮ › Developer settings › Unknown sources: on. Then NetherFlow is with the car\'s other music apps.')] : []));
 }
 // a labelled row of choices (the mood menu and the Settings panel)
 // a labelled number setting, with − and + either side of it: held down, they keep counting (by 5 after a moment)
@@ -3521,7 +3533,7 @@ function notifyNative() {
       title: $('title').textContent, artist: $('artist').textContent, album: current.collectionName || '',
       art,
       duration: Math.round(P.dur * 1000), position: Math.round(P.t * 1000), playing: !P.paused, hasNext: hasNext(),
-      lyric: lockLyrics && synced && lyrDisp(lines[lockIdx()]).text.trim() || '',
+      lyric: lockLyrics && !car.on && synced && lyrDisp(lines[lockIdx()]).text.trim() || '', // (in the car: the singer, not a line to read)
     });
   }, 150);
 }
@@ -3541,6 +3553,8 @@ function carLibrary() {
 // a car's pick: a song from that library (its list played from it: the next ones follow), or a voice search ("play …
 // on NetherFlow": its best match, and the songs found with it; nothing said — the last song, or your liked songs)
 async function carPlay(action, text) {
+  for (let i = 0; i < 50 && !libReady; i++) await new Promise(r => setTimeout(r, 200)); // (the app opened for it, just now: its library first)
+  if (action === 'play') { if (P.loaded) P.play(); else if (lastSong) resumeLast(); else if (library.liked.length) { queue = library.liked.slice(); playTrack(queue[0], '', false, true); } return; } // (Play with nothing loaded: the last song, else your liked songs)
   if (action === 'playId') {
     let parent, at, id;
     try { [parent, at, id] = JSON.parse(text); } catch { return; }
@@ -3557,9 +3571,40 @@ async function carPlay(action, text) {
   if (!found.length) return toast(`Nothing found for "${q}"`);
   queue = found.slice(0, 20); playTrack(queue[0], q, false, true);
 }
+// ---------- in the car (Android): Android Auto, a car's Bluetooth, a cable ----------
+// Android says (Playback "route", see PlaybackPlugin) whether Android Auto's running and what the sound comes out of. In
+// the car — Android Auto, or a Bluetooth you've said is your car — Drive mode comes up on the phone by itself (Settings ›
+// In the car) and goes when the car does: big controls, and nothing else drawing (the phone's processor left to the
+// music, Android Auto and the map); MobiVib rests (a phone in its holder). Play when connected: the song you'd paused
+// carries on when Bluetooth, a cable (AUX) or USB is connected, or Android Auto starts.
+const myCars = () => { try { return JSON.parse(store.get(CARS) || '{}'); } catch { return {}; } }; // (a Bluetooth's name → yours, or not)
+function setCarDrive(v) { carDrive = v === 'Drive mode'; store.set('netherflow.cardrive', carDrive ? '' : 'Off'); renderTextPanel(); }
+function setPlayOnConnect(v) { playOnConnect = v === 'On'; store.set('netherflow.connectplay', playOnConnect ? '' : 'Off'); renderTextPanel(); }
+function markCar(name, mine) { const m = myCars(); m[name] = mine; store.set(CARS, JSON.stringify(m)); carRoute(car.route, ''); renderTextPanel(); }
+function carRoute(r, added = '') {
+  if (!r) return;
+  car.route = r;
+  const was = car.on, cars = myCars();
+  car.on = !!r.car || !!(r.bt && cars[r.bt]);
+  if (car.on !== was) {
+    hap.line.length = 0;
+    if (car.on && carDrive && !$('drive').open) { openDrive(); car.drove = true; }
+    else if (!car.on && car.drove) { car.drove = false; if ($('drive').open) $('drive').close(); }
+  }
+  const carried = playOnConnect && (added || car.on && !was) && tg.role !== 'guest' && (P.loaded ? current && P.paused : !!lastSong);
+  if (carried) P.loaded ? P.play() : resumeLast(); // (the app just opened, in the car: the last song, from where it was)
+  // a Bluetooth not said about yet: asked, once, whether it's your car
+  if (added === 'bt' && r.bt && !(r.bt in cars) && !r.car && !car.asked.has(r.bt)) { car.asked.add(r.bt); toast(`Connected to ${r.bt}. Is it your car?`, 9000, 'Yes, my car', () => { markCar(r.bt, true); toast(`${r.bt}: your car. Drive mode comes up when it connects`); }); }
+  else if (carried) toast(`Playing on ${r.car ? 'Android Auto' : added === 'bt' ? r.bt || 'Bluetooth' : added === 'usb' ? 'USB' : 'the cable'}`);
+  if ($('textPanel').matches(':popover-open')) renderTextPanel();
+}
+if (native) { Capacitor.Plugins.Playback.addListener('route', r => carRoute(r, r.added)); Capacitor.Plugins.Playback.route().then(r => libReady || lastSong ? carRoute(r) : setTimeout(() => carRoute(r), 1500), () => {}); }
+// (whether it may start by itself, as Settings shows it: asked again whenever the app comes back — from the phone's settings)
+const carSelf = () => native && Capacitor.Plugins.Playback.selfStart().then(r => { if (car.self !== r.on) { car.self = r.on; if ($('textPanel').matches(':popover-open')) renderTextPanel(); } }, () => {});
+carSelf(); document.addEventListener('visibilitychange', () => { if (!document.hidden) carSelf(); });
 if (native) Capacitor.Plugins.Playback.addListener('action', ({ action, position, text }) => {
   if (action === 'playId' || action === 'search') carPlay(action, text || '');
-  else if (action === 'play') P.play();
+  else if (action === 'play') P.loaded ? P.play() : carPlay('play', ''); // (a car's Play, the app just opened for it: the last song)
   else if (action === 'pause') P.pause();
   else if (action === 'next') nextTrack();
   else if (action === 'prev') prevTrack();
@@ -3886,7 +3931,9 @@ function useEngine(kind) {
 
 function initAudio() { // created lazily: browsers want a user gesture first
   if (ctx) return ctx.resume();
-  ctx = new AudioContext({ latencyHint: 'playback' }); // (music's larger buffers: no cracks when the device is busy)
+  // (music's larger buffers: no cracks when the device is busy — on a phone, twice the size 'playback' gets, 0.17 s: a
+  // phone in a car is busy with Android Auto, the map and the heat; what's heard is still in step, as soundLag counts it)
+  ctx = new AudioContext({ latencyHint: native ? .25 : 'playback' });
   ctx.addEventListener('error', () => freshSound()); // (its output device failing, where the browser says so)
   applySink(); // (on the speakers chosen)
   analyser = ctx.createAnalyser();
@@ -15145,7 +15192,7 @@ let bassS = 0, bassAvg = 0, midS = 0, highS = 0, fxT = 0, last = 0, visWas = fal
 // (the things the beat moves: the play button, the record, the cover background — set on them alone, not on the whole
 // page, and only while they're seen)
 const bassEls = [['.core', () => true], ['.cs-disc', coverShown], ['.cover-bg', () => theme === 'Cover']].map(([q, seen]) => ({ el: document.querySelector(q), seen, v: '' }));
-const fullPages = [dlg, $('artistPage'), $('about')];
+const fullPages = [dlg, $('artistPage'), $('about'), $('drive')]; // (Drive mode too: nothing drawn behind it, in the car)
 let lastSeek = -1, lastCur = '', lastDur = '', looping = true, owed = 0, lastRun = 0, visN = 0, visDt = 0;
 let vsGap = [], vsTick = 0, vsN = 1; // (a computer: the gaps between the screen's frames, and every how many the work's done)
 // Each frame reads what it needs of the page first (sizes, places) and changes it after: read after a change, the

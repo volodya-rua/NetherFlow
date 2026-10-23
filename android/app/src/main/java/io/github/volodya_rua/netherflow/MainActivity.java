@@ -77,6 +77,8 @@ public class MainActivity extends BridgeActivity {
             }
         });
         keptDir = new java.io.File(getCacheDir(), "heads");
+        // opened by itself for a car (PlaybackService.startItself): behind what's on the phone's screen — it plays from there
+        if (getIntent().getBooleanExtra("nfCar", false)) { getIntent().removeExtra("nfCar"); moveTaskToBack(true); }
     }
 
     // (a test build only — never NetherFlow's own APKs, which aren't debuggable: `am start … --ez nfTestKill true` kills the
@@ -113,14 +115,19 @@ public class MainActivity extends BridgeActivity {
             if (!streamable(u)) return failed(403);
             Head h = HEADS.remove(u);
             if (h != null && first) return startThenRest(type, range, h, new Later(u, null, "bytes=" + h.bytes.length + "-", null, h.total)); // (its start, fetched ahead: from memory)
-            java.net.HttpURLConnection c = open(u, range);
+            // (its first part asked for by its range too — at full speed, see Steady — and the player told of all it asked for)
+            long start = from(range);
+            java.net.HttpURLConnection c = open(u, "bytes=" + start + "-" + (start + Steady.PART - 1));
             int code = c.getResponseCode();
             if (code != 200 && code != 206) { c.disconnect(); return failed(code == 403 ? 410 : 502); } // (410: gone, ask anew)
+            long total = code == 206 ? totalOf(c.getHeaderField("Content-Range")) : endOf(c, 200, 0), end = Math.min(total, rangeEnd(range, total));
+            if (total <= 0 || start >= total) { c.disconnect(); return failed(502); }
             java.util.Map<String, String> head = new java.util.HashMap<>();
-            head.put("Accept-Ranges", "bytes"); head.put("Cache-Control", "no-store");
-            for (String k : new String[] { "Content-Length", "Content-Range" }) if (c.getHeaderField(k) != null) head.put(k, c.getHeaderField(k));
+            head.put("Accept-Ranges", "bytes"); head.put("Cache-Control", "no-store"); head.put("Content-Length", String.valueOf(end - start));
+            if (range != null) head.put("Content-Range", "bytes " + start + "-" + (end - 1) + "/" + total);
             if (first) keepStart(id, u, q.getQueryParameter("g")); // (for next time)
-            return new WebResourceResponse(type, null, code, code == 206 ? "Partial Content" : "OK", head, code == 206 ? CastPlugin.skipped(c.getInputStream(), range) : c.getInputStream()); // (a range: see CastPlugin.skipped)
+            java.io.InputStream body = new Steady(u, start, end, c);
+            return new WebResourceResponse(type, null, range != null ? 206 : 200, range != null ? "Partial Content" : "OK", head, range != null ? CastPlugin.skipped(body, range) : body); // (a range: see CastPlugin.skipped)
         } catch (Exception e) {
             return failed(502);
         }
@@ -243,19 +250,93 @@ public class MainActivity extends BridgeActivity {
         Later(String u, String token, String range, String id, long total) { this.u = u; this.token = token; this.range = range; this.id = id; this.total = total; }
         private java.io.InputStream in() throws java.io.IOException {
             if (in == null) {
-                java.net.HttpURLConnection c = open(u != null ? u : urlFor(token), range);
+                String at = u != null ? u : urlFor(token);
+                java.net.HttpURLConnection c = open(at, "bytes=" + from(range) + "-" + (from(range) + Steady.PART - 1)); // (by parts: see Steady)
                 String cr = c.getHeaderField("Content-Range");
                 if (c.getResponseCode() != 206 || cr == null || Long.parseLong(cr.substring(cr.indexOf('/') + 1)) != total) {
                     c.disconnect(); java.io.File f = kept(id); if (f != null) f.delete();
                     throw new java.io.IOException("not the stream its start was");
                 }
-                in = c.getInputStream();
+                in = new Steady(at, from(range), total, c);
             }
             return in;
         }
         @Override public int read() throws java.io.IOException { return in().read(); }
         @Override public int read(byte[] b, int off, int len) throws java.io.IOException { return in().read(b, off, len); }
         @Override public void close() throws java.io.IOException { if (in != null) in.close(); }
+    }
+
+    // A song's stream as the player reads it, fetched ahead of it as fast as the connection gives it (6 MB ahead at most:
+    // most of a song, minutes of it), so a car's patchy signal — a tunnel, a mast handing over — plays on from what's
+    // here. YouTube sends one long answer only about as fast as it plays (a couple of seconds ahead, no more: a hiccup in
+    // the signal and the music stopped), but each part asked for by its range at full speed, so it's asked for 1 MB at a
+    // time, as a browser's own player asks. A connection that drops or stalls is opened again from the very byte it got
+    // to, for a minute of trying; the player only ever sees the music arrive a little later. Given up only after that,
+    // or if the address is gone (the page then asks anew, as before).
+    static final class Steady extends java.io.InputStream {
+        private static final int AHEAD = 6 << 20, PART = 1 << 20;
+        private final java.util.ArrayDeque<byte[]> got = new java.util.ArrayDeque<>();
+        private byte[] cur; private int at; private long held;
+        private boolean done; private java.io.IOException fail; private volatile boolean closed;
+        Steady(String u, long pos, long end, java.net.HttpURLConnection first) {
+            Thread t = new Thread(() -> fetch(u, pos, end, first), "nf-steady"); t.setDaemon(true); t.start();
+        }
+        private void fetch(String u, long pos, long total, java.net.HttpURLConnection c) { // (total: where it ends)
+            long lost = 0; // (when it was last getting anything)
+            try {
+                while (!closed && (total <= 0 || pos < total)) {
+                    try {
+                        if (c == null) c = open(u, "bytes=" + pos + "-" + (total > 0 ? String.valueOf(Math.min(total, pos + PART) - 1) : ""));
+                        int code = c.getResponseCode();
+                        if (code == 403 || code == 404 || code == 410) throw new Gone();
+                        if (code != 200 && code != 206) throw new java.io.IOException("HTTP " + code);
+                        try (java.io.InputStream in = c.getInputStream()) {
+                            if (code == 200 && pos > 0) for (long k = pos; k > 0; ) { long s = in.skip(k); if (s <= 0) throw new java.io.IOException("short"); k -= s; } // (the whole of it, though only the rest was asked)
+                            for (long part = 0; total <= 0 || part < PART; ) { byte[] b = new byte[65536]; int n = in.read(b); if (n < 0) break; if (n > 0) { give(b, n); pos += n; part += n; lost = 0; } }
+                        }
+                        if (total <= 0) break; // (its length not known: what came is all of it)
+                        if (pos < total) { c.disconnect(); c = null; continue; } // (a part done: the next, at once)
+                    } catch (Gone g) { throw g; }
+                    catch (java.io.IOException e) { if (closed) break; }
+                    finally { if (c != null) c.disconnect(); c = null; }
+                    if (closed || (total > 0 && pos >= total)) break;
+                    if (lost == 0) { lost = System.currentTimeMillis(); android.util.Log.i("NetherFlow", "stream dropped at " + pos + ": opened again from there"); }
+                    if (System.currentTimeMillis() - lost > 60000) throw new java.io.IOException("no connection for a minute");
+                    Thread.sleep(1500); // (then again, from where it got to)
+                }
+            } catch (java.io.IOException e) { fail = e; }
+            catch (InterruptedException e) { fail = new java.io.InterruptedIOException(); }
+            synchronized (this) { done = true; notifyAll(); }
+        }
+        private synchronized void give(byte[] b, int n) throws InterruptedException {
+            while (held > AHEAD && !closed) wait(1000);
+            got.add(n == b.length ? b : java.util.Arrays.copyOf(b, n)); held += n; notifyAll();
+        }
+        @Override public synchronized int read(byte[] b, int off, int len) throws java.io.IOException {
+            if (len == 0) return 0;
+            while ((cur == null || at >= cur.length) && got.isEmpty()) {
+                if (done) { if (fail != null) throw fail; return -1; }
+                try { wait(1000); } catch (InterruptedException e) { throw new java.io.InterruptedIOException(); }
+            }
+            if (cur == null || at >= cur.length) { cur = got.poll(); at = 0; }
+            int n = Math.min(len, cur.length - at);
+            System.arraycopy(cur, at, b, off, n); at += n; held -= n; notifyAll();
+            return n;
+        }
+        @Override public int read() throws java.io.IOException { byte[] one = new byte[1]; return read(one, 0, 1) < 0 ? -1 : one[0] & 255; }
+        @Override public synchronized void close() { closed = true; got.clear(); notifyAll(); }
+        static final class Gone extends java.io.IOException { Gone() { super("the address is gone"); } }
+    }
+    // (where a range starts, and where the answer to it ends: the byte after its last)
+    private static long from(String range) { java.util.regex.Matcher m = java.util.regex.Pattern.compile("bytes=(\\d+)-").matcher(range == null ? "" : range); return m.find() ? Long.parseLong(m.group(1)) : 0; }
+    private static long totalOf(String contentRange) { try { return Long.parseLong(contentRange.substring(contentRange.indexOf('/') + 1).trim()); } catch (Exception e) { return -1; } }
+    private static long rangeEnd(String range, long total) { java.util.regex.Matcher m = java.util.regex.Pattern.compile("bytes=\\d+-(\\d+)").matcher(range == null ? "" : range); return m.find() ? Long.parseLong(m.group(1)) + 1 : total; }
+    private static long endOf(java.net.HttpURLConnection c, int code, long pos) {
+        String cr = c.getHeaderField("Content-Range");
+        try {
+            if (code == 206 && cr != null) return Long.parseLong(cr.substring(cr.indexOf('-') + 1, cr.indexOf('/'))) + 1; // (bytes a-b/total)
+            return pos + Long.parseLong(c.getHeaderField("Content-Length"));
+        } catch (Exception e) { return -1; }
     }
 
     private static WebResourceResponse failed(int code) {

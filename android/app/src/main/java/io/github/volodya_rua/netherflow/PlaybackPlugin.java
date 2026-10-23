@@ -36,7 +36,96 @@ public class PlaybackPlugin extends Plugin {
     @Override
     public void load() {
         instance = this;
+        watchRoute();
+        // a car's pick that opened the app (PlaybackService.startItself): to the page as soon as it listens
+        String a = PlaybackService.waitingAction;
+        if (a != null) {
+            JSObject d = new JSObject(); d.put("action", a); d.put("position", 0); d.put("text", PlaybackService.waitingText);
+            PlaybackService.waitingAction = null;
+            notifyListeners("action", d, true);
+        }
     }
+    static boolean alive() { PlaybackPlugin p = instance; return p != null && p.getActivity() != null && !p.getActivity().isFinishing(); }
+
+    // Settings › Start by itself in the car: whether it may ({ on }), and the phone's own switch for it ("Display over
+    // other apps" for NetherFlow: see PlaybackService.startItself)
+    @PluginMethod
+    public void selfStart(PluginCall call) {
+        JSObject o = new JSObject();
+        o.put("on", Build.VERSION.SDK_INT < 23 || android.provider.Settings.canDrawOverlays(getContext()));
+        call.resolve(o);
+    }
+    @PluginMethod
+    public void allowSelfStart(PluginCall call) {
+        try {
+            getActivity().startActivity(new Intent(android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION, android.net.Uri.parse("package:" + getContext().getPackageName())));
+            call.resolve();
+        } catch (RuntimeException e) { call.reject("no settings page"); }
+    }
+    // Android Auto's own settings (its developer settings are reached from there: see Settings › Android Auto)
+    @PluginMethod
+    public void carSettings(PluginCall call) {
+        String aa = "com.google.android.projection.gearhead";
+        for (Intent i : new Intent[] { new Intent(Intent.ACTION_APPLICATION_PREFERENCES).setPackage(aa), getContext().getPackageManager().getLaunchIntentForPackage(aa),
+                new Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, android.net.Uri.fromParts("package", aa, null)) }) {
+            if (i == null) continue;
+            try { getActivity().startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); call.resolve(); return; } catch (RuntimeException ignored) {}
+        }
+        call.reject("no Android Auto");
+    }
+
+    // The car, and what the sound comes out of, as they change ("route" events; route() asks): Android Auto running (its
+    // own answer — the connection provider Android Auto keeps, as androidx.car.app reads it) and the outputs connected:
+    // Bluetooth (by its name), a cable (AUX, headphones), USB. { car, bt, wired, usb, added: what was just connected —
+    // "bt", "wired" or "usb" — or "" }. No permission needed.
+    private static final android.net.Uri CAR = android.net.Uri.parse("content://androidx.car.app.connection");
+    private boolean primed = false;
+    static int carState(android.content.Context c) {
+        try (android.database.Cursor q = c.getContentResolver().query(CAR, new String[] { "CarConnectionState" }, null, null, null)) {
+            if (q != null && q.moveToNext()) return q.getInt(0);
+        } catch (Exception ignored) {}
+        return 0; // (no Android Auto, or not connected)
+    }
+    private static String kind(android.media.AudioDeviceInfo d) {
+        switch (d.getType()) {
+            case android.media.AudioDeviceInfo.TYPE_BLUETOOTH_A2DP: return "bt";
+            case android.media.AudioDeviceInfo.TYPE_WIRED_HEADSET: case android.media.AudioDeviceInfo.TYPE_WIRED_HEADPHONES:
+            case android.media.AudioDeviceInfo.TYPE_LINE_ANALOG: case android.media.AudioDeviceInfo.TYPE_AUX_LINE: return "wired";
+            case android.media.AudioDeviceInfo.TYPE_USB_HEADSET: case android.media.AudioDeviceInfo.TYPE_USB_DEVICE: return "usb";
+            default: return "";
+        }
+    }
+    private JSObject routeNow(String added) {
+        JSObject o = new JSObject();
+        String bt = ""; boolean wired = false, usb = false;
+        android.media.AudioManager am = getContext().getSystemService(android.media.AudioManager.class);
+        if (am != null) for (android.media.AudioDeviceInfo d : am.getDevices(android.media.AudioManager.GET_DEVICES_OUTPUTS)) {
+            String k = kind(d);
+            if (k.equals("bt")) bt = String.valueOf(d.getProductName()); else if (k.equals("wired")) wired = true; else if (k.equals("usb")) usb = true;
+        }
+        o.put("car", carState(getContext()) != 0); o.put("bt", bt); o.put("wired", wired); o.put("usb", usb); o.put("added", added);
+        return o;
+    }
+    private void tellRoute(String added) { notifyListeners("route", routeNow(added)); }
+    private void watchRoute() {
+        android.os.Handler h = new android.os.Handler(android.os.Looper.getMainLooper());
+        android.media.AudioManager am = getContext().getSystemService(android.media.AudioManager.class);
+        if (am != null) am.registerAudioDeviceCallback(new android.media.AudioDeviceCallback() {
+            @Override public void onAudioDevicesAdded(android.media.AudioDeviceInfo[] add) {
+                String k = "";
+                for (android.media.AudioDeviceInfo d : add) if (d.isSink() && !kind(d).isEmpty()) k = kind(d);
+                tellRoute(primed ? k : ""); primed = true; // (the first call: what was there already, not just connected)
+            }
+            @Override public void onAudioDevicesRemoved(android.media.AudioDeviceInfo[] gone) { tellRoute(""); }
+        }, h);
+        // Android Auto starting or ending: its provider's change, and the word it sends apps as it does
+        try { getContext().getContentResolver().registerContentObserver(CAR, true, new android.database.ContentObserver(h) { @Override public void onChange(boolean self) { tellRoute(""); } }); } catch (Exception ignored) {}
+        ContextCompat.registerReceiver(getContext(), new android.content.BroadcastReceiver() {
+            @Override public void onReceive(android.content.Context c, Intent i) { h.postDelayed(() -> tellRoute(""), 500); } // (only asks again: nothing's taken from it)
+        }, new android.content.IntentFilter("androidx.car.app.connection.action.CAR_CONNECTION_UPDATED"), ContextCompat.RECEIVER_EXPORTED);
+    }
+    @PluginMethod
+    public void route(PluginCall call) { call.resolve(routeNow("")); }
 
     @PluginMethod
     public void update(PluginCall call) {

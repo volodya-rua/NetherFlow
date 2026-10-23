@@ -82,7 +82,7 @@ public class PlaybackService extends MediaBrowserServiceCompat {
         }
         session = new MediaSessionCompat(this, "NetherFlow");
         session.setCallback(new MediaSessionCompat.Callback() {
-            @Override public void onPlay() { PlaybackPlugin.emit("play", 0); }
+            @Override public void onPlay() { if (!PlaybackPlugin.emit("play", 0, "")) fromCar("play", ""); } // (a car's Play with the app closed: it starts, and carries on the last song)
             @Override public void onPause() { PlaybackPlugin.emit("pause", 0); }
             @Override public void onSkipToNext() { PlaybackPlugin.emit("next", 0); }
             @Override public void onSkipToPrevious() { PlaybackPlugin.emit("prev", 0); }
@@ -104,14 +104,34 @@ public class PlaybackService extends MediaBrowserServiceCompat {
     // what a car can ask for: a song from the library it was shown, or one by voice
     private static final long CAR_ACTIONS = PlaybackStateCompat.ACTION_PLAY_FROM_MEDIA_ID | PlaybackStateCompat.ACTION_PLAY_FROM_SEARCH;
 
-    // A song or a search from a car, to the page; NetherFlow not open on the phone (it plays in its page): said on the
-    // car's screen, nothing played
+    // A song or a search from a car (or its Play), to the page. NetherFlow not open on the phone (it plays in its page):
+    // it opens itself, behind what's on the phone's screen, where it may (startItself), and the pick waits for the page
+    // (PlaybackPlugin.load); where it may not, said on the car's screen, nothing played.
+    static String waitingAction, waitingText;
     private void fromCar(String action, String text) {
         if (PlaybackPlugin.emit(action, 0, text)) return;
-        session.setPlaybackState(new PlaybackStateCompat.Builder().setActions(CAR_ACTIONS)
-            .setState(PlaybackStateCompat.STATE_ERROR, 0, 0f)
-            .setErrorMessage(PlaybackStateCompat.ERROR_CODE_APP_ERROR, "Open NetherFlow on your phone first: it plays from there")
-            .build());
+        boolean starting = startItself();
+        if (starting) { waitingAction = action; waitingText = text; }
+        carNote = new PlaybackStateCompat.Builder().setActions(CAR_ACTIONS | PlaybackStateCompat.ACTION_PLAY)
+            .setState(starting ? PlaybackStateCompat.STATE_BUFFERING : PlaybackStateCompat.STATE_ERROR, 0, 0f)
+            .setErrorMessage(PlaybackStateCompat.ERROR_CODE_APP_ERROR, starting ? "Starting NetherFlow…" : "Open NetherFlow on your phone first, or let it start by itself: on the phone, NetherFlow › Settings › Start by itself in the car")
+            .build();
+        session.setPlaybackState(carNote);
+    }
+    // (what the car's told meanwhile — starting, or open it first — kept till the page sends the song: see update)
+    private PlaybackStateCompat carNote;
+    // NetherFlow opening itself for a car, behind whatever's on the phone's screen (MainActivity, nfCar). Android lets an
+    // app in the background open itself only with "Display over other apps" allowed for it (Settings › Start by itself
+    // in the car: nothing's ever drawn over other apps — it's the one way Android has to let a music app wake itself for
+    // the car). Once in 15 s at most.
+    private long startedAt = -60000;
+    boolean startItself() {
+        if (PlaybackPlugin.alive()) return true;
+        if (Build.VERSION.SDK_INT >= 23 && !android.provider.Settings.canDrawOverlays(this)) return false;
+        if (android.os.SystemClock.elapsedRealtime() - startedAt < 15000) return true;
+        startedAt = android.os.SystemClock.elapsedRealtime();
+        try { startActivity(new Intent(this, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_NO_ANIMATION).putExtra("nfCar", true)); return true; }
+        catch (RuntimeException e) { return false; }
     }
 
     // The library as a car shows it: liked songs, recently played and the playlists, each song [id, title, artist] — a
@@ -147,7 +167,16 @@ public class PlaybackService extends MediaBrowserServiceCompat {
     }
     @Override
     public BrowserRoot onGetRoot(@NonNull String client, int uid, Bundle hints) {
-        return new BrowserRoot(trusted(client, uid) ? "root" : "none", null);
+        boolean ok = trusted(client, uid);
+        // Android Auto connecting with NetherFlow closed: it opens itself, ready to play (where it may: startItself)
+        if (ok && "com.google.android.projection.gearhead".equals(client)) main.post(this::startItself);
+        // (its lists as lists; search by voice and in the car's own search)
+        Bundle look = new Bundle();
+        look.putBoolean("android.media.browse.SEARCH_SUPPORTED", true);
+        look.putBoolean("android.media.browse.CONTENT_STYLE_SUPPORTED", true);
+        look.putInt("android.media.browse.CONTENT_STYLE_BROWSABLE_HINT", 1);
+        look.putInt("android.media.browse.CONTENT_STYLE_PLAYABLE_HINT", 1);
+        return new BrowserRoot(ok ? "root" : "none", ok ? look : null);
     }
     boolean trusted(String client, int uid) {
         if (uid == android.os.Process.myUid() || uid == android.os.Process.SYSTEM_UID) return true;
@@ -224,6 +253,8 @@ public class PlaybackService extends MediaBrowserServiceCompat {
         if ("nf.prev".equals(action)) PlaybackPlugin.emit("prev", 0);
         else if ("nf.next".equals(action)) PlaybackPlugin.emit("next", 0);
         else if ("nf.toggle".equals(action)) PlaybackPlugin.emit(song.getBoolean("playing") ? "pause" : "play", 0);
+        // (a test build only: a car's ask, as if from Android Auto — `am start-foreground-service … -a nf.carTest --es a playId --es text …`)
+        else if ("nf.carTest".equals(action) && (getApplicationInfo().flags & android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0) fromCar(intent.getStringExtra("a"), String.valueOf(intent.getStringExtra("text")));
         else if (intent != null && intent.getExtras() != null) update(intent.getExtras());
         if (!foreground) publish(); // Android requires the notification promptly after the service starts
         return START_NOT_STICKY;
@@ -231,6 +262,7 @@ public class PlaybackService extends MediaBrowserServiceCompat {
 
     // New song details from the page (any subset of the fields).
     void update(Bundle changes) {
+        carNote = null; // (the page is here, and says what's playing)
         song.putAll(changes);
         String url = song.getString("art", "");
         if (!url.equals(artUrl)) {
@@ -278,7 +310,7 @@ public class PlaybackService extends MediaBrowserServiceCompat {
             | PlaybackStateCompat.ACTION_SEEK_TO | PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS
             | PlaybackStateCompat.ACTION_FAST_FORWARD | PlaybackStateCompat.ACTION_REWIND | PlaybackStateCompat.ACTION_STOP
             | (song.getBoolean("hasNext") ? PlaybackStateCompat.ACTION_SKIP_TO_NEXT : 0) | CAR_ACTIONS;
-        session.setPlaybackState(new PlaybackStateCompat.Builder()
+        session.setPlaybackState(carNote != null ? carNote : new PlaybackStateCompat.Builder()
             .setActions(actions)
             .setState(playing ? PlaybackStateCompat.STATE_PLAYING : PlaybackStateCompat.STATE_PAUSED, song.getLong("position"), playing ? 1f : 0f)
             .build());
