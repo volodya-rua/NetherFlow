@@ -27,6 +27,7 @@
     "electron": "44.7.0",
     "electron-builder": "26.15.3",
     "jsqr": "1.4.0",
+    "onnxruntime-web": "1.30.0",
     "three": "0.186.1"
   },
   "build": {
@@ -100,8 +101,7 @@
     ]
   },
   "dependencies": {
-    "electron-updater": "^6.8.9",
-    "onnxruntime-web": "^1.30.0"
+    "electron-updater": "^6.8.9"
   },
   "homepage": "https://volodya-rua.github.io/NetherFlow/"
 }
