@@ -311,6 +311,10 @@ async function handle(req, res) {
     try { return send(res, 200, JSON.stringify(artist && title ? await verse.words(artist, title, +p.get('dur') || 0) : {})); }
     catch { return send(res, 200, JSON.stringify({})); } // no word timing is fine: line timing still works
   }
+  // (a pack's file from a copy on this computer — the app's folder's voice/, as main.js names it — so a pack already here
+  // isn't downloaded again: by its name alone, and the page checks it against its SHA-256 before it's kept or used)
+  const kept = !FILES[url.pathname] && /^\/voice\/[\w.-]+$/.test(url.pathname) && module.exports.voiceDir && path.join(module.exports.voiceDir, url.pathname.slice(7));
+  if (kept && fs.existsSync(kept) && fs.statSync(kept).isFile()) { res.writeHead(200, { 'Content-Type': 'application/octet-stream', 'Content-Length': fs.statSync(kept).size }); return fs.createReadStream(kept).pipe(res); }
   const f = FILES[url.pathname];
   if (!f) return send(res, 404, 'not found', 'text/plain');
   // (the app's own pages cross-origin isolated: SharedArrayBuffer, so the voice pack's recognizer works on several cores —
@@ -334,5 +338,5 @@ const start = port => new Promise((resolve, reject) => {
   });
 });
 
-module.exports = { start, heads: null }; // (heads: main.js's folder for songs' starts)
+module.exports = { start, heads: null, voiceDir: null }; // (heads: main.js's folder for songs' starts; voiceDir: for packs' files already on this computer)
 if (require.main === module) start(+process.env.PORT || 5173).then(p => console.log(`NetherFlow is up: http://localhost:${p}`));

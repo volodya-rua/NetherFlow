@@ -42,6 +42,7 @@ ipcMain.on('awake', (e, on) => {
 });
 
 srvMod.heads = path.join(app.getPath('userData'), 'heads'); // (the starts of the last songs played, so they start at once: server.js)
+srvMod.voiceDir = path.join(app.getPath('userData'), 'voice'); // (packs' files already on this computer: got from there, not downloaded again — server.js)
 
 // ---------- the island: what's playing, in a small black island at the top middle of the screen, over every other app
 // (always on top, at the screen-saver level, on every desktop, never taking the focus). The page (preload.js) sends
