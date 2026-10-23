@@ -931,6 +931,10 @@ body.home .home-stage .msg { font-size: clamp(56px, min(15vw, 24cqh), 240px); } 
 .dv-prog b { display: block; height: 100%; width: 0; border-radius: inherit; background: linear-gradient(90deg, var(--b), var(--a)); box-shadow: 0 0 14px var(--a); }
 .dv-like { display: inline-flex; align-items: center; gap: 8px; }
 .dv-like[hidden], .nav-ico[hidden] { display: none; }
+.nav-ico.awake { color: var(--a); }
+.nav-ico.awake svg { animation: awake 2.8s ease-in-out infinite; }
+@keyframes awake { 0%, 100% { filter: drop-shadow(0 0 1px var(--a)); } 50% { filter: drop-shadow(0 0 7px var(--a)); } }
+@media (prefers-reduced-motion: reduce) { .nav-ico.awake svg { animation: none; filter: drop-shadow(0 0 4px var(--a)); } }
 /* voice control: listening (the ring swells with your voice), then what it heard and did */
 .voice-ui { position: fixed; inset: auto 0 calc(118px + env(safe-area-inset-bottom)) 0; margin: 0 auto; width: min(460px, calc(100vw - 32px)); padding: 16px 20px;
   border: 1px solid color-mix(in srgb, var(--a) 45%, transparent); border-radius: 22px; background: color-mix(in srgb, #050505 86%, var(--a)); color: #fff;
@@ -3193,7 +3197,8 @@ function renderTextPanel() {
     settingRow('Instant start', ['On', 'Off'], instantOn ? 'On' : 'Off', setInstant, 'The first few seconds of the last 100 songs you played are kept on this device (about 25 MB, never synced), so they start the moment you press play. Off: they\'re deleted, and nothing more is kept.'),
     ...(instantOn ? [settingRow('Kept song starts', ['Clear'], '', () => { forgetKept(); toast('Cleared: songs start as usual till you play them again'); }, 'Deletes them now (they\'re kept again as you play).')] : []),
     ...(AI_PACK_LIVE || aiPack.ready ? [Object.assign(aiRow(), { id: 'aiRow' })] : []),
-    ...(herePc ? [Object.assign(voiceRow(), { id: 'voiceRow' })] : []),
+    ...(herePc ? [Object.assign(voiceRow(), { id: 'voiceRow' }), settingRow('Hey NetherFlow', ['Off', 'On'], hey.on ? 'On' : 'Off', setWake,
+      'Hands free: say "Hey NetherFlow, next song", "Hey NetherFlow, play Sunflower", "Hey NetherFlow, volume 40" — or "Hey NetherFlow", then what you want after the chime. While it\'s on, the microphone stays on whenever NetherFlow is open (Windows shows its microphone sign, and the mic button glows). What it hears is worked out on this computer by the voice pack: never recorded, kept or sent anywhere, and anything that isn\'t "Hey NetherFlow…" is forgotten at once. Needs the voice pack.')] : []),
     settingRow('Smooth mix', ['Off', 'On'], smoothMix ? 'On' : 'Off', setSmoothMix, 'Songs blend into each other like a DJ mix: the next one starts on a beat and fades in over the last 8 seconds, and a quiet or silent ending is skipped.'),
     ...(native || window.netherflowApp?.syncOpen ? [settingRow(native ? 'Sync with computer' : 'Sync with phone', ['Start'], '', () => { $('textPanel').hidePopover(); $('syncPanel').showPopover(); },
       'Your liked songs, playlists, history and stats, swapped between your phone and computer over your Wi-Fi: no account.')] : []),
@@ -3630,7 +3635,7 @@ const VOICE_MB = Math.round(Object.values(VOICE_FILES).reduce((a, f) => a + f[0]
 const voicePack = { ready: false, getting: 0 }, wh = { init: null, worker: null, say: null, stop: null, idle: 0 };
 async function voicePackCheck() {
   try { const c = await caches.open(VOICE_PACK); voicePack.ready = (await Promise.all(Object.keys(VOICE_FILES).map(n => c.match(n)))).every(Boolean); } catch { voicePack.ready = false; }
-  renderVoiceRow();
+  renderVoiceRow(); wakeSync();
 }
 async function voicePackGet() {
   if (voicePack.getting || voicePack.ready) return;
@@ -3654,24 +3659,26 @@ async function voicePackGet() {
       await c.put(name, new Response(buf, { headers: { 'Content-Type': type } }));
       had += size;
     }
-    voicePack.ready = true;
-    toast('The voice pack is ready: tap the mic and say a song');
+    voicePack.ready = true; wakeSync();
+    toast(hey.on ? 'The voice pack is ready: say "Hey NetherFlow"' : 'The voice pack is ready: tap the mic and say a song');
   } catch { toast('Couldn\'t get the voice pack: check the internet and try again', 6000); }
   voicePack.getting = 0; renderVoiceRow();
 }
 async function voicePackRemove() {
-  wh.worker?.terminate(); Object.assign(wh, { init: null, worker: null });
+  voicePack.ready = false; wakeSync();
+  wh.worker?.terminate(); Object.assign(wh, { init: null, worker: null, q: null });
   await caches.delete(VOICE_PACK).catch(() => {});
-  voicePack.ready = false; renderVoiceRow(); toast('Voice pack removed: voice control uses Windows\' own');
+  voicePack.ready = false; wakeSync(); renderVoiceRow(); toast('Voice pack removed: voice control uses Windows\' own');
 }
 // its row in Settings (the computer): Get, how far it's got, or Remove
 const voiceRow = () => settingRow('Voice pack', [voicePack.ready ? 'Remove' : voicePack.getting ? `Getting… ${Math.round(100 * voicePack.getting)}%` : `Get · ${VOICE_MB} MB`], '', () => voicePack.ready ? voicePackRemove() : voicePackGet(),
   'For voice control: what you say understood properly, names and accents too, by a speech recognizer on this computer (OpenAI\'s Whisper, run by ONNX Runtime): what you say never leaves it. A one-time download from Hugging Face and jsDelivr, kept on this computer till you remove it here. Without it, voice control uses Windows\' own speech recognition.');
 function renderVoiceRow() { const r = document.getElementById('voiceRow'); if (r) r.replaceChildren(...voiceRow().childNodes); }
 if (herePc) voicePackCheck();
-// the recognizer, started when it's first wanted (the mic tapped) and let go 3 minutes after it was last used (its memory back)
+// the recognizer, started when it's first wanted (the mic tapped) and let go 3 minutes after it was last used (its memory
+// back) — kept while "Hey NetherFlow" listens, so it answers at once
 function whisperStart() {
-  clearTimeout(wh.idle); wh.idle = setTimeout(() => { wh.worker?.terminate(); Object.assign(wh, { init: null, worker: null }); }, 180e3);
+  clearTimeout(wh.idle); wh.idle = setTimeout(() => { if (hey.stop) return whisperStart(); wh.worker?.terminate(); Object.assign(wh, { init: null, worker: null, q: null }); }, 180e3);
   return wh.init ||= (async () => {
     const c = await caches.open(VOICE_PACK), file = async n => { const r = await c.match(n); if (!r) throw new Error('voice pack'); return r; };
     const url = async n => URL.createObjectURL(await (await file(n)).blob()), buf = async n => (await file(n)).arrayBuffer(), text = async n => (await file(n)).text();
@@ -3683,49 +3690,142 @@ function whisperStart() {
     return wh.worker = w;
   })().catch(e => { wh.init = null; throw e; });
 }
-// One sentence from the microphone (16 kHz, one channel): from when you start speaking till you stop (0.8 s quiet), 10 s
-// at most; nothing said in 7 s, nothing. A click or a cough alone isn't speaking (a fifth of a second, at least). Its
-// level for the ring as it goes.
-async function micSentence(on) {
-  let mic;
-  try { mic = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true } }); }
-  catch (e) { throw Object.assign(new Error(e.name), { code: /NotFound|Overconstrained|NotReadable/.test(e.name) ? 'no microphone' : 'denied' }); }
-  const ctx = new AudioContext({ sampleRate: 16000 }), src = ctx.createMediaStreamSource(mic), tap = ctx.createScriptProcessor(1024, 1, 1);
-  on('listening');
-  return new Promise(done => {
-    let got = [], floor = 0, frames = 0, talk = 0, loudN = 0, quiet = 0, over = false;
-    const end = keep => {
-      if (over) return; over = true;
-      tap.onaudioprocess = null; src.disconnect(); tap.disconnect(); mic.getTracks().forEach(t => t.stop()); ctx.close().catch(() => {});
-      const pcm = new Float32Array(got.reduce((a, x) => a + x.length, 0)); let o = 0; for (const x of got) { pcm.set(x, o); o += x.length; }
-      done(keep && loudN >= 3 ? pcm : null);
-    };
-    wh.stop = () => end(true); // (the mic tapped again: what's been said, as it is)
-    tap.onaudioprocess = e => {
-      const x = e.inputBuffer.getChannelData(0).slice(); frames++;
+// Speech, cut from a microphone's sound (16 kHz, in pieces of 1024): from when someone starts speaking till they stop
+// (0.8 s quiet), 10 s at most, with a third of a second from before; a click or a cough alone isn't speaking (a fifth of
+// a second, at least). feed(piece) → the speech, once it's over; .level (0–1) for the ring; .waiting: no one speaking.
+function speechCutter() {
+  let got = [], floor = 0, frames = 0, talk = 0, loudN = 0, quiet = 0;
+  const join = () => { const pcm = new Float32Array(got.reduce((a, x) => a + x.length, 0)); let o = 0; for (const x of got) { pcm.set(x, o); o += x.length; } return pcm; };
+  return {
+    level: 0, frames: 0, get waiting() { return !talk; },
+    feed(x) {
+      this.frames = ++frames;
       let ss = 0; for (let i = 0; i < x.length; i++) ss += x[i] * x[i];
-      const rms = Math.sqrt(ss / x.length);
+      const rms = Math.sqrt(ss / x.length); this.level = Math.min(1, rms * 10);
       floor = frames === 1 || rms < floor ? rms : floor * 1.01; // (the room's own sound: the quietest lately)
       const loud = rms > Math.max(.006, floor * 3);
-      on('level', Math.min(1, rms * 10)); got.push(x);
-      if (!talk) { if (loud) talk = loudN = 1; else if (got.length > 5) got.shift(); if (frames > 110) end(false); return; } // (a third of a second kept from before you spoke)
+      got.push(x);
+      if (!talk) { if (loud) talk = loudN = 1; else if (got.length > 5) got.shift(); return null; }
       talk++; if (loud) loudN++; quiet = loud ? 0 : quiet + 1;
-      if (quiet >= 13 && loudN < 3) { talk = loudN = quiet = 0; got = got.slice(-5); } // (only a click: still waiting)
-      else if (quiet >= 13 || talk > 156) end(true);
-    };
+      if (quiet >= 13 && loudN < 3) { talk = loudN = quiet = 0; got = got.slice(-5); return null; } // (only a click: still waiting)
+      if (quiet < 13 && talk <= 156) return null;
+      const pcm = join(); got = []; talk = loudN = quiet = 0; return pcm;
+    },
+    rest() { return talk ? join() : null; }, // (what's been said so far)
+  };
+}
+const micOpen = () => navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true } })
+  .catch(e => { throw Object.assign(new Error(e.name), { code: /NotFound|Overconstrained|NotReadable/.test(e.name) ? 'no microphone' : 'denied' }); });
+// One sentence from the microphone (the mic tapped); nothing said in 7 s, nothing. Its level for the ring as it goes.
+async function micSentence(on) {
+  const mic = await micOpen(), ctx = new AudioContext({ sampleRate: 16000 }), src = ctx.createMediaStreamSource(mic), tap = ctx.createScriptProcessor(1024, 1, 1);
+  on('listening');
+  return new Promise(done => {
+    const cut = speechCutter(); let over = false;
+    const end = pcm => { if (over) return; over = true; tap.onaudioprocess = null; src.disconnect(); tap.disconnect(); mic.getTracks().forEach(t => t.stop()); ctx.close().catch(() => {}); done(pcm); };
+    wh.stop = () => end(cut.rest()); // (the mic tapped again: what's been said, as it is)
+    tap.onaudioprocess = e => { const pcm = cut.feed(e.inputBuffer.getChannelData(0).slice()); on('level', cut.level); if (pcm) end(pcm); else if (cut.waiting && cut.frames > 110) end(null); };
     src.connect(tap); tap.connect(ctx.destination);
   });
 }
+// Whisper asked, one thing at a time (the mic tapped and "Hey NetherFlow" share it). wake: give up after a few words
+// that aren't it — most of what a microphone hears is someone talking about something else.
+const VOICE_CMDS = ['Play', 'Pause', 'Next song', 'Previous', 'Louder', 'Quieter', 'Volume 50', 'Shuffle'];
+function whisperAsk(pcm, names, wake = false) {
+  return wh.q = (wh.q || Promise.resolve()).catch(() => {}).then(async () => {
+    const w = await whisperStart();
+    const r = await new Promise(ok => { w.onmessage = e => ok(e.data); w.postMessage({ id: 1, pcm, names, wake }, [pcm.buffer]); });
+    if (r.error) throw new Error(r.error);
+    const text = (r.text || '').trim().replace(/[,;:]+$/, ''); // (what Whisper writes for a sound that isn't words: nothing; the names' commas, not)
+    return /^(thank you( for watching)?|thanks for watching|you|bye)[.!]*$/i.test(text) ? '' : text;
+  });
+}
 async function hearHere(o) {
-  const ready = whisperStart(); ready.catch(() => {}); // (readied while you speak)
+  whisperStart().catch(() => {}); // (readied while you speak)
   const pcm = await micSentence((state, level) => wh.say?.({ state, level }));
   if (!pcm) return { text: '' };
   wh.say?.({ state: 'heard' });
-  let w; try { w = await ready; } catch { return { text: '', why: 'voice pack' }; }
-  const names = ['Play', 'Pause', 'Next song', 'Previous', 'Louder', 'Quieter', 'Shuffle', ...(o.words || [])]; // (the commands first: they count most — a short word comes out as one of them)
-  const r = await new Promise(ok => { w.onmessage = e => ok(e.data); w.postMessage({ id: 1, pcm, names }, [pcm.buffer]); });
-  const text = (r.text || '').trim().replace(/[,;:]+$/, ''); // (what Whisper writes for a sound that isn't words: nothing; the names' commas, not)
-  return { text: /^(thank you( for watching)?|thanks for watching|you|bye)[.!]*$/i.test(text) ? '' : text, why: r.error ? 'voice pack' : '' };
+  try { return { text: await whisperAsk(pcm, [...VOICE_CMDS, ...(o.words || [])]) }; } // (the commands first: they count most — a short word comes out as one of them)
+  catch { return { text: '', why: 'voice pack' }; }
+}
+// ---------- "Hey NetherFlow" (the computer, with the voice pack: Settings › Hey NetherFlow) ----------
+// Hands free, as with a smart speaker: "Hey NetherFlow, next song", "Hey NetherFlow, volume 40" — or "Hey NetherFlow",
+// a chime, then what you want. While it's on, the microphone's open whenever NetherFlow is (Windows shows it; the mic
+// button glows): its sound cut into what's said (speechCutter), nothing kept, and only speech goes to Whisper, here on
+// this computer — a quiet room costs nothing; someone talking, half a second of work each time they stop. What isn't
+// "Hey NetherFlow…" is forgotten at once. The music this app plays is taken out of what the microphone hears by the
+// browser's echo cancelling.
+const hey = { on: store.get('netherflow.wake') === 'On', stop: null, armed: 0, was: false, song: null, busy: false, next: null, t: 0 };
+const NETHERFLOW = 'natarflav'; // (soundKey('NetherFlow'))
+// what was said after "Hey NetherFlow" (nothing after it: ''), or null: it wasn't said (its own spelling, or near it)
+function afterWake(text) {
+  const words = text.replace(/[,.!?;:]+/g, ' ').trim().split(/\s+/).filter(Boolean);
+  for (let i = 0; i < Math.min(3, words.length); i++) for (let j = i + 1; j <= Math.min(i + 3, words.length); j++)
+    if (soundApart(soundKey(words.slice(i, j).join('')), NETHERFLOW) <= 2) return words.slice(j).join(' ');
+  return null;
+}
+function wakeSync() {
+  const want = hey.on && herePc && voicePack.ready;
+  if (want && !hey.stop) wakeListen(); else if (!want && hey.stop) hey.stop();
+  $('voiceBtn').classList.toggle('awake', want); $('voiceBtn').title = want ? 'Voice: listening for "Hey NetherFlow"' : 'Voice';
+}
+function setWake(v) {
+  hey.on = v === 'On'; store.set('netherflow.wake', hey.on ? 'On' : '');
+  if (hey.on && !voicePack.ready) voicePackGet(); // (it starts once the pack's here)
+  wakeSync(); renderTextPanel();
+}
+async function wakeListen() {
+  let stopped = false; hey.stop = () => { stopped = true; hey.stop = null; };
+  let mic; try { mic = await micOpen(); } catch (e) {
+    hey.stop = null; hey.on = false; store.set('netherflow.wake', ''); wakeSync();
+    return toast(e.code === 'no microphone' ? 'Hey NetherFlow is off: no microphone found' : 'Hey NetherFlow is off: the microphone isn\'t allowed (Windows Settings › Privacy › Microphone)', 7000);
+  }
+  if (stopped) return mic.getTracks().forEach(t => t.stop());
+  whisperStart().catch(() => {}); // (readied now: the first "Hey NetherFlow" answered as quickly as the rest)
+  const ctx = new AudioContext({ sampleRate: 16000 }), src = ctx.createMediaStreamSource(mic), tap = ctx.createScriptProcessor(1024, 1, 1), cut = speechCutter();
+  tap.onaudioprocess = e => {
+    if (voice.busy) return; // (the mic tapped: that's listening)
+    const pcm = cut.feed(e.inputBuffer.getChannelData(0).slice());
+    if (hey.armed) $('voiceUi').style.setProperty('--lv', cut.level.toFixed(2));
+    if (pcm) wakeHeard(pcm);
+  };
+  src.connect(tap); tap.connect(ctx.destination);
+  hey.stop = () => { tap.onaudioprocess = null; src.disconnect(); tap.disconnect(); mic.getTracks().forEach(t => t.stop()); ctx.close().catch(() => {}); hey.stop = null; wakeDisarm(); };
+}
+// something said: "Hey NetherFlow…"? (one at a time; the latest said meanwhile next)
+async function wakeHeard(pcm) {
+  if (hey.busy) { hey.next = pcm; return; }
+  hey.busy = true;
+  try {
+    const armed = !!hey.armed;
+    const text = await whisperAsk(pcm, armed ? [...VOICE_CMDS, ...voiceWords()] : ['Hey NetherFlow', ...VOICE_CMDS, ...voiceWords()], !armed);
+    if (armed) { if (text) { const { was, song } = hey; wakeDisarm(false); voiceAct(text, was, song); } } // (what you want, after the chime)
+    else {
+      const rest = afterWake(text);
+      if (rest !== null && !voice.busy) {
+        chime();
+        if (rest) voiceAct(rest, false, null);
+        else { // ("Hey NetherFlow" alone: listening for what you want, the music paused meanwhile)
+          hey.was = P.loaded && !P.paused; hey.song = current; if (hey.was) P.pause();
+          hey.armed = 1; clearTimeout(voice.t); clearTimeout(hey.t);
+          $('voiceText').textContent = 'Listening…'; $('voiceHint').textContent = 'Say a song or an artist, or "next", "pause", "volume 40"…';
+          if (!$('voiceUi').matches(':popover-open')) $('voiceUi').showPopover();
+          hey.t = setTimeout(() => { if (!hey.armed) return; wakeDisarm(); $('voiceText').textContent = 'Didn\'t catch that'; $('voiceHint').textContent = 'Say "Hey NetherFlow" again'; voice.t = setTimeout(() => $('voiceUi').hidePopover(), 2000); }, 7000);
+        }
+      }
+    }
+  } catch {}
+  hey.busy = false;
+  if (hey.next) { const n = hey.next; hey.next = null; wakeHeard(n); }
+}
+function wakeDisarm(resume = true) { clearTimeout(hey.t); if (hey.armed && resume && hey.was && current === hey.song && P.loaded && P.paused) P.play(); hey.armed = 0; }
+// its chime: two soft notes, up
+function chime() {
+  try {
+    const c = new AudioContext(), t = c.currentTime;
+    for (const [f, at] of [[880, 0], [1318.5, .1]]) { const o = c.createOscillator(), g = c.createGain(); o.frequency.value = f; g.gain.setValueAtTime(0, t + at); g.gain.linearRampToValueAtTime(.1, t + at + .015); g.gain.exponentialRampToValueAtTime(.001, t + at + .4); o.connect(g).connect(c.destination); o.start(t + at); o.stop(t + at + .45); }
+    setTimeout(() => c.close(), 900);
+  } catch {}
 }
 const Voice = native ? Capacitor.Plugins.Voice : herePc ? {
   available: async () => ({ on: true, device: false }),
@@ -3751,17 +3851,17 @@ const voiceWords = () => voiceNames().map(x => x.name);
 const soundKey = x => x.toLowerCase().normalize('NFD').replace(/[^a-z]/g, '').replace(/ph/g, 'f').replace(/([bcdgkpst])h/g, '$1').replace(/h/g, '')
   .replace(/c(?=[eiy])/g, 's').replace(/[cq]/g, 'k').replace(/x/g, 'ks').replace(/z/g, 's').replace(/w/g, 'v').replace(/j/g, 'g').replace(/d/g, 't')
   .replace(/[aeiouy]+/g, 'a').replace(/(.)\1+/g, '$1');
+const soundApart = (a, b) => { let row = [...Array(b.length + 1).keys()]; for (let i = 1; i <= a.length; i++) { const next = [i]; for (let j = 1; j <= b.length; j++) next[j] = Math.min(row[j] + 1, next[j - 1] + 1, row[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)); row = next; } return row[b.length]; };
 function voiceName(said) {
   const words = said.split(/\s+/).filter(Boolean), ends = new Set(words.map((w, i) => soundKey(words.slice(i).join(' '))));
   const all = soundKey(said); if (/^pla./.test(all)) ends.add(all.slice(3));
   ends.delete('');
-  const apart = (a, b) => { let row = [...Array(b.length + 1).keys()]; for (let i = 1; i <= a.length; i++) { const next = [i]; for (let j = 1; j <= b.length; j++) next[j] = Math.min(row[j] + 1, next[j - 1] + 1, row[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)); row = next; } return row[b.length]; };
   let best = null;
   for (const it of voiceNames()) {
     const k = soundKey(it.name); if (!k) continue;
     for (const u of ends) {
       if (k.length < 5 ? u !== k : Math.abs(u.length - k.length) > k.length * .2) continue;
-      const r = apart(k, u) / k.length;
+      const r = soundApart(k, u) / k.length;
       if (r <= .2 && (!best || r < best.r || r === best.r && k.length > best.n)) best = { ...it, r, n: k.length };
     }
   }
@@ -3808,14 +3908,32 @@ async function listen() {
     if (was) P.play();
     return hide(2600);
   }
-  $('voiceText').textContent = r.text;
-  const done = await voiceDo(r.text);
+  voiceAct(r.text, was, song);
+}
+// what was heard, shown and done; the song paused to listen carries on if what was said doesn't play or stop anything
+async function voiceAct(text, was, song) {
+  const ui = $('voiceUi');
+  $('voiceText').textContent = text; $('voiceHint').textContent = '';
+  clearTimeout(voice.t); if (!ui.matches(':popover-open')) ui.showPopover();
+  const done = await voiceDo(text);
   $('voiceHint').textContent = done.say;
-  if (was && done.resume && current === song && P.loaded && P.paused) P.play(); // (said something that doesn't play or stop: the song carries on)
-  hide(2400);
+  if (was && done.resume && current === song && P.loaded && P.paused) P.play();
+  voice.t = setTimeout(() => ui.hidePopover(), 2400);
 }
 $('voiceBtn').onclick = listen;
 $('dvVoice').onclick = listen;
+// a number said, 0–100 ("40", "forty", "forty five", "a hundred", "half", "max"), or null
+function spokenNumber(x) {
+  x = x.trim().toLowerCase().replace(/^(a|one) hundred$/, 'hundred');
+  if (/^\d{1,3}$/.test(x)) return +x;
+  const ones = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'];
+  const tens = { twenty: 20, thirty: 30, forty: 40, fourty: 40, fifty: 50, sixty: 60, seventy: 70, eighty: 80, ninety: 90 }, more = { hundred: 100, max: 100, maximum: 100, full: 100, half: 50 };
+  if (ones.includes(x)) return ones.indexOf(x);
+  if (x in tens) return tens[x];
+  if (x in more) return more[x];
+  const m = x.match(/^(\w+)[ -](\w+)$/), k = m ? ones.indexOf(m[2]) : -1;
+  return m && m[1] in tens && k > 0 && k < 10 ? tens[m[1]] + k : null;
+}
 // what was said, done: { say: what it did, resume: whether the song paused to listen carries on }
 async function voiceDo(said) {
   const t = said.toLowerCase().replace(/[.!?,;:]/g, ' ').replace(/\s+/g, ' ').trim(), is = re => re.test(t);
@@ -3823,10 +3941,15 @@ async function voiceDo(said) {
   if (!t) return { say: '', resume: true };
   if (is(/^(next|skip|next (song|one|track)|skip (this|it|this one|this song)|agla( gaana| gana)?|aglaga+na|aage)$/)) { nextTrack(); return { say: 'Next song', resume: false }; }
   if (is(/^(previous|back|go back|last song|previous (song|one|track)|pichla( gaana| gana)?|peeche)$/)) { prevTrack(); return { say: 'Previous song', resume: false }; }
-  if (is(/^(pause|paws|stop|stop (the )?music|stop playing|ruko|ruk jao|band karo|rok do|bas)$/)) return { say: 'Paused', resume: false };
+  if (is(/^(pause|paws|stop|stop (the )?music|stop playing|ruko|ruk jao|band karo|rok do|bas)$/)) { if (P.loaded && !P.paused) P.pause(); return { say: 'Paused', resume: false }; } // (paused already, if it was listening with the mic tapped; not with "Hey NetherFlow, pause")
   if (is(/^(play|resume|continue|carry on|go on|keep (going|playing)|unpause|chalao|bajao|play (the )?music)$/)) { await carPlay('play', ''); return { say: 'Playing', resume: true }; }
   if (is(/^(louder|volume up|turn (it )?up|increase (the )?volume|more volume|awaaz badhao|tez karo)$/)) { setVolume(Math.min(1, volume + .15)); return { say: `Volume ${volPct()}`, resume: true }; }
   if (is(/^(quieter|softer|volume down|turn (it )?down|lower (the )?volume|decrease (the )?volume|awaaz kam karo|dheere)$/)) { setVolume(Math.max(.05, volume - .15)); return { say: `Volume ${volPct()}`, resume: true }; }
+  const vol = t.replace(/%/g, ' percent').replace(/\s+/g, ' ').match(/^(?:set |turn )?(?:the )?(?:volume|vol|awaaz)(?: to| at| on)? (.+?)(?: percent)?$|^(.+?) (?:percent )?volume$/);
+  const n = vol && spokenNumber(vol[1] || vol[2]);
+  if (n != null) { if (n > 100) return { say: 'Say a volume from 0 to 100', resume: true }; setVolume(n / 100, false); return { say: `Volume ${volPct()}`, resume: true }; }
+  if (is(/^(mute|mute (it|the music|the sound)|silence)$/)) { setVolume(volume, true); return { say: 'Muted', resume: true }; }
+  if (is(/^(unmute|unmute (it|the music|the sound)|sound on)$/)) { setVolume(volume, false); return { say: `Volume ${volPct()}`, resume: true }; }
   if (is(/^(shuffle|shuffle on|shuffle (it|this|everything))$/)) { setShuffle(true, true); return { say: 'Shuffle on', resume: true }; }
   if (is(/^(shuffle off|stop shuffling|no shuffle)$/)) { setShuffle(false, true); return { say: 'Shuffle off', resume: true }; }
   if (is(/^(repeat|repeat (this|it|one|this song|the song)|play (this|it) again|on repeat)$/)) { setRepeat('one'); return { say: 'Repeating this song', resume: true }; }

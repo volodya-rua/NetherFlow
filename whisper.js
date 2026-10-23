@@ -6,7 +6,7 @@
 //   in:  { init: { ort, mjs, wasm (the engine's files, as addresses), threads, encoder, decoder (the model's two nets:
 //          the decoder the merged one, that keeps what it's worked out), vocab, merges, gen (its vocabulary, word-pieces
 //          and generation settings: text) } } · { id, pcm (Float32Array, 16 kHz), langs, names (the library's, to hear
-//          them as spelt) }
+//          them as spelt), wake (only "Hey NetherFlow…" wanted: anything else given up early) }
 //   out: { ready } · { id, text, lang, ms } · { id, error }
 const SR = 16000, NFFT = 400, HOP = 160, MELS = 80, FRAMES = 3000, BINS = NFFT / 2 + 1;
 const HEADS = 8, HEAD = 64; // (Whisper base's attention: 8 heads of 64)
@@ -95,7 +95,7 @@ function tokens() {
 // timestamps or its non-speech symbols. The library's names go before, as if said just now: Whisper then writes them as
 // they're spelt there ("Sid Sriram", not "Sid Shriram").
 const EOT = 50257;
-async function hear(pcm, langs, names) {
+async function hear(pcm, langs, names, wake) {
   const [enc, dec] = await nets;
   const t0 = performance.now(), feats = new ort.Tensor('float32', logMel(pcm), [1, MELS, FRAMES]), t1 = performance.now();
   const hidden = (await enc.run({ [enc.inputNames[0]]: feats }))[enc.outputNames[0]], t2 = performance.now();
@@ -126,6 +126,7 @@ async function hear(pcm, langs, names) {
     if (top === EOT || top < 0) break;
     ids.push(top);
     if (ids.length > 8 && ids.slice(-4).join() === ids.slice(-8, -4).join()) break; // (going round in circles)
+    if (wake && ids.length === 6 && !/flo|nether|neither|never/i.test(decode(ids))) break; // (listening for "Hey NetherFlow": six words' worth, and not it)
     l = await step([top]);
   }
   const code = langIds.find(([, id]) => id === lang)?.[0].slice(2, -2) || 'en';
@@ -146,7 +147,7 @@ onmessage = async ({ data: d }) => {
     return;
   }
   if (d.pcm) {
-    try { postMessage({ id: d.id, ...(await hear(d.pcm, d.langs, d.names)) }); }
+    try { postMessage({ id: d.id, ...(await hear(d.pcm, d.langs, d.names, d.wake)) }); }
     catch (e) { postMessage({ id: d.id, error: String(e && e.message || e) }); }
   }
 };
