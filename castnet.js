@@ -9,9 +9,18 @@ const GROUPS = new Set(['224.0.0.251:5353', '239.255.255.250:1900']); // (mDNS, 
 // The question asked on each of this computer's networks in the house (its Wi-Fi, a cable): asked the system's own way it
 // went out on one only, as often as not a virtual one (WSL's, a VPN's, an emulator's) that no TV is on — and nothing was
 // ever found (a Fire TV on the Wi-Fi, answering at once when asked there).
+// Real networks only (Legal): never a VPN's or a virtual machine's — a work VPN's 10.x is a company's network, not the
+// house — told by their names, and by the makers' codes virtual adapters' addresses start with (Hyper-V and WSL,
+// VirtualBox, VMware, Docker), whatever they're called. None left: the system's own choice, as before.
+const VIRTUAL = /vethernet|wsl|hyper-v|virtualbox|vbox|vmware|vmnet|docker|br-|virbr|veth|tap|tun|wireguard|\bwg\d|nordlynx|tailscale|zerotier|openvpn|vpn|loopback/i;
+const VIRTUAL_MAC = /^(00:15:5d|08:00:27|0a:00:27|00:50:56|00:0c:29|00:05:69|00:1c:14|02:42)/i;
+function houseNets() {
+  return [...new Set(Object.entries(os.networkInterfaces()).filter(([n]) => !VIRTUAL.test(n)).flatMap(([, a]) => a || [])
+    .filter(x => x.family === 'IPv4' && !x.internal && privateHost(x.address) && !VIRTUAL_MAC.test(x.mac || '')).map(x => x.address))];
+}
 function udp(group, port, bytes, ms) {
   if (!GROUPS.has(group + ':' + port)) return Promise.reject(new Error('not a question it asks'));
-  const nets = [...new Set(Object.values(os.networkInterfaces()).flat().filter(x => x && x.family === 'IPv4' && !x.internal && privateHost(x.address)).map(x => x.address))];
+  const nets = houseNets();
   const wait = Math.min(Math.max(ms || 2500, 500), 8000), got = [];
   return Promise.all((nets.length ? nets : ['']).map(at => new Promise(res => {
     const s = dgram.createSocket({ type: 'udp4', reuseAddr: true });
