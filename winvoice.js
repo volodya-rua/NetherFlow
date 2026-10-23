@@ -5,10 +5,10 @@
 // library's own names (its artists, playlists and songs: what's said is most likely one of them). Nothing's kept: the
 // sound goes to the recognizer, the words come back. The page asks (voice-listen, with those names) and hears
 // 'listening' once it is; voice-stop: given up.
-const { spawn } = require('child_process'), fs = require('fs'), path = require('path'), os = require('os'), crypto = require('crypto');
+const { spawn } = require('child_process');
 
-const VOICE_PS = String.raw`param([string]$Wav = '')
-$ErrorActionPreference = 'Stop'
+// (run with $Wav set before it: '' — the microphone — or a recording's path)
+const VOICE_PS = String.raw`$ErrorActionPreference = 'Stop'
 function Done($o) { [Console]::Out.WriteLine(($o | ConvertTo-Json -Compress)); exit 0 }
 # (the names, each its own: Windows PowerShell hands a JSON list on as one thing, so it's gone through by hand)
 $words = @(); try { $raw = [Console]::In.ReadToEnd(); if ($raw) { foreach ($w in (ConvertFrom-Json $raw)) { $words += "$w" } } } catch {}
@@ -68,12 +68,12 @@ let child = null;
 function listen(words, ready = () => {}, wav = '') {
   if (process.platform !== 'win32') return Promise.resolve({ text: '', why: 'unavailable' });
   if (child) child.kill();
-  const file = path.join(os.tmpdir(), `netherflow-voice-${crypto.randomBytes(6).toString('hex')}.ps1`);
-  fs.writeFileSync(file, VOICE_PS);
+  // (the script handed over on its command line, encoded as PowerShell takes it: never a file of it anywhere — Legal's point)
+  const script = `$Wav = '${String(wav).replace(/'/g, "''")}'\n` + VOICE_PS;
   return new Promise(res => {
     let out = '', said = false, settled = false;
-    const end = r => { if (settled) return; settled = true; clearTimeout(timer); fs.rm(file, { force: true }, () => {}); res(r); };
-    const c = child = spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', file, ...(wav ? ['-Wav', wav] : [])], { windowsHide: true });
+    const end = r => { if (settled) return; settled = true; clearTimeout(timer); res(r); };
+    const c = child = spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-EncodedCommand', Buffer.from(script, 'utf16le').toString('base64')], { windowsHide: true });
     const timer = setTimeout(() => c.kill(), 25000);
     c.stdout.on('data', d => { out += d; if (!said && /^READY\s*$/m.test(out)) { said = true; ready(); } });
     c.on('error', () => end({ text: '', why: 'busy' }));

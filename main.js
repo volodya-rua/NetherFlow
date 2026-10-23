@@ -17,6 +17,10 @@ const COUNTRY = process.platform !== 'win32' ? Promise.resolve('') : new Promise
 
 // Songs start right after a search finishes, which isn't a click as far as Chromium is concerned.
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
+// SharedArrayBuffer, though the page isn't cross-origin isolated: the voice pack's recognizer (whisper.js) then works on
+// several cores, a sentence in 0.6 s, not 2. (Isolation's for a page running others' scripts beside its own: only
+// NetherFlow's own run in this app.)
+app.commandLine.appendSwitch('enable-features', 'SharedArrayBuffer');
 
 let win;
 // (a second launch: the first one comes forward instead — and this one sets nothing up while it quits)
@@ -308,16 +312,17 @@ ipcMain.on('island-shape', (e, r) => {
 });
 
 // What the page may use, asked by its own address only (this port: the player, its legal page, the island): the camera
-// (Library › Import › Scan a QR code: video alone, never the microphone), notifications (an artist you follow has
-// something new), copying to the clipboard, full screen; and the list of sound outputs, by name (Settings' output picker:
-// 'speaker-selection'). Anything else — the microphone, the screen, location… — or asked by any other address, is
-// refused. (Electron grants every request unasked otherwise.)
+// (Library › Import › Scan a QR code: video alone), the microphone (voice control with the voice pack, while you speak
+// after tapping the mic: sound alone — never both at once), notifications (an artist you follow has something new),
+// copying to the clipboard, full screen; and the list of sound outputs, by name (Settings' output picker:
+// 'speaker-selection'). Anything else — the screen, location… — or asked by any other address, is refused. (Electron
+// grants every request unasked otherwise.)
 function guardPermissions(ses, port) {
   const ours = u => { try { const x = new URL(u); return /^(localhost|127\.0\.0\.1)$/.test(x.hostname) && x.port === String(port); } catch { return false; } };
   const MAY = new Set(['notifications', 'clipboard-sanitized-write', 'fullscreen']);
   ses.setPermissionRequestHandler((wc, permission, done, d) => done(ours(d.requestingUrl) && (MAY.has(permission)
-    || permission === 'media' && Array.isArray(d.mediaTypes) && d.mediaTypes.length === 1 && d.mediaTypes[0] === 'video')));
-  ses.setPermissionCheckHandler((wc, permission, origin, d) => ours(origin) && (MAY.has(permission) || permission === 'speaker-selection' || permission === 'media' && d?.mediaType === 'video'));
+    || permission === 'media' && Array.isArray(d.mediaTypes) && d.mediaTypes.length === 1 && /^(video|audio)$/.test(d.mediaTypes[0]))));
+  ses.setPermissionCheckHandler((wc, permission, origin, d) => ours(origin) && (MAY.has(permission) || permission === 'speaker-selection' || permission === 'media' && /^(video|audio)$/.test(d?.mediaType || '')));
 }
 if (process.platform === 'win32') app.setAppUserModelId(require('./package.json').build?.appId || 'io.github.volodya_rua.netherflow'); // (its notifications under its own name)
 app.whenReady().then(async () => {

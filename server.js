@@ -28,10 +28,13 @@ const FILES = {
   '/island.html': ['island.html', 'text/html; charset=utf-8'], // (the desktop app's island: see main.js)
   '/logo.png': ['logo.png', 'image/png'],
   '/karaoke.js': ['karaoke.js', 'text/javascript'], // (Sing's AI voice remover: its worker — the engine and model in ai/)
+  '/whisper.js': ['whisper.js', 'text/javascript'], // (voice control's recognizer: its worker — the engine and model in voice/)
 };
 for (const f of fs.readdirSync(path.join(__dirname, 'licenses'))) FILES['/licenses/' + f] = ['licenses/' + f, 'text/plain; charset=utf-8'];
 // (Sing's AI voice remover: ONNX Runtime Web and Spleeter's model, ai/ — built in by npm run ai, not in the repository)
 if (fs.existsSync(path.join(__dirname, 'ai'))) for (const f of fs.readdirSync(path.join(__dirname, 'ai'))) FILES['/ai/' + f] = ['ai/' + f, { js: 'text/javascript', mjs: 'text/javascript', wasm: 'application/wasm' }[f.split('.').pop()] || 'application/octet-stream'];
+// (voice control's recognizer: ONNX Runtime Web and Whisper's model, voice/ — a computer's own copy, not in the repository)
+if (fs.existsSync(path.join(__dirname, 'voice'))) for (const f of fs.readdirSync(path.join(__dirname, 'voice'))) FILES['/voice/' + f] = ['voice/' + f, { js: 'text/javascript', mjs: 'text/javascript', wasm: 'application/wasm', json: 'application/json' }[f.split('.').pop()] || 'application/octet-stream'];
 for (const f of fs.readdirSync(path.join(__dirname, 'fonts'))) FILES['/fonts/' + f] = ['fonts/' + f, f.endsWith('.css') ? 'text/css' : 'font/woff2'];
 for (const f of fs.readdirSync(path.join(__dirname, 'emoji'))) FILES['/emoji/' + f] = ['emoji/' + f, f.endsWith('.webp') ? 'image/webp' : 'text/plain; charset=utf-8']; // (Extreme lyrics' emoji)
 // Redline's 3D races (race/: the renderer, three.js, the circuits, the cars; not in NetherFlow Lite)

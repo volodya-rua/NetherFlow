@@ -21,3 +21,4 @@ relay/.wrangler/
 
 # Sing's AI voice remover: ONNX Runtime Web (npm run ai) and Spleeter's model (~52 MB), built in locally, not committed
 ai/
+voice/
