@@ -3151,7 +3151,7 @@ function renderTextPanel() {
     settingRow('Autoplay', ['On', 'Off'], autoOn ? 'On' : 'Off', setAutoplay, 'When the list runs out, songs like the one playing carry on, as on YouTube Music: from its radio for the song, ranked to what you\'re listening to — the same language and era, songs that fit the last few, more of the artists you play through or like and less of those you skip, never one you just heard.'),
     settingRow('Instant start', ['On', 'Off'], instantOn ? 'On' : 'Off', setInstant, 'The first few seconds of the last 100 songs you played are kept on this device (about 25 MB, never synced), so they start the moment you press play. Off: they\'re deleted, and nothing more is kept.'),
     ...(instantOn ? [settingRow('Kept song starts', ['Clear'], '', () => { forgetKept(); toast('Cleared: songs start as usual till you play them again'); }, 'Deletes them now (they\'re kept again as you play).')] : []),
-    Object.assign(aiRow(), { id: 'aiRow' }),
+    ...(AI_PACK_LIVE || aiPack.ready ? [Object.assign(aiRow(), { id: 'aiRow' })] : []),
     settingRow('Smooth mix', ['Off', 'On'], smoothMix ? 'On' : 'Off', setSmoothMix, 'Songs blend into each other like a DJ mix: the next one starts on a beat and fades in over the last 8 seconds, and a quiet or silent ending is skipped.'),
     ...(native || window.netherflowApp?.syncOpen ? [settingRow(native ? 'Sync with computer' : 'Sync with phone', ['Start'], '', () => { $('textPanel').hidePopover(); $('syncPanel').showPopover(); },
       'Your liked songs, playlists, history and stats, swapped between your phone and computer over your Wi-Fi: no account.')] : []),
@@ -4062,9 +4062,14 @@ const AI_FILES = {
   'spleeter-vocals.int8.onnx': [26238864, '6e9721864c0c1a6d86eaae92de71637b2daeb3df769c9c536053b46be8dd10aa', 'application/octet-stream'],
   'spleeter-accompaniment.int8.onnx': [26238869, '53a96a0d1520b45b8f3cc53262e3725defb686fc3a17490932f050721f4583f1', 'application/octet-stream'],
 };
+// (true once the ai-karaoke-1 pre-release is up: till then no Get is offered — the download would fail — and Settings
+// shows the row only to remove a pack already here. Legal's point.)
+let AI_PACK_LIVE = false;
 const AI_MB = Math.round(Object.values(AI_FILES).reduce((a, f) => a + f[0], 0) / 1e6);
 const aiPack = { ready: false, getting: 0 };
 async function aiPackCheck() {
+  // (a test build with the pack built in beside the app — before the pre-release is up — offers it, got from there)
+  if (!AI_PACK_LIVE) try { const b = await (await fetch('/ai/ort-wasm-simd-threaded.mjs')).arrayBuffer(); if (await sha256hex(b) === AI_FILES['ort-wasm-simd-threaded.mjs'][1]) AI_PACK_LIVE = true; } catch {}
   try { const c = await caches.open(AI_PACK); aiPack.ready = (await Promise.all(Object.keys(AI_FILES).map(n => c.match(n)))).every(Boolean); } catch { aiPack.ready = false; }
   aiShow(); return aiPack.ready;
 }
@@ -4078,7 +4083,7 @@ async function aiPackGet() {
       if (await c.match(name)) { had += size; continue; }
       let buf = null;
       const seen = n => { aiPack.getting = Math.max(.001, (had + n) / total); aiShow(); renderAiRow(); };
-      for (const from of native ? ['phone'] : ['/ai/', '/api/aipack/']) {
+      for (const from of native ? ['/ai/', 'phone'] : ['/ai/', '/api/aipack/']) {
         try {
           let b;
           if (from === 'phone') { // (the phone's own download, then read here)
@@ -4213,7 +4218,7 @@ setInterval(() => { if (singOn) aiSync(); }, 500);
 // how it's going, by the voice's slider: the parts ready of the song's
 function aiShow() {
   const n = ai.parts.size, all = ai.total;
-  $('singGet').hidden = !singOn || aiPack.ready;
+  $('singGet').hidden = !singOn || aiPack.ready || !AI_PACK_LIVE;
   $('singGet').textContent = aiPack.getting ? `Getting AI karaoke… ${Math.round(100 * aiPack.getting)}%` : `Get AI karaoke · ${AI_MB} MB`;
   $('singAi').textContent = !singOn || ai.broken || !ai.song ? '' : !all ? `AI: getting the song${ai.got ? ` ${Math.round(100 * ai.got)}%` : '…'}` : n < all ? `AI: ${Math.round(100 * n / all)}%` : 'AI';
 }
