@@ -3627,7 +3627,7 @@ async function listen() {
   if (voice.busy) return Voice.stop().catch(() => {}); // (tapped again: that's all it says)
   if (!store.get('netherflow.voicenote')) { // (the first time: where the words go, then the phone's own question)
     const d = $('voiceNote'); d.returnValue = ''; d.showModal(); placeWinctl();
-    if (!native) d.querySelector('p').textContent = 'Your words are worked out by Windows\' own speech recognition, on this computer — or by Microsoft\'s online speech service if you\'ve turned on Online speech recognition in Windows\' settings. NetherFlow never keeps a recording.';
+    if (!native) d.querySelector('p').textContent = 'Your words are worked out on this computer by Windows\' own speech recognition, or by Microsoft\'s online speech service if you\'ve turned on "Online speech recognition" in Windows\' settings. NetherFlow never keeps a recording.'; // (Legal's wording)
     if (await new Promise(r => { d.onclose = () => r(d.returnValue); }) !== 'ok') return;
     store.set('netherflow.voicenote', '1');
   }
