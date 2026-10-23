@@ -48,6 +48,7 @@ NetherFlow's own code in this repository, including:
 - Play on a TV or speaker: how the app finds devices on your Wi-Fi, its connection to the chosen device, and what it accepts back from it
 - NetherFlow on a TV as a receiver: the listener it opens on your Wi-Fi, what it accepts, and what it fetches
 - the QR scanner and the Spotify data import: what they accept from a code, a picture or a file
+- the AI assistant: which settings it may change, and whether names it reads (playlists, songs) can steer it
 - the website (volodya-rua.github.io/NetherFlow) and its shared-playlist page
 
 Out of scope:
