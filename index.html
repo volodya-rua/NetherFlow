@@ -5158,6 +5158,16 @@ function videoMatch(v, artist, title, lang = '') {
              || versionsOf(title).some(w => !said.has(w)) // (the version asked for, not said by the upload)
              || (l => !!lang && !!l && !sameLang(l, lang))(tagLang(v.title)) }; // (or in another language)
 }
+// An upload that's the song: its name and its artist — or, failing that, at the recording's very length, its name, or
+// (titled in another script, where names can't be compared) its artist. Never another artist's own upload ("… - Topic",
+// their VEVO): that's their song of the same name (measured: Chad Brock's "Ordinary Life" played for Parson Brown's).
+function uploadFits(v, artist, title, dur, lang, m = videoMatch(v, artist, title, lang)) {
+  if (m.other) return false;
+  if (m.named && m.byArtist) return true;
+  const flat = x => (x || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ''), whose = (artist || '').split(/,|&| feat\.? | ft\.? | x | and /i).map(flat).filter(a => a.length >= 2);
+  const theirOwn = / - Topic$|vevo$/i.test(v.channel || ''), someoneElse = theirOwn && !whose.some(a => flat(v.channel).includes(a));
+  return !someoneElse && (m.named || m.byArtist && !sameScript(v.title, title)) && !!dur && Math.abs((v.dur || 0) - dur) <= 2;
+}
 // The YouTube uploads of a song, best first — only ones that really are it, so a song never plays some other video:
 // its name and its artist; or, failing any such upload, one of the two at the recording's exact length (a re-upload
 // titled in another script, say). None found with the usual search: a second, plainer one. None at all: [] (the
@@ -5223,7 +5233,8 @@ async function resolveVids(t, dur) {
 function videosFor(t) {
   const dur = (t.trackTimeMillis || 0) / 1000;
   if (t.ytId) return Promise.resolve([{ id: t.ytId, dur }]); // (found on YouTube: that very video)
-  const kept = vidKept.get(String(t.trackId));
+  let kept = vidKept.get(String(t.trackId));
+  if (kept?.[0]?.title && !uploadFits(kept[0], t.artistName || '', t.trackName || '', dur, songLang(t))) { forgetVids(t); kept = null; } // (kept by an older, looser rule)
   if (!vidCache.has(t.trackId)) vidCache.set(t.trackId, kept ? Promise.resolve(kept) : resolveVids(t, dur)
     .then(v => { if (!v.length) vidCache.delete(t.trackId); else if (!v[0].cache) keepVids(t.trackId, v); return v; }, e => { vidCache.delete(t.trackId); throw e; }));
   return vidCache.get(t.trackId);
@@ -5330,12 +5341,12 @@ async function findVideos(artist, title, dur, album = '', lang = '') {
   // (by the artist at the song's very length but not by its name: only where the name's in another script and can't be
   // told apart — in the same script it's another of their songs: "Locked & Loaded" kept in reserve for d4vd's "Feel It",
   // played when that didn't load)
-  const likely = v => { const m = match(v); return (m.named || m.byArtist && !sameScript(v.title, title)) && !m.other && dur && Math.abs(v.dur - dur) <= 2; };
+  const fits = v => uploadFits(v, artist, title, dur, lang, match(v)); // (see uploadFits)
   // Its name matched, or not: the ones that aren't come after all that are — unless their title is in another script than
   // the song's ("アイドル" for "Idol"), where a name can't be told apart: then the artist's own upload at its very length
   // beats a fan's re-upload that spells it in Latin letters (measured: a fan's lyric video played for YOASOBI's "Idol").
   const score = v => Math.max(0, Math.abs(v.dur - dur) - .5) + official(v) + (sure(v) ? 0 : !sameScript(v.title, title) ? 1.5 : 50);
-  return found.filter(v => sure(v) || likely(v)).sort((x, y) => score(x) - score(y));
+  return found.filter(fits).sort((x, y) => score(x) - score(y));
 }
 
 function previewFallback(reason) {
@@ -10661,7 +10672,9 @@ function row(s, i, list, from = {}) {
   b.append(el('span', 'idx', pad(i + 1)), img, txt, el('span', 'len', s.trackTimeMillis ? fmt(s.trackTimeMillis / 1000) : ''));
   // (a copy: the queue changed — a song taken out of it, the rest dragged about — mustn't change the playlist or Liked songs
   // it came from, as it did, kept by the next save)
-  b.onclick = () => { queue = list.slice(); queueFrom = from.playlist ? { p: from.playlist, queue } : null; playTrack(s, dlg.open ? $('q').value.trim() : ''); };
+  // (one from the search: that song alone, Autoplay carrying on with songs like it — the rest of the search's list is
+  // covers, karaoke takes and other songs of the name, which played next as if at random)
+  b.onclick = () => { queue = dlg.open && !from.playlist ? [s] : list.slice(); queueFrom = from.playlist ? { p: from.playlist, queue } : null; playTrack(s, dlg.open ? $('q').value.trim() : ''); };
   b.onpointerdown = e => { if (e.pointerType === 'mouse' && fullSongs && !saved.has(s.trackId)) videosFor(s).catch(() => {}); };
   more.append((dotsMade ||= Object.assign(document.createElement('template'), { innerHTML: DOTS }).content.firstChild).cloneNode(true));
   more.setAttribute('aria-label', `Options for ${s.trackName}`);
