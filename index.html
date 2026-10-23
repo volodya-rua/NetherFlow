@@ -4851,6 +4851,7 @@ function autoQueue(ref, lists, seed) {
 // begun again from it (and the two you played before it, if they're YouTube's: no lookups for them).
 function autoFill(t) {
   if (tg.role === 'guest' || !(autoOn || radio === queue) || !t || t.kind === 'episode' || repeat !== 'off' || hasNext() || !fullSongs) return;
+  if (!navigator.onLine) { autoOffline(t); return Promise.resolve(); } // (no signal: from what's saved — and the song's end, waiting on this, moves on)
   const p = auto.pending = (async () => {
     const seed = await seedFor(t);
     if (!seed || current !== t) return;
@@ -4860,9 +4861,23 @@ function autoFill(t) {
     let lists = await Promise.all([...new Set([...auto.seeds, auto.originSeed])].map(radioFor));
     if (!lists[0].length) lists = [await api.ytm(t.artistName || t.trackName).catch(() => []), ...lists.slice(1)]; // (YouTube's radio not answering: the artist's own songs, not silence)
     if (current !== t || hasNext() || !(autoOn || radio === queue)) return;
+    if (!lists.some(l => l.length)) return autoOffline(t); // (no answer from YouTube Music: what's saved)
     autoQueue(t, lists, seed);
-  })().catch(() => {}).finally(() => { if (auto.pending === p) auto.pending = null; });
+  })().catch(() => autoOffline(t)).finally(() => { if (auto.pending === p) auto.pending = null; });
   return p;
+}
+// No signal (a tunnel, a road trip's end): the next song from what's saved on this device — the song playing's artist
+// and language first, then your taste; nothing heard lately, nothing in the list already
+function autoOffline(t) {
+  if (current !== t || hasNext() || !(autoOn || radio === queue)) return;
+  const heard = new Set([...auto.mem.heard.slice(0, 80), ...queue.map(songKey)]), lang = songLang(t), a = artKey(t);
+  const pool = [...saved.values()].map(x => x.track).filter(s => s?.trackName && s.kind !== 'episode' && !heard.has(songKey(s)));
+  if (!pool.length) return;
+  const score = s => (artKey(s) === a ? 3 : 0) + (lang && sameLang(songLang(s) || lang, lang) ? 2 : 0) + (auto.mem.taste[artKey(s)] || 0) + Math.random() * 2;
+  const pick = pool.sort((x, y) => score(y) - score(x))[0], s = { ...pick };
+  auto.items.add(s);
+  const was = queue; queue = [...queue, s]; if (radio === was) radio = queue;
+  queueChanged();
 }
 // Next on a pick of Autoplay's, early on: turned down — and the song it queued after it, from its radio, picked again from
 // the others' before it plays (as they came: no waiting)
@@ -6981,6 +6996,7 @@ const ICONS = {
   out: '<path d="M13.5 4.5H19.5V10.5M19.5 4.5L11 13"/><path d="M17.5 14v4.5a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1v-11a1 1 0 0 1 1-1H10"/>',
   book: '<path d="M4 5.5c2.7-1.2 5.3-1.2 8 .5v13c-2.7-1.7-5.3-1.7-8-.5zM20 5.5c-2.7-1.2-5.3-1.2-8 .5v13c2.7-1.7 5.3-1.7 8-.5z"/>',
   compass: '<circle cx="12" cy="12" r="8.5"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/>',
+  car: '<path d="M4 16.5v-4l2-5.5h12l2 5.5v4M4 12.5h16M4 16.5h16M6.5 16.5v2M17.5 16.5v2"/><circle cx="7.5" cy="14.5" r=".6"/><circle cx="16.5" cy="14.5" r=".6"/>',
   together: '<circle cx="9" cy="8" r="3.2"/><path d="M3 19.5c.6-3.3 3-5.2 6-5.2s5.4 1.9 6 5.2"/><circle cx="16.5" cy="9" r="2.6"/><path d="M16.8 14.3c2.3.2 3.9 1.8 4.4 4.4"/>',
   story: '<rect x="6" y="2.5" width="12" height="19" rx="2.5"/><circle cx="12" cy="10.5" r="3.2"/><path d="M9 16.5h6"/>',
 };
@@ -7542,6 +7558,62 @@ function saveOffline(tracks, withLyrics, upgrade = false) {
   navigator.storage?.persist?.().catch(() => {}); // ask the browser not to clear them when space runs low
   if (!upgrade) toast(!fresh.length ? 'Already saved' : fresh.length > 1 ? `Downloading ${fresh.length} songs` : `Downloading ${fresh[0].trackName}`);
   dlChanged(); pumpDl();
+}
+// ---------- Road trip (a list's page: Road trip): before a drive, the list and more like it, saved for offline at once ----------
+// The list, and an hour or three more like it — picked as Autoplay picks, from YouTube Music's radios of a few of its
+// songs (their feel, the list's language, a mix of artists, none of its own again) — kept as a playlist of its own
+// ("Road trip · …", made again the next time) and downloaded with their lyrics, so tunnels and dead zones don't stop the
+// music. Played with no signal, Autoplay carries on from what's saved (autoOffline).
+function tripButton(name, tracksOf) {
+  const b = el('button', 'pill ghost');
+  b.append(ico('car'), 'Road trip');
+  b.onclick = () => showMenu(b, [...[['Just this list', 0], ['This list + 1 hour like it', 1], ['This list + 3 hours like it', 3]].map(([label, h]) => mi('car', label, () => { hideMenu(); roadTrip(name, tracksOf(), h); })),
+    el('div', 'mi-note lbl', 'Everything saved on this device with its lyrics, to play with no signal. The songs like it come from YouTube Music: the internet\'s needed for that, now.')]);
+  return b;
+}
+async function roadTrip(name, tracks, hours) {
+  const own = tracks.filter(t => t?.trackName && t.kind !== 'episode' && !t.epNoSave);
+  if (!own.length) return;
+  let more = [];
+  if (hours) {
+    toast(`Road trip: finding ${hours === 1 ? 'an hour' : hours + ' hours'} of songs like ${name}…`, 9000);
+    more = await tripMore(own, hours * 3600).catch(() => []);
+    if (!more.length) toast(`YouTube Music didn't answer: ${name} alone, for now`);
+  }
+  const all = [...own, ...more], title = `Road trip · ${name}`.slice(0, 80);
+  const p = library.playlists.find(x => x.name === title && !x.collab) || newPlaylist(title, false);
+  p.tracks = all.map(slim); saveLib();
+  saveOffline(all, true);
+  const mins = Math.round(all.reduce((a, t) => a + (t.trackTimeMillis || 0), 0) / 60000);
+  toast(`Road trip: ${all.length} songs, ${mins >= 60 ? `${Math.floor(mins / 60)} h ${mins % 60} min` : mins + ' min'}, downloading. In the car, play "${title}"`, 7000);
+  if ($('library').open) openLibrary({ kind: 'playlist', id: p.id });
+  return p;
+}
+// songs like these, enough for secs: the radios of up to six of them spread through the list (then of the songs found,
+// once more, if that's not enough), ranked as Autoplay ranks — in more of the radios first, in the list's language, no
+// remix or live take, the artists you play through first — and an artist no closer than 4 songs
+async function tripMore(own, secs) {
+  const key = c => songKey({ trackName: c.title, artistName: c.artist }), taken = new Set(own.map(songKey));
+  const langs = own.map(songLang).filter(Boolean), lang = langs.sort((a, b) => langs.filter(x => x === b).length - langs.filter(x => x === a).length)[0] || '';
+  const out = [], recent = [];
+  let got = 0, seeds = own.filter((_, i) => i % Math.max(1, Math.floor(own.length / 6)) === 0).slice(0, 6);
+  for (let round = 0; round < 2 && got < secs && seeds.length; round++) {
+    const ids = (await Promise.all(seeds.map(t => seedFor(t).catch(() => '')))).filter(Boolean);
+    const lists = (await Promise.all(ids.map(radioFor))).filter(l => l.length), score = new Map();
+    for (const l of lists) l.forEach((c, i) => {
+      const k = key(c), s0 = { trackName: c.title, artistName: c.artist, collectionName: c.album }, cl = songLang(s0);
+      if (taken.has(k) || c.dur < 60 || c.dur > 600 || isModded(s0) || lang && cl && !sameLang(lang, cl) || c.type && c.type !== 'ATV' && c.type !== 'OMV') return;
+      const x = score.get(k) || { c, v: auto.mem.taste[artKey(s0)] || 0 }; x.v += 10 * (1 - i / l.length) + 3; score.set(k, x);
+    });
+    const ranked = [...score.values()].sort((a, b) => b.v - a.v).map(x => x.c), found = [];
+    while (got < secs && ranked.length) {
+      const i = ranked.findIndex(c => !recent.includes(artKey({ artistName: c.artist }))), c = ranked.splice(Math.max(0, i), 1)[0];
+      taken.add(key(c)); found.push(ytmToTrack(c)); got += c.dur;
+      recent.push(artKey({ artistName: c.artist })); if (recent.length > 4) recent.shift();
+    }
+    out.push(...found); seeds = found.filter((_, i) => i % 4 === 0).slice(0, 4);
+  }
+  return out;
 }
 function cancelSave(id) {
   dl.queue = dl.queue.filter(j => j.t.trackId !== id);
@@ -9228,7 +9300,7 @@ function renderList(v, head, list, tok) {
       mix.onclick = () => shuffleList(d.tracks.slice());
       save.append(ico('plus'), 'Save to Library');
       save.onclick = () => { const p = newPlaylist(d.name || v.title); addToPlaylist(p, d.tracks); if (d.src) { p.src = d.src; saveLib(); } openLibrary({ kind: 'playlist', id: p.id }); };
-      acts.push(play, mix, save);
+      acts.push(play, mix, save, ...(fullSongs ? [tripButton(d.name || v.title, () => d.tracks)] : []));
     }
     $('libActs').replaceChildren(...acts);
     $('libList').replaceChildren(...(d.tracks.length ? d.tracks.map((s, i) => row(s, i, d.tracks)) : [el('p', 'empty', d.empty || 'Nothing in it right now.')]));
@@ -9791,7 +9863,7 @@ function renderLibrary() {
         save.append(ico('down'), going ? `Downloading · ${done} of ${tracks.length}` : !left ? 'All downloaded' : done ? `Download ${left} more` : 'Download all');
         save.disabled = !left;
         save.onclick = () => saveChoice(tracks.filter(t => !saved.has(t.trackId) && !dlJob(t.trackId)), save);
-        acts.push(save);
+        acts.push(save, tripButton(p ? p.name : 'Liked songs', () => listView(v, tracks)));
         if (going) {
           const stop = el('button', 'link', 'Stop');
           stop.onclick = () => { for (const t of tracks) if (dlJob(t.trackId)) cancelSave(t.trackId); };
