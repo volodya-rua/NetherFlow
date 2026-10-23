@@ -3620,37 +3620,47 @@ async function carPlay(action, text) {
 // paused while it listens (so it hears you, not the song), and carried on after unless you said otherwise.
 // The computer: the voice pack's recognizer when it's here, else Windows' own speech recognition (winvoice.js).
 // The voice pack: Windows' hears names and accents badly (the user: wrong words, not hearing them, the wrong song). It's
-// OpenAI's Whisper (base, multilingual; made ONNX, int8, by Hugging Face's onnx-community, at one fixed version) run by
-// ONNX Runtime Web 1.30.0 in whisper.js, so what's said is worked out on this computer and never leaves it; the library's
-// names given to it, so it writes them as they're spelt there. A one-time download (~93 MB) from where they're published
+// OpenAI's Whisper (base, English-only — measured: of the same size, fewer words wrong than the multilingual one, Indian
+// names spelt in Latin letters all the same; made ONNX by Hugging Face's onnx-community, at one fixed version) run by
+// ONNX Runtime Web 1.30.0 in whisper.js — on the graphics card where there is one (a sentence's words in 0.34 s, not
+// 0.71) — so what's said is worked out on this computer and never leaves it; the library's names given to it, so it
+// writes them as they're spelt there. A one-time download (~126 MB; ~107 with no graphics card) from where they're published
 // — the model from Hugging Face, the engine from npm (by jsDelivr) — each file checked against its SHA-256 here before
 // it's kept or used, kept in the browser's cache storage till Settings › Voice pack › Remove. (A computer's own copy
 // beside the app, voice/ — as when it's being made — tried first.)
 const herePc = !native && !!window.netherflowApp?.voice;
-const VOICE_PACK = 'netherflow-voice-1', WHISPER_AT = 'https://huggingface.co/onnx-community/whisper-base/resolve/1846881b6b3a3024392c1eea3ad983695bc23925/', ORT_AT = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.30.0/dist/';
+const VOICE_PACK = 'netherflow-voice-2', VOICE_OLD = 'netherflow-voice-1', WHISPER_AT = 'https://huggingface.co/onnx-community/whisper-base.en/resolve/51eefc0af78b103839eda9e7e4f4186acc6517fe/', ORT_AT = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.30.0/dist/';
 const VOICE_FILES = {
-  'ort.wasm.min.js': [50196, 'faece07e84faa9001f5104bbe4e5c70861d06cb2376a0dea1fa0ad33a67adc81', 'text/javascript', ORT_AT],
-  'ort-wasm-simd-threaded.mjs': [24381, 'e13f7f94fc51b4ca72b12faeb1ee95f4ace6dfbc8939bc718aabdc0a27c4299b', 'text/javascript', ORT_AT],
-  'ort-wasm-simd-threaded.wasm': [14239897, '3398c10d07d229bd91b364548e130e0e51a8e5704b88c7c083ebbeb78842dee2', 'application/wasm', ORT_AT],
-  'encoder_model_quantized.onnx': [23201314, '5862993336bf33acd23736071aae2b32261d3b1b2f37780194460d4ef974dd46', 'application/octet-stream', WHISPER_AT + 'onnx/'],
-  'decoder_model_merged_quantized.onnx': [53693315, 'fa3ef9902734ce5ae6f9ef2bdb2ba9a6c4b5785b09f4f420ce036573dc9d090b', 'application/octet-stream', WHISPER_AT + 'onnx/'],
-  'vocab.json': [1036584, '50d6a919f0a0601d56a04eb583c780d18553aa388254ba3158eb6a00f13e2c1a', 'application/json', WHISPER_AT],
-  'merges.txt': [493869, '2df2990a395e35e8dfbc7511e08c12d56018d8d04691e0133e5d63b21e154dc6', 'text/plain', WHISPER_AT],
-  'generation_config.json': [3832, '61070cf8de25b1e9256e8e102ded49d8d24a8369ed36ef84fdf21549e68125a0', 'application/json', WHISPER_AT],
+  'ort.min.mjs': [367950, '0ca19c223d563f244908feb26712f40333980b07576328c8b4a04d132bbf34ad', 'text/javascript', ORT_AT],
+  'ort-wasm-simd-threaded.jsep.mjs': [46851, '709853412fd1ffc34247af1e73569227b5b79629c5ca3f59cc39cf7e500e4947', 'text/javascript', ORT_AT],
+  'ort-wasm-simd-threaded.jsep.wasm': [28312028, '3ad23231b5bd6d9dda55a7f84606315e0bf35b6750c28ee993c987c54cacab0f', 'application/wasm', ORT_AT],
+  'encoder_model_q4.onnx': [18772451, 'e7e6d1103e14c9c0beb838eaa011f8bcdbfb3abc7f15a87edae1373ff5a6d678', 'application/octet-stream', WHISPER_AT + 'onnx/', 'gpu'], // (got only where there's a graphics card)
+  'encoder_model_quantized.onnx': [23201320, '6e8001198c490bbae018c0044f630c2915efb826bad957006ce36152d0ab2a10', 'application/octet-stream', WHISPER_AT + 'onnx/'],
+  'decoder_model_merged_quantized.onnx': [53692803, 'dd4761a3f7add26afda3512abff4706920404c2517e85a9f2ff090b0c0987909', 'application/octet-stream', WHISPER_AT + 'onnx/'],
+  'vocab.json': [999186, 'f6bd25a65e4e63ca31360e9fb11c7e4f9a391a78385d640acd814092dd6eee4f', 'application/json', WHISPER_AT],
+  'merges.txt': [456318, '1ce1664773c50f3e0cc8842619a93edc4624525b728b188a9e0be33b7726adc5', 'text/plain', WHISPER_AT],
+  'generation_config.json': [1556, '3479b1f44a07e41db799e22599222fee5816738036def94a39841cb9cdbb4120', 'application/json', WHISPER_AT],
 };
-const VOICE_MB = Math.round(Object.values(VOICE_FILES).reduce((a, f) => a + f[0], 0) / 1e6);
-const voicePack = { ready: false, getting: 0 }, wh = { init: null, worker: null, say: null, stop: null, idle: 0 };
+const voicePack = { ready: false, getting: 0, gpu: false }, wh = { init: null, worker: null, say: null, stop: null, idle: 0 };
+// its files for this computer (the graphics card's encoder only where there's one), and their size
+const voiceFiles = () => Object.entries(VOICE_FILES).filter(([, f]) => f[4] !== 'gpu' || voicePack.gpu);
+const voiceMB = () => Math.round(voiceFiles().reduce((a, [, f]) => a + f[0], 0) / 1e6);
 async function voicePackCheck() {
-  try { const c = await caches.open(VOICE_PACK); voicePack.ready = (await Promise.all(Object.keys(VOICE_FILES).map(n => c.match(n)))).every(Boolean); } catch { voicePack.ready = false; }
+  voicePack.gpu = !!(await navigator.gpu?.requestAdapter().catch(() => null));
+  try { const c = await caches.open(VOICE_PACK); voicePack.ready = (await Promise.all(voiceFiles().map(([n]) => c.match(n)))).every(Boolean); } catch { voicePack.ready = false; }
   renderVoiceRow(); wakeSync();
+  if (!voicePack.ready && await caches.has(VOICE_OLD).catch(() => false)) { // (an older voice pack here: the new one got in its place — asked for once already)
+    await voicePackGet(true);
+    if (voicePack.ready) caches.delete(VOICE_OLD).catch(() => {});
+  }
 }
-async function voicePackGet() {
+async function voicePackGet(update = false) {
   if (voicePack.getting || voicePack.ready) return;
-  const total = VOICE_MB * 1e6; let had = 0;
-  voicePack.getting = .001; renderVoiceRow(); toast(`Getting the voice pack (${VOICE_MB} MB)…`);
+  const total = voiceMB() * 1e6; let had = 0;
+  voicePack.getting = .001; renderVoiceRow(); toast(update ? `Updating the voice pack (${voiceMB()} MB): quicker, and it hears you better` : `Getting the voice pack (${voiceMB()} MB)…`);
   try {
     const c = await caches.open(VOICE_PACK);
-    for (const [name, [size, sha, type, at]] of Object.entries(VOICE_FILES)) {
+    for (const [name, [size, sha, type, at]] of voiceFiles()) {
       if (await c.match(name)) { had += size; continue; }
       let buf = null;
       for (const from of ['/voice/' + name, at + name]) {
@@ -3674,11 +3684,11 @@ async function voicePackGet() {
 async function voicePackRemove() {
   voicePack.ready = false; wakeSync();
   wh.worker?.terminate(); Object.assign(wh, { init: null, worker: null, q: null });
-  await caches.delete(VOICE_PACK).catch(() => {});
+  await caches.delete(VOICE_PACK).catch(() => {}); await caches.delete(VOICE_OLD).catch(() => {});
   voicePack.ready = false; wakeSync(); renderVoiceRow(); toast('Voice pack removed: voice control uses Windows\' own');
 }
 // its row in Settings (the computer): Get, how far it's got, or Remove
-const voiceRow = () => settingRow('Voice pack', [voicePack.ready ? 'Remove' : voicePack.getting ? `Getting… ${Math.round(100 * voicePack.getting)}%` : `Get · ${VOICE_MB} MB`], '', () => voicePack.ready ? voicePackRemove() : voicePackGet(),
+const voiceRow = () => settingRow('Voice pack', [voicePack.ready ? 'Remove' : voicePack.getting ? `Getting… ${Math.round(100 * voicePack.getting)}%` : `Get · ${voiceMB()} MB`], '', () => voicePack.ready ? voicePackRemove() : voicePackGet(),
   'For voice control: what you say understood properly, names and accents too, by a speech recognizer on this computer (OpenAI\'s Whisper, run by ONNX Runtime): what you say never leaves it. A one-time download from Hugging Face and jsDelivr, kept on this computer till you remove it here. Without it, voice control uses Windows\' own speech recognition.');
 function renderVoiceRow() { const r = document.getElementById('voiceRow'); if (r) r.replaceChildren(...voiceRow().childNodes); }
 if (herePc) voicePackCheck();
@@ -3689,22 +3699,24 @@ function whisperStart() {
   return wh.init ||= (async () => {
     const c = await caches.open(VOICE_PACK), file = async n => { const r = await c.match(n); if (!r) throw new Error('voice pack'); return r; };
     const url = async n => URL.createObjectURL(await (await file(n)).blob()), buf = async n => (await file(n)).arrayBuffer(), text = async n => (await file(n)).text();
-    const init = { threads: Math.max(1, Math.min(4, (navigator.hardwareConcurrency || 2) >> 1)), ort: await url('ort.wasm.min.js'), mjs: await url('ort-wasm-simd-threaded.mjs'), wasm: await url('ort-wasm-simd-threaded.wasm'),
-      encoder: await buf('encoder_model_quantized.onnx'), decoder: await buf('decoder_model_merged_quantized.onnx'), vocab: await text('vocab.json'), merges: await text('merges.txt'), gen: await text('generation_config.json') };
+    const gpu = voicePack.gpu && await c.match('encoder_model_q4.onnx') ? await buf('encoder_model_q4.onnx') : null;
+    const init = { threads: Math.max(1, Math.min(8, (navigator.hardwareConcurrency || 2) >> 1)), ort: await url('ort.min.mjs'), mjs: await url('ort-wasm-simd-threaded.jsep.mjs'), wasm: await url('ort-wasm-simd-threaded.jsep.wasm'),
+      encoder: await buf('encoder_model_quantized.onnx'), encoderGpu: gpu, decoder: await buf('decoder_model_merged_quantized.onnx'), vocab: await text('vocab.json'), merges: await text('merges.txt'), gen: await text('generation_config.json') };
     const w = new Worker('whisper.js');
-    const r = await new Promise(ok => { w.onmessage = e => ok(e.data); w.onerror = () => ok({ error: 'worker' }); w.postMessage({ init }, [init.encoder, init.decoder]); });
+    const r = await new Promise(ok => { w.onmessage = e => ok(e.data); w.onerror = () => ok({ error: 'worker' }); w.postMessage({ init }, [init.encoder, init.decoder, ...(gpu ? [gpu] : [])]); });
     if (!r.ready) { w.terminate(); throw new Error(r.error || 'voice pack'); }
+    wh.gpu = r.gpu; // (on the graphics card, or the processor)
     return wh.worker = w;
   })().catch(e => { wh.init = null; throw e; });
 }
 // Speech, cut from a microphone's sound (16 kHz, in pieces of 1024): from when someone starts speaking till they stop
 // (0.8 s quiet), 10 s at most, with a third of a second from before; a click or a cough alone isn't speaking (a fifth of
 // a second, at least). feed(piece) → the speech, once it's over; .level (0–1) for the ring; .waiting: no one speaking.
-function speechCutter() {
+function speechCutter(over = 13) { // (over: quiet pieces that end it — 13, 0.8 s)
   let got = [], floor = 0, frames = 0, talk = 0, loudN = 0, quiet = 0;
   const join = () => { const pcm = new Float32Array(got.reduce((a, x) => a + x.length, 0)); let o = 0; for (const x of got) { pcm.set(x, o); o += x.length; } return pcm; };
   return {
-    level: 0, frames: 0, get waiting() { return !talk; },
+    level: 0, frames: 0, over, get waiting() { return !talk; }, get quiet() { return quiet; },
     feed(x) {
       this.frames = ++frames;
       let ss = 0; for (let i = 0; i < x.length; i++) ss += x[i] * x[i];
@@ -3714,8 +3726,8 @@ function speechCutter() {
       got.push(x);
       if (!talk) { if (loud) talk = loudN = 1; else if (got.length > 5) got.shift(); return null; }
       talk++; if (loud) loudN++; quiet = loud ? 0 : quiet + 1;
-      if (quiet >= 13 && loudN < 3) { talk = loudN = quiet = 0; got = got.slice(-5); return null; } // (only a click: still waiting)
-      if (quiet < 13 && talk <= 156) return null;
+      if (quiet >= this.over && loudN < 3) { talk = loudN = quiet = 0; got = got.slice(-5); return null; } // (only a click: still waiting)
+      if (quiet < this.over && talk <= 156) return null;
       const pcm = join(); got = []; talk = loudN = quiet = 0; return pcm;
     },
     rest() { return talk ? join() : null; }, // (what's been said so far)
@@ -3762,7 +3774,7 @@ async function hearHere(o) {
 // this computer — a quiet room costs nothing; someone talking, half a second of work each time they stop. What isn't
 // "Hey NetherFlow…" is forgotten at once. The music this app plays is taken out of what the microphone hears by the
 // browser's echo cancelling.
-const hey = { on: store.get('netherflow.wake') === 'On', paused: false, stop: null, armed: 0, was: false, song: null, busy: false, next: null, t: 0 };
+const hey = { on: store.get('netherflow.wake') === 'On', paused: false, stop: null, armed: 0, was: false, song: null, busy: false, next: null, guess: null, t: 0 };
 const NETHERFLOW = 'natarflav'; // (soundKey('NetherFlow'))
 // what was said after "Hey NetherFlow" (nothing after it: ''), or null: it wasn't said (its own spelling, or near it)
 function afterWake(text) {
@@ -3800,23 +3812,29 @@ async function wakeListen() {
   }
   if (stopped) return mic.getTracks().forEach(t => t.stop());
   whisperStart().catch(() => {}); // (readied now: the first "Hey NetherFlow" answered as quickly as the rest)
-  const ctx = new AudioContext({ sampleRate: 16000 }), src = ctx.createMediaStreamSource(mic), tap = ctx.createScriptProcessor(1024, 1, 1), cut = speechCutter();
+  const ctx = new AudioContext({ sampleRate: 16000 }), src = ctx.createMediaStreamSource(mic), tap = ctx.createScriptProcessor(1024, 1, 1), cut = speechCutter(9);
   tap.onaudioprocess = e => {
     if (voice.busy) return; // (the mic tapped: that's listening)
+    cut.over = hey.armed ? 11 : 9; // (0.55 s; what you want, after the chime, 0.7 s: time to think of a name)
     const pcm = cut.feed(e.inputBuffer.getChannelData(0).slice());
     if (hey.armed) $('voiceUi').style.setProperty('--lv', cut.level.toFixed(2));
-    if (pcm) wakeHeard(pcm);
+    // (a third of a second's pause: what's been said worked out now, while it waits to be sure it's over — the words
+    // ready ~0.2 s sooner; someone speaking on, and the guess is thrown away)
+    if (!pcm && !cut.waiting && cut.quiet === 5) hey.guess = { armed: !!hey.armed, text: heyAsk(cut.rest(), !!hey.armed) };
+    else if (!cut.waiting && cut.quiet === 0) hey.guess = null;
+    if (pcm) { const g = hey.guess; hey.guess = null; wakeHeard(pcm, g?.armed === !!hey.armed ? g.text : null); }
   };
   src.connect(tap); tap.connect(ctx.destination);
   hey.stop = () => { tap.onaudioprocess = null; src.disconnect(); tap.disconnect(); mic.getTracks().forEach(t => t.stop()); ctx.close().catch(() => {}); hey.stop = null; wakeDisarm(); };
 }
 // something said: "Hey NetherFlow…"? (one at a time; the latest said meanwhile next)
-async function wakeHeard(pcm) {
+const heyAsk = (pcm, armed) => { const p = whisperAsk(pcm, [...VOICE_CMDS, ...voiceWords()], !armed); p.catch(() => {}); return p; }; // (never "Hey NetherFlow" among the hints: Whisper took it as said already, and left it out — 5 times in 12)
+async function wakeHeard(pcm, guess = null) {
   if (hey.busy) { hey.next = pcm; return; }
   hey.busy = true;
   try {
     const armed = !!hey.armed;
-    const text = await whisperAsk(pcm, armed ? [...VOICE_CMDS, ...voiceWords()] : ['Hey NetherFlow', ...VOICE_CMDS, ...voiceWords()], !armed);
+    const text = await (guess || heyAsk(pcm, armed));
     if (armed) { if (text) { const { was, song } = hey; wakeDisarm(false); voiceAct(text, was, song); } } // (what you want, after the chime)
     else {
       const rest = afterWake(text);
@@ -3899,7 +3917,7 @@ async function listen() {
   if (!voice.on) return;
   if (voice.busy) return Voice.stop().catch(() => {}); // (tapped again: that's all it says)
   if (herePc && !voicePack.ready && !voicePack.getting && !store.get('netherflow.voiceoffer')) { // (the computer, once: the voice pack, or Windows' own)
-    const d = $('voiceOffer'); d.returnValue = ''; d.querySelector('b').textContent = VOICE_MB + ' MB'; d.showModal(); placeWinctl();
+    const d = $('voiceOffer'); d.returnValue = ''; d.querySelector('b').textContent = voiceMB() + ' MB'; d.showModal(); placeWinctl();
     const v = await new Promise(r => { d.onclose = () => r(d.returnValue); });
     if (!v) return;
     store.set('netherflow.voiceoffer', '1');

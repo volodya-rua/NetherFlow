@@ -1,13 +1,15 @@
 // NetherFlow - Copyright (C) 2026 Volodya.rua - GNU GPL v3 only, with additional terms (credit, name and logo): see LICENSE and NOTICE.
-// Voice control's recognizer, a worker of its own: OpenAI's Whisper (base, multilingual — made ONNX, int8, by Hugging
-// Face's onnx-community) run by ONNX Runtime Web on this device: what's said never leaves it. The page sends one
-// sentence (16 kHz, one channel); this sends back its words. The engine and the model aren't in the app: the voice pack,
-// downloaded when the user asks for it and kept on the device (see voicePack in index.html), handed over first.
-//   in:  { init: { ort, mjs, wasm (the engine's files, as addresses), threads, encoder, decoder (the model's two nets:
-//          the decoder the merged one, that keeps what it's worked out), vocab, merges, gen (its vocabulary, word-pieces
-//          and generation settings: text) } } · { id, pcm (Float32Array, 16 kHz), langs, names (the library's, to hear
-//          them as spelt), wake (only "Hey NetherFlow…" wanted: anything else given up early) }
-//   out: { ready } · { id, text, lang, ms } · { id, error }
+// Voice control's recognizer, a worker of its own: OpenAI's Whisper (base.en — made ONNX by Hugging Face's
+// onnx-community) run by ONNX Runtime Web on this device: what's said never leaves it. The page sends one sentence (16 kHz,
+// one channel); this sends back its words. Its encoder — the work every sentence costs — on the graphics card where
+// there's one (WebGPU, 4-bit: 80 ms, against 430 on the processor, measured; half precision there wrote nonsense), else
+// on the processor (int8); its decoder, word by word, on the processor. The engine and the model aren't in the app: the voice pack, downloaded when
+// the user asks for it and kept on the device (see voicePack in index.html), handed over first.
+//   in:  { init: { ort, mjs, wasm (the engine's files, as addresses), threads, encoder (int8), encoderGpu (4-bit, or
+//          none), decoder (the merged one, that keeps what it's worked out), vocab, merges, gen (its
+//          vocabulary, word-pieces and generation settings: text) } } · { id, pcm (Float32Array, 16 kHz), langs, names (the
+//          library's, to hear them as spelt), wake (only "Hey NetherFlow…" wanted: anything else given up early), end }
+//   out: { ready, gpu } · { id, text, lang, ms } · { id, error }
 const SR = 16000, NFFT = 400, HOP = 160, MELS = 80, FRAMES = 3000, BINS = NFFT / 2 + 1;
 const HEADS = 8, HEAD = 64; // (Whisper base's attention: 8 heads of 64)
 let nets = null, vocab = null, merges = null, gen = null;
@@ -60,7 +62,7 @@ let tokenText = null;
 function decode(ids) {
   tokens();
   const bytes = [];
-  for (const id of ids) { const t = tokenText.byId[id]; if (t == null || id >= 50257) continue; for (const ch of t) { const b = tokenText.byte.get(ch); if (b != null) bytes.push(b); } }
+  for (const id of ids) { const t = tokenText.byId[id]; if (t == null || id >= EOT) continue; for (const ch of t) { const b = tokenText.byte.get(ch); if (b != null) bytes.push(b); } }
   return new TextDecoder().decode(new Uint8Array(bytes)).trim();
 }
 function encode(text) {
@@ -94,8 +96,8 @@ function tokens() {
 // step): its language first (among those it's told the listener may speak, English always), then its words, never
 // timestamps or its non-speech symbols. The library's names go before, as if said just now: Whisper then writes them as
 // they're spelt there ("Sid Sriram", not "Sid Shriram").
-const EOT = 50257;
-async function hear(pcm, langs, names, wake) {
+let EOT = 50257; // (its end: its special tokens come after — the English-only model's one earlier, from its settings)
+async function hear(pcm, langs, names, wake, end) {
   const [enc, dec] = await nets;
   const t0 = performance.now(), feats = new ort.Tensor('float32', logMel(pcm), [1, MELS, FRAMES]), t1 = performance.now();
   const hidden = (await enc.run({ [enc.inputNames[0]]: feats }))[enc.outputNames[0]], t2 = performance.now();
@@ -111,15 +113,16 @@ async function hear(pcm, langs, names, wake) {
   };
   const SOT = gen.decoder_start_token_id ?? 50258, PREV = gen.prev_sot_token_id ?? 50361, NO_TS = gen.no_timestamps_token_id ?? 50363, TRANSCRIBE = gen.task_to_id?.transcribe ?? 50359;
   let said = []; // (as many names as 160 of its tokens hold — Whisper's limit is 224 — the first given nearest: they count most)
-  for (const n of names || []) { const t = encode(' ' + n + ','); if (said.length + t.length > 160) break; said = [...t, ...said]; }
+  for (const n of names || []) { const t = encode(' ' + n + (said.length ? ',' : '.')); if (said.length + t.length > 160) break; said = [...t, ...said]; }
+  if (end && said.length) said = [...said, ...encode(' ' + end)];
   const langIds = Object.entries(gen.lang_to_id || {}), wanted = new Set(['en', ...(langs || [])].map(l => `<|${l}|>`));
-  const first = await step(said.length ? [PREV, ...said, SOT] : [SOT]);
+  const first = await step(said.length ? [PREV, ...said, SOT] : [SOT]), t3 = performance.now();
   const en = gen.lang_to_id?.['<|en|>'] ?? 50259; let lang = en, best = -Infinity;
   for (const [tok, id] of langIds) if (wanted.has(tok) && first[id] > best) { best = first[id]; lang = id; }
   // (English, where it's nearly as likely as another: song names and commands come out in Latin letters, as searched)
   if (lang !== en && first[en] > best - 1.5) lang = en;
   const suppress = new Set(gen.suppress_tokens || []), begin = new Set(gen.begin_suppress_tokens || [220, EOT]), ids = [];
-  let l = await step([lang, TRANSCRIBE, NO_TS]);
+  let l = await step(gen.is_multilingual === false ? [NO_TS] : [lang, TRANSCRIBE, NO_TS]); // (the English-only model: no language, no task)
   for (let i = 0; i < 48; i++) {
     let top = -1, v = -Infinity;
     for (let t = 0; t <= EOT; t++) { if (suppress.has(t) || (i === 0 && begin.has(t))) continue; if (l[t] > v) { v = l[t]; top = t; } } // (words and the end: never its other special tokens, nor timestamps)
@@ -130,24 +133,31 @@ async function hear(pcm, langs, names, wake) {
     l = await step([top]);
   }
   const code = langIds.find(([, id]) => id === lang)?.[0].slice(2, -2) || 'en';
-  return { text: decode(ids), lang: code, ms: { mel: Math.round(t1 - t0), encoder: Math.round(t2 - t1), decoder: Math.round(performance.now() - t2), tokens: ids.length, prompt: said.length } };
+  return { text: decode(ids), lang: code, ms: { mel: Math.round(t1 - t0), encoder: Math.round(t2 - t1), first: Math.round(t3 - t2), decoder: Math.round(performance.now() - t2), tokens: ids.length, prompt: said.length } };
 }
 
 onmessage = async ({ data: d }) => {
   if (d.init) {
     try {
-      importScripts(d.init.ort);
+      self.ort = await import(d.init.ort);
       ort.env.wasm.wasmPaths = { mjs: d.init.mjs, wasm: d.init.wasm };
       ort.env.wasm.numThreads = d.init.threads || 1; // (more: SharedArrayBuffer, the page cross-origin isolated by server.js)
-      vocab = JSON.parse(d.init.vocab); gen = JSON.parse(d.init.gen); merges = d.init.merges;
-      nets = Promise.all([d.init.encoder, d.init.decoder].map(b => ort.InferenceSession.create(new Uint8Array(b), { executionProviders: ['wasm'] })));
+      vocab = JSON.parse(d.init.vocab); gen = JSON.parse(d.init.gen); merges = d.init.merges; EOT = gen.eos_token_id ?? 50257;
+      const cpu = b => ort.InferenceSession.create(new Uint8Array(b), { executionProviders: ['wasm'] });
+      let gpu = false, enc = null;
+      if (d.init.encoderGpu && self.navigator?.gpu) try { // (on the graphics card, run once on silence: its first run builds its shaders, ~1 s)
+        enc = await ort.InferenceSession.create(new Uint8Array(d.init.encoderGpu), { executionProviders: ['webgpu'] });
+        await enc.run({ [enc.inputNames[0]]: new ort.Tensor('float32', new Float32Array(MELS * FRAMES).fill(-1.5), [1, MELS, FRAMES]) });
+        gpu = true;
+      } catch { enc = null; } // (no graphics card it can use: the processor)
+      nets = Promise.all([enc || cpu(d.init.encoder), cpu(d.init.decoder)]);
       await nets;
-      postMessage({ ready: true });
+      postMessage({ ready: true, gpu });
     } catch (e) { postMessage({ error: String(e && e.message || e) }); }
     return;
   }
   if (d.pcm) {
-    try { postMessage({ id: d.id, ...(await hear(d.pcm, d.langs, d.names, d.wake)) }); }
+    try { postMessage({ id: d.id, ...(await hear(d.pcm, d.langs, d.names, d.wake, d.end)) }); }
     catch (e) { postMessage({ id: d.id, error: String(e && e.message || e) }); }
   }
 };
