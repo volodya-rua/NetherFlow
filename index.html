@@ -13038,7 +13038,7 @@ void main(){
   float y = uv.y + hh * .45 - .14 * s;
   float rays = pow(n(vec2(uv.x * 22. + T * .4, T * .9)), 2.) * .8 + .2;
   float veil = y > 0. ? exp(-y * (14. - 8. * s)) : exp(y * 90.);
-  col += mix(tint(x), vec3(1.), .2 * s) * veil * rays * (.025 + .22 * s) * smoothstep(1., .8, x);
+  col += mix(tint(x), vec3(1.), .2 * s) * veil * rays * (.05 + .22 * s) * smoothstep(1., .8, x);
 #else
   // Nova: a star bursting with the music — rays of the spectrum out of its heart (the bass at the top, mirrored),
   // streaking outward as each frame is drawn larger, and on every kick a ring of light thrown out from it
