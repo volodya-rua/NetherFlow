@@ -9605,6 +9605,46 @@ function renderBook(v, head, list, tok) {
     $('libList').replaceChildren(...(b.about ? [aboutEl(b.about)] : []), ...(b.chapters.length ? b.chapters.map((t, i) => epRow(t, i, b.chapters)) : [el('p', 'empty', 'No chapters it can play.')]));
   }).catch(e => { if (tok === libTok) { $('libSub').textContent = ''; $('libList').replaceChildren(xFail(e)); } });
 }
+// ---------- smart playlists (Library): lists that fill themselves from what you play, like and keep — made again each
+// time they're shown or opened, so they're never out of date. Save to Library keeps one as it is. ----------
+// every song you've played, on every device synced in: songKey → { t, n (plays), m (seconds, by month), p (by part of
+// the day: morning, afternoon, evening, night) }
+function playedSongs() {
+  const all = new Map();
+  for (const st of [stats.mine, ...Object.values(stats.others || {})]) for (const [k, v] of Object.entries(st.songs || {})) {
+    if (!v?.t?.trackName || v.t.kind === 'episode') continue;
+    const x = all.get(k) || all.set(k, { t: v.t, n: 0, m: {}, p: [0, 0, 0, 0] }).get(k);
+    x.n += v.n || 0;
+    for (const [mo, secs] of Object.entries(v.m || {})) x.m[mo] = (x.m[mo] || 0) + (+secs || 0);
+    (v.p || []).forEach((secs, i) => { x.p[i] += +secs || 0; });
+  }
+  return all;
+}
+// [id, icon, name, what it is, its songs ()]
+function smartLists() {
+  const played = playedSongs(), now = new Date(), mon = monthKey(now), prev = monthKey(new Date(now.getFullYear(), now.getMonth() - 1, 1));
+  const lately = x => (x.m[mon] || 0) + (x.m[prev] || 0), total = x => Object.values(x.m).reduce((a, b) => a + b, 0);
+  const heard = new Set(auto.mem.heard.slice(0, 150)), mine = (l, n = 50) => { const seen = new Set(); return l.filter(t => { const k = songKey(t); return !seen.has(k) && seen.add(k); }).slice(0, n); };
+  const top = (f, by) => [...played.values()].filter(f).sort((a, b) => by(b) - by(a)).map(x => x.t);
+  const yours = [...library.liked, ...library.playlists.flatMap(pl => pl.tracks)].filter(t => t?.trackName && t.kind !== 'episode');
+  return [
+    ['repeat', 'radio', 'On repeat', 'What you\'ve played most lately', () => mine(top(x => x.n >= 2 && (x.m[mon] || 0) + (x.m[prev] || 0) * .5 >= 120, x => (x.m[mon] || 0) + (x.m[prev] || 0) * .5))],
+    ['forgotten', 'heart', 'Forgotten favourites', 'Songs you love that you haven\'t heard lately', () => {
+      const liked = new Set(library.liked.map(songKey)), score = t => (played.get(songKey(t))?.n || 0) + (liked.has(songKey(t)) ? 5 : 0);
+      const gone = t => { const k = songKey(t), x = played.get(k); return !!x?.n && !heard.has(k) && !lately(x); }; // (played before — never: Not played yet)
+      return mine([...library.liked, ...top(x => x.n >= 5, x => x.n)].filter(gone).sort((a, b) => score(b) - score(a)));
+    }],
+    ['night', 'clock', 'Late nights', 'What you play after 10 at night', () => mine(top(x => x.p[3] >= 90 && x.p[3] >= .5 * x.p.reduce((a, b) => a + b, 0), x => x.p[3]))],
+    ['liked', 'plus', 'Recently liked', 'The songs you liked last, newest first', () => mine(library.liked)],
+    ['unplayed', 'note', 'Not played yet', 'In your liked songs and playlists, never played', () => mine(yours.filter(t => { const k = songKey(t); return !played.get(k)?.n && !heard.has(k); }), 100)],
+    ['top', 'chart', 'All-time top', 'Your most played, ever', () => mine(top(x => x.n >= 3, total))],
+  ];
+}
+function smartCards() {
+  return smartLists().map(([id, icon, name, sub, make]) => [make(), id, icon, name, sub, make]).filter(([l]) => l.length).map(([l, id, icon, name, sub, make]) =>
+    libCard(mosaic(l, () => tile(icon, name, l.length)), name, `${counted(l).join(" · ")} · ${sub}`,
+      () => openList({ key: 'smart:' + id + ':' + Date.now(), label: 'Smart playlist', title: name, load: async () => ({ name, sub: `${sub} · fills itself`, tracks: make() }) })));
+}
 function renderLibrary() {
   const v = libView, list = [], acts = [], tok = ++libTok, again = libDrawn === v, keep = again ? $('libList').scrollTop : 0;
   const had = again ? $('libList').querySelector('.lib-rows')?.childElementCount || 0 : 0; // (as many rows drawn at once as were there: room to stay where it was)
@@ -9641,7 +9681,8 @@ function renderLibrary() {
       libCard(tile('mic', 'Podcasts', pods.length || null), 'Podcasts', pods.length ? `${pods.length} followed` : 'Shows, from where you left off', () => openLibrary({ kind: 'pods' })),
       libCard(tile('book', 'Audiobooks', books.length || null), 'Audiobooks', 'Free classics, read by volunteers', () => openLibrary({ kind: 'books' })),
       libCard(tile('speaker', 'Live concerts', lives.length || null), 'Live concerts', 'Free shows, most taped by fans', () => openLibrary({ kind: 'lives' })));
-    list.push(sectionHead('Discover'), discover, sectionHead('Playlists'), grid);
+    const smart = el('div', 'albums'); smart.append(...smartCards());
+    list.push(sectionHead('Discover'), discover, sectionHead('Playlists'), grid, ...(smart.childElementCount ? [sectionHead('Smart playlists'), smart] : []));
     if (dl.cur.length || dl.queue.length) list.push(sectionHead('Downloading'), ...dlRows());
   } else if (v.kind === 'explore') renderExplore(head, list, tok);
   else if (v.kind === 'mood') renderMood(v, head, list, tok);
