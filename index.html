@@ -1704,6 +1704,13 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
     <div class="acts lbl"><button value="win" class="link">Use Windows'</button><button value="get" class="pill">Get the voice pack</button></div>
   </form>
 </dialog>
+<dialog id="heyNote" class="consent name-prompt" aria-labelledby="hnTitle">
+  <form method="dialog">
+    <div id="hnTitle" class="kicker lbl">Turn on Hey NetherFlow?</div>
+    <p>While it's on, the microphone stays on whenever NetherFlow is open, even minimized. Everything it hears, other people included, is checked for "Hey NetherFlow" on this computer, and anything else is forgotten at once. Nothing is recorded, kept or sent anywhere. Let the people around you know it's listening for its name.</p>
+    <div class="acts lbl"><button value="no" class="link">Not now</button><button value="on" class="pill">Turn it on</button></div>
+  </form>
+</dialog>
 <dialog id="namePrompt" class="consent name-prompt" aria-labelledby="npTitle">
   <form method="dialog">
     <div id="npTitle" class="kicker lbl">New playlist</div>
@@ -3198,7 +3205,7 @@ function renderTextPanel() {
     ...(instantOn ? [settingRow('Kept song starts', ['Clear'], '', () => { forgetKept(); toast('Cleared: songs start as usual till you play them again'); }, 'Deletes them now (they\'re kept again as you play).')] : []),
     ...(AI_PACK_LIVE || aiPack.ready ? [Object.assign(aiRow(), { id: 'aiRow' })] : []),
     ...(herePc ? [Object.assign(voiceRow(), { id: 'voiceRow' }), settingRow('Hey NetherFlow', ['Off', 'On'], hey.on ? 'On' : 'Off', setWake,
-      'Hands free: say "Hey NetherFlow, next song", "Hey NetherFlow, play Sunflower", "Hey NetherFlow, volume 40" — or "Hey NetherFlow", then what you want after the chime. While it\'s on, the microphone stays on whenever NetherFlow is open (Windows shows its microphone sign, and the mic button glows). What it hears is worked out on this computer by the voice pack: never recorded, kept or sent anywhere, and anything that isn\'t "Hey NetherFlow…" is forgotten at once. Needs the voice pack.')] : []),
+      'Hands free: say "Hey NetherFlow, next song", "Hey NetherFlow, play Sunflower" or "Hey NetherFlow, volume 40", or say "Hey NetherFlow" and then what you want after the chime. While it\'s on, the microphone stays on whenever NetherFlow is open, even minimized (Windows shows its microphone sign, and the mic button glows: click it to pause listening). Everything it hears, other people\'s voices included, is checked for "Hey NetherFlow" on this computer by the voice pack, and anything else is forgotten at once: nothing is recorded, kept or sent anywhere. Needs the voice pack.')] : []),
     settingRow('Smooth mix', ['Off', 'On'], smoothMix ? 'On' : 'Off', setSmoothMix, 'Songs blend into each other like a DJ mix: the next one starts on a beat and fades in over the last 8 seconds, and a quiet or silent ending is skipped.'),
     ...(native || window.netherflowApp?.syncOpen ? [settingRow(native ? 'Sync with computer' : 'Sync with phone', ['Start'], '', () => { $('textPanel').hidePopover(); $('syncPanel').showPopover(); },
       'Your liked songs, playlists, history and stats, swapped between your phone and computer over your Wi-Fi: no account.')] : []),
@@ -3755,7 +3762,7 @@ async function hearHere(o) {
 // this computer — a quiet room costs nothing; someone talking, half a second of work each time they stop. What isn't
 // "Hey NetherFlow…" is forgotten at once. The music this app plays is taken out of what the microphone hears by the
 // browser's echo cancelling.
-const hey = { on: store.get('netherflow.wake') === 'On', stop: null, armed: 0, was: false, song: null, busy: false, next: null, t: 0 };
+const hey = { on: store.get('netherflow.wake') === 'On', paused: false, stop: null, armed: 0, was: false, song: null, busy: false, next: null, t: 0 };
 const NETHERFLOW = 'natarflav'; // (soundKey('NetherFlow'))
 // what was said after "Hey NetherFlow" (nothing after it: ''), or null: it wasn't said (its own spelling, or near it)
 function afterWake(text) {
@@ -3765,12 +3772,23 @@ function afterWake(text) {
   return null;
 }
 function wakeSync() {
-  const want = hey.on && herePc && voicePack.ready;
+  const can = hey.on && herePc && voicePack.ready, want = can && !hey.paused;
   if (want && !hey.stop) wakeListen(); else if (!want && hey.stop) hey.stop();
-  $('voiceBtn').classList.toggle('awake', want); $('voiceBtn').title = want ? 'Voice: listening for "Hey NetherFlow"' : 'Voice';
+  $('voiceBtn').classList.toggle('awake', want);
+  $('voiceBtn').title = want ? 'Listening for "Hey NetherFlow": click to pause' : can ? 'Not listening for "Hey NetherFlow": click to listen again' : 'Voice';
 }
-function setWake(v) {
-  hey.on = v === 'On'; store.set('netherflow.wake', hey.on ? 'On' : '');
+// the mic button, with "Hey NetherFlow" on: listening paused, or again (Legal: off for a while without a trip to Settings)
+function heyPause(paused) {
+  hey.paused = paused; wakeSync();
+  toast(paused ? 'Not listening for "Hey NetherFlow" till you click the mic' : 'Listening for "Hey NetherFlow"');
+}
+async function setWake(v) {
+  if (v === 'On' && !store.get('netherflow.heyok')) { // (the first time: what it means, said plainly — Legal's words)
+    const d = $('heyNote'); d.returnValue = ''; d.showModal(); placeWinctl();
+    if (await new Promise(r => { d.onclose = () => r(d.returnValue); }) !== 'on') return renderTextPanel();
+    store.set('netherflow.heyok', '1');
+  }
+  hey.on = v === 'On'; hey.paused = false; store.set('netherflow.wake', hey.on ? 'On' : '');
   if (hey.on && !voicePack.ready) voicePackGet(); // (it starts once the pack's here)
   wakeSync(); renderTextPanel();
 }
@@ -3920,7 +3938,7 @@ async function voiceAct(text, was, song) {
   if (was && done.resume && current === song && P.loaded && P.paused) P.play();
   voice.t = setTimeout(() => ui.hidePopover(), 2400);
 }
-$('voiceBtn').onclick = listen;
+$('voiceBtn').onclick = () => hey.on && herePc && voicePack.ready ? heyPause(!hey.paused) : listen();
 $('dvVoice').onclick = listen;
 // a number said, 0–100 ("40", "forty", "forty five", "a hundred", "half", "max"), or null
 function spokenNumber(x) {
@@ -3939,6 +3957,7 @@ async function voiceDo(said) {
   const t = said.toLowerCase().replace(/[.!?,;:]/g, ' ').replace(/\s+/g, ' ').trim(), is = re => re.test(t);
   const play = (list, say) => { if (!list?.length) return { say: 'Nothing there yet', resume: true }; queue = list.slice(); playTrack(queue[0], '', false, true); return { say, resume: false }; };
   if (!t) return { say: '', resume: true };
+  if (herePc && hey.on && is(/^(stop listening|don'?t listen|go to sleep|stop listening to me)$/)) { hey.paused = true; setTimeout(wakeSync); return { say: 'Not listening till you click the mic', resume: true }; }
   if (is(/^(next|skip|next (song|one|track)|skip (this|it|this one|this song)|agla( gaana| gana)?|aglaga+na|aage)$/)) { nextTrack(); return { say: 'Next song', resume: false }; }
   if (is(/^(previous|back|go back|last song|previous (song|one|track)|pichla( gaana| gana)?|peeche)$/)) { prevTrack(); return { say: 'Previous song', resume: false }; }
   if (is(/^(pause|paws|stop|stop (the )?music|stop playing|ruko|ruk jao|band karo|rok do|bas)$/)) { if (P.loaded && !P.paused) P.pause(); return { say: 'Paused', resume: false }; } // (paused already, if it was listening with the mic tapped; not with "Hey NetherFlow, pause")
