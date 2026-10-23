@@ -1708,7 +1708,7 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
   <form method="dialog">
     <div id="hnTitle" class="kicker lbl">Turn on Hey NetherFlow?</div>
     <p>While it's on, the microphone stays on whenever NetherFlow is open, even minimized. Everything it hears, other people included, is checked for "Hey NetherFlow" on this computer, and anything else is forgotten at once. Nothing is recorded, kept or sent anywhere. Let the people around you know it's listening for its name.</p>
-    <div class="acts lbl"><button value="no" class="link">Not now</button><button value="on" class="pill">Turn it on</button></div>
+    <div class="acts lbl"><button value="no" class="pill ghost" autofocus>Not now</button><button value="on" class="pill ghost">Turn it on</button></div><!-- (both alike, the focus on Not now: Legal — never turned on by a stray Enter) -->
   </form>
 </dialog>
 <dialog id="namePrompt" class="consent name-prompt" aria-labelledby="npTitle">
