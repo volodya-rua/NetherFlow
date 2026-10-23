@@ -17,10 +17,6 @@ const COUNTRY = process.platform !== 'win32' ? Promise.resolve('') : new Promise
 
 // Songs start right after a search finishes, which isn't a click as far as Chromium is concerned.
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
-// SharedArrayBuffer, though the page isn't cross-origin isolated: the voice pack's recognizer (whisper.js) then works on
-// several cores, a sentence in 0.6 s, not 2. (Isolation's for a page running others' scripts beside its own: only
-// NetherFlow's own run in this app.)
-app.commandLine.appendSwitch('enable-features', 'SharedArrayBuffer');
 
 let win;
 // (a second launch: the first one comes forward instead — and this one sets nothing up while it quits)

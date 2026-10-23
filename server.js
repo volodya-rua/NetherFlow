@@ -311,6 +311,9 @@ async function handle(req, res) {
   }
   const f = FILES[url.pathname];
   if (!f) return send(res, 404, 'not found', 'text/plain');
+  // (the app's own pages cross-origin isolated: SharedArrayBuffer, so the voice pack's recognizer works on several cores —
+  // a sentence in 0.6 s, not 2. Others' images and sounds still load, without their cookies: "credentialless".)
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin'); res.setHeader('Cross-Origin-Embedder-Policy', 'credentialless');
   fs.readFile(path.join(__dirname, f[0]), (err, data) => err ? send(res, 500, 'unreadable', 'text/plain') : send(res, 200, data, f[1]));
 }
 

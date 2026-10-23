@@ -137,7 +137,7 @@ onmessage = async ({ data: d }) => {
     try {
       importScripts(d.init.ort);
       ort.env.wasm.wasmPaths = { mjs: d.init.mjs, wasm: d.init.wasm };
-      ort.env.wasm.numThreads = d.init.threads || 1; // (more: SharedArrayBuffer, which main.js turns on)
+      ort.env.wasm.numThreads = d.init.threads || 1; // (more: SharedArrayBuffer, the page cross-origin isolated by server.js)
       vocab = JSON.parse(d.init.vocab); gen = JSON.parse(d.init.gen); merges = d.init.merges;
       nets = Promise.all([d.init.encoder, d.init.decoder].map(b => ort.InferenceSession.create(new Uint8Array(b), { executionProviders: ['wasm'] })));
       await nets;

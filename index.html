@@ -1696,7 +1696,7 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
 <dialog id="voiceOffer" class="consent name-prompt" aria-labelledby="voTitle">
   <form method="dialog">
     <div id="voTitle" class="kicker lbl">Voice control</div>
-    <p>To understand you properly, names and accents too, get the voice pack: a speech recognizer that runs on this computer, so what you say never leaves it. A one-time download of <b></b> (Settings › Voice pack removes it). Or use Windows' own speech recognition, which often mishears names.</p>
+    <p>To understand you properly, names and accents too, get the voice pack: a speech recognizer that runs on this computer, so what you say never leaves it. A one-time download of <b></b> (Settings › Voice pack removes it). Or use Windows' own speech recognition, which can mishear names.</p>
     <div class="acts lbl"><button value="win" class="link">Use Windows'</button><button value="get" class="pill">Get the voice pack</button></div>
   </form>
 </dialog>
@@ -3722,7 +3722,8 @@ async function hearHere(o) {
   if (!pcm) return { text: '' };
   wh.say?.({ state: 'heard' });
   let w; try { w = await ready; } catch { return { text: '', why: 'voice pack' }; }
-  const r = await new Promise(ok => { w.onmessage = e => ok(e.data); w.postMessage({ id: 1, pcm, names: o.words || [] }, [pcm.buffer]); });
+  const names = ['Play', 'Pause', 'Next song', 'Previous', 'Louder', 'Quieter', 'Shuffle', ...(o.words || [])]; // (the commands first: they count most — a short word comes out as one of them)
+  const r = await new Promise(ok => { w.onmessage = e => ok(e.data); w.postMessage({ id: 1, pcm, names }, [pcm.buffer]); });
   const text = (r.text || '').trim().replace(/[,;:]+$/, ''); // (what Whisper writes for a sound that isn't words: nothing; the names' commas, not)
   return { text: /^(thank you( for watching)?|thanks for watching|you|bye)[.!]*$/i.test(text) ? '' : text, why: r.error ? 'voice pack' : '' };
 }
@@ -3743,21 +3744,26 @@ function voiceNames() {
 }
 const voiceWords = () => voiceNames().map(x => x.name);
 // The library's name nearest what was heard, by its sound: names, Indian ones above all, come out spelt every which way
-// ("Placid Shriram" for "play Sid Sriram", "Aragit Singh"). The end of what was said against each name, both folded to
-// their sounds (sh → s, gh → g, j → g, d → t, every run of vowels one); a fifth of a name's sounds wrong at most. A short
-// name ("Gym", "Heather") only as all that was said: else it's the end of half of everything ("what's the weather").
+// ("Placid Shriram" for "play Sid Sriram", "Aragit Singh"). The last words said — the last one, two, … all of them,
+// whole words only, or all but a "play" run into the name ("Placid") — against each name, both folded to their sounds
+// (sh → s, gh → g, j → g, d → t, every run of vowels one); a fifth of a name's sounds wrong at most. Never a name inside
+// a word ("Sunflower" played Laavan: "flower" ends as "lavan" does). A short name ("Gym") only as just what was said.
 const soundKey = x => x.toLowerCase().normalize('NFD').replace(/[^a-z]/g, '').replace(/ph/g, 'f').replace(/([bcdgkpst])h/g, '$1').replace(/h/g, '')
   .replace(/c(?=[eiy])/g, 's').replace(/[cq]/g, 'k').replace(/x/g, 'ks').replace(/z/g, 's').replace(/w/g, 'v').replace(/j/g, 'g').replace(/d/g, 't')
   .replace(/[aeiouy]+/g, 'a').replace(/(.)\1+/g, '$1');
 function voiceName(said) {
-  const u = soundKey(said); if (u.length < 3) return null;
+  const words = said.split(/\s+/).filter(Boolean), ends = new Set(words.map((w, i) => soundKey(words.slice(i).join(' '))));
+  const all = soundKey(said); if (/^pla./.test(all)) ends.add(all.slice(3));
+  ends.delete('');
+  const apart = (a, b) => { let row = [...Array(b.length + 1).keys()]; for (let i = 1; i <= a.length; i++) { const next = [i]; for (let j = 1; j <= b.length; j++) next[j] = Math.min(row[j] + 1, next[j - 1] + 1, row[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)); row = next; } return row[b.length]; };
   let best = null;
   for (const it of voiceNames()) {
-    const k = soundKey(it.name); if (k.length < 5 && k !== u) continue;
-    let row = new Array(u.length + 1).fill(0); // (its distance from any end of what was said: where the name starts, free)
-    for (let i = 1; i <= k.length; i++) { const next = [i]; for (let j = 1; j <= u.length; j++) next[j] = Math.min(row[j] + 1, next[j - 1] + 1, row[j - 1] + (k[i - 1] === u[j - 1] ? 0 : 1)); row = next; }
-    const r = row[u.length] / k.length;
-    if (r <= .2 && (!best || r < best.r || r === best.r && k.length > best.n)) best = { ...it, r, n: k.length };
+    const k = soundKey(it.name); if (!k) continue;
+    for (const u of ends) {
+      if (k.length < 5 ? u !== k : Math.abs(u.length - k.length) > k.length * .2) continue;
+      const r = apart(k, u) / k.length;
+      if (r <= .2 && (!best || r < best.r || r === best.r && k.length > best.n)) best = { ...it, r, n: k.length };
+    }
   }
   return best;
 }
@@ -3839,7 +3845,7 @@ async function voiceDo(said) {
     if (p) return play(p.tracks, `Playing ${p.name}`);
   }
   // the rest: a song or an artist ("play …", "… bajao", "… ke gaane")
-  const q = said.replace(/[.!?]+$/, '').trim().replace(/^(play|put on|i want to (hear|listen to)|let me hear|listen to|can you play|please play)\s+/i, '')
+  const q = said.replace(/[,;:]+/g, ' ').replace(/[.!?]+$/, '').replace(/\s+/g, ' ').trim().replace(/^(play|put on|i want to (hear|listen to)|let me hear|listen to|can you play|please play)\s+/i, '')
     .replace(/\s+(ke|ka|ki)?\s*(gaane|gane|gana|gaana|songs?)?\s*(bajao|chalao|sunao|lagao)$/i, '').replace(/\s+(ke|ka|ki)\s+(gaane|gane|gana|gaana)$/i, '').replace(/('s)?\s+(songs|music)$/i, '').trim();
   if (!q) return { say: 'Didn\'t catch a song', resume: true };
   // (a name of the library's, heard nearly right: a playlist of yours, a song of yours — that one, then Autoplay — or an
