@@ -3670,7 +3670,7 @@ async function voicePackCheck() {
   voicePack.gpu = !!(await navigator.gpu?.requestAdapter().catch(() => null));
   try { const c = await caches.open(VOICE_PACK); voicePack.ready = (await Promise.all(voiceFiles().map(([n]) => c.match(n)))).every(Boolean); } catch { voicePack.ready = false; }
   voicePack.old = !voicePack.ready && await caches.has(VOICE_OLD).catch(() => false) && (await Promise.all(OLD_FILES.map(async n => (await caches.open(VOICE_OLD)).match(n)))).every(Boolean);
-  renderVoiceRow(); wakeSync(); assistCheck();
+  renderTextPanel(); wakeSync(); assistCheck(); // (Settings drawn again: drawn at start, before the graphics card was known — the AI assistant's row missing till something else redrew it)
   if (voicePack.old && !voicePack.offered && !topDialog()) { // (an update for the older pack: asked, once each time NetherFlow starts — never fetched unasked: Legal)
     voicePack.offered = true;
     const d = $('voiceUpdate'); d.returnValue = ''; d.querySelector('b').textContent = voiceMB() + ' MB'; d.showModal(); placeWinctl();
@@ -4277,6 +4277,7 @@ const assistRow = () => settingRow('AI assistant', assist.getting ? [`Getting…
 function renderAssistRow() { const r = document.getElementById('assistRow'); if (r) r.replaceChildren(...assistRow().childNodes); }
 async function assistCheck() {
   try { const c = await caches.open(ASSIST_PACK); assist.ready = (await Promise.all(Object.keys(ASSIST_FILES).map(n => c.match(n)))).every(Boolean); } catch { assist.ready = false; }
+  renderTextPanel(); // (its rows as they are: got already, on or off)
   if (assistOn()) assistStart().catch(() => {}); // (on: readied now, so its first answer comes as quickly as the rest)
 }
 // ---------- in the car (Android): Android Auto, a car's Bluetooth, a cable ----------
