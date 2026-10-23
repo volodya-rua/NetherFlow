@@ -3160,7 +3160,7 @@ function renderTextPanel() {
     settingRow('Lyrics alignment', ALIGNS, lalign, setAlign),
     settingRow('Romanize lyrics', ['Off', 'On'], romanizeOn ? 'On' : 'Off', setRomanize, 'Show lyrics in another script (Hindi, Punjabi and India\'s other scripts, Korean, Russian, Greek, Japanese kana) in Latin letters, so you can sing along. On the device, instantly. Chinese and Japanese kanji stay as they are.'),
     stepperRow('Skip back / forward', 1, 60, jump, setJump, ' s', 'The ⟲ ⟳ buttons by the player, and the ← → keys. Hold − or + to count faster.'),
-    settingRow('Autoplay', ['On', 'Off'], autoOn ? 'On' : 'Off', setAutoplay, 'When the list runs out, songs like the one playing carry on, as on YouTube Music: from its radio for the song, ranked to what you\'re listening to — the same language and era, songs that fit the last few, more of the artists you play through or like and less of those you skip, never one you just heard.'),
+    settingRow('Autoplay', ['On', 'Off'], autoOn ? 'On' : 'Off', setAutoplay, 'When the list runs out, songs like the one playing carry on, as on YouTube Music: from its radio for the song, ranked to what you\'re listening to: kept to the feel of the song you chose, in its language and era, with songs you love that fit now and then, a mix of artists, and more of those you play through or like. Skip one early, or take it out of the queue, and the next is picked again at once, away from it.'),
     settingRow('Instant start', ['On', 'Off'], instantOn ? 'On' : 'Off', setInstant, 'The first few seconds of the last 100 songs you played are kept on this device (about 25 MB, never synced), so they start the moment you press play. Off: they\'re deleted, and nothing more is kept.'),
     ...(instantOn ? [settingRow('Kept song starts', ['Clear'], '', () => { forgetKept(); toast('Cleared: songs start as usual till you play them again'); }, 'Deletes them now (they\'re kept again as you play).')] : []),
     ...(AI_PACK_LIVE || aiPack.ready ? [Object.assign(aiRow(), { id: 'aiRow' })] : []),
@@ -4401,6 +4401,7 @@ function shufflePick() {
 const hasNext = () => upNext.length > 0 || (shuffling() ? !!shufflePick() : qi + 1 < queue.length) || (repeat === 'all' && queue.length > 0);
 function nextTrack() {
   if (tgIntercept('next')) return;
+  autoSkipped(); // (a pick of Autoplay's, early on: the one after it picked again, away from it)
   if (upNext.length) playTrack(upNext.shift(), '', true, true);
   else if (shuffling()) { let n = shufflePick(); if (!n && repeat === 'all') { shuf.heard.clear(); n = shufflePick(); } if (n) playTrack(n, '', false, true); }
   else if (qi + 1 < queue.length) playTrack(queue[qi + 1], '', false, true);
@@ -4655,25 +4656,38 @@ function songEnded() {
 // ---------- Autoplay: when the list runs out, songs like the one playing carry on (Settings, and the queue) ----------
 // As on YouTube Music: its radio for the song playing — YouTube Music's own "more like this", from what listeners play
 // together (genre, mood, era, language) — then ranked here, for this listening:
-//  · in the radios of the songs before it too: the session's vibe, not just this one song's
-//  · in the song playing's language (a Telugu song carries on in Telugu), from near its year
-//  · not heard lately; not the artist just heard
-//  · what you do: an artist you skip early moves down, one you like or play through moves up (kept on this device)
+//  · in the radios of the songs before it too, and above all of the song you chose (the last one that wasn't
+//    Autoplay's): the vibe you started, held to — not drifting off one song at a time
+//  · in your song's language (a Telugu song carries on in Telugu), from near its year
+//  · not heard lately; no artist of the last few songs (the latest the most), nor the same album again
+//  · songs you love that fit — liked, or played often; in the radios, or by artists in them — one now and then, between
+//    new ones, never two in a row
+//  · what you do: an artist you skip early moves down, one you like or play through moves up (kept on this device). A
+//    pick skipped early (Next) or taken out of the queue: the song after it picked again at once, away from it — that
+//    song, and less of its artist, for the rest of this listening
 //  · no remix, live take or sped-up edit after an original
 // One song's queued at a time, as the one before it starts (so it's looked up ahead, and Smooth mix can blend into it);
 // the next few it'd pick show in the queue, to play now instead.
 let autoOn = store.get('netherflow.autoplay') !== 'Off';
 let radio = null; // (Radio, see startRadio: the queue it's growing — another list played, and it's over)
 const AUTO_MEM = 'netherflow.autoplay.mem';
-const auto = { radios: new Map(), seeds: [], items: new WeakSet(), more: [], pending: null, mem: (() => { try { return JSON.parse(store.get(AUTO_MEM) || '{}'); } catch { return {}; } })() };
+// radios: by seed, as asked for (got: as they came) · seeds: the radios ranked from (the song playing's first) · origin:
+// the song you chose, and its seed · nope: songs not to pick again, cold: artists less, for this listening
+const auto = { radios: new Map(), got: new Map(), seeds: [], origin: null, originSeed: '', nope: new Set(), cold: new Map(), items: new WeakSet(), more: [], pending: null,
+  mem: (() => { try { return JSON.parse(store.get(AUTO_MEM) || '{}'); } catch { return {}; } })() };
 auto.mem.heard ||= []; auto.mem.taste ||= {};
 const artKey = s => words((s.artistName || '').split(/,|&| feat\.? | x /i)[0]).join(' ');
+// everyone credited: the artists, and anyone featured in the title ("… (feat. X)")
+const artsOf = s => [...new Set([...(s.artistName || '').split(/,|&| feat\.? | ft\.? | x | and /i), ...((s.trackName || '').match(/[([](?:feat|ft)\.? ([^)\]]+)/i)?.[1] || '').split(/,|&| and /i)]
+  .map(x => words(x).join(' ')).filter(Boolean))];
 function autoSave() {
   auto.mem.heard = auto.mem.heard.slice(0, 200);
   auto.mem.taste = Object.fromEntries(Object.entries(auto.mem.taste).filter(([, v]) => Math.abs(v) > .2).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1])).slice(0, 300));
   store.set(AUTO_MEM, JSON.stringify(auto.mem));
 }
 const autoTaste = (t, d) => { const k = artKey(t); if (k) { auto.mem.taste[k] = Math.max(-8, Math.min(6, (auto.mem.taste[k] || 0) + d)); autoSave(); } };
+// a pick turned down (skipped early, taken out of the queue): not again, and less of its artist, this listening
+const autoNot = t => { auto.nope.add(songKey(t)); const a = artKey(t); if (a) auto.cold.set(a, Math.max(-10, (auto.cold.get(a) || 0) - 4)); };
 function setAutoplay(v) {
   autoOn = v === 'On'; store.set('netherflow.autoplay', autoOn ? '' : 'Off');
   if (autoOn) autoFill(current);
@@ -4681,65 +4695,118 @@ function setAutoplay(v) {
   renderTextPanel();
   if ($('queuePanel').matches(':popover-open')) renderQueue();
 }
-// a song starting: heard (so not picked again soon); the one leaving, if Autoplay picked it: skipped early, a little
-// less of its artist from now on; played through, a little more
+// a song starting: heard (so not picked again soon); one you chose, where Autoplay carries on from; the one leaving, if
+// Autoplay picked it: skipped early, a little less of its artist from now on; played through, a little more
 function autoStart(t, prev, at, dur) {
   if (t?.kind === 'episode' || prev?.kind === 'episode') return; // (talk: nothing to learn about music from it)
   if (prev && prev !== t && auto.items.has(prev) && dur > 0) { if (at < Math.min(30, dur * .4)) autoTaste(prev, -3); else if (at > dur * .8) autoTaste(prev, 1); }
+  if (t && !auto.items.has(t)) auto.origin = t;
   const k = songKey(t);
   auto.more = []; // (what it would pick after the last song: picked again for this one, if it's the last)
   auto.mem.heard = [k, ...auto.mem.heard.filter(x => x !== k)];
   autoSave();
 }
-const radioFor = id => { if (!auto.radios.has(id)) auto.radios.set(id, api.radio(id).catch(() => { auto.radios.delete(id); return []; })); return auto.radios.get(id); };
+const radioFor = id => {
+  if (!auto.radios.has(id)) auto.radios.set(id, api.radio(id).then(l => (auto.got.set(id, l), l), () => { auto.radios.delete(id); return []; }));
+  return auto.radios.get(id);
+};
 // the radio's seed: the song's own YouTube upload, the one it plays (so its version's language and feel carry on)
 const seedFor = async t => t.ytId || saved.get(t.trackId)?.ytId || (await videosFor(t).catch(() => []))[0]?.id || '';
-// The radio's songs, best first (see above). lists: the song playing's radio, then the songs' before it.
-function autoRank(t, lists, heardTo = 80) {
+const ytOf = t => t?.ytId || saved.get(t?.trackId)?.ytId || '';
+// songs you love: liked (all of them), or played 3 times or more (the more, the more) — songKey → { t, w }
+function autoFavs() {
+  const m = new Map();
+  for (const [t, , plays] of statsFor('all').songs) if (plays >= 3 && t?.trackName && t.kind !== 'episode') m.set(songKey(t), { t, w: Math.min(1, plays / 10) });
+  for (const t of library.liked) if (t?.trackName && t.kind !== 'episode') m.set(songKey(t), { t, w: 1 });
+  return m;
+}
+// The radios' songs, best first (see above). ref: the song it carries on from; lists: its radio, then those of the songs
+// before it; o: the radio of the song you chose. Each a radio's item, fav: one of yours; lib: yours, from your library.
+function autoRank(ref, lists, o = null, heardTo = 80) {
   const [cur, ...before] = lists, key = c => songKey({ trackName: c.title, artistName: c.artist });
-  const heard = new Set([...auto.mem.heard.slice(0, heardTo), ...queue.slice(0, qi + 1).map(songKey), ...upNext.map(songKey)]);
-  const lang = songLang(t), year = +(t.releaseDate || '').slice(0, 4) || 0, modded = isModded(t), last = [t, queue[qi - 1]].filter(Boolean).map(artKey);
-  const out = cur.map((c, i) => {
-    const s = { trackName: c.title, artistName: c.artist, collectionName: c.album }, k = key(c), a = artKey(s), cl = songLang(s);
+  const heard = new Set([...auto.mem.heard.slice(0, heardTo), ...queue.slice(0, qi + 1).map(songKey), ...upNext.map(songKey), ...auto.nope]);
+  const from = auto.origin || ref, lang = songLang(from) || songLang(ref), yr = s => +(s?.releaseDate || '').slice(0, 4) || 0, year = yr(from) || yr(ref), modded = isModded(from);
+  const near = new Map(); // (the last few songs' artists: the latest the most — the last two only if nothing else will do)
+  queue.slice(Math.max(0, qi - 7), qi + 1).reverse().forEach((s, i) => { for (const a of artsOf(s)) near.set(a, (near.get(a) || 0) + [30, 20, 10, 7, 5, 3, 2, 1.5][i]); });
+  const album = (ref.collectionName || '').toLowerCase(), inO = o && o !== cur ? new Set(o.map(key)) : null;
+  // songs you love: worth the most when none of the last two picks was one; never right after one
+  const favs = autoFavs(), run = queue.slice(0, qi + 2).filter(s => auto.items.has(s)).slice(-2), famW = run.at(-1)?.autoFav ? 0 : run.some(s => s.autoFav) ? .5 : 1;
+  // and yours by the radios' artists, though not in them
+  const byArt = new Map(); for (const l of lists) for (const c of l) { const a = artKey({ artistName: c.artist }); if (a) byArt.set(a, (byArt.get(a) || 0) + 1); }
+  const listed = new Set(lists.flat().map(key)), mine = [];
+  if (famW) for (const [k, { t }] of favs) {
+    const n = byArt.get(artKey(t)) || 0;
+    if (n && !listed.has(k)) mine.push([{ id: ytOf(t), title: t.trackName, artist: t.artistName, album: t.collectionName, year: yr(t), dur: (t.trackTimeMillis || 0) / 1000 || 200, art: t.artworkUrl100, type: 'ATV', lib: t }, 3 + Math.min(3, n)]);
+  }
+  const out = [...cur.map((c, i) => [c, 10 * (1 - i / cur.length)]), ...mine].map(([c, score]) => {
+    const s = { trackName: c.title, artistName: c.artist, collectionName: c.album }, k = key(c), a = artKey(s), cl = songLang(s), f = favs.get(k);
     if (heard.has(k) || c.dur < 60 || c.dur > 600) return null;
-    let score = 10 * (1 - i / cur.length); // (YouTube Music's own order: the likeliest first)
     score += 3 * before.filter(l => l.some(x => key(x) === k)).length;
+    if (inO?.has(k)) score += 3; // (the song you chose's radio: its vibe the most)
     if (lang && cl && !sameLang(lang, cl)) score -= 8;
     if (year && c.year) score -= Math.min(3, Math.abs(year - c.year) / 4);
-    if (last.includes(a)) score -= a === last[0] ? 5 : 3;
-    score += auto.mem.taste[a] || 0;
+    score -= Math.max(0, ...artsOf(s).map(x => near.get(x) || 0)); // (featured too: no one twice running)
+    if (album && (c.album || '').toLowerCase() === album) score -= 2;
+    score += (auto.mem.taste[a] || 0) + (auto.cold.get(a) || 0);
+    if (f) score += 5 * f.w * famW;
     if (!modded && isModded(s)) score -= 10;
     // (the label's album recording over a video upload — "Song Full Video | Film | Cast", "Lyrical Video Song": its title
     // a mess, its sound a video's mix)
     if (c.type && c.type !== 'ATV') score -= c.type === 'OMV' ? 2 : 6;
     if (/\s\|\s|lyrical|video song|full video|official (music )?video|lyric video/i.test(c.title)) score -= 6;
-    return { c, score };
+    return { c: { ...c, fav: !!f }, score };
   }).filter(Boolean).sort((x, y) => y.score - x.score).map(x => x.c);
-  return out.length || !heardTo ? out : autoRank(t, lists, 0); // (all heard lately: only this session's left out)
+  return out.length || !heardTo ? out : autoRank(ref, lists, o, 0); // (all heard lately: only this session's left out)
 }
-const autoTrack = c => { const s = { kind: 'song', trackId: 'yt:' + c.id, ytId: c.id, ytTitle: c.title, trackName: c.title, artistName: c.artist, collectionName: c.album || 'YouTube Music',
-  artworkUrl100: c.art, trackTimeMillis: c.dur * 1000, releaseDate: c.year ? c.year + '-01-01T00:00:00Z' : undefined }; auto.items.add(s); return s; };
-// the song playing the last of the list (and nothing added by hand): the next one picked — one of the best few, at random
-// (the same song needn't always lead to the same next one)
+const autoTrack = (c, seed) => {
+  const s = c.lib ? { ...c.lib } : { kind: 'song', trackId: 'yt:' + c.id, ytId: c.id, ytTitle: c.title, trackName: c.title, artistName: c.artist, collectionName: c.album || 'YouTube Music',
+    artworkUrl100: c.art, trackTimeMillis: c.dur * 1000, releaseDate: c.year ? c.year + '-01-01T00:00:00Z' : undefined };
+  s.autoSeed = seed; s.autoFav = c.fav; auto.items.add(s); return s;
+};
+// the next song queued from these radios — one of the best few, at random (the same song needn't always lead to the
+// same next one) — and the few after it shown in the queue
+function autoQueue(ref, lists, seed) {
+  const ranked = autoRank(ref, lists, auto.got.get(auto.originSeed) || null);
+  if (!ranked.length) return false;
+  const r = Math.random(), pick = ranked[Math.min(ranked.length - 1, r < .6 ? 0 : r < .85 ? 1 : 2)];
+  const was = queue;
+  queue = [...queue, autoTrack(pick, seed)]; // (a new list: the one played from may be a playlist's own)
+  if (radio === was) radio = queue;
+  auto.more = ranked.filter(c => c !== pick).slice(0, 6).map(c => autoTrack(c, seed));
+  queueChanged();
+  return true;
+}
+// the song playing the last of the list (and nothing added by hand): the next one picked. A song you chose: the radios
+// begun again from it (and the two you played before it, if they're YouTube's: no lookups for them).
 function autoFill(t) {
   if (tg.role === 'guest' || !(autoOn || radio === queue) || !t || t.kind === 'episode' || repeat !== 'off' || hasNext() || !fullSongs) return;
   const p = auto.pending = (async () => {
     const seed = await seedFor(t);
     if (!seed || current !== t) return;
+    if (auto.items.has(t)) t.autoOwn = seed; // (a pick's own radio: what it's turned down with, if it's skipped)
+    else { auto.originSeed = seed; auto.seeds = queue.slice(Math.max(0, qi - 2), qi).reverse().map(ytOf).filter(Boolean); }
     auto.seeds = [seed, ...auto.seeds.filter(s => s !== seed)].slice(0, 3);
-    let lists = await Promise.all(auto.seeds.map(radioFor));
+    let lists = await Promise.all([...new Set([...auto.seeds, auto.originSeed])].map(radioFor));
     if (!lists[0].length) lists = [await api.ytm(t.artistName || t.trackName).catch(() => []), ...lists.slice(1)]; // (YouTube's radio not answering: the artist's own songs, not silence)
     if (current !== t || hasNext() || !(autoOn || radio === queue)) return;
-    const ranked = autoRank(t, lists);
-    if (!ranked.length) return;
-    const r = Math.random(), pick = ranked[Math.min(ranked.length - 1, r < .6 ? 0 : r < .85 ? 1 : 2)];
-    const was = queue;
-    queue = [...queue, autoTrack(pick)]; // (a new list: the one played from may be a playlist's own)
-    if (radio === was) radio = queue;
-    auto.more = ranked.filter(c => c !== pick).slice(0, 6).map(autoTrack);
-    queueChanged();
+    autoQueue(t, lists, seed);
   })().catch(() => {}).finally(() => { if (auto.pending === p) auto.pending = null; });
   return p;
+}
+// Next on a pick of Autoplay's, early on: turned down — and the song it queued after it, from its radio, picked again from
+// the others' before it plays (as they came: no waiting)
+function autoSkipped() {
+  const t = current, next = queue[qi + 1];
+  if (!t || !auto.items.has(t) || !P.dur || P.t >= Math.min(30, P.dur * .4)) return;
+  autoNot(t);
+  const own = t.autoOwn || t.ytId;
+  auto.seeds = auto.seeds.filter(s => s !== own);
+  if (upNext.length || shuffling() || qi + 2 !== queue.length || !auto.items.has(next) || next.autoSeed !== own) return;
+  const lists = [...new Set([...auto.seeds, auto.originSeed])].map(s => auto.got.get(s)).filter(l => l?.length);
+  if (!lists.length) return;
+  const was = radio === queue;
+  queue = queue.slice(0, qi + 1); if (was) radio = queue;
+  if (!autoQueue(queue[qi - 1] || auto.origin || t, lists, auto.seeds[0] || auto.originSeed)) { queue = [...queue, next]; if (was) radio = queue; }
 }
 
 // Radio (a song's ••• menu, an artist's page): that song, then songs like it without end — Autoplay's picks, whether
@@ -6963,7 +7030,7 @@ function renderQueue() {
     ...mine.map(t => qrow(t, () => playTrack(t), () => { queue.splice(queue.indexOf(t), 1); queueChanged(); }, queue, queue.indexOf(t))));
   if (current && repeat === 'off') {
     out.push(sectionHead(autoOn ? 'Autoplay · songs like this' : 'Autoplay is off', autoOn ? 'Turn off' : 'Turn on', () => setAutoplay(autoOn ? 'Off' : 'On')));
-    if (autoOn) out.push(...picked.map(t => qrow(t, () => playTrack(t), () => { queue.splice(queue.indexOf(t), 1); queueChanged(); })),
+    if (autoOn) out.push(...picked.map(t => qrow(t, () => playTrack(t), () => { queue.splice(queue.indexOf(t), 1); autoNot(t); autoTaste(t, -2); queueChanged(); autoFill(current); })),
       ...auto.more.map(t => qrow(t, () => { queue = [...queue.slice(0, qi + 1), t]; playTrack(t, '', false, true); })));
     if (autoOn && !picked.length && !auto.more.length) out.push(el('p', 'q-empty lbl', mine.length || upNext.length ? 'When the list ends, songs like the last one carry on.' : 'Finding songs like this one…'));
   }
