@@ -53,7 +53,7 @@ kbd { font: inherit; border: 1px solid currentColor; border-radius: 3px; padding
 /* (hidden by its opacity alone: a frame hidden any other way gets no animation frames from the browser, so never draws its first) */
 .vedit { position: fixed; inset: 0; z-index: 1; pointer-events: none; opacity: 0; transition: opacity .6s; background: #000; }
 .vedit canvas { display: block; width: 100%; height: 100%; }
-.vid-edit.la-kinetic.has-song:not(.home):not(.view-cover):not(.still) .vedit { opacity: 1; }
+.vid-edit.la-kinetic.has-song:not(.home):not(.view-cover, .view-vis):not(.still) .vedit { opacity: 1; }
 /* Listen together: its panel, the code, the people, reactions floating up */
 .tg-row { display: flex; gap: 10px; align-items: center; padding: 6px 12px; }
 .tg-row .name-in { flex: 1; min-width: 0; margin: 0; }
@@ -88,8 +88,8 @@ body.home .singbar { display: none; } /* (its voice slider is for the lyrics: no
 .singbar .sing-get { color: var(--a); white-space: nowrap; }
 .singb[aria-pressed="true"] svg { stroke: var(--a); filter: drop-shadow(0 0 6px var(--a)); }
 #kin { display: none; position: fixed; inset: 0; z-index: 1; width: 100%; height: 100%; pointer-events: none; }
-.la-kinetic.has-song:not(.home):not(.view-cover):not(.still) #kin { display: block; }
-.la-kinetic.has-song:not(.home):not(.view-cover):not(.still) #stage .deck.lyr { visibility: hidden; }
+.la-kinetic.has-song:not(.home):not(.view-cover, .view-vis):not(.still) #kin { display: block; }
+.la-kinetic.has-song:not(.home):not(.view-cover, .view-vis):not(.still) #stage .deck.lyr { visibility: hidden; }
 /* Film grain lives here (drawn at the screen's full sharpness), not in the backdrop drawing: the smoke can then be
    rendered smaller on lower qualities and stretched smoothly without the grain turning into blocks. */
 .grain { position: fixed; inset: -8%; z-index: 1; pointer-events: none; opacity: var(--grain, .06); mix-blend-mode: overlay;
@@ -875,6 +875,10 @@ body.home .singbar { display: none; } /* (its voice slider is for the lyrics: no
 .stage-wrap > * { grid-area: 1 / 1; min-height: 0; min-width: 0; }
 .cover-stage { display: none; position: relative; grid-template-columns: auto; place-content: center; justify-items: center; }
 .view-cover.has-song #stage { visibility: hidden; }
+/* the visualiser view: the backdrop's canvas draws it (see visFrame) — nothing over it but the controls */
+.view-vis.has-song:not(.home) #stage { visibility: hidden; }
+.view-vis.has-song:not(.home) #fx { display: block; }
+.view-vis.has-song:not(.home) :is(.cover-bg, .race, .agent) { display: none; }
 /* home: the welcome screen, before any song and when Android's back button leaves the song (back again: the app goes to the background) */
 .home-stage { display: none; }
 /* folders on the home screen (an option): a row of tiles under the buttons at the top — on the home screen, a song
@@ -1172,10 +1176,10 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
 .top, .bottom, .map { transition: opacity .7s, transform .7s; }
 .fs .winctl { display: none; }
 .app.fs .top, .app.fs .s-top { padding-right: 0; }
-.fs.idle .top { opacity: 0; transform: translateY(-14px); pointer-events: none; }
-.fs.idle .bottom { opacity: 0; transform: translateY(14px); pointer-events: none; }
-.fs.idle .map { opacity: 0; pointer-events: none; }
-.fs.idle, .fs.idle * { cursor: none !important; }
+:is(.fs, .view-vis).idle .top { opacity: 0; transform: translateY(-14px); pointer-events: none; }
+:is(.fs, .view-vis).idle .bottom { opacity: 0; transform: translateY(14px); pointer-events: none; }
+:is(.fs, .view-vis).idle .map { opacity: 0; pointer-events: none; }
+:is(.fs, .view-vis).idle, :is(.fs, .view-vis).idle * { cursor: none !important; }
 .fs-btn svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.4; }
 .fs-btn .i-exit, .fs .fs-btn .i-enter { display: none; }
 .fs .fs-btn .i-exit { display: inline; }
@@ -2876,13 +2880,19 @@ function setAlign(name) {
   renderTextPanel();
 }
 body.classList.toggle('lyr-center', lalign === 'Center'); body.classList.toggle('lyr-right', lalign === 'Right');
-// What the stage shows: the lyrics, or the cover on its spinning record with the beat ring
-// (also: the player's cover thumbnail, or V).
-let view = store.get('netherflow.view') === 'Cover' ? 'Cover' : 'Lyrics';
+// What the stage shows: the lyrics, the cover on its spinning record with the beat ring, or the visualiser (the whole
+// screen moving with the music: see visFrame) — the player's cover thumbnail, or V, goes round the three.
+const VIEWS = ['Lyrics', 'Cover', 'Visualiser'];
+let view = VIEWS.includes(store.get('netherflow.view')) ? store.get('netherflow.view') : 'Lyrics';
 // A song with no timed lyrics (only plain words, or none): its cover instead, by itself — the view chosen stays as it is.
 // Tapped (or V): its words after all, for this song (coverSkip).
 let autoCover = false, coverSkip = null;
-const coverShown = () => view === 'Cover' || autoCover;
+// the visualiser's looks (Settings › Visualiser; Auto: a new one with each song; a tap on it: the next)
+const VIS = ['Fold', 'Mirror', 'Ether', 'Spiral'];
+const VIS_NOTE = 'Fold: glowing fractal threads, bent by the music. Mirror: a kaleidoscope looking into itself. Ether: smoke that flows. Spiral: a whirlpool of light.';
+let visPick = VIS.includes(store.get('netherflow.vis')) ? store.get('netherflow.vis') : 'Auto', visNow = Math.max(0, VIS.indexOf(visPick)), visSong = null;
+function setVis(v) { visPick = v; store.set('netherflow.vis', v === 'Auto' ? '' : v); if (v !== 'Auto') visNow = VIS.indexOf(v); renderTextPanel(); }
+const coverShown = () => view === 'Cover' || autoCover && view === 'Lyrics';
 // how the beat ring round the record is drawn
 const BEATS = ['Wave', 'Silk', 'Aura', 'Petals', 'Liquid', 'Nova', 'Vortex', 'Flame'];
 let beatStyle = BEATS.includes(store.get('netherflow.beat')) ? store.get('netherflow.beat') : 'Wave';
@@ -3009,7 +3019,7 @@ function setUiSize(v) { uiSize = v; store.set('netherflow.uisize', v === '100%' 
 applyUiSize();
 if (native && !window.netherflowApp) addEventListener('orientationchange', () => setTimeout(applyUiSize, 300)); // (the screen's width turned with it)
 function setView(v) {
-  view = v; store.set('netherflow.view', v === 'Cover' ? v : '');
+  view = v; store.set('netherflow.view', v === 'Lyrics' ? '' : v);
   body.classList.remove('home');
   if (v === 'Lyrics' && autoCover) { autoCover = false; coverSkip = current; } // (the lyrics asked for: this song's words)
   applyView();
@@ -3017,11 +3027,12 @@ function setView(v) {
 }
 function applyView() {
   body.classList.toggle('view-cover', coverShown());
+  body.classList.toggle('view-vis', view === 'Visualiser');
   fitCover();
-  $('nowCover').setAttribute('aria-label', coverShown() ? 'Show the lyrics (V)' : 'Show the cover (V)');
+  $('nowCover').setAttribute('aria-label', view === 'Visualiser' || coverShown() && view === 'Lyrics' ? 'Show the lyrics (V)' : coverShown() ? 'Show the visualiser (V)' : 'Show the cover (V)');
 }
 // the cover thumbnail, or V: the other view — for a song whose words were asked for, its cover again (this song only)
-const flipView = () => view === 'Lyrics' && current && coverSkip === current && !synced ? (coverSkip = null, autoCover = true, applyView()) : setView(coverShown() ? 'Lyrics' : 'Cover');
+const flipView = () => view === 'Lyrics' && current && coverSkip === current && !synced ? (coverSkip = null, autoCover = true, applyView()) : setView(view === 'Cover' ? 'Visualiser' : view === 'Visualiser' || coverShown() ? 'Lyrics' : 'Cover');
 // ---------- updates (Settings › Update) ----------
 // Windows (the installed app): from the GitHub releases, by electron-updater (main.js) — only the parts of the installer
 // that changed come down, and a restart puts them in place. The portable app can't update itself: it's sent to the
@@ -3136,7 +3147,8 @@ function renderTextPanel() {
     ...(window.netherflowApp?.notify || upd.ours ? [settingRow('Update notifications', ['On', 'Off'], updNotify ? 'On' : 'Off', setUpdNotify,
       native ? 'A notification when a newer NetherFlow is out, even with the app closed (Android looks once a day).' : 'A notification when a newer NetherFlow is out, while NetherFlow is open but not in front (it looks once a day).')] : []),
     settingRow('Interface size', UI_SIZES, uiSize, setUiSize, 'Everything larger or smaller: the buttons, the text, the panels.'),
-    settingRow('Show', ['Lyrics', 'Cover'], view, setView, 'Cover: the record spinning, with a ring that moves to the beat. Tap the cover in the player to switch. A song with no timed lyrics shows its cover by itself: tap it for the words.'),
+    settingRow('Show', VIEWS, view, setView, 'Cover: the record spinning, with a ring that moves to the beat. Visualiser: the whole screen moving with the music. Tap the cover in the player (or press V) to go round them. A song with no timed lyrics shows its cover by itself: tap it for the words.'),
+    ...(view === 'Visualiser' ? [settingRow('Visualiser', ['Auto', ...VIS], visPick, setVis, `How the visualiser looks. Auto: a new one with each song. Tap the visualiser for the next. ${VIS_NOTE}`)] : []),
     settingRow('Lyrics animation', LANIMS, lanimPick, setLanim, 'How the lyrics move. 2D: Wave, Spiral, Shatter, Fireworks. 3D: Swarm, Black Hole, Cylinder, Globe, Helix, DNA, Tornado, Knot, Möbius, Ribbon, Coaster, Corkscrew, Star, Infinity, Coil, Lissajous, Orbit, Atom, Tunnel, Cube.' + (kin.on ? ' (Extreme lyrics are on, in the mood menu: this is for when they\x27re off.)' : '')),
     ...(skin ? [] : [fontRow()]), // (a theme brings its own font and timeline)
     settingRow('Beat style', BEATS, beatStyle, setBeat, 'The ring round the record, in the Cover view.'),
@@ -10808,12 +10820,20 @@ let idleTimer;
 function wake() {
   body.classList.remove('idle');
   clearTimeout(idleTimer);
-  if (body.classList.contains('fs')) idleTimer = setTimeout(() => {
+  if (body.classList.contains('fs') || body.classList.contains('view-vis')) idleTimer = setTimeout(() => {
     if (!topDialog() && !document.querySelector(':popover-open')) body.classList.add('idle');
   }, 2600);
 }
 
 // ---------- parallax: the lyrics tilt a little toward the mouse ----------
+// (a touch, too — and in the visualiser, a tap that only brought the controls back doesn't also change its look)
+let tapWoke = false;
+addEventListener('pointerdown', () => { tapWoke = body.classList.contains('idle'); wake(); }, true);
+document.querySelector('.stage-wrap').addEventListener('click', () => {
+  if (view !== 'Visualiser' || tapWoke || !body.classList.contains('has-song')) return;
+  visNow = (visNow + 1) % VIS.length; if (visPick !== 'Auto') setVis(VIS[visNow]);
+  toast(`Visualiser: ${VIS[visNow]}`);
+});
 addEventListener('pointermove', e => {
   wake();
   if (!motion || e.pointerType !== 'mouse' || place < 2) return;
@@ -11980,10 +12000,10 @@ let fxStyle = -1; // (the theme whose backdrop is being drawn: its program ready
 // worker: it may wait for a compile (only the worker waits); on the page's thread it never does unless asked to.
 function fxEngine(tell, worker) {
   const VS = 'attribute vec2 p;void main(){gl_Position=vec4(p,0,1);}';
-  const NAMES = ['R', 'T', 'B', 'M', 'H', 'G', 'OCT', 'QF', 'K', 'GY', 'HM', 'C0', 'C1', 'C2', 'F'];
-  let cv = null, gl = null, psc = null, progs = {}, cur = -1, blocks = null, lost = false;
+  const NAMES = ['R', 'T', 'B', 'M', 'H', 'G', 'OCT', 'QF', 'K', 'GY', 'HM', 'C0', 'C1', 'C2', 'F', 'P', 'S'];
+  let cv = null, gl = null, psc = null, progs = {}, cur = -1, blocks = null, lost = false, vis = null;
   function setup() {
-    progs = {}; cur = -1; blocks = null;
+    progs = {}; cur = -1; blocks = null; vis = null;
     gl = cv.getContext('webgl', { antialias: false, alpha: false });
     if (!gl) return false;
     psc = gl.getExtension('KHR_parallel_shader_compile');
@@ -12037,8 +12057,46 @@ function fxEngine(tell, worker) {
     for (const [k, v] of [[gl.TEXTURE_MIN_FILTER, gl.NEAREST], [gl.TEXTURE_MAG_FILTER, gl.NEAREST], [gl.TEXTURE_WRAP_S, gl.REPEAT], [gl.TEXTURE_WRAP_T, gl.REPEAT]]) gl.texParameteri(gl.TEXTURE_2D, k, v);
     return blocks;
   }
+  // The visualiser (a view of its own): each frame drawn over the last one, warped a little — so what the music draws
+  // trails, melts and folds back into itself — into one of two pictures that take turns, then onto the canvas with a
+  // soft glow ('vc'). S: the spectrum, as a row of bands (bass first); P: the last frame.
+  const tex = (w, h, f, d) => {
+    const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t);
+    gl.texImage2D(gl.TEXTURE_2D, 0, f, w, h, 0, f, gl.UNSIGNED_BYTE, d);
+    for (const [k, x] of [[gl.TEXTURE_MIN_FILTER, gl.LINEAR], [gl.TEXTURE_MAG_FILTER, gl.LINEAR], [gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE], [gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE]]) gl.texParameteri(gl.TEXTURE_2D, k, x);
+    return t;
+  };
+  function visDraw(style, v) {
+    if (!ready(style, worker) || !ready('vc', worker)) return false;
+    if (!vis || vis.w !== cv.width || vis.h !== cv.height) { // (a new size: begun again, black)
+      if (vis) for (const b of vis.b) { gl.deleteTexture(b.t); gl.deleteFramebuffer(b.f); }
+      vis = { w: cv.width, h: cv.height, i: 0, s: vis?.s || tex(v.S.length, 1, gl.LUMINANCE, null), b: [0, 1].map(() => {
+        const t = tex(cv.width, cv.height, gl.RGBA, null), f = gl.createFramebuffer();
+        gl.bindFramebuffer(gl.FRAMEBUFFER, f); gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, t, 0);
+        gl.clearColor(0, 0, 0, 1); gl.clear(gl.COLOR_BUFFER_BIT);
+        return { t, f };
+      }) };
+    }
+    const from = vis.b[vis.i], to = vis.b[vis.i ^= 1];
+    gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, vis.s);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, v.S.length, 1, 0, gl.LUMINANCE, gl.UNSIGNED_BYTE, v.S);
+    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, from.t);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, to.f);
+    for (const [s, t] of [[style, null], ['vc', to.t]]) {
+      const U = progs[s].u;
+      if (t) { gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.bindTexture(gl.TEXTURE_2D, t); }
+      gl.useProgram(progs[s].prog);
+      gl.uniform1i(U.P, 0); gl.uniform1i(U.S, 1); gl.uniform2f(U.R, cv.width, cv.height); gl.uniform1f(U.T, v.T);
+      gl.uniform1f(U.B, v.B); gl.uniform1f(U.M, v.M); gl.uniform1f(U.H, v.H); gl.uniform1f(U.K, v.K); gl.uniform1f(U.G, v.G); gl.uniform1f(U.QF, v.QF);
+      gl.uniform3fv(U.C0, v.C0); gl.uniform3fv(U.C1, v.C1); gl.uniform3fv(U.C2, v.C2);
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+    }
+    cur = -1;
+    return true;
+  }
   // one drawing of a theme's backdrop at the canvas's size (v: fxUniforms)
   function draw(style, v) {
+    if (v.S) return visDraw(style, v);
     if (!ready(style, worker)) return false;
     const p = progs[style], U = p.u;
     if (cur !== style) { gl.useProgram(p.prog); cur = style; }
@@ -12116,8 +12174,8 @@ if (fx.transferControlToOffscreen && typeof Worker === 'function') try {
 } catch { fxWorker = null; }
 if (!fxWorker) fxOnPage(false);
 // ready to draw this theme? (its compile asked for, once)
-function fxUse(style) {
-  if (!fxAsked.has(style)) { fxAsked.add(style); const src = fxSource(style); if (fxWorker) fxWorker.postMessage({ style, src }); else fxEng.compile(style, src); }
+function fxUse(style, make = fxSource) {
+  if (!fxAsked.has(style)) { fxAsked.add(style); const src = make(style); if (fxWorker) fxWorker.postMessage({ style, src }); else fxEng.compile(style, src); }
   return fxWorker ? fxReady.has(style) : fxEng.ready(style, false);
 }
 const fxPaint = (style, v) => fxWorker ? fxWorker.postMessage({ paint: { ...v, style } }) : fxEng.draw(style, v);
@@ -12744,6 +12802,121 @@ function fxUniforms(Q, beat = 0, kick = 0) {
     C0: palette[0], C1: palette[1], C2: palette[2], F: palette[3] };
 }
 const paintFx = (Q, beat = 0, kick = 0) => fxPaint(fxStyle, fxUniforms(Q, beat, kick));
+
+// ---------- the visualiser (Settings › Show › Visualiser) ----------
+// Drawn on the backdrop's canvas, by fxEngine (visDraw): every frame over the last, which each look warps its own way,
+// so what the music draws trails and folds back into itself — then 'vc', a soft glow. Its colours: the mood's.
+// S: the spectrum in 64 bands, 40 Hz to 16 kHz, spaced as we hear (bass first) · B, M, H: the low, middle and top of it ·
+// K: the kick · P: the last frame.
+const visSource = style => `
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
+precision mediump float;
+#endif
+uniform vec2 R; uniform float T, B, M, H, K, G, QF; uniform vec3 C0, C1, C2; uniform sampler2D P, S;
+float h(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float n(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3. - 2. * f);
+  return mix(mix(h(i), h(i + vec2(1, 0)), f.x), mix(h(i + vec2(0, 1)), h(i + vec2(1, 1)), f.x), f.y); }
+float sp(float x){ return texture2D(S, vec2(clamp(x, 0., 1.) * .97 + .015, .5)).r; } // (the spectrum at x: 0 bass … 1 treble)
+vec3 last(vec2 q){ vec2 t = q * min(R.x, R.y) / R + .5;                                // (the last frame, at q: centred, the short side 1 —
+  return texture2D(P, t).rgb * smoothstep(.5, .485, max(abs(t.x - .5), abs(t.y - .5))); } // past its edge, dark: never its edge smeared)
+vec3 fade(vec3 c, float k){ return max(c * k - 1.5 / 255., 0.); }                       // (and dimmed — always to black: 8 bits never get there by × alone)
+mat2 rot(float a){ float c = cos(a), s = sin(a); return mat2(c, -s, s, c); }
+vec3 tint(float x){ return mix(C1, C2, smoothstep(.1, .9, x)); }                        // (the mood's two colours, low to high)
+float line(float d, float w){ return w * w / (d * d + w * w); }                        // (a line of light at distance d: sharp — the glow comes after)
+vec3 age(vec3 c, float k){ return mix(c, length(c) * normalize(C2 + .02) * .8, k); }   // (light turning, as it trails, to the second colour)
+void main(){
+  vec2 uv = (gl_FragCoord.xy - .5 * R) / min(R.x, R.y); // (a phone held upright: all of it across its width —
+  float r = length(uv), sc = min(R.x, R.y) / R.y;        // Fold and Mirror, larger by sc: the whole screen theirs)
+  vec3 col;
+#if ${style + 1} == 0
+  // vc: onto the screen — a soft glow round everything bright, the brightest rolled off (never clipped), on the mood's dark
+  vec2 t = gl_FragCoord.xy / R, e = 2.5 / R, f = 8. / R;
+  vec3 c = texture2D(P, t).rgb;
+  vec3 g = (texture2D(P, t + e).rgb + texture2D(P, t - e).rgb + texture2D(P, t + vec2(e.x, -e.y)).rgb + texture2D(P, t - vec2(e.x, -e.y)).rgb) * .25;
+  vec3 g2 = (texture2D(P, t + vec2(f.x, 0.)).rgb + texture2D(P, t - vec2(f.x, 0.)).rgb + texture2D(P, t + vec2(0., f.y)).rgb + texture2D(P, t - vec2(0., f.y)).rgb) * .25;
+  col = c + g * .3 + g2 * .25;
+  col = 1. - exp(-col * 1.4);
+  col = C0 + col * (1. - C0);
+  col *= 1. - smoothstep(.6, 1.25, length((t - .5) * vec2(R.x / R.y, 1.))) * .55;
+  col += (h(gl_FragCoord.xy + fract(T * 7.) * 91.) - .5) * G;
+#elif ${style + 1} == 1
+  // Fold: Fractal's own fold — threads of light — each turn of it bent by a band of the music (the bass the first), the
+  // whole of it breathing on the bass — fresh only in its heart, a core that swells on the bass; what it drew streams out
+  // from there to the edges, turning, and cools as it goes
+  col = age(fade(last(rot(.006 + .012 * M) * uv * (.972 - .04 * K)), .86), .06);
+  float a = atan(uv.y, uv.x) + T * .12, seg = 6.2832 / 6., rs = r * sc;
+  a = abs(mod(a, seg) - seg * .5);
+  vec2 z = vec2(cos(a), sin(a)) * rs * (1.55 + .4 * B);
+  float acc = 0., lm = 0., trap = 9., w = 0.;
+  for (int i = 0; i < 8; i++) {
+    float s = sp(float(i) / 7.);
+    z = abs(z) / max(dot(z, z), .03) - vec2(.9 + .1 * s + .05 * sin(T * .7), .46 + .08 * sp(1. - float(i) / 7.) + .05 * cos(T * .5));
+    float m = length(z);
+    acc += exp(-abs(m - lm) * 3.) * (.35 + s); w += .35 + s;
+    trap = min(trap, abs(z.y));
+    lm = m;
+  }
+  acc /= w;
+  float core = smoothstep(.45 + .2 * B + .1 * K, .02, rs);
+  col += (tint(acc) * pow(acc, 4.) * (.05 + .14 * B + .16 * K) + mix(C1, vec3(1.), .5) * exp(-trap * 55.) * (.07 + .35 * H + .3 * K)) * core;
+#elif ${style + 1} == 2
+  // Mirror: a kaleidoscope looking into itself — the last frame seen again a little larger, turned and folded eight ways,
+  // so it flowers outward — and the spectrum drawn in the kaleidoscope's own fold: petals of it (bass in the middle,
+  // treble at their tips), sixteen at once
+  float a = atan(uv.y, uv.x), seg = 6.2832 / 8.;
+  float fa = abs(mod(a + T * .05, seg) - seg * .5);
+  vec2 k = vec2(cos(fa), sin(fa)) * r;
+  vec2 q = rot(.015 * sin(T * .2)) * k * (.965 - .03 * K);
+  col = age(fade(last(R.y > R.x ? q.yx : q), .9), .05); // (its copy read along the screen's long side: the same, mirrored)
+  float x = clamp((k.x * sc - .03) / .4, 0., 1.), s = sp(x);
+  float d = k.y * sc - (.004 + .07 * s * smoothstep(0., .15, x)) * (1. + .5 * B);
+  col += mix(tint(x), vec3(1.), .35 * s) * line(d, .0028 + .002 * K) * (.06 + .5 * s) * smoothstep(1., .7, x) * smoothstep(.0, .08, x);
+#elif ${style + 1} == 3
+  // Ether: smoke that flows — the last frame carried along a slowly turning current (the mids stir it) and fading
+  // slowly — fed by the spectrum, a glowing horizon of it across the middle, mirrored up and down
+  vec2 p = uv * 2.2 + vec2(T * .05, -T * .03);
+  float ee = .02, nx = n(p + vec2(ee, 0.)) - n(p - vec2(ee, 0.)), ny = n(p + vec2(0., ee)) - n(p - vec2(0., ee));
+  vec2 flow = vec2(ny, -nx) / (2. * ee);
+  col = age(fade(last(uv - vec2(0., sign(uv.y) * (.0015 + .004 * B)) * (1. - .006 * K) - flow * (.006 + .014 * M) * smoothstep(0., .12, abs(uv.y))), .975), .05);
+  float x = abs(uv.x) / (.5 * R.x / min(R.x, R.y)), s = sp(x);
+  float y = abs(uv.y) - (.004 + .28 * s * (1. - x * .4));
+  col += mix(tint(x), vec3(1.), .3 * s) * (line(y, .003) * .6 + line(y, .012) * .25) * (.04 + .35 * s) * smoothstep(1., .85, x);
+#else
+  // Spiral: a whirlpool — the last frame drawn a little smaller and turned, the more the nearer the middle, so all of it
+  // winds inward in arms of light, cooling as it goes — fed round its rim by the spectrum (the bass at the top)
+  col = age(fade(last(rot(.015 + .06 / (r + .2) + .015 * K) * uv * (1.018 + .025 * K)), .945 - .1 * smoothstep(.12, 0., r)), .05);
+  float x = abs(atan(uv.x, uv.y)) / 3.1416, s = sp(x);
+  float rim = line(r - .45 + .18 * s, .0035 + .003 * K);
+  col += mix(tint(x), vec3(1.), rim * .4) * rim * (.08 + .5 * s);
+#endif
+  gl_FragColor = vec4(col, 1.);
+}`;
+// the spectrum as the visualiser takes it: 64 bands, each quick to rise and slower to fall
+const VIS_N = 64, visBands = new Float32Array(VIS_N), visAvg = new Float32Array(VIS_N), visS = new Uint8Array(VIS_N);
+let visT = 0;
+function visFrame(Q, dt, live, kick) {
+  if (visPick === 'Auto' && visSong !== current) { visSong = current; if (current) visNow = (visNow + 1) % VIS.length; } // (Auto: a new one each song)
+  const ny = sampleRate / 2, n = freq.length;
+  for (let i = 0; i < VIS_N; i++) {
+    const a = Math.floor(40 * 400 ** (i / VIS_N) / ny * n), b = Math.max(a + 1, Math.ceil(40 * 400 ** ((i + 1) / VIS_N) / ny * n));
+    let m = 0;
+    for (let k = a; k < b && k < n; k++) m = Math.max(m, freq[k]);
+    const l = live ? Math.min(1, Math.max(0, (m / 255 - .35 + i / VIS_N * .14) / .6)) : 0; // (the top a little lifted: it's quieter)
+    visAvg[i] += (l - visAvg[i]) * .01; // (~2 s)
+    const x = Math.min(1, Math.max(0, l * .45 + (l - visAvg[i]) * 2.2)); // (as loud as it is, and how much more than lately: the hits)
+    visBands[i] += (x - visBands[i]) * (x > visBands[i] ? .6 : .16);
+    visS[i] = visBands[i] * 255;
+  }
+  const band = (a, b) => { let s = 0; for (let i = a; i < b; i++) s += visBands[i]; return s / (b - a); };
+  const B = band(0, 14), M = band(18, 42), H = band(44, 64);
+  visT += dt * (P.paused ? .15 : .45 + B * .8 + M * .5); // (livelier as the music is)
+  const style = 'v' + visNow, ok = fxUse(style, () => visSource(visNow)), ok2 = fxUse('vc', () => visSource(-1));
+  if (!ok || !ok2) return; // (still compiling: the backdrop as it was meanwhile)
+  for (let c = 0; c < 4; c++) for (let k = 0; k < palette[c].length; k++) palette[c][k] += (target[c][k] - palette[c][k]) * .04;
+  fxPaint(style, { T: visT, B, M, H, K: motion ? kick : 0, G: coarse ? Q.grain * .5 : .006, QF: Q.fx, C0: palette[0], C1: palette[1], C2: palette[2], S: visS });
+}
 // The backdrop as it is right now, drawn once at w×h in full quality (for the story), then the screen's put back → a
 // picture (a canvas or an ImageBitmap), or null
 function backdropAt(w, h) {
@@ -14811,7 +14984,7 @@ skinExtras();
 
 // ---------- main loop ----------
 const avg =(a, b) => { let s = 0; for (let i = a; i < b; i++) s += freq[i]; return s / (b - a) / 255; };
-let bassS = 0, bassAvg = 0, midS = 0, highS = 0, fxT = 0, last = 0;
+let bassS = 0, bassAvg = 0, midS = 0, highS = 0, fxT = 0, last = 0, visWas = false;
 // (the things the beat moves: the play button, the record, the cover background — set on them alone, not on the whole
 // page, and only while they're seen)
 const bassEls = [['.core', () => true], ['.cs-disc', coverShown], ['.cover-bg', () => theme === 'Cover']].map(([q, seen]) => ({ el: document.querySelector(q), seen, v: '' }));
@@ -14860,8 +15033,11 @@ function frame(now) {
   const settling = palette.some((c, i) => c.some((v, k) => Math.abs(target[i][k] - v) > 0.002));
   const style = THEMES.indexOf(theme), drawn = !PLAIN.has(theme); // Cover isn't drawn here: it's the blurred cover in front, on plain background; Gradient, CSS
   if (fxOn && !covered && theme === 'Cover' && fxDirty) { fxDirty = false; fxClear(rgb(pal.bg)); }
-  const moving = fxOn && !covered && drawn && !Q.still;
-  if (fxOn && !covered && drawn && !race.show && ++fxFrame % Q.every === 0 && (!Q.still || settling || fxDirty)) { // lower qualities redraw less often (none under Redline's race)
+  const vis = fxOn && !covered && view === 'Visualiser' && body.classList.contains('has-song') && !body.classList.contains('home');
+  if (vis !== visWas) { visWas = vis; fxDirty = true; wake(); } // (out of it: the backdrop drawn again, even a still one)
+  const moving = vis || fxOn && !covered && drawn && !Q.still;
+  if (vis) visFrame(Q, dt, live, kick);
+  else if (fxOn && !covered && drawn && !race.show && ++fxFrame % Q.every === 0 && (!Q.still || settling || fxDirty)) { // lower qualities redraw less often (none under Redline's race)
     fxDirty = false;
     if (style !== fxStyle && fxUse(style)) fxStyle = style; // (not ready yet: the last theme's goes on meanwhile — see fxEngine)
     if (fxStyle < 0) { fxClear(rgb(pal.bg)); fxDirty = true; } // (none ready yet: the plain background, and asked again next frame)
@@ -14889,10 +15065,10 @@ function frame(now) {
   lyricKick = kick;
   syncLyrics();
   if (skin) skinTick(now, kick, t, dur);
-  const kinSeen = kin.on && !covered && !coverShown() && body.classList.contains('has-song') && !body.classList.contains('home');
+  const kinSeen = kin.on && !covered && !coverShown() && !vis && body.classList.contains('has-song') && !body.classList.contains('home');
   if (kinSeen) drawKin(now, kick);
   vedFrame(now, kinSeen, kick);
-  raceFrame(now, !covered, kick);
+  raceFrame(now, !covered && !vis, kick);
 }
 // the seek bar and the time (only what changed)
 function showTime(t, dur) {
