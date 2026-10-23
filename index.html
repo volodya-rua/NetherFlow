@@ -930,7 +930,7 @@ body.home .home-stage .msg { font-size: clamp(56px, min(15vw, 24cqh), 240px); } 
 .dv-prog i { height: 8px; border-radius: 4px; background: rgba(255,255,255,.12); overflow: hidden; }
 .dv-prog b { display: block; height: 100%; width: 0; border-radius: inherit; background: linear-gradient(90deg, var(--b), var(--a)); box-shadow: 0 0 14px var(--a); }
 .dv-like { display: inline-flex; align-items: center; gap: 8px; }
-.dv-like[hidden] { display: none; }
+.dv-like[hidden], .nav-ico[hidden] { display: none; }
 /* voice control: listening (the ring swells with your voice), then what it heard and did */
 .voice-ui { position: fixed; inset: auto 0 calc(118px + env(safe-area-inset-bottom)) 0; margin: 0 auto; width: min(460px, calc(100vw - 32px)); padding: 16px 20px;
   border: 1px solid color-mix(in srgb, var(--a) 45%, transparent); border-radius: 22px; background: color-mix(in srgb, #050505 86%, var(--a)); color: #fff;
@@ -1685,6 +1685,14 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
   <div id="apList" class="results"></div>
 </dialog>
 
+<!-- Voice control, the first time (Legal): where the words are worked out, before the phone asks for its microphone -->
+<dialog id="voiceNote" class="consent name-prompt" aria-labelledby="vnTitle">
+  <form method="dialog">
+    <div id="vnTitle" class="kicker lbl">Voice control</div>
+    <p>Your words are worked out on your phone where it can. Otherwise your phone's speech service does it (usually Google's), under its own privacy policy. NetherFlow never keeps a recording.</p>
+    <div class="acts lbl"><button value="no" class="link">Not now</button><button value="ok" class="pill">Continue</button></div>
+  </form>
+</dialog>
 <dialog id="namePrompt" class="consent name-prompt" aria-labelledby="npTitle">
   <form method="dialog">
     <div id="npTitle" class="kicker lbl">New playlist</div>
@@ -3590,7 +3598,21 @@ async function carPlay(action, text) {
 // "quieter", "shuffle", "repeat this", "like this", "songs like this", "what's playing", "sing" — and Hindi's basics
 // ("agla gaana", "ruko", "Arijit ke gaane bajao"). Anything else: a song or an artist, searched and played. The music
 // paused while it listens (so it hears you, not the song), and carried on after unless you said otherwise.
-const Voice = native ? Capacitor.Plugins.Voice : null;
+const Voice = native ? Capacitor.Plugins.Voice : window.netherflowApp?.voice ? { // (the computer: Windows' own, winvoice.js)
+  available: async () => ({ on: true, device: false }),
+  listen: o => netherflowApp.voice.listen(o.words || []),
+  stop: async () => netherflowApp.voice.stop(),
+  addListener: (name, cb) => netherflowApp.voice.onEvent(cb),
+} : null;
+// the library's names, to help it hear them: playlists, artists, songs (yours first: liked, most played)
+function voiceWords() {
+  const seen = new Set(), out = [], add = x => { x = clean(String(x || '')).trim(); const k = x.toLowerCase(); if (x && x.length <= 60 && !seen.has(k)) { seen.add(k); out.push(x); } };
+  for (const p of library.playlists) add(p.name);
+  const mine = [...library.liked, ...statsFor('all').songs.slice(0, 400).map(s => s[0])].filter(Boolean);
+  for (const t of mine) for (const a of (t.artistName || '').split(/,|&| feat\.? | x /i)) add(a);
+  for (const t of mine) add(t.trackName);
+  return out.slice(0, 1500);
+}
 const voice = { on: false, busy: false };
 if (Voice) {
   Voice.available().then(r => { voice.on = !!r.on; $('voiceBtn').hidden = $('dvVoice').hidden = !voice.on; }, () => {});
@@ -3603,6 +3625,12 @@ if (Voice) {
 async function listen() {
   if (!voice.on) return;
   if (voice.busy) return Voice.stop().catch(() => {}); // (tapped again: that's all it says)
+  if (!store.get('netherflow.voicenote')) { // (the first time: where the words go, then the phone's own question)
+    const d = $('voiceNote'); d.returnValue = ''; d.showModal(); placeWinctl();
+    if (!native) d.querySelector('p').textContent = 'Your words are worked out by Windows\' own speech recognition, on this computer — or by Microsoft\'s online speech service if you\'ve turned on Online speech recognition in Windows\' settings. NetherFlow never keeps a recording.';
+    if (await new Promise(r => { d.onclose = () => r(d.returnValue); }) !== 'ok') return;
+    store.set('netherflow.voicenote', '1');
+  }
   voice.busy = true;
   const ui = $('voiceUi'), hide = ms => { clearTimeout(voice.t); voice.t = setTimeout(() => ui.hidePopover(), ms); };
   $('voiceText').textContent = 'Listening…'; $('voiceHint').textContent = 'Say a song or an artist, or "next", "pause", "louder"…'; ui.style.setProperty('--lv', 0);
@@ -3610,11 +3638,11 @@ async function listen() {
   const was = P.loaded && !P.paused, song = current;
   if (was) P.pause();
   let r = null, why = '';
-  try { r = await Voice.listen({ lang: navigator.language || '' }); why = r?.why || ''; } catch (e) { why = e.code || e.message || ''; }
+  try { r = await Voice.listen({ lang: navigator.language || '', words: voiceWords() }); why = r?.why || ''; } catch (e) { why = e.code || e.message || ''; }
   voice.busy = false;
   if (!r?.text) {
-    $('voiceText').textContent = { denied: 'The microphone isn\'t allowed', 'no internet': 'Voice needs the internet on this phone', language: 'Your phone can\'t understand this language offline yet' }[why] || 'Didn\'t catch that';
-    $('voiceHint').textContent = why === 'denied' ? 'Allow it for NetherFlow in the phone\'s settings' : 'Tap the mic and try again';
+    $('voiceText').textContent = { denied: 'The microphone isn\'t allowed', 'no internet': 'Voice needs the internet on this phone', language: native ? 'Your phone can\'t understand this language offline yet' : 'Windows has no speech recognition for its language', 'no microphone': 'No microphone found' }[why] || 'Didn\'t catch that';
+    $('voiceHint').textContent = why === 'denied' ? 'Allow it for NetherFlow in the phone\'s settings' : why === 'no microphone' ? 'Plug one in, or allow apps to use it: Windows Settings › Privacy › Microphone' : 'Tap the mic and try again';
     if (was) P.play();
     return hide(2600);
   }

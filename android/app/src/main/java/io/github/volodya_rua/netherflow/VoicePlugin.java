@@ -66,6 +66,13 @@ public class VoicePlugin extends Plugin {
                 .putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 5)
                 .putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
                 .putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, getContext().getPackageName());
+            // (the library's names — its artists, playlists, songs — what's said most likely is one of them: Android 13+)
+            com.getcapacitor.JSArray words = call.getArray("words");
+            if (Build.VERSION.SDK_INT >= 33 && words != null) {
+                ArrayList<String> w = new ArrayList<>();
+                for (int k = 0; k < words.length() && w.size() < 500; k++) { String x = words.optString(k, ""); if (!x.isEmpty() && x.length() <= 60) w.add(x); }
+                if (!w.isEmpty()) i.putStringArrayListExtra(RecognizerIntent.EXTRA_BIASING_STRINGS, w);
+            }
             String lang = call.getString("lang", "");
             if (lang != null && lang.matches("[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*")) i.putExtra(RecognizerIntent.EXTRA_LANGUAGE, lang);
             final boolean[] done = { false };

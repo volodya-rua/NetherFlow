@@ -30,6 +30,13 @@ contextBridge.exposeInMainWorld('netherflowApp', {
     },
     http: (method, url, headers, body) => ipcRenderer.invoke('cast-http', method, url, headers, body),
   },
+  // voice control (winvoice.js, Windows only): one sentence as words ({ text, how } or { text: '', why }), helped by the
+  // library's names; 'listening' once it is
+  ...(process.platform === 'win32' ? { voice: {
+    listen: words => ipcRenderer.invoke('voice-listen', words),
+    stop: () => ipcRenderer.send('voice-stop'),
+    onEvent: cb => ipcRenderer.on('voice-event', (_, e) => cb(e)),
+  } } : {}),
   // Discord "Now playing" (see main.js): the song as it plays ({ title, artist, album, art, start, end, url }), or null
   presence: w => ipcRenderer.send('presence', w),
   // phone ↔ PC sync (see main.js): open the local server → { port, addrs, name }; what a phone sends (encrypted) comes in

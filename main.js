@@ -291,6 +291,7 @@ ipcMain.on('notify', (e, n) => {
   note.show();
 });
 require('./castnet.js').register(ipcMain, () => win); // (casting: the house's network, for cast.js in the page)
+require('./winvoice.js').register(ipcMain, () => win); // (voice control: Windows' own speech recognition, for the mic by Search)
 ipcMain.on('update-install', e => { if (win && e.sender === win.webContents && getUpdater()) getUpdater().quitAndInstall(true, true); }); // (quietly, then open again)
 
 // Settings › Island position: move it (or done), or back to the top middle
