@@ -139,7 +139,7 @@ async function hear(pcm, langs, names, wake, end) {
 onmessage = async ({ data: d }) => {
   if (d.init) {
     try {
-      self.ort = await import(d.init.ort);
+      if (d.init.classic) importScripts(d.init.ort); else self.ort = await import(d.init.ort); // (the older voice pack's engine: a plain script)
       ort.env.wasm.wasmPaths = { mjs: d.init.mjs, wasm: d.init.wasm };
       ort.env.wasm.numThreads = d.init.threads || 1; // (more: SharedArrayBuffer, the page cross-origin isolated by server.js)
       vocab = JSON.parse(d.init.vocab); gen = JSON.parse(d.init.gen); merges = d.init.merges; EOT = gen.eos_token_id ?? 50257;

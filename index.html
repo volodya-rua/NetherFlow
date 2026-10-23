@@ -1700,8 +1700,15 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
 <dialog id="voiceOffer" class="consent name-prompt" aria-labelledby="voTitle">
   <form method="dialog">
     <div id="voTitle" class="kicker lbl">Voice control</div>
-    <p>To understand you properly, names and accents too, get the voice pack: a speech recognizer that runs on this computer, so what you say never leaves it. A one-time download of <b></b> (Settings › Voice pack removes it). Or use Windows' own speech recognition, which can mishear names.</p>
+    <p>To understand you properly, names and accents too, get the voice pack: a speech recognizer that runs on this computer, so what you say never leaves it. A download of about <b></b> (Settings › Voice pack removes it). Or use Windows' own speech recognition, which can mishear names.</p>
     <div class="acts lbl"><button value="win" class="link">Use Windows'</button><button value="get" class="pill">Get the voice pack</button></div>
+  </form>
+</dialog>
+<dialog id="voiceUpdate" class="consent name-prompt" aria-labelledby="vuTitle">
+  <form method="dialog">
+    <div id="vuTitle" class="kicker lbl">Voice pack</div>
+    <p>The voice pack has an update (<b></b>): quicker, and it hears you better.</p>
+    <div class="acts lbl"><button value="later" class="pill ghost" autofocus>Later</button><button value="update" class="pill ghost">Update now</button></div><!-- (both alike, the focus on Later: Legal) -->
   </form>
 </dialog>
 <dialog id="heyNote" class="consent name-prompt" aria-labelledby="hnTitle">
@@ -3641,23 +3648,28 @@ const VOICE_FILES = {
   'merges.txt': [456318, '1ce1664773c50f3e0cc8842619a93edc4624525b728b188a9e0be33b7726adc5', 'text/plain', WHISPER_AT],
   'generation_config.json': [1556, '3479b1f44a07e41db799e22599222fee5816738036def94a39841cb9cdbb4120', 'application/json', WHISPER_AT],
 };
-const voicePack = { ready: false, getting: 0, gpu: false }, wh = { init: null, worker: null, say: null, stop: null, idle: 0 };
+const voicePack = { ready: false, old: false, offered: false, getting: 0, gpu: false }, wh = { init: null, worker: null, say: null, stop: null, idle: 0 };
 // its files for this computer (the graphics card's encoder only where there's one), and their size
 const voiceFiles = () => Object.entries(VOICE_FILES).filter(([, f]) => f[4] !== 'gpu' || voicePack.gpu);
 const voiceMB = () => Math.round(voiceFiles().reduce((a, [, f]) => a + f[0], 0) / 1e6);
+// (the older pack — the multilingual model, ONNX Runtime's processor-only build — works as it did till it's updated)
+const OLD_FILES = ['ort.wasm.min.js', 'ort-wasm-simd-threaded.mjs', 'ort-wasm-simd-threaded.wasm', 'encoder_model_quantized.onnx', 'decoder_model_merged_quantized.onnx', 'vocab.json', 'merges.txt', 'generation_config.json'];
+const packHere = () => voicePack.ready || voicePack.old; // (a voice pack to hear with: the new one, or the older one)
 async function voicePackCheck() {
   voicePack.gpu = !!(await navigator.gpu?.requestAdapter().catch(() => null));
   try { const c = await caches.open(VOICE_PACK); voicePack.ready = (await Promise.all(voiceFiles().map(([n]) => c.match(n)))).every(Boolean); } catch { voicePack.ready = false; }
+  voicePack.old = !voicePack.ready && await caches.has(VOICE_OLD).catch(() => false) && (await Promise.all(OLD_FILES.map(async n => (await caches.open(VOICE_OLD)).match(n)))).every(Boolean);
   renderVoiceRow(); wakeSync();
-  if (!voicePack.ready && await caches.has(VOICE_OLD).catch(() => false)) { // (an older voice pack here: the new one got in its place — asked for once already)
-    await voicePackGet(true);
-    if (voicePack.ready) caches.delete(VOICE_OLD).catch(() => {});
+  if (voicePack.old && !voicePack.offered && !topDialog()) { // (an update for the older pack: asked, once each time NetherFlow starts — never fetched unasked: Legal)
+    voicePack.offered = true;
+    const d = $('voiceUpdate'); d.returnValue = ''; d.querySelector('b').textContent = voiceMB() + ' MB'; d.showModal(); placeWinctl();
+    if (await new Promise(r => { d.onclose = () => r(d.returnValue); }) === 'update') voicePackGet();
   }
 }
-async function voicePackGet(update = false) {
+async function voicePackGet() {
   if (voicePack.getting || voicePack.ready) return;
   const total = voiceMB() * 1e6; let had = 0;
-  voicePack.getting = .001; renderVoiceRow(); toast(update ? `Updating the voice pack (${voiceMB()} MB): quicker, and it hears you better` : `Getting the voice pack (${voiceMB()} MB)…`);
+  voicePack.getting = .001; renderVoiceRow(); toast(voicePack.old ? `Updating the voice pack (${voiceMB()} MB)…` : `Getting the voice pack (${voiceMB()} MB)…`);
   try {
     const c = await caches.open(VOICE_PACK);
     for (const [name, [size, sha, type, at]] of voiceFiles()) {
@@ -3676,20 +3688,26 @@ async function voicePackGet(update = false) {
       await c.put(name, new Response(buf, { headers: { 'Content-Type': type } }));
       had += size;
     }
-    voicePack.ready = true; wakeSync();
+    voicePack.ready = true;
+    if (voicePack.old) { // (updated: the older one gone, the recognizer started again on the new)
+      voicePack.old = false; caches.delete(VOICE_OLD).catch(() => {});
+      wh.worker?.terminate(); Object.assign(wh, { init: null, worker: null, q: null }); if (hey.stop) whisperStart().catch(() => {});
+    }
+    wakeSync();
     toast(hey.on ? 'The voice pack is ready: say "Hey NetherFlow"' : 'The voice pack is ready: tap the mic and say a song');
   } catch { toast('Couldn\'t get the voice pack: check the internet and try again', 6000); }
   voicePack.getting = 0; renderVoiceRow();
 }
 async function voicePackRemove() {
-  voicePack.ready = false; wakeSync();
+  voicePack.ready = voicePack.old = false; wakeSync();
   wh.worker?.terminate(); Object.assign(wh, { init: null, worker: null, q: null });
   await caches.delete(VOICE_PACK).catch(() => {}); await caches.delete(VOICE_OLD).catch(() => {});
   voicePack.ready = false; wakeSync(); renderVoiceRow(); toast('Voice pack removed: voice control uses Windows\' own');
 }
 // its row in Settings (the computer): Get, how far it's got, or Remove
-const voiceRow = () => settingRow('Voice pack', [voicePack.ready ? 'Remove' : voicePack.getting ? `Getting… ${Math.round(100 * voicePack.getting)}%` : `Get · ${voiceMB()} MB`], '', () => voicePack.ready ? voicePackRemove() : voicePackGet(),
-  'For voice control: what you say understood properly, names and accents too, by a speech recognizer on this computer (OpenAI\'s Whisper, run by ONNX Runtime): what you say never leaves it. A one-time download from Hugging Face and jsDelivr, kept on this computer till you remove it here. Without it, voice control uses Windows\' own speech recognition.');
+const voiceRow = () => settingRow('Voice pack', voicePack.getting ? [`Getting… ${Math.round(100 * voicePack.getting)}%`] : voicePack.ready ? ['Remove'] : voicePack.old ? [`Update · ${voiceMB()} MB`, 'Remove'] : [`Get · ${voiceMB()} MB`], '',
+  v => voicePack.getting ? 0 : v === 'Remove' ? voicePackRemove() : voicePackGet(),
+  'For voice control: what you say understood properly, names and accents too, by a speech recognizer on this computer (OpenAI\'s Whisper, run by ONNX Runtime; partly on its graphics card, where it can): what you say never leaves it. A download from Hugging Face and jsDelivr (a newer version only if you choose to update), kept on this computer till you remove it here. Without it, voice control uses Windows\' own speech recognition.');
 function renderVoiceRow() { const r = document.getElementById('voiceRow'); if (r) r.replaceChildren(...voiceRow().childNodes); }
 if (herePc) voicePackCheck();
 // the recognizer, started when it's first wanted (the mic tapped) and let go 3 minutes after it was last used (its memory
@@ -3697,10 +3715,11 @@ if (herePc) voicePackCheck();
 function whisperStart() {
   clearTimeout(wh.idle); wh.idle = setTimeout(() => { if (hey.stop) return whisperStart(); wh.worker?.terminate(); Object.assign(wh, { init: null, worker: null, q: null }); }, 180e3);
   return wh.init ||= (async () => {
-    const c = await caches.open(VOICE_PACK), file = async n => { const r = await c.match(n); if (!r) throw new Error('voice pack'); return r; };
+    const old = !voicePack.ready && voicePack.old, c = await caches.open(old ? VOICE_OLD : VOICE_PACK), file = async n => { const r = await c.match(n); if (!r) throw new Error('voice pack'); return r; };
     const url = async n => URL.createObjectURL(await (await file(n)).blob()), buf = async n => (await file(n)).arrayBuffer(), text = async n => (await file(n)).text();
-    const gpu = voicePack.gpu && await c.match('encoder_model_q4.onnx') ? await buf('encoder_model_q4.onnx') : null;
-    const init = { threads: Math.max(1, Math.min(8, (navigator.hardwareConcurrency || 2) >> 1)), ort: await url('ort.min.mjs'), mjs: await url('ort-wasm-simd-threaded.jsep.mjs'), wasm: await url('ort-wasm-simd-threaded.jsep.wasm'),
+    const gpu = !old && voicePack.gpu && await c.match('encoder_model_q4.onnx') ? await buf('encoder_model_q4.onnx') : null;
+    const init = { threads: Math.max(1, Math.min(8, (navigator.hardwareConcurrency || 2) >> 1)), classic: old, // (the older pack's engine: a plain script)
+      ...(old ? { ort: await url('ort.wasm.min.js'), mjs: await url('ort-wasm-simd-threaded.mjs'), wasm: await url('ort-wasm-simd-threaded.wasm') } : { ort: await url('ort.min.mjs'), mjs: await url('ort-wasm-simd-threaded.jsep.mjs'), wasm: await url('ort-wasm-simd-threaded.jsep.wasm') }),
       encoder: await buf('encoder_model_quantized.onnx'), encoderGpu: gpu, decoder: await buf('decoder_model_merged_quantized.onnx'), vocab: await text('vocab.json'), merges: await text('merges.txt'), gen: await text('generation_config.json') };
     const w = new Worker('whisper.js');
     const r = await new Promise(ok => { w.onmessage = e => ok(e.data); w.onerror = () => ok({ error: 'worker' }); w.postMessage({ init }, [init.encoder, init.decoder, ...(gpu ? [gpu] : [])]); });
@@ -3784,7 +3803,7 @@ function afterWake(text) {
   return null;
 }
 function wakeSync() {
-  const can = hey.on && herePc && voicePack.ready, want = can && !hey.paused;
+  const can = hey.on && herePc && packHere(), want = can && !hey.paused;
   if (want && !hey.stop) wakeListen(); else if (!want && hey.stop) hey.stop();
   $('voiceBtn').classList.toggle('awake', want);
   $('voiceBtn').title = want ? 'Listening for "Hey NetherFlow": click to pause' : can ? 'Not listening for "Hey NetherFlow": click to listen again' : 'Voice';
@@ -3801,7 +3820,7 @@ async function setWake(v) {
     store.set('netherflow.heyok', '1');
   }
   hey.on = v === 'On'; hey.paused = false; store.set('netherflow.wake', hey.on ? 'On' : '');
-  if (hey.on && !voicePack.ready) voicePackGet(); // (it starts once the pack's here)
+  if (hey.on && !packHere()) voicePackGet(); // (it starts once the pack's here)
   wakeSync(); renderTextPanel();
 }
 async function wakeListen() {
@@ -3865,8 +3884,8 @@ function chime() {
 }
 const Voice = native ? Capacitor.Plugins.Voice : herePc ? {
   available: async () => ({ on: true, device: false }),
-  listen: o => voicePack.ready ? hearHere(o) : netherflowApp.voice.listen(o.words || []),
-  stop: async () => voicePack.ready ? wh.stop?.() : netherflowApp.voice.stop(),
+  listen: o => packHere() ? hearHere(o) : netherflowApp.voice.listen(o.words || []),
+  stop: async () => packHere() ? wh.stop?.() : netherflowApp.voice.stop(),
   addListener: (name, cb) => { wh.say = cb; netherflowApp.voice.onEvent(cb); },
 } : null;
 // the library's names, to help it hear them: playlists, artists, songs (yours first: liked, most played)
@@ -3916,19 +3935,19 @@ if (Voice) {
 async function listen() {
   if (!voice.on) return;
   if (voice.busy) return Voice.stop().catch(() => {}); // (tapped again: that's all it says)
-  if (herePc && !voicePack.ready && !voicePack.getting && !store.get('netherflow.voiceoffer')) { // (the computer, once: the voice pack, or Windows' own)
+  if (herePc && !packHere() && !voicePack.getting && !store.get('netherflow.voiceoffer')) { // (the computer, once: the voice pack, or Windows' own)
     const d = $('voiceOffer'); d.returnValue = ''; d.querySelector('b').textContent = voiceMB() + ' MB'; d.showModal(); placeWinctl();
     const v = await new Promise(r => { d.onclose = () => r(d.returnValue); });
     if (!v) return;
     store.set('netherflow.voiceoffer', '1');
     if (v === 'get') return voicePackGet();
   }
-  if (herePc && voicePack.ready && !hey.on && !store.get('netherflow.heyasked')) { // (the computer, once: hands free offered, with its own consent — the user looked for it on the mic, not in Settings)
+  if (herePc && packHere() && !hey.on && !store.get('netherflow.heyasked')) { // (the computer, once: hands free offered, with its own consent — the user looked for it on the mic, not in Settings)
     store.set('netherflow.heyasked', '1');
     await setWake('On');
     if (hey.on) return toast('Listening for "Hey NetherFlow": say it any time', 5000);
   }
-  if (!store.get('netherflow.voicenote') && !(herePc && voicePack.ready)) { // (the first time: where the words go, then the phone's own question; the voice pack's never go anywhere)
+  if (!store.get('netherflow.voicenote') && !(herePc && packHere())) { // (the first time: where the words go, then the phone's own question; the voice pack's never go anywhere)
     const d = $('voiceNote'); d.returnValue = ''; d.showModal(); placeWinctl();
     if (!native) d.querySelector('p').textContent = 'Your words are worked out on this computer by Windows\' own speech recognition, or by Microsoft\'s online speech service if you\'ve turned on "Online speech recognition" in Windows\' settings. NetherFlow never keeps a recording.'; // (Legal's wording)
     if (await new Promise(r => { d.onclose = () => r(d.returnValue); }) !== 'ok') return;
@@ -3936,7 +3955,7 @@ async function listen() {
   }
   voice.busy = true;
   const ui = $('voiceUi'), hide = ms => { clearTimeout(voice.t); voice.t = setTimeout(() => ui.hidePopover(), ms); };
-  $('voiceText').textContent = herePc && voicePack.ready ? 'Getting ready…' : 'Listening…'; $('voiceHint').textContent = 'Say a song or an artist, or "next", "pause", "louder"…'; ui.style.setProperty('--lv', 0);
+  $('voiceText').textContent = herePc && packHere() ? 'Getting ready…' : 'Listening…'; $('voiceHint').textContent = 'Say a song or an artist, or "next", "pause", "louder"…'; ui.style.setProperty('--lv', 0);
   clearTimeout(voice.t); if (!ui.matches(':popover-open')) ui.showPopover();
   const was = P.loaded && !P.paused, song = current;
   if (was) P.pause();
@@ -3961,7 +3980,7 @@ async function voiceAct(text, was, song) {
   if (was && done.resume && current === song && P.loaded && P.paused) P.play();
   voice.t = setTimeout(() => ui.hidePopover(), 2400);
 }
-$('voiceBtn').onclick = () => hey.on && herePc && voicePack.ready ? heyPause(!hey.paused) : listen();
+$('voiceBtn').onclick = () => hey.on && herePc && packHere() ? heyPause(!hey.paused) : listen();
 $('dvVoice').onclick = listen;
 // a number said, 0–100 ("40", "forty", "forty five", "a hundred", "half", "max"), or null
 function spokenNumber(x) {
