@@ -2888,8 +2888,8 @@ let view = VIEWS.includes(store.get('netherflow.view')) ? store.get('netherflow.
 // Tapped (or V): its words after all, for this song (coverSkip).
 let autoCover = false, coverSkip = null;
 // the visualiser's looks (Settings › Visualiser; Auto: a new one with each song; a tap on it: the next)
-const VIS = ['Fold', 'Mirror', 'Ether', 'Spiral'];
-const VIS_NOTE = 'Fold: glowing fractal threads, bent by the music. Mirror: a kaleidoscope looking into itself. Ether: smoke that flows. Spiral: a whirlpool of light.';
+const VIS = ['Fold', 'Mirror', 'Ether', 'Spiral', 'Portal', 'Lace', 'Veil', 'Nova'];
+const VIS_NOTE = 'Fold: glowing fractal threads, bent by the music. Mirror: a kaleidoscope looking into itself. Ether: smoke that flows. Spiral: a whirlpool of light. Portal: a tunnel of light you fly down. Lace: a fractal\'s glowing edge, reshaped by every beat. Veil: an aurora rising from the music. Nova: a star bursting with it.';
 let visPick = VIS.includes(store.get('netherflow.vis')) ? store.get('netherflow.vis') : 'Auto', visNow = Math.max(0, VIS.indexOf(visPick)), visSong = null;
 function setVis(v) { visPick = v; store.set('netherflow.vis', v === 'Auto' ? '' : v); if (v !== 'Auto') visNow = VIS.indexOf(v); renderTextPanel(); }
 const coverShown = () => view === 'Cover' || autoCover && view === 'Lyrics';
@@ -12950,13 +12950,62 @@ void main(){
   float x = abs(uv.x) / (.5 * R.x / min(R.x, R.y)), s = sp(x);
   float y = abs(uv.y) - (.004 + .28 * s * (1. - x * .4));
   col += mix(tint(x), vec3(1.), .3 * s) * (line(y, .003) * .6 + line(y, .012) * .25) * (.04 + .35 * s) * smoothstep(1., .85, x);
-#else
+#elif ${style + 1} == 4
   // Spiral: a whirlpool — the last frame drawn a little smaller and turned, the more the nearer the middle, so all of it
   // winds inward in arms of light, cooling as it goes — fed round its rim by the spectrum (the bass at the top)
   col = age(fade(last(rot(.015 + .06 / (r + .2) + .015 * K) * uv * (1.018 + .025 * K)), .945 - .1 * smoothstep(.12, 0., r)), .05);
   float x = abs(atan(uv.x, uv.y)) / 3.1416, s = sp(x);
   float rim = line(r - .45 + .18 * s, .0035 + .003 * K);
   col += mix(tint(x), vec3(1.), rim * .4) * rim * (.08 + .5 * s);
+#elif ${style + 1} == 5
+  // Portal: flying down a tunnel of light — rings of the spectrum one behind another, each turned its own way, rushing at
+  // you (faster with the music) round a vanishing point that wanders, so the tunnel bends; drawn sharp at their depth,
+  // with a short trail
+  vec2 c = .07 * vec2(sin(T * .37), cos(T * .29));
+  col = age(fade(last(c + (uv - c) * .985), .72), .1);
+  for (int i = 0; i < 10; i++) {
+    float z = fract(float(i) / 10. + T * .3), depth = mix(5., .3, z * z); // (0 far … 1 here)
+    vec2 d = uv - c * (depth - .3) * .35;
+    float ang = atan(d.x, d.y) + float(i) * .7, x = abs(mod(ang + 3.1416, 6.2832) - 3.1416) / 3.1416, s = sp(x);
+    float ring = line(length(d) * depth - .32 - .1 * s - .03 * B, .004 + .002 * K);
+    col += mix(tint(x), vec3(1.), ring * .3) * ring * (.06 + .4 * s) * smoothstep(0., .25, z) * smoothstep(.99, .88, z);
+  }
+#elif ${style + 1} == 6
+  // Lace: the edge of a Julia set, glowing — its seed walked round by the music (the bass pulls it out, the mids turn it),
+  // so the lace reshapes with every beat; what it was a moment ago trails behind it, sinking inward
+  col = age(fade(last(rot(-.004) * uv * 1.008), .84), .06);
+  vec2 z = rot(T * .05) * uv * sc * 3.2, dz = vec2(1., 0.);
+  float ca = 2.1 + T * .08 + .25 * M, cr = .7685 + .035 * B;
+  vec2 cc = cr * vec2(cos(ca), sin(ca));
+  float m2 = 0., big = 0., trap = 9.;
+  for (int i = 0; i < 48; i++) {
+    dz = 2. * vec2(z.x * dz.x - z.y * dz.y, z.x * dz.y + z.y * dz.x);
+    z = vec2(z.x * z.x - z.y * z.y, 2. * z.x * z.y) + cc;
+    m2 = dot(z, z); big = dot(dz, dz);
+    trap = min(trap, abs(z.x * z.y));
+    if (m2 > 1e4 || big > 1e30) break;
+  }
+  bool esc = m2 > 1e4;
+  float de = esc ? .5 * sqrt(m2 / max(big, 1e-12)) * log(m2) : 0.;
+  col += tint(clamp(trap * 3., 0., 1.)) * (esc ? exp(-de * 260.) * (.12 + .5 * H + .3 * K) + exp(-de * 40.) * (.012 + .03 * B) : .002);
+#elif ${style + 1} == 7
+  // Veil: curtains of light — the last frame risen a little, waving side to side as it goes and fading slowly, so the
+  // spectrum drawn low across the screen (the bass in the middle, the treble out to the sides) climbs as an aurora
+  float hw = .5 * R.x / min(R.x, R.y), hh = .5 * R.y / min(R.x, R.y);
+  col = age(fade(last(uv + vec2(.0025 * sin(uv.y * 7. + T * 1.3) + .0015 * sin(uv.x * 3. - T), -.0045 - .006 * B)), .972), .06);
+  float x = abs(uv.x) / hw, s = sp(x);
+  float y = uv.y + hh * .45 - .14 * s;
+  float rays = pow(n(vec2(uv.x * 22. + T * .4, T * .9)), 2.) * .8 + .2;
+  float veil = y > 0. ? exp(-y * (14. - 8. * s)) : exp(y * 90.);
+  col += mix(tint(x), vec3(1.), .2 * s) * veil * rays * (.025 + .22 * s) * smoothstep(1., .8, x);
+#else
+  // Nova: a star bursting with the music — rays of the spectrum out of its heart (the bass at the top, mirrored),
+  // streaking outward as each frame is drawn larger, and on every kick a ring of light thrown out from it
+  col = age(fade(last(uv * (.955 - .02 * K)), .86), .06);
+  float x = abs(atan(uv.x, uv.y)) / 3.1416, N = 36., b = (floor(x * N) + .5) / N, s = sp(b), rn = r * sc; // (larger on a tall screen)
+  float ray = line((x - b) * 3.1416 * rn, .0018) * smoothstep(.03, .06, rn) * smoothstep(.06 + .22 * s, .04 + .1 * s, rn);
+  col += mix(tint(b), vec3(1.), .25 * s) * ray * (.03 + .35 * s);
+  col += mix(C1, vec3(1.), .4) * line(rn - .05, .004) * K * .3 + C1 * exp(-rn * 40.) * (.01 + .04 * B);
 #endif
   gl_FragColor = vec4(col, 1.);
 }`;
