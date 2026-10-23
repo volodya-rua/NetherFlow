@@ -11,7 +11,8 @@ const GROUPS = new Set(['224.0.0.251:5353', '239.255.255.250:1900']); // (mDNS, 
 // ever found (a Fire TV on the Wi-Fi, answering at once when asked there).
 // Real networks only (Legal): never a VPN's or a virtual machine's — a work VPN's 10.x is a company's network, not the
 // house — told by their names, and by the makers' codes virtual adapters' addresses start with (Hyper-V and WSL,
-// VirtualBox, VMware, Docker), whatever they're called. None left: the system's own choice, as before.
+// VirtualBox, VMware, Docker), whatever they're called. None left: the system's own choice, as before. ponytail: by
+// name and maker's code only — a VPN named plainly, on a real card's code, isn't told apart.
 const VIRTUAL = /vethernet|wsl|hyper-v|virtualbox|vbox|vmware|vmnet|docker|br-|virbr|veth|tap|tun|wireguard|\bwg\d|nordlynx|tailscale|zerotier|openvpn|vpn|loopback/i;
 const VIRTUAL_MAC = /^(00:15:5d|08:00:27|0a:00:27|00:50:56|00:0c:29|00:05:69|00:1c:14|02:42)/i;
 function houseNets() {
