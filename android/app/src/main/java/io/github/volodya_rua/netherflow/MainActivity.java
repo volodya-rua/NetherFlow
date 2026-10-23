@@ -46,6 +46,7 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(FilesPlugin.class);
         registerPlugin(UpdatePlugin.class);
         registerPlugin(CastPlugin.class);
+        registerPlugin(VoicePlugin.class);
         UpdatePlugin.forgetOld(this); // (a page downloaded for the APK before this one: this one's own instead)
         super.onCreate(savedInstanceState);
 

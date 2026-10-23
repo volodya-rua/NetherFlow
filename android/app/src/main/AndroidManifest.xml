@@ -93,6 +93,8 @@
         <package android:name="com.google.android.googlequicksearchbox" />
         <!-- whether Android Auto is running: the provider it keeps for apps to ask (see PlaybackPlugin.carState) -->
         <provider android:authorities="androidx.car.app.connection" />
+        <!-- voice control: the phone's speech recognizer (VoicePlugin) -->
+        <intent><action android:name="android.speech.RecognitionService" /></intent>
     </queries>
 
     <!-- Permissions -->
@@ -117,4 +119,7 @@
          lets NetherFlow open itself in the background when Android Auto connects or the car asks for a song — the only
          way Android has for that. Nothing is ever drawn over other apps (PlaybackService.startItself). -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <!-- Voice control (the mic by Search, and in Drive mode): asked for the first time it's used; the mic on only while
+         it's listening for one sentence, recognized on the phone where it can (VoicePlugin) -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
 </manifest>

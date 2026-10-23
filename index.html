@@ -930,6 +930,15 @@ body.home .home-stage .msg { font-size: clamp(56px, min(15vw, 24cqh), 240px); } 
 .dv-prog i { height: 8px; border-radius: 4px; background: rgba(255,255,255,.12); overflow: hidden; }
 .dv-prog b { display: block; height: 100%; width: 0; border-radius: inherit; background: linear-gradient(90deg, var(--b), var(--a)); box-shadow: 0 0 14px var(--a); }
 .dv-like { display: inline-flex; align-items: center; gap: 8px; }
+.dv-like[hidden] { display: none; }
+/* voice control: listening (the ring swells with your voice), then what it heard and did */
+.voice-ui { position: fixed; inset: auto 0 calc(118px + env(safe-area-inset-bottom)) 0; margin: 0 auto; width: min(460px, calc(100vw - 32px)); padding: 16px 20px;
+  border: 1px solid color-mix(in srgb, var(--a) 45%, transparent); border-radius: 22px; background: color-mix(in srgb, #050505 86%, var(--a)); color: #fff;
+  grid-template-columns: auto 1fr; gap: 4px 16px; align-items: center; box-shadow: 0 0 44px color-mix(in srgb, var(--a) 30%, transparent); }
+.voice-ui:popover-open { display: grid; }
+.voice-ring { grid-row: span 2; width: 38px; height: 38px; border-radius: 50%; background: var(--a); box-shadow: 0 0 0 calc(var(--lv, 0) * 14px) color-mix(in srgb, var(--a) 32%, transparent); transition: box-shadow .08s; }
+.voice-text { margin: 0; font: italic 400 20px/1.2 var(--serif); min-height: 1.2em; overflow-wrap: anywhere; }
+.voice-ui small { opacity: .7; }
 .dv-like svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linejoin: round; }
 .dv-like.on { background: color-mix(in srgb, var(--a) 24%, transparent); color: var(--a); }
 .dv-like.on svg { fill: currentColor; }
@@ -1533,6 +1542,7 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
 <div id="syncPanel" class="moods textp qpanel" popover aria-label="Sync"></div>
 <div id="songMenu" class="smenu lbl" popover aria-label="Song options"></div>
 <div id="toast" class="toast" popover="manual" role="status"></div>
+<div id="voiceUi" class="voice-ui" popover="manual" role="status" aria-live="polite"><i class="voice-ring" aria-hidden="true"></i><p id="voiceText" class="voice-text"></p><small id="voiceHint" class="lbl"></small></div>
 <div id="eqPanel" class="eq" popover aria-label="Equalizer">
   <div class="eq-top"><h3>Equalizer</h3><label class="lbl"><span id="eqState">Off</span><button id="eqSwitch" class="switch" role="switch" aria-checked="false" aria-label="Equalizer on or off"></button></label></div>
   <div id="eqPresets" class="presets lbl"></div>
@@ -1554,6 +1564,7 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
     <nav class="files lbl">
       <!-- Search: a lens with a sound wave in it. Library: a record sliding out of its sleeve. -->
       <button id="openSearch" class="link hot nav-ico" aria-label="Search (/)" title="Search (/)"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="7"/><path d="M15.6 15.6L21 21M7.5 9.5v2M10.5 7.5v6M13.5 9v3"/></svg></button>
+      <button id="voiceBtn" class="link nav-ico" aria-label="Voice: say a song, or what to do" title="Voice" hidden><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg></button>
       <button id="openLib" class="link nav-ico" aria-label="Library (L)" title="Library (L)"><svg viewBox="0 0 24 24"><path d="M14.5 5.16a7 7 0 0 1 0 13.68M14.5 7.76a4.5 4.5 0 0 1 0 8.48"/><rect x="2.5" y="4.5" width="12" height="15" rx="1.5"/><path d="M6 15.5h5"/></svg><span id="dlCount" class="dl-count" hidden></span></button>
       <button id="togetherBtn" class="link nav-ico tg-btn" popovertarget="togetherPanel" aria-label="Listen together" title="Listen together"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3 19.5c.6-3.3 3-5.2 6-5.2s5.4 1.9 6 5.2"/><circle cx="17" cy="9" r="2.5"/><path d="M16.5 14.3c2.4.2 4.1 1.9 4.6 4.7"/></svg><b id="tgCount" class="tg-count" hidden></b></button>
       <!-- Play on a TV or speaker: a screen with sound coming from it -->
@@ -1745,7 +1756,7 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
     <button id="dvPlay" class="dv-btn dv-main" aria-label="Play or pause"><svg class="i-play" viewBox="0 0 24 24"><path d="M7 4.5v15L19.5 12z"/></svg><svg class="i-pause" viewBox="0 0 24 24"><path d="M7.5 4.5v15M16.5 4.5v15"/></svg></button>
     <button id="dvNext" class="dv-btn" aria-label="Next song"><svg viewBox="0 0 24 24"><path d="M18 5v14M5 5.5 15 12 5 18.5z"/></svg></button>
   </div>
-  <div class="dv-skip"><button id="dvBack" class="dv-small lbl"></button><button id="dvLike" class="dv-small dv-like lbl" aria-label="Like this song"><svg viewBox="0 0 24 24"><path d="M12 20.5s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.6a4.3 4.3 0 0 1 7.5 2.7c0 5.6-7.5 10.2-7.5 10.2z"/></svg>Like</button><button id="dvFwd" class="dv-small lbl"></button></div>
+  <div class="dv-skip"><button id="dvBack" class="dv-small lbl"></button><button id="dvLike" class="dv-small dv-like lbl" aria-label="Like this song"><svg viewBox="0 0 24 24"><path d="M12 20.5s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.6a4.3 4.3 0 0 1 7.5 2.7c0 5.6-7.5 10.2-7.5 10.2z"/></svg>Like</button><button id="dvVoice" class="dv-small dv-like lbl" aria-label="Speak: a song, or what to do" hidden><svg aria-hidden="true" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg>Speak</button><button id="dvFwd" class="dv-small lbl"></button></div>
 </dialog>
 
 <dialog id="search" class="search" aria-label="Search songs">
@@ -3572,6 +3583,83 @@ async function carPlay(action, text) {
   const found = (await searchSongs(q).catch(() => [])).filter(playable);
   if (!found.length) return toast(`Nothing found for "${q}"`);
   queue = found.slice(0, 20); playTrack(queue[0], q, false, true);
+}
+// ---------- voice control (Android: the mic by Search, and Drive mode's Speak) ----------
+// One sentence, recognized by the phone (VoicePlugin: on the phone itself where it can), then done as it says: "play Sid
+// Sriram", "play my liked songs", "play the playlist Drive Mix", "next", "previous", "pause", "carry on", "louder",
+// "quieter", "shuffle", "repeat this", "like this", "songs like this", "what's playing", "sing" — and Hindi's basics
+// ("agla gaana", "ruko", "Arijit ke gaane bajao"). Anything else: a song or an artist, searched and played. The music
+// paused while it listens (so it hears you, not the song), and carried on after unless you said otherwise.
+const Voice = native ? Capacitor.Plugins.Voice : null;
+const voice = { on: false, busy: false };
+if (Voice) {
+  Voice.available().then(r => { voice.on = !!r.on; $('voiceBtn').hidden = $('dvVoice').hidden = !voice.on; }, () => {});
+  Voice.addListener('voice', e => {
+    if (e.state === 'level') $('voiceUi').style.setProperty('--lv', (+e.level || 0).toFixed(2));
+    else if (e.state === 'words' && e.text) $('voiceText').textContent = e.text;
+    else if (e.state === 'heard') $('voiceHint').textContent = 'Got it…';
+  });
+}
+async function listen() {
+  if (!voice.on) return;
+  if (voice.busy) return Voice.stop().catch(() => {}); // (tapped again: that's all it says)
+  voice.busy = true;
+  const ui = $('voiceUi'), hide = ms => { clearTimeout(voice.t); voice.t = setTimeout(() => ui.hidePopover(), ms); };
+  $('voiceText').textContent = 'Listening…'; $('voiceHint').textContent = 'Say a song or an artist, or "next", "pause", "louder"…'; ui.style.setProperty('--lv', 0);
+  clearTimeout(voice.t); if (!ui.matches(':popover-open')) ui.showPopover();
+  const was = P.loaded && !P.paused, song = current;
+  if (was) P.pause();
+  let r = null, why = '';
+  try { r = await Voice.listen({ lang: navigator.language || '' }); why = r?.why || ''; } catch (e) { why = e.code || e.message || ''; }
+  voice.busy = false;
+  if (!r?.text) {
+    $('voiceText').textContent = { denied: 'The microphone isn\'t allowed', 'no internet': 'Voice needs the internet on this phone', language: 'Your phone can\'t understand this language offline yet' }[why] || 'Didn\'t catch that';
+    $('voiceHint').textContent = why === 'denied' ? 'Allow it for NetherFlow in the phone\'s settings' : 'Tap the mic and try again';
+    if (was) P.play();
+    return hide(2600);
+  }
+  $('voiceText').textContent = r.text;
+  const done = await voiceDo(r.text);
+  $('voiceHint').textContent = done.say;
+  if (was && done.resume && current === song && P.loaded && P.paused) P.play(); // (said something that doesn't play or stop: the song carries on)
+  hide(2400);
+}
+$('voiceBtn').onclick = listen;
+$('dvVoice').onclick = listen;
+// what was said, done: { say: what it did, resume: whether the song paused to listen carries on }
+async function voiceDo(said) {
+  const t = said.toLowerCase().replace(/[.!?,;:]/g, ' ').replace(/\s+/g, ' ').trim(), is = re => re.test(t);
+  const play = (list, say) => { if (!list?.length) return { say: 'Nothing there yet', resume: true }; queue = list.slice(); playTrack(queue[0], '', false, true); return { say, resume: false }; };
+  if (!t) return { say: '', resume: true };
+  if (is(/^(next|skip|next (song|one|track)|skip (this|it|this one|this song)|agla( gaana| gana)?|aage)$/)) { nextTrack(); return { say: 'Next song', resume: false }; }
+  if (is(/^(previous|back|go back|last song|previous (song|one|track)|pichla( gaana| gana)?|peeche)$/)) { prevTrack(); return { say: 'Previous song', resume: false }; }
+  if (is(/^(pause|stop|stop (the )?music|stop playing|ruko|ruk jao|band karo|rok do|bas)$/)) return { say: 'Paused', resume: false };
+  if (is(/^(play|resume|continue|carry on|go on|keep (going|playing)|unpause|chalao|bajao|play (the )?music)$/)) { await carPlay('play', ''); return { say: 'Playing', resume: true }; }
+  if (is(/^(louder|volume up|turn (it )?up|increase (the )?volume|more volume|awaaz badhao|tez karo)$/)) { setVolume(Math.min(1, volume + .15)); return { say: `Volume ${volPct()}`, resume: true }; }
+  if (is(/^(quieter|softer|volume down|turn (it )?down|lower (the )?volume|decrease (the )?volume|awaaz kam karo|dheere)$/)) { setVolume(Math.max(.05, volume - .15)); return { say: `Volume ${volPct()}`, resume: true }; }
+  if (is(/^(shuffle|shuffle on|shuffle (it|this|everything))$/)) { setShuffle(true, true); return { say: 'Shuffle on', resume: true }; }
+  if (is(/^(shuffle off|stop shuffling|no shuffle)$/)) { setShuffle(false, true); return { say: 'Shuffle off', resume: true }; }
+  if (is(/^(repeat|repeat (this|it|one|this song|the song)|play (this|it) again|on repeat)$/)) { setRepeat('one'); return { say: 'Repeating this song', resume: true }; }
+  if (is(/^(repeat off|stop repeating|no repeat)$/)) { setRepeat('off'); return { say: 'Repeat off', resume: true }; }
+  if (is(/^(like|like (this|it|this song)|i like (this|it|this song)|love (this|it|this song)|add (this|it) to (my )?(liked songs|likes|favou?rites))$/)) {
+    if (current && !isLiked(current)) toggleLike(current); return { say: current ? 'Added to Liked songs' : 'Nothing playing', resume: true }; }
+  if (is(/^(what('s| is) (this|playing|this song|the song)|what song is (this|it|playing)|who('s| is) (singing|this|the singer)|which song is this)$/))
+    return { say: current ? `${current.trackName} · ${current.artistName}` : 'Nothing playing', resume: true };
+  if (is(/^(sing|karaoke|sing along|let me sing|sing mode)$/)) { setSing(true); return { say: 'Sing on', resume: true }; }
+  if (is(/^((play )?(something|songs|more|music) like (this|it|this song)|radio|start (a )?radio|play (a |the )?radio)$/)) { if (current) startRadio(current); return { say: current ? 'Songs like this one' : 'Nothing playing', resume: !current }; }
+  if (is(/^(play )?(my )?(liked songs|likes|liked|favou?rites|favou?rite songs|my songs)$/)) return play(library.liked, 'Your liked songs');
+  if (is(/^(play )?(my )?(downloads|downloaded songs|offline songs|saved songs)$/)) return play([...saved.values()].map(x => x.track).filter(Boolean), 'Your downloads');
+  const pl = t.match(/^(?:play )?(?:my )?(?:the )?(?:playlist (.+)|(.+) playlist)$/);
+  if (pl) {
+    const want = (pl[1] || pl[2]).trim(), lists = library.playlists, p = lists.find(x => x.name.toLowerCase() === want) || lists.find(x => x.name.toLowerCase().includes(want)) || lists.find(x => want.includes(x.name.toLowerCase()));
+    if (p) return play(p.tracks, `Playing ${p.name}`);
+  }
+  // the rest: a song or an artist ("play …", "… bajao", "… ke gaane")
+  const q = said.replace(/[.!?]+$/, '').trim().replace(/^(play|put on|i want to (hear|listen to)|let me hear|listen to|can you play|please play)\s+/i, '')
+    .replace(/\s+(ke|ka|ki)?\s*(gaane|gane|gana|gaana|songs?)?\s*(bajao|chalao|sunao|lagao)$/i, '').replace(/\s+(ke|ka|ki)\s+(gaane|gane|gana|gaana)$/i, '').trim();
+  if (!q) return { say: 'Didn\'t catch a song', resume: true };
+  await carPlay('search', q);
+  return { say: `Playing ${q}`, resume: false };
 }
 // ---------- in the car (Android): Android Auto, a car's Bluetooth, a cable ----------
 // Android says (Playback "route", see PlaybackPlugin) whether Android Auto's running and what the sound comes out of. In
