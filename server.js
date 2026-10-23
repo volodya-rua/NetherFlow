@@ -29,6 +29,8 @@ const FILES = {
   '/logo.png': ['logo.png', 'image/png'],
   '/karaoke.js': ['karaoke.js', 'text/javascript'], // (Sing's AI voice remover: its worker — the engine and model in ai/)
   '/whisper.js': ['whisper.js', 'text/javascript'], // (voice control's recognizer: its worker — the engine and model in voice/)
+  '/llm.js': ['llm.js', 'text/javascript'], // (the AI assistant's brain: its worker — the engine and model in the AI pack)
+  '/tts.js': ['tts.js', 'text/javascript'], // (the AI assistant's voice: its worker — the engine and model in the AI pack)
 };
 for (const f of fs.readdirSync(path.join(__dirname, 'licenses'))) FILES['/licenses/' + f] = ['licenses/' + f, 'text/plain; charset=utf-8'];
 // (Sing's AI voice remover: ONNX Runtime Web and Spleeter's model, ai/ — built in by npm run ai, not in the repository)

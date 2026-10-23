@@ -44,7 +44,7 @@
       "endverse.js",
       "cast.js",
       "castnet.js",
-      "winvoice.js","whisper.js",
+      "winvoice.js","whisper.js","llm.js","tts.js",
       "bridgethemusic.js",
       "jsqr.js",
       "karaoke.js",
