@@ -3905,6 +3905,11 @@ async function listen() {
     store.set('netherflow.voiceoffer', '1');
     if (v === 'get') return voicePackGet();
   }
+  if (herePc && voicePack.ready && !hey.on && !store.get('netherflow.heyasked')) { // (the computer, once: hands free offered, with its own consent — the user looked for it on the mic, not in Settings)
+    store.set('netherflow.heyasked', '1');
+    await setWake('On');
+    if (hey.on) return toast('Listening for "Hey NetherFlow": say it any time', 5000);
+  }
   if (!store.get('netherflow.voicenote') && !(herePc && voicePack.ready)) { // (the first time: where the words go, then the phone's own question; the voice pack's never go anywhere)
     const d = $('voiceNote'); d.returnValue = ''; d.showModal(); placeWinctl();
     if (!native) d.querySelector('p').textContent = 'Your words are worked out on this computer by Windows\' own speech recognition, or by Microsoft\'s online speech service if you\'ve turned on "Online speech recognition" in Windows\' settings. NetherFlow never keeps a recording.'; // (Legal's wording)
