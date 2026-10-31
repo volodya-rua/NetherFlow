@@ -931,6 +931,15 @@ body.home .singbar { display: none; } /* (its voice slider is for the lyrics: no
 /* ---------- cover view: the song's cover on a spinning record, with the beat ring round it (drawn on #viz) ---------- */
 .stage-wrap { display: grid; min-height: 0; min-width: 0; container: wrap / size; }
 .stage-wrap > * { grid-area: 1 / 1; min-height: 0; min-width: 0; }
+/* Back, everywhere: ← Home on the song's page (the song plays on), ← Back atop every panel */
+.to-home { display: none; justify-self: start; align-self: start; z-index: 4; align-items: center; gap: 6px; padding: 6px 13px 6px 8px; border-radius: 999px; font-size: 10.5px;
+  letter-spacing: .12em; color: var(--ink); background: color-mix(in srgb, var(--bg) 55%, transparent); box-shadow: inset 0 0 0 1px var(--hair); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+  transition: color .2s, box-shadow .2s; }
+.to-home .ico { width: 14px; height: 14px; }
+.to-home:hover { color: var(--a); box-shadow: inset 0 0 0 1px var(--a); }
+body.has-song:not(.home, .fs) .to-home { display: inline-flex; }
+.panel-back { grid-column: 1 / -1; justify-self: start; display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px 8px 2px; font-size: 10.5px; letter-spacing: .12em; color: var(--a); }
+.panel-back .ico { width: 14px; height: 14px; }
 .cover-stage { display: none; position: relative; grid-template-columns: auto; place-content: center; justify-items: center; }
 .view-cover.has-song #stage { visibility: hidden; }
 /* the visualiser view: the backdrop's canvas draws it (see visFrame) — nothing over it but the controls */
@@ -1644,6 +1653,7 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
 
   <section class="mid">
     <div class="stage-wrap">
+    <button id="toHome" class="to-home lbl" aria-label="Back to the home screen (the song plays on)"><svg viewBox="0 0 24 24" class="ico"><path d="M14.5 5.5L8 12l6.5 6.5"/></svg>Home</button>
     <div id="coverStage" class="cover-stage">
       <div class="cs-disc" aria-hidden="true"><div class="cs-spin"></div><i class="cs-art"></i></div>
       <div class="cs-text"><p id="csTitle" class="cs-title"></p><p id="csSub" class="cs-sub lbl"></p><p id="csLine" class="cs-line" aria-live="off"></p></div>
@@ -3223,6 +3233,7 @@ setTimeout(updDaily, 12000); setInterval(updDaily, 3 * 3600e3); // (and again in
 // its row in Settings (and kept up to date in place while it's open)
 function updRow() {
   const q = el('div', 'bgq lbl upd'), mb = n => (n / 1e6).toFixed(n > 1e7 ? 0 : 1) + ' MB', v = upd.version ? ` ${upd.version}` : '';
+  q.dataset.set = 'Updates';
   const has = upd.version ? `You have NetherFlow ${upd.version}. ` : ''; // (the version always said: a bug report asks for it)
   const note = {
     '': has + 'It updates itself, downloading only what changed.', checking: has + 'Looking for a newer one…', none: `NetherFlow${v} is the latest.`,
@@ -3245,8 +3256,12 @@ function updShow() { $('textPanel').querySelector('.upd')?.replaceWith(updRow())
 
 // (looked for again when Settings opens — only then: the panel's also drawn at start, unseen)
 $('textPanel').addEventListener('toggle', e => { if (e.newState === 'open' && (!upd.state || (upd.state === 'none' && Date.now() - (+store.get('netherflow.updchecked') || 0) > 3600e3))) setTimeout(() => updCheck(), 300); });
+// Settings, Classic: the few most people change; Advanced: every one (the user's pick, kept on this device)
+let setMode = store.get('netherflow.setmode') === 'Advanced' ? 'Advanced' : 'Classic';
+const CLASSIC = new Set(['Theme', 'Updates', 'Interface size', 'Show', 'Visualiser', 'Lyrics animation', 'Lyrics size', 'Autoplay', 'Smooth mix', 'Liked songs offline', 'Sync with phone', 'Sync with computer', 'Island']);
+function setSetMode(v) { setMode = v; store.set('netherflow.setmode', v === 'Advanced' ? v : ''); renderTextPanel(); }
 function renderTextPanel() {
-  $('textPanel').replaceChildren(
+  const rows = [
     settingRow('Theme', ['NetherFlow', ...SKIN_LIST], skin || 'NetherFlow', v => setSkin(v === 'NetherFlow' ? '' : v),
       'The whole look at once: every button and panel, the colours, the background, the timeline, the lyrics\' faces and the cursor. ' +
       SKIN_LIST.map(k => `${k}: ${SKINS[k].note.charAt(0).toLowerCase() + SKINS[k].note.slice(1)}.`).join(' ')),
@@ -3303,7 +3318,9 @@ function renderTextPanel() {
       settingRow('Start by itself in the car', [car.self ? 'Allowed' : 'Allow'], car.self ? 'Allowed' : '', () => Capacitor.Plugins.Playback.allowSelfStart().catch(() => {}),
         'When Android Auto connects, or the car asks for a song, NetherFlow opens by itself behind what\'s on the phone and plays: no need to open it first. Android allows that only with NetherFlow\'s "Display over other apps" switched on (it never draws over other apps: it\'s how Android lets an app open itself in the background).'),
       settingRow('Android Auto', ['Its settings'], '', () => Capacitor.Plugins.Playback.carSettings().catch(() => toast('Android Auto isn\'t on this phone')),
-        'NetherFlow isn\'t from the Play Store, so Android Auto lists it only once you allow that: in Android Auto\'s settings, tap Version 10 times (developer settings), then ⋮ › Developer settings › Unknown sources: on. Then NetherFlow is with the car\'s other music apps. It\'s Android Auto\'s own developer setting, so turning it on is your choice.')] : []));
+        'NetherFlow isn\'t from the Play Store, so Android Auto lists it only once you allow that: in Android Auto\'s settings, tap Version 10 times (developer settings), then ⋮ › Developer settings › Unknown sources: on. Then NetherFlow is with the car\'s other music apps. It\'s Android Auto\'s own developer setting, so turning it on is your choice.')] : [])];
+  $('textPanel').replaceChildren(settingRow('Settings', ['Classic', 'Advanced'], setMode, setSetMode, 'Classic: the few settings most people change. Advanced: every one of them.'),
+    ...(setMode === 'Advanced' ? rows : rows.filter(r => CLASSIC.has(r.dataset?.set))));
 }
 // a labelled row of choices (the mood menu and the Settings panel)
 // a labelled number setting, with − and + either side of it: held down, they keep counting (by 5 after a moment)
@@ -3328,6 +3345,7 @@ function stepperRow(label, min, max, cur, pick, unit, note) {
   set(cur);
   row.append(minus, val, plus);
   q.append(el('span', 'sl-head', label), row, note ? el('small', '', note) : '');
+  q.dataset.set = label;
   return q;
 }
 function settingRow(label, names, cur, pick, note) {
@@ -3340,6 +3358,7 @@ function settingRow(label, names, cur, pick, note) {
     seg.append(b);
   }
   q.append(el('span', '', label), seg, note ? el('small', '', note) : '');
+  q.dataset.set = label;
   return q;
 }
 // Big text sizes itself: as large as fits (a long line taking more rows), up to a cap (so a two-word line doesn't swamp
@@ -11634,7 +11653,7 @@ function tvLand() {
   const all = [...scope.querySelectorAll(FOCUSABLE)].filter(e => !e.disabled && e.getClientRects().length && (!e.checkVisibility || e.checkVisibility({ checkVisibilityCSS: true })));
   const seen = e => { const r = e.getBoundingClientRect(); return r.bottom > 0 && r.top < innerHeight && r.right > 0 && r.left < innerWidth; };
   const to = all.find(e => tvKey(e) === tvLast) // the same one, drawn again
-    || all.find(e => seen(e) && !e.matches(TEXT_FIELD) && !/^(closeLib|apBack)$/.test(e.id) && !e.closest('header, .top')) // else the first in sight on the page (not a field, not Back)
+    || all.find(e => seen(e) && !e.matches(TEXT_FIELD) && !/^(closeLib|apBack)$/.test(e.id) && !e.classList.contains('panel-back') && !e.closest('header, .top')) // else the first in sight on the page (not a field, not Back)
     || all.find(seen);
   to?.focus({ preventScroll: true });
   to?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
@@ -11696,6 +11715,17 @@ function goHome(on) {
   $('homeNow').querySelector('b').textContent = `${curTitle} — ${$('artist').textContent}`;
 }
 $('homeNow').onclick = () => goHome(false);
+$('toHome').onclick = () => goHome(true);
+// ← Back atop every panel: it closes the panel, as Esc, a tap outside or the phone's Back do (kept first as the panel's
+// drawn again)
+for (const id of ['moods', 'textPanel', 'queuePanel', 'togetherPanel', 'castPanel', 'syncPanel', 'eqPanel']) {
+  const p = $(id), back = el('button', 'link panel-back lbl');
+  back.append(ico('back'), 'Back'); back.setAttribute('aria-label', 'Back: close ' + (p.getAttribute('aria-label') || 'this panel'));
+  back.onclick = () => p.hidePopover();
+  const keep = () => { if (p.firstChild !== back) p.prepend(back); };
+  new MutationObserver(keep).observe(p, { childList: true });
+  keep();
+}
 $('fsBtn').onclick = toggleFull;
 document.addEventListener('fullscreenchange', () => { body.classList.toggle('fs', !!document.fullscreenElement); wake(); });
 // In full screen the controls fade out after a few still seconds, and come back on any mouse move or key.
@@ -11712,8 +11742,8 @@ function wake() {
 // (a touch, too — and in the visualiser, a tap that only brought the controls back doesn't also change its look)
 let tapWoke = false;
 addEventListener('pointerdown', () => { tapWoke = body.classList.contains('idle'); wake(); }, true);
-document.querySelector('.stage-wrap').addEventListener('click', () => {
-  if (view !== 'Visualiser' || tapWoke || !body.classList.contains('has-song')) return;
+document.querySelector('.stage-wrap').addEventListener('click', e => {
+  if (view !== 'Visualiser' || tapWoke || !body.classList.contains('has-song') || e.target.closest('.to-home')) return;
   visNow = (visNow + 1) % VIS.length; if (visPick !== 'Auto') setVis(VIS[visNow]);
   toast(`Visualiser: ${VIS[visNow]}`);
 });
