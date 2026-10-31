@@ -3047,7 +3047,7 @@ function setBeat(name) { beatStyle = name; store.set('netherflow.beat', name ===
 // the wave along all four sides of the screen too (with the lyrics as well as the cover)
 let edges = store.get('netherflow.edges') === 'On';
 // its look (see drawEdges) and how far in from the sides it reaches
-const EDGE_STYLES = ['Wave', 'Bars', 'Neon', 'Glow', 'Frame', 'Dots', 'Aurora', 'Spikes', 'Ripple', 'Rim'], EDGE_SIZES = { Small: .6, Medium: 1, Large: 1.5, Huge: 2.2 };
+const EDGE_STYLES = ['Wave', 'Bars', 'Neon', 'Glow', 'Frame', 'Dots', 'Aurora', 'Spikes', 'Ripple', 'Rim', 'Trace'], EDGE_SIZES = { Small: .6, Medium: 1, Large: 1.5, Huge: 2.2 };
 let edgeStyle = EDGE_STYLES.includes(store.get('netherflow.edgestyle')) ? store.get('netherflow.edgestyle') : 'Wave';
 // (an edge look bringing its own code: EDGE_HOOKS[name] = { draw(g, W, H, o) from drawEdges, rows() its own Settings rows })
 const EDGE_HOOKS = {};
@@ -13786,6 +13786,36 @@ function drawRing(now, dt, live, kick) {
 
 // The wave along the four sides of the screen: the ring's Wave layers, mirrored on each side — the bass in the
 // middle of every side, the treble toward the corners — reaching in at most about a tenth of the screen.
+// Trace (the user's video, 2026-11-01: "an animation for the edges of the screen, one exact like that"): the screen's
+// rim one hairline, all but unseen, and lights travelling round it — three long streaks, soft at both ends, in the
+// mood's colour (the cover's, on Auto), a bright core in each; they run faster, grow and brighten with the music, and
+// a beat flashes a light at the top's middle. Each streak is the rim's own path, dashed: one dash, its place the offset
+// (three dashes over one another, each shorter and brighter, make its soft ends).
+const trace = { at: [.08, .41, .73], v: [.05, .034, -.026], flare: 0 };
+EDGE_HOOKS.Trace = {
+  draw(g, W, H, o) {
+    const inset = 1.5, per = 2 * (W + H) - 8 * inset, e = Math.min(1, o.bass * 1.2);
+    let mids = 0; for (let k = 8; k < 40; k++) mids += ring.slow[k]; mids /= 32;
+    trace.flare = o.beat ? 1 : Math.max(0, trace.flare - o.dt * 2.4);
+    o.frame(inset);
+    g.strokeStyle = rgba(pal.a, .06 + e * .1); g.lineWidth = 1.2; g.stroke(); // (the hairline)
+    g.globalCompositeOperation = 'lighter';
+    const streak = (mid, L, I) => { // (one streak, its middle mid px along the rim, L long)
+      for (const [k, wd, al, col] of [[1, 18, .16, pal.a], [.7, 7, .34, pal.a], [.4, 2.8, .95, pal.a], [.18, 1.4, .55, pal.ink]]) {
+        const len = Math.max(2, L * k);
+        g.setLineDash([len, per - len]); g.lineDashOffset = len / 2 - mid;
+        g.strokeStyle = rgba(col, al * I); g.lineWidth = wd; g.stroke();
+      }
+    };
+    trace.at.forEach((p, i) => {
+      trace.at[i] = ((p + o.dt * trace.v[i] * (motion ? 1 + e * 2.2 : 0)) % 1 + 1) % 1;
+      const L = per * (.09 + .1 * Math.sin(o.now / 2600 + i * 2.1) ** 2 + e * .09 + mids * .06 + trace.flare * .04);
+      streak(trace.at[i] * per, L, Math.min(1.25, .32 + e * .75 + mids * .25 + trace.flare * .25));
+    });
+    if (trace.flare > .02) streak(W / 2 - inset, per * .05 * (.6 + trace.flare), trace.flare * 1.1); // (the beat's flash, at the top's middle)
+    g.setLineDash([]); g.lineDashOffset = 0; g.globalCompositeOperation = 'source-over';
+  },
+};
 const edgeFx = { run: 0, beat: 0, rip: [] }; // (Frame's lights, how far round; the last beat seen; Ripple's ripples)
 function drawEdges(g, W, H, kick = 0, now = performance.now(), dt = 1 / 60) {
   const D = Math.min(W, H) * (W <= 720 ? .1 : .07) * EDGE_SIZES[edgeSize];
