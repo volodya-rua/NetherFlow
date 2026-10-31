@@ -44,32 +44,27 @@ need a powerful graphics card anyway), about 18 MB smaller, and it updates to Li
 
 <a id="whats-new"></a>
 
-## What's new in 1.6.1
+## What's new in 1.6.2
 
-**Phone ↔ PC sync keeps your computer's name to itself:** while it's open, other devices on your Wi-Fi only see "your
-computer". Everything 1.6.0 brought is here too:
+**Talk to it, drive with it, watch it move, and read every word.** The biggest update yet:
 
-- **Play on a TV or speaker.** It works with Chromecast and other Google Cast devices, and with DLNA TVs and speakers.
-  NetherFlow isn't made, certified or endorsed by Google
-- **NetherFlow also runs on Fire TV: install the APK.** Phones and computers on your Wi-Fi can then play on it
-- **Live concerts from the Internet Archive's Live Music Archive:** free shows, most of them taped by
-  fans, in Library › Live concerts and with the artists you search for
-- **Weekly picks** (new every Monday) and **Today's mix**, made from what you play and like
-- **Listen together with up to 30 people**
-- **Lyrics romanized** in Hindi, Punjabi and India's other scripts, and word by word in them where the song has it
-- **Share to NetherFlow** (Android): a song shared from YouTube or YouTube Music plays that very song
-- **Move the island** (Windows) anywhere on the screen: Settings › Island position, or Ctrl+Alt+I from any app
-- **A notice when an update is out,** and on phones the music keeps playing when Android takes the app's page away
-- **Faster and steadier everywhere:** long lists quicker to draw and steady while songs download, and on phones,
-  jumping ahead past what's loaded just works
-
-1.5.1 brought the new search, playlists you can arrange and the 300% booster: see the
-[changelog](CHANGELOG.md#151-better-search-playlists-you-can-arrange-and-a-booster-up-to-300).
+- **Voice control** on Android and Windows: say a song, an artist or what to do. On Windows, **"Hey NetherFlow"** works
+  hands-free with the optional voice pack, which runs on your computer
+- **Android Auto,** with music that doesn't break when the car connects, and **Road trip** for a drive offline
+- **A visualiser:** the whole screen moving with the music, in eight looks
+- **Lyrics you can read:** eight new styles (Tower, Lens, Pop, Drift, Wall, Fisheye, Fisheye Emoji, Emoji Stack), the
+  word being sung on a block of the mood's colour; Tamil, Hindi and other scripts no longer break apart
+- **Light round your screen:** Trace, one long arc of light gliding round the screen in the album's colour, Rim and five
+  more edge looks
+- **Make it yours:** your own pictures as the background, your own colours, 14 more moods and 9 more backgrounds
+- **Shuffle that plays every song once** before any repeats, **Repeat a part,** and saved songs that carry on offline
+- **360 sound rebuilt,** AI karaoke on computers, MobiVib on phones, QR codes for sharing, importing, Listen together and
+  sync, Smart playlists, covers that show at once, Classic and Advanced Settings, and Back everywhere
 
 > [!NOTE]
-> Someone on 1.4.2 or older can't join a Listen together session started on 1.5 or newer, so update both sides. Shared
-> playlists keep working with older versions. The terms and privacy policy changed a little (TVs and speakers, NetherFlow
-> on a TV, live concerts and update notices), so you're asked to accept them again.
+> The terms and privacy policy changed (voice control, the camera for QR codes, in the car, AI karaoke, and what's kept
+> on your device), so you're asked to accept them again. On Android, NetherFlow's data no longer goes into Google Drive
+> backup: it stays on your phone (Phone ↔ PC sync moves your library).
 
 The full notes for this release and every earlier one are in the [changelog](CHANGELOG.md).
 
