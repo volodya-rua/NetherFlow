@@ -320,6 +320,11 @@ body.home .singbar { display: none; } /* (its voice slider is for the lyrics: no
 .la-drift .cur .w { animation: drift-in .5s cubic-bezier(.2,.9,.3,1.1) backwards; animation-delay: calc(var(--i) * 35ms); transition: transform .4s cubic-bezier(.2,.9,.3,1.2); }
 .la-drift .cur .w.now { transform: translateZ(.55em) rotateX(-12deg); }
 @keyframes drift-in { from { opacity: 0; transform: translateZ(-2em) translateY(.4em); } }
+/* @slot:wall-css */
+/* · */
+/* @slot:fisheye-css */
+/* · */
+/* @slot:emojistack-css */
 /* The self-laid styles (Spiral, Swarm, Cylinder, Globe, Helix, DNA, Tornado, Orbit, Atom): the letters (Cylinder:
    words) are placed one by one, every frame, round the middle of the stage (see layoutLyricShape / turnLyricShape) */
 .la-self .deck.lyr { position: absolute; inset: 0; transform: none; }
@@ -1181,6 +1186,9 @@ body.home .home-now { display: flex; }
 /* (out of the page unless it's the background chosen: even unseen, a full-screen layer is a layer to blend) */
 .theme-cover .cover-bg { display: block; opacity: 1; @starting-style { opacity: 0; } } /* the canvas stays under it, plain */
 .theme-cover:not(.grain-still) .cover-bg { animation: drift 40s ease-in-out infinite alternate; } /* (only when it's seen) */
+/* @slot:colors-css */
+/* · */
+/* @slot:pictures-css */
 
 @media (max-width: 900px) and (min-height: 521px) { /* (and a narrow window, a tablet upright: in one row, the bar's parts ran into each other) */
   /* phones: the song's name gets the first row, the controls the second (spread across), the time and sync the third */
@@ -1597,6 +1605,7 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
 <div id="splash" aria-hidden="true"><b>NetherFlow</b></div>
 <canvas id="fx" aria-hidden="true"></canvas>
 <div class="cover-bg" aria-hidden="true"></div>
+<div class="pic-bg" aria-hidden="true"></div>
 <div class="grain" aria-hidden="true"></div>
 <div id="agent" class="agent" aria-hidden="true"><b class="ag-bg"></b><img class="ag-pt" alt=""></div><!-- the Tactical theme's agent (see "the themes' extras") -->
 <div class="vedit" id="vedit" inert aria-hidden="true"><canvas id="vedc"></canvas><video id="vedv" muted playsinline crossorigin="anonymous" preload="auto" hidden></video></div><!-- Extreme lyrics: the song's music video, cut like an edit -->
@@ -2696,10 +2705,10 @@ function setKinetic(v) { kinetic = v === 'Music video'; store.set('netherflow.ki
 
 // ---------- background theme (mood menu): what the backdrop draws. The mood picks its colors. ----------
 // The shader draws all but Gradient and Cover (both CSS: see PLAIN). The index is the shader's style number (themeNo).
-const THEMES = ['Smoke', 'Aurora', 'Liquid', 'Lava', 'Rings', 'Nebula', 'Prism', 'Silk', 'Mesh', 'Fireflies', 'Black Hole', 'Tunnel', 'Storm', 'Kaleido', 'Gyroid', 'Mandala', 'Fractal', 'Julia', 'Crystal', 'Cosmos', 'Galaxy', 'Plasma', 'Ribbons', 'Synapse', 'Halo', 'Bloom', 'Hyperbolic', 'Apollonian', 'Newton', 'Coral', 'Mandelbrot', 'Vortex', 'Deep Field', 'Ridges', 'Spirograph', 'Moiré', 'Gradient', 'Cover',
+const THEMES = ['Smoke', 'Aurora', 'Liquid', 'Lava', 'Rings', 'Nebula', 'Prism', 'Silk', 'Mesh', 'Fireflies', 'Black Hole', 'Tunnel', 'Storm', 'Kaleido', 'Gyroid', 'Mandala', 'Fractal', 'Julia', 'Crystal', 'Cosmos', 'Galaxy', 'Plasma', 'Ribbons', 'Synapse', 'Halo', 'Bloom', 'Hyperbolic', 'Apollonian', 'Newton', 'Coral', 'Mandelbrot', 'Vortex', 'Deep Field', 'Ridges', 'Spirograph', 'Moiré', 'Pictures', 'Gradient', 'Cover',
   'Stickman', 'Spider', 'Blocks', 'Tactical', 'Ops', 'Redline'];
 // (the backgrounds the shader doesn't draw: Gradient, plain CSS; Cover, the album cover blurred, CSS too)
-const PLAIN = new Set(['Gradient', 'Cover']);
+const PLAIN = new Set(['Gradient', 'Cover', 'Pictures']);
 // (the themes' own backdrops: in the list only while their theme is on — see SKINS)
 const SCENES = new Set(['Stickman', 'Spider', 'Blocks', 'Tactical', 'Ops', 'Redline']);
 const ownTheme = () => { const t = store.get('netherflow.theme'); return THEMES.includes(t) && !SCENES.has(t) ? t : 'Smoke'; };
@@ -2708,6 +2717,7 @@ function showTheme(name) {
   theme = name;
   body.classList.toggle('theme-cover', name === 'Cover');
   body.classList.toggle('theme-gradient', name === 'Gradient');
+  body.classList.toggle('theme-pictures', name === 'Pictures');
 }
 function setTheme(name) {
   if (skin) store.set('netherflow.skinbg', name === skin ? '' : name); // (a theme on: its own backdrop, or the one picked over it)
@@ -3019,8 +3029,11 @@ function setBeat(name) { beatStyle = name; store.set('netherflow.beat', name ===
 // the wave along all four sides of the screen too (with the lyrics as well as the cover)
 let edges = store.get('netherflow.edges') === 'On';
 // its look (see drawEdges) and how far in from the sides it reaches
-const EDGE_STYLES = ['Wave', 'Bars', 'Neon', 'Glow', 'Frame', 'Dots', 'Aurora', 'Spikes', 'Ripple'], EDGE_SIZES = { Small: .6, Medium: 1, Large: 1.5, Huge: 2.2 };
+const EDGE_STYLES = ['Wave', 'Bars', 'Neon', 'Glow', 'Frame', 'Dots', 'Aurora', 'Spikes', 'Ripple', 'Rim'], EDGE_SIZES = { Small: .6, Medium: 1, Large: 1.5, Huge: 2.2 };
 let edgeStyle = EDGE_STYLES.includes(store.get('netherflow.edgestyle')) ? store.get('netherflow.edgestyle') : 'Wave';
+// (an edge look bringing its own code: EDGE_HOOKS[name] = { draw(g, W, H, o) from drawEdges, rows() its own Settings rows })
+const EDGE_HOOKS = {};
+// @slot:rim-js
 let edgeSize = EDGE_SIZES[store.get('netherflow.edgesize')] ? store.get('netherflow.edgesize') : 'Medium';
 // the background beating with the music too: it swells and brightens with the bass (the album cover background as well)
 let bgBeat = store.get('netherflow.bgbeat') === 'On', bgKick = 0;
@@ -3029,7 +3042,7 @@ body.classList.toggle('bg-beat', bgBeat);
 // folders on the home screen (an option: see renderFolders)
 let folders = store.get('netherflow.folders') === 'On';
 // how the lyrics move (see "lyrics animations" in the CSS, and buildStage / layoutLyricShape / turnLyricShape)
-const LANIMS = ['Classic', 'Tower', 'Lens', 'Pop', 'Drift', 'Wave', 'Spiral', 'Shatter', 'Fireworks', 'Swarm', 'Black Hole', 'Cylinder', 'Globe', 'Helix', 'DNA', 'Tornado', 'Knot', 'Möbius', 'Ribbon', 'Orbit', 'Atom', 'Tunnel', 'Cube'];
+const LANIMS = ['Classic', 'Tower', 'Lens', 'Pop', 'Drift', 'Wall', 'Fisheye', 'Fisheye Emoji', 'Emoji Stack', 'Wave', 'Spiral', 'Shatter', 'Fireworks', 'Swarm', 'Black Hole', 'Cylinder', 'Globe', 'Helix', 'DNA', 'Tornado', 'Knot', 'Möbius', 'Ribbon', 'Orbit', 'Atom', 'Tunnel', 'Cube'];
 const SELF_LAID = new Set(['Spiral', 'Fireworks', 'Swarm', 'Black Hole', 'Cylinder', 'Globe', 'Helix', 'DNA', 'Tornado', 'Knot', 'Möbius', 'Ribbon', 'Orbit', 'Atom']); // (placed by layoutLyricShape)
 const LETTERED = new Set(['Wave', 'Shatter', ...[...SELF_LAID].filter(n => n !== 'Cylinder')]), HUSHED = new Set(['Tunnel', 'Tower', ...SELF_LAID]);
 const LEAVING = new Set(['Tunnel', 'Cube', 'Shatter', ...SELF_LAID]);
@@ -3039,6 +3052,14 @@ const scatter = ch => { for (const [v, m] of [['--dx', 1.4], ['--dy', 1.1], ['--
 // another app: no need of a 3D style working away unseen meanwhile)
 let lanimPick = LANIMS.includes(store.get('netherflow.lanim')) ? store.get('netherflow.lanim') : 'Classic', lanim = lanimPick;
 const lens = { k: -1, p: null }; // (Lens: the word it's on, in which line — see lensFocus)
+// The styles that bring their own code: LA_HOOKS[name] = { build({ p, deck, words, text }) as a line's laid out (buildStage),
+// frame() every frame (syncLyrics), fit(cur, { ls, h, phone }) to size the line (fitDeck) } — each optional.
+const LA_HOOKS = {};
+// @slot:wall-js
+// ·
+// @slot:fisheye-js
+// ·
+// @slot:emojistack-js
 function applyLanim() {
   for (const n of LANIMS) body.classList.toggle('la-' + n.toLowerCase().replace(/ /g, '-'), n === lanim);
   body.classList.toggle('la-letters', LETTERED.has(lanim)); body.classList.toggle('la-hush', HUSHED.has(lanim));
@@ -3280,6 +3301,7 @@ function renderTextPanel() {
     settingRow('Beat on the screen edges', ['Off', 'On'], edges ? 'On' : 'Off', setEdges, 'The beat also runs along all four sides of the screen, with the lyrics too.'),
     ...(edges ? [settingRow('Edge look', EDGE_STYLES, edgeStyle, setEdgeStyle, 'Wave: a filled wave. Bars: the spectrum as bars. Neon: one glowing line. Glow: the sides light up on the bass. Frame: a frame round the screen breathing with the bass, two lights racing round it, leaping on the beat. Dots: a row of lights along each side. Aurora: soft curtains of light swaying in from the sides. Spikes: the spectrum as sharp spikes. Ripple: each beat sends a ripple of light in from the edges.'),
       settingRow('Edge size', Object.keys(EDGE_SIZES), edgeSize, setEdgeSize, 'How far in from the sides it reaches.')] : []),
+    ...(edges ? Object.values(EDGE_HOOKS).flatMap(h => h.rows?.() || []) : []), // (an edge look's own rows)
     ...(skin ? [] : [settingRow('Timeline', BARS, barStyle, setBar, 'The bar under the lyrics that shows where the song is (drag it to move through the song).')]),
     settingRow('Lyrics size', Object.keys(LSIZE), lsize, setLsize, 'Long lines shrink just enough to stay on screen.'),
     settingRow('Lyrics alignment', ALIGNS, lalign, setAlign),
@@ -3385,7 +3407,8 @@ function fitDeck() {
   const deck = stage.querySelector('.deck:not(.leaving)');
   if (!deck) return;
   const phone = innerWidth <= 720, ls = LSIZE[lsize], h = stage.clientHeight, cur = deck.querySelector('.cur'), title = deck.querySelector('.it-title');
-  if (cur && lanim === 'Lens') { cur.style.fontSize = Math.min(innerHeight * (phone ? .07 : .1), stage.clientWidth / 10) * ls + 'px'; lens.k = -1; lensFocus(); }
+  if (cur && LA_HOOKS[lanim]?.fit) LA_HOOKS[lanim].fit(cur, { ls, h, phone }); // (a style that sizes its own line)
+  else if (cur && lanim === 'Lens') { cur.style.fontSize = Math.min(innerHeight * (phone ? .07 : .1), stage.clientWidth / 10) * ls + 'px'; lens.k = -1; lensFocus(); }
   else if (cur && !SELF_LAID.has(lanim)) fitText(cur, Math.min(innerHeight * (phone ? .095 : .15), phone ? 80 : 150) * ls, h * (innerHeight <= 400 ? .92 : lanim === 'Tower' ? .86 : .58)); // (very short: alone on the stage; Tower: the line alone)
   if (title) fitText(title, Math.min(innerHeight * .13, phone ? 64 : 140), h * .42);
 }
@@ -3496,10 +3519,11 @@ const setMood = i => { mood = ((i % MOODS.length) + MOODS.length) % MOODS.length
 
 // Mood choice sticks across songs and restarts. "Auto" takes each song's colors from its cover.
 const MOOD_KEY = 'netherflow.mood';
-let moodPref = MOODS.some(m => m.name === store.get(MOOD_KEY)) ? store.get(MOOD_KEY) : 'Auto';
+let moodPref = MOODS.some(m => m.name === store.get(MOOD_KEY)) || store.get(MOOD_KEY) === 'Custom' ? store.get(MOOD_KEY) : 'Auto';
 let curArt = '', curTitle = '';
 function applyMood() {
   if (skin) return applyPalette(SKINS[skin].pal); // (a theme's own colours)
+  if (MOOD_HOOKS.some(h => h.apply?.())) return; // (one of the mood menu's own set them)
   if (moodPref !== 'Auto') return setMood(MOODS.findIndex(m => m.name === moodPref));
   const tok = loadId;
   setMood(curTitle ? hash(curTitle) : 0);
@@ -3511,6 +3535,12 @@ function chooseMood(name) {
   applyMood();
   renderMoodMenu();
 }
+// (more in the mood menu: MOOD_HOOKS = [{ chips() after the moods, rows() after Background, apply() true when it set the
+// colours }] — each optional)
+const MOOD_HOOKS = [];
+// @slot:colors-js
+// ·
+// @slot:pictures-js
 // the themes, as cards on top of the mood menu: each its own little picture
 const SKIN_ICONS = {
   '': '<img src="logo.png" alt="">',
@@ -3537,7 +3567,7 @@ function skinCards() {
 function renderMoodMenu() {
   $('mood').querySelector('span').textContent = skin ? 'Theme' : 'Mood';
   $('moods').replaceChildren(skinCards(), ...(skin ? [el('p', 'skin-note lbl', `${SKINS[skin].note}. The theme sets the colours: NetherFlow, above, brings the moods back.`)]
-    : [{ name: 'Auto' }, ...MOODS].map(m => {
+    : [...[{ name: 'Auto' }, ...MOODS].map(m => {
     const b = el('button', 'mchip'), sw = el('i');
     sw.style.background = m.a ? `radial-gradient(circle at 30% 30%, ${m.a}, ${m.b} 62%, ${m.bg})`
                               : 'conic-gradient(#ff4a1c, #d4ff1a, #5ce9ff, #a066ff, #ff4a1c)';
@@ -3545,10 +3575,11 @@ function renderMoodMenu() {
     b.append(sw, el('span', '', m.a ? m.name : 'Auto · from cover'));
     b.onclick = () => chooseMood(m.name);
     return b;
-  })));
+  }), ...MOOD_HOOKS.flatMap(h => h.chips?.() || [])]));
   const bgs = THEMES.filter(n => !SCENES.has(n));
   $('moods').append(
     settingRow('Background', skin ? [skin, ...bgs] : bgs, theme, setTheme, (skin ? `${skin}: the theme's own (drawn in full on Ultra and Extreme). ` : '') + 'Gradient: plain and still, in the mood\'s colors — the lightest of all, for a phone that lags. Cover: the song\'s album cover, blurred into a glow.'),
+    ...MOOD_HOOKS.flatMap(h => h.rows?.() || []), // (the mood menu's own rows)
     settingRow('Background quality', BGQ_SHOWN, bgq, setBgq, (pcOnly ? 'Extreme is for a powerful graphics card, and unlocks Extreme lyrics. ' : '') + (fullPc ? 'Extreme+ is Extreme with each theme\'s most demanding extras: Redline races real cars round real circuits in 3D. ' : '') + 'Ultra is the sharpest (needs a strong graphics card); lower settings save battery. Off keeps the colors but stops the motion. Till you pick one, NetherFlow picks for this device, and steps down by itself if it runs slow.'),
     ...(extremeQ() ? [settingRow('Extreme lyrics', ['Off', 'Music video'], kinetic ? 'Music video' : 'Off', setKinetic, 'The lyrics cut like a music video or an Instagram lyric edit: every word comes in as it\'s sung, in 58 looks (each theme brings its own: a doodle, comic captions, dropping blocks, tactical banners, a kill feed, speed) —chat bubbles, shattering glass, holographic foil, a slot machine, liquid filling the letters, label tape, a film title, a mix of typefaces, story text, lime green, glowing dust, a swirl, TikTok captions, a music app\'s lyrics screen, letters cut out of the cover, outline rings, a dreamy haze, velocity whips, grunge block letters, echoes, hand-drawn outlines, marker, a floor into the distance, tape glitches, a typewriter, falling letters, decoding, words flying out of the dark, extruded 3D, split halves, Y2K chrome, neon signs, an editorial stack, a highlighter, a ripple, a strobe, a turning cube, a split-flap board, letters flipping in, a tunnel, handwriting, stickers, 8-bit arcade, graffiti, a ransom-note collage, a ring, glitch slices, a rack focus, karaoke, a spotlight, a reflection, jelly — with 3D emoji popping up for words like fire, love or moon — louder for a chorus, quieter for a verse, with film scratches, glow and light leaks on the beat. Nothing is ever cut off at the edges.'),
       ...(kinetic ? [settingRow('Extreme look', ['Mixed', ...Object.values(KIN_NAMES)], kinLook === 'Mixed' ? 'Mixed' : KIN_NAMES[kinLook], v => setKinLook(Object.keys(KIN_NAMES).find(k => KIN_NAMES[k] === v) || 'Mixed'),
@@ -6443,6 +6474,7 @@ function buildStage(idx) {
     kinEmojiIndex();
     curWords.forEach((o, i) => { const c = emojiFor(words[i]); if (c) o.append(Object.assign(el('img', 'emo'), { alt: '', src: 'emoji/' + c + '.webp', decoding: 'async', onerror() { this.remove(); } })); });
   }
+  LA_HOOKS[lanim]?.build?.({ p, deck, words, text });
   deck.append(p);
 
   const nx = lines[idx + 1];
@@ -6596,6 +6628,7 @@ function syncLyrics() {
   }
   if (SELF_LAID.has(lanim) && !coverShown()) turnLyricShape(); // (not while the cover view hides it)
   else if (lanim === 'Lens') lensFocus();
+  else LA_HOOKS[lanim]?.frame?.();
 }
 // Lens: the word being sung (the last one begun) given the most room, the rest by how far off they are; the row moved
 // to keep it in the middle — where it'll be once the sizes have settled, from an unseen copy laid out at once
@@ -13741,6 +13774,7 @@ function drawEdges(g, W, H, kick = 0, now = performance.now(), dt = 1 / 60) {
   const bass = (ring.bands[0] + ring.bands[1] + ring.bands[2] + ring.bands[3]) / 4, beat = ring.lastBeat !== edgeFx.beat;
   edgeFx.beat = ring.lastBeat;
   const frame = s => { g.beginPath(); g.roundRect(s, s, W - 2 * s, H - 2 * s, Math.max(4, Math.min(28, Math.min(W, H) * .04) - s * .3)); }; // (the screen's frame, s px in)
+  if (EDGE_HOOKS[edgeStyle]?.draw) return EDGE_HOOKS[edgeStyle].draw(g, W, H, { D, bass, beat, kick, now, dt, frame, reach, sides, wave });
   if (edgeStyle === 'Frame') { // (the frame breathing with the bass; two lights racing round it, leaping on each beat)
     const inset = 3 + D * .08, per = 2 * (W + H - 4 * inset), seg = per * (.05 + kick * .07);
     frame(inset);
@@ -16081,7 +16115,7 @@ const avg =(a, b) => { let s = 0; for (let i = a; i < b; i++) s += freq[i]; retu
 let bassS = 0, bassAvg = 0, midS = 0, highS = 0, fxT = 0, last = 0, visWas = false;
 // (the things the beat moves: the play button, the record, the cover background — set on them alone, not on the whole
 // page, and only while they're seen)
-const bassEls = [['.core', () => true], ['.cs-disc', coverShown], ['.cover-bg', () => theme === 'Cover']].map(([q, seen]) => ({ el: document.querySelector(q), seen, v: '' }));
+const bassEls = [['.core', () => true], ['.cs-disc', coverShown], ['.cover-bg', () => theme === 'Cover'], ['.pic-bg', () => theme === 'Pictures']].map(([q, seen]) => ({ el: document.querySelector(q), seen, v: '' }));
 const fullPages = [dlg, $('artistPage'), $('about'), $('drive')]; // (Drive mode too: nothing drawn behind it, in the car)
 let lastSeek = -1, lastCur = '', lastDur = '', looping = true, owed = 0, lastRun = 0, visN = 0, visDt = 0;
 let vsGap = [], vsTick = 0, vsN = 1; // (a computer: the gaps between the screen's frames, and every how many the work's done)
@@ -16126,7 +16160,7 @@ function frame(now) {
   // Off (still): only redraw while the colors are changing, or after a resize; otherwise the last image stays.
   const settling = palette.some((c, i) => c.some((v, k) => Math.abs(target[i][k] - v) > 0.002));
   const style = THEMES.indexOf(theme), drawn = !PLAIN.has(theme); // Cover isn't drawn here: it's the blurred cover in front, on plain background; Gradient, CSS
-  if (fxOn && !covered && theme === 'Cover' && fxDirty) { fxDirty = false; fxClear(rgb(pal.bg)); }
+  if (fxOn && !covered && (theme === 'Cover' || theme === 'Pictures') && fxDirty) { fxDirty = false; fxClear(rgb(pal.bg)); }
   const vis = fxOn && !covered && view === 'Visualiser' && body.classList.contains('has-song') && !body.classList.contains('home');
   if (vis !== visWas) { visWas = vis; fxDirty = true; wake(); } // (out of it: the backdrop drawn again, even a still one)
   const moving = vis || fxOn && !covered && drawn && !Q.still;
