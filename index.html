@@ -1895,6 +1895,8 @@ const store = {
   get: k => { try { return localStorage.getItem(k) || ''; } catch { return ''; } },
   set: (k, v) => { try { v ? localStorage.setItem(k, v) : localStorage.removeItem(k); } catch {} },
 };
+// covers kept on this device, there at once the next time it's opened (sw.js) — once the page has loaded, not in its way
+if ('serviceWorker' in navigator) addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}), { once: true });
 // NetherFlow was first called Afterglow: what it saved under the old names (settings, library, history, lyric sync) moves
 // to the new ones, once.
 try {
@@ -6405,7 +6407,7 @@ function buildStage(idx) {
   curP = words.map(() => -1);
   if (lanim === 'Pop' && kinEmojiOn && text) { // (a word's own emoji, popping up by it as it's sung)
     kinEmojiIndex();
-    curWords.forEach((o, i) => { const c = emojiFor(words[i]); if (c) o.append(Object.assign(el('img', 'emo'), { alt: '', src: 'emoji/' + c + '.webp', decoding: 'async' })); });
+    curWords.forEach((o, i) => { const c = emojiFor(words[i]); if (c) o.append(Object.assign(el('img', 'emo'), { alt: '', src: 'emoji/' + c + '.webp', decoding: 'async', onerror() { this.remove(); } })); });
   }
   deck.append(p);
 
