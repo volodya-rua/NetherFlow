@@ -86,6 +86,9 @@
     <!-- (a camera isn't needed: without one, a QR code is read from a picture) -->
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
+    <!-- (nor a microphone: voice control is a choice. RECORD_AUDIO alone would make stores that filter by features,
+         F-Droid's app among them, hide NetherFlow from TVs and boxes without one) -->
+    <uses-feature android:name="android.hardware.microphone" android:required="false" />
 
     <!-- Android Auto and Google's assistant: seen, so their signatures can be checked (PlaybackService.trusted) -->
     <queries>

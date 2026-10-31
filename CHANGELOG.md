@@ -16,8 +16,8 @@ What changed in each NetherFlow release. The builds are on the [releases page](h
 - **Visualiser:** a third view beside Lyrics and Cover, the whole screen moving with the music, in eight looks
 - **Lyrics you can read:** eight new styles where every word stays big and clear and the word being sung sits on a
   block of the mood's colour: Tower, Lens, Pop (with emoji popping in by the words), Drift, Wall, Fisheye, Fisheye
-  Emoji and Emoji Stack. Six 3D styles that were hard to read are gone (Coaster, Corkscrew, Star, Infinity, Coil and
-  Lissajous). Tamil, Hindi, Punjabi, Telugu and other scripts no longer fall apart in the letter-by-letter styles
+  Emoji and Emoji Stack. Tamil, Hindi, Punjabi, Telugu and other scripts no longer fall apart in the letter-by-letter
+  styles
 - **Light round your screen:** seven new looks for the beat on the screen's edges, among them Trace (one long arc of
   light gliding round the screen in the album's colour) and Rim (a soft glow flowing round the edges, with the music or
   still, in your own colours if you like), plus Frame, Dots, Aurora, Spikes and Ripple
