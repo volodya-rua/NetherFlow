@@ -272,6 +272,54 @@ body.home .singbar { display: none; } /* (its voice slider is for the lyrics: no
 .la-shatter .deck.leaving .cur .ch { opacity: 0; filter: blur(6px); transition: transform .6s cubic-bezier(.3,0,.9,.4), opacity .6s, filter .6s;
   transform: perspective(500px) translate3d(calc(var(--dx) * 4em), calc(var(--dy) * 4em), 5em) rotateX(calc(var(--rx) * 3deg)) rotateY(calc(var(--ry) * 3deg)) rotate(calc(var(--rz) * 3deg)); }
 .la-shatter .deck.leaving .prev, .la-shatter .deck.leaving .next { visibility: hidden; }
+/* The poster styles (Tower, Lens, Pop, Drift): every word big and clear — never turned past reading, never letter by
+   letter — and the one being sung on a block of the mood's colour, as on a poster; their motion in how the words come
+   in and where they sit (users: the 3D ones couldn't be read) */
+:is(.la-tower, .la-lens, .la-pop, .la-drift) .cur .w { position: relative; isolation: isolate; }
+:is(.la-tower, .la-lens, .la-pop, .la-drift) .cur .w > span { --dim: color-mix(in srgb, var(--ink) 42%, transparent); }
+:is(.la-tower, .la-lens, .la-pop, .la-drift) .cur .w.em > span { --dim: color-mix(in srgb, var(--a) 45%, transparent); font: inherit; letter-spacing: inherit; text-transform: inherit; }
+:is(.la-tower, .la-lens, .la-pop, .la-drift) .cur:not(.rest) .w::before { content: ''; position: absolute; z-index: -1; inset: .04em -.14em 0 calc(var(--x, 0) * 1em - .14em);
+  border-radius: .12em; background: var(--a); box-shadow: 0 .1em .45em color-mix(in srgb, var(--a) 45%, transparent);
+  transform: rotate(-2.5deg) scaleX(0); transform-origin: left center; transition: transform .3s cubic-bezier(.2,.9,.3,1.15); }
+:is(.la-tower, .la-lens, .la-pop, .la-drift) .cur:not(.rest) .w.now::before { transform: rotate(-2.5deg) scaleX(1); }
+:is(.la-tower, .la-lens, .la-pop, .la-drift) .cur:not(.rest) .w.now > span { color: var(--bg); filter: none; } /* (its sweep left clipped to the letters: the colour over it) */
+/* Tower: the line's words stacked a word a row, staggered, the stack turned a little in space, swaying slowly; each
+   word swings in as the line comes */
+.la-tower .deck.lyr { perspective: 1100px; }
+.la-tower .cur { display: flex; flex-direction: column; align-items: flex-start; line-height: .96; transform-origin: 30% 50%; animation: tower-sway 11s ease-in-out infinite alternate; }
+.lyr-center.la-tower .cur { align-items: center; }
+.lyr-right.la-tower .cur { align-items: flex-end; }
+.la-tower .cur .w { padding-left: calc(var(--x, 0) * 1em); animation: tower-in .4s cubic-bezier(.2,.9,.3,1.1) backwards; animation-delay: calc(var(--i) * 28ms); }
+.la-tower .cur .w:nth-child(3n + 2) { --x: .8; }
+.la-tower .cur .w:nth-child(3n) { --x: .35; }
+.la-tower .cur .w:nth-child(4n + 1) { font-size: 1.16em; } /* (a poster's rhythm: every fourth word a size up) */
+@keyframes tower-in { from { opacity: 0; transform: translateX(-.5em) rotateY(50deg); } }
+@keyframes tower-sway { from { transform: rotateY(-9deg) rotateX(4deg) rotate(-1.5deg); } to { transform: rotateY(5deg) rotateX(-2deg) rotate(1deg); } }
+/* Lens: the line in one row through a magnifying glass — the word being sung nearest, big in the middle; the others
+   smaller, fainter and turned away the further off they are; the row gliding along (see lensFocus) */
+.la-lens .deck.lyr { overflow-x: clip; }
+.la-lens .lyr .cur { position: relative; left: 50%; width: max-content; white-space: nowrap; text-align: left; perspective: 900px; transition: translate .5s cubic-bezier(.2,.8,.2,1); }
+.la-lens .cur .w { --d: 3; font-size: calc((1.75 - min(var(--d), 3) * .32) * var(--fit, 1) * 1em); opacity: calc(1 - min(var(--d), 4) * .17); vertical-align: middle;
+  transform: rotateY(calc(var(--side, 1) * min(var(--d), 3) * -13deg)); animation: none; transition: font-size .4s cubic-bezier(.2,.8,.2,1), opacity .4s, transform .4s; }
+.lens-ghost { position: absolute !important; visibility: hidden; translate: none !important; }
+.lens-ghost, .lens-ghost * { transition: none !important; animation: none !important; }
+/* Pop: the words not sung yet a little small and faint; each pops up full as it's sung, and a word with an emoji of its
+   own (fire, love, moon, dil…) pops its emoji up by it */
+.la-pop .cur .w { animation: none; }
+.la-pop .cur .w > span { transform: scale(.86); transition: transform .45s cubic-bezier(.3,1.7,.45,1), filter .3s; }
+.la-pop .cur .w.on > span { transform: none; }
+.la-pop .cur .w.now > span { transform: scale(1.08) rotate(-2deg); }
+.la-pop .emo { position: absolute; right: -.3em; top: -.55em; width: .8em; height: .8em; pointer-events: none; transform: scale(0) rotate(-30deg);
+  transition: transform .5s cubic-bezier(.3,1.8,.45,1); filter: drop-shadow(0 .06em .1em rgba(0, 0, 0, .45)); }
+.la-pop .cur .w.on .emo { transform: rotate(8deg); animation: emo-bob 2.4s .5s ease-in-out infinite; }
+@keyframes emo-bob { 50% { translate: 0 -.08em; rotate: -10deg; } }
+/* Drift: the line on a page drifting and turning slowly in space; the word being sung lifts off it towards you */
+.la-drift .deck.lyr { perspective: 900px; perspective-origin: 50% 30%; }
+.la-drift .cur { transform-style: preserve-3d; animation: page-drift 14s ease-in-out infinite alternate; }
+@keyframes page-drift { from { transform: rotateX(22deg) rotateZ(-3.5deg) translateZ(-.2em); } to { transform: rotateX(12deg) rotateZ(2.5deg) translateZ(.25em) translateX(.25em); } }
+.la-drift .cur .w { animation: drift-in .5s cubic-bezier(.2,.9,.3,1.1) backwards; animation-delay: calc(var(--i) * 35ms); transition: transform .4s cubic-bezier(.2,.9,.3,1.2); }
+.la-drift .cur .w.now { transform: translateZ(.55em) rotateX(-12deg); }
+@keyframes drift-in { from { opacity: 0; transform: translateZ(-2em) translateY(.4em); } }
 /* The self-laid styles (Spiral, Swarm, Cylinder, Globe, Helix, DNA, Tornado, Orbit, Atom): the letters (Cylinder:
    words) are placed one by one, every frame, round the middle of the stage (see layoutLyricShape / turnLyricShape) */
 .la-self .deck.lyr { position: absolute; inset: 0; transform: none; }
@@ -283,10 +331,10 @@ body.home .singbar { display: none; } /* (its voice slider is for the lyrics: no
    graphics chip — otherwise the whole line is painted again every frame (on a phone, half the frame rate or worse) */
 .la-self .ch, .la-self .rocket, .la-self .spark { will-change: transform; }
 .la-self .cur .w.now .ch.lit { text-shadow: 0 0 .25em color-mix(in srgb, var(--a) 75%, transparent); }
-/* Knot, Möbius, Ribbon (and Coaster, Corkscrew, Star, Infinity, Coil, Lissajous): the letters in the lit color always — unlit, a fainter opacity, and lighting up by opacity too
+/* Knot, Möbius, Ribbon: the letters in the lit color always — unlit, a fainter opacity, and lighting up by opacity too
    (curvePlace: the same look). Fading the color itself had each letter painted again for every frame of the fade; on a
    phone, the line stalled as it was sung. Opacity, the graphics chip does alone. */
-.la-knot .cur .ch, .la-möbius .cur .ch, .la-ribbon .cur .ch, .la-coaster .cur .ch, .la-corkscrew .cur .ch, .la-star .cur .ch, .la-infinity .cur .ch, .la-coil .cur .ch, .la-lissajous .cur .ch { color: var(--ink); transition: none; }
+.la-knot .cur .ch, .la-möbius .cur .ch, .la-ribbon .cur .ch { color: var(--ink); transition: none; }
 /* Spiral: a whirlpool. The line winds out of the middle, the word being sung big at the top, and what's been sung
    sweeps on round and out, growing and fading */
 /* Swarm: the letters fly loops round the middle like a swarm, each to its place in the line as it's sung; the line
@@ -2957,15 +3005,16 @@ body.classList.toggle('bg-beat', bgBeat);
 // folders on the home screen (an option: see renderFolders)
 let folders = store.get('netherflow.folders') === 'On';
 // how the lyrics move (see "lyrics animations" in the CSS, and buildStage / layoutLyricShape / turnLyricShape)
-const LANIMS = ['Classic', 'Wave', 'Spiral', 'Shatter', 'Fireworks', 'Swarm', 'Black Hole', 'Cylinder', 'Globe', 'Helix', 'DNA', 'Tornado', 'Knot', 'Möbius', 'Ribbon', 'Coaster', 'Corkscrew', 'Star', 'Infinity', 'Coil', 'Lissajous', 'Orbit', 'Atom', 'Tunnel', 'Cube'];
-const SELF_LAID = new Set(['Spiral', 'Fireworks', 'Swarm', 'Black Hole', 'Cylinder', 'Globe', 'Helix', 'DNA', 'Tornado', 'Knot', 'Möbius', 'Ribbon', 'Coaster', 'Corkscrew', 'Star', 'Infinity', 'Coil', 'Lissajous', 'Orbit', 'Atom']); // (placed by layoutLyricShape)
-const LETTERED = new Set(['Wave', 'Shatter', ...[...SELF_LAID].filter(n => n !== 'Cylinder')]), HUSHED = new Set(['Tunnel', ...SELF_LAID]);
+const LANIMS = ['Classic', 'Tower', 'Lens', 'Pop', 'Drift', 'Wave', 'Spiral', 'Shatter', 'Fireworks', 'Swarm', 'Black Hole', 'Cylinder', 'Globe', 'Helix', 'DNA', 'Tornado', 'Knot', 'Möbius', 'Ribbon', 'Orbit', 'Atom', 'Tunnel', 'Cube'];
+const SELF_LAID = new Set(['Spiral', 'Fireworks', 'Swarm', 'Black Hole', 'Cylinder', 'Globe', 'Helix', 'DNA', 'Tornado', 'Knot', 'Möbius', 'Ribbon', 'Orbit', 'Atom']); // (placed by layoutLyricShape)
+const LETTERED = new Set(['Wave', 'Shatter', ...[...SELF_LAID].filter(n => n !== 'Cylinder')]), HUSHED = new Set(['Tunnel', 'Tower', ...SELF_LAID]);
 const LEAVING = new Set(['Tunnel', 'Cube', 'Shatter', ...SELF_LAID]);
 // Shatter: where each letter hangs before it's sung, and blows off to after (em, degrees)
 const scatter = ch => { for (const [v, m] of [['--dx', 1.4], ['--dy', 1.1], ['--dz', 1.5], ['--rx', 70], ['--ry', 70], ['--rz', 50]]) ch.style.setProperty(v, ((Math.random() * 2 - 1) * m).toFixed(2)); };
 // lanimPick: the user's pick; lanim: the one in use — Classic while Extreme lyrics are on (the lines then only show behind
 // another app: no need of a 3D style working away unseen meanwhile)
 let lanimPick = LANIMS.includes(store.get('netherflow.lanim')) ? store.get('netherflow.lanim') : 'Classic', lanim = lanimPick;
+const lens = { k: -1, p: null }; // (Lens: the word it's on, in which line — see lensFocus)
 function applyLanim() {
   for (const n of LANIMS) body.classList.toggle('la-' + n.toLowerCase().replace(/ /g, '-'), n === lanim);
   body.classList.toggle('la-letters', LETTERED.has(lanim)); body.classList.toggle('la-hush', HUSHED.has(lanim));
@@ -3196,7 +3245,7 @@ function renderTextPanel() {
     settingRow('Interface size', UI_SIZES, uiSize, setUiSize, 'Everything larger or smaller: the buttons, the text, the panels.'),
     settingRow('Show', VIEWS, view, setView, 'Cover: the record spinning, with a ring that moves to the beat. Visualiser: the whole screen moving with the music. Tap the cover in the player (or press V) to go round them. A song with no timed lyrics shows its cover by itself: tap it for the words.'),
     ...(view === 'Visualiser' ? [settingRow('Visualiser', ['Auto', ...VIS], visPick, setVis, `How the visualiser looks. Auto: a new one with each song. Tap the visualiser for the next. ${VIS_NOTE}`)] : []),
-    settingRow('Lyrics animation', LANIMS, lanimPick, setLanim, 'How the lyrics move. 2D: Wave, Spiral, Shatter, Fireworks. 3D: Swarm, Black Hole, Cylinder, Globe, Helix, DNA, Tornado, Knot, Möbius, Ribbon, Coaster, Corkscrew, Star, Infinity, Coil, Lissajous, Orbit, Atom, Tunnel, Cube.' + (kin.on ? ' (Extreme lyrics are on, in the mood menu: this is for when they\x27re off.)' : '')),
+    settingRow('Lyrics animation', LANIMS, lanimPick, setLanim, 'How the lyrics move. Easy to read, every word big and the one being sung on a block of colour: Tower (a word a row), Lens (the sung word nearest), Pop (words and their emoji popping in), Drift (a page turning in space). 2D: Wave, Spiral, Shatter, Fireworks. 3D: Swarm, Black Hole, Cylinder, Globe, Helix, DNA, Tornado, Knot, Möbius, Ribbon, Orbit, Atom, Tunnel, Cube.' + (kin.on ? ' (Extreme lyrics are on, in the mood menu: this is for when they\x27re off.)' : '')),
     ...(skin ? [] : [fontRow()]), // (a theme brings its own font and timeline)
     settingRow('Beat style', BEATS, beatStyle, setBeat, 'The ring round the record, in the Cover view.'),
     settingRow('Beat on the screen edges', ['Off', 'On'], edges ? 'On' : 'Off', setEdges, 'The beat also runs along all four sides of the screen, with the lyrics too.'),
@@ -3303,7 +3352,8 @@ function fitDeck() {
   const deck = stage.querySelector('.deck:not(.leaving)');
   if (!deck) return;
   const phone = innerWidth <= 720, ls = LSIZE[lsize], h = stage.clientHeight, cur = deck.querySelector('.cur'), title = deck.querySelector('.it-title');
-  if (cur && !SELF_LAID.has(lanim)) fitText(cur, Math.min(innerHeight * (phone ? .095 : .15), phone ? 80 : 150) * ls, h * (innerHeight <= 400 ? .92 : .58)); // (very short: alone on the stage)
+  if (cur && lanim === 'Lens') { cur.style.fontSize = Math.min(innerHeight * (phone ? .07 : .1), stage.clientWidth / 10) * ls + 'px'; lens.k = -1; lensFocus(); }
+  else if (cur && !SELF_LAID.has(lanim)) fitText(cur, Math.min(innerHeight * (phone ? .095 : .15), phone ? 80 : 150) * ls, h * (innerHeight <= 400 ? .92 : lanim === 'Tower' ? .86 : .58)); // (very short: alone on the stage; Tower: the line alone)
   if (title) fitText(title, Math.min(innerHeight * .13, phone ? 64 : 140), h * .42);
 }
 // the Cover view's title and lyric line: their CSS size is the most they get; at most two rows each
@@ -6313,6 +6363,10 @@ function buildStage(idx) {
     return o;
   });
   curP = words.map(() => -1);
+  if (lanim === 'Pop' && kinEmojiOn && text) { // (a word's own emoji, popping up by it as it's sung)
+    kinEmojiIndex();
+    curWords.forEach((o, i) => { const c = emojiFor(words[i]); if (c) o.append(Object.assign(el('img', 'emo'), { alt: '', src: 'emoji/' + c + '.webp', decoding: 'async' })); });
+  }
   deck.append(p);
 
   const nx = lines[idx + 1];
@@ -6465,6 +6519,26 @@ function syncLyrics() {
     if (chs) chs.forEach((c, k) => c.classList.toggle('lit', p > 0 && (k + .5) / chs.length <= p));
   }
   if (SELF_LAID.has(lanim) && !coverShown()) turnLyricShape(); // (not while the cover view hides it)
+  else if (lanim === 'Lens') lensFocus();
+}
+// Lens: the word being sung (the last one begun) given the most room, the rest by how far off they are; the row moved
+// to keep it in the middle — where it'll be once the sizes have settled, from an unseen copy laid out at once
+function lensFocus() {
+  let k = 0; for (let i = 0; i < curWords.length; i++) if (curP[i] > 0) k = i;
+  if (!curWords.length || k === lens.k && lens.p === curWords) return;
+  lens.k = k; lens.p = curWords;
+  const set = (ws, fit) => ws.forEach((w, i) => { w.style.setProperty('--d', Math.abs(i - k)); w.style.setProperty('--side', i < k ? -1 : 1); if (i === k && fit < 1) w.style.setProperty('--fit', fit.toFixed(3)); else w.style.removeProperty('--fit'); });
+  const p = curWords[0].parentElement, ghost = p.cloneNode(true), room = (p.closest('.deck')?.clientWidth || stage.clientWidth) * .9;
+  ghost.classList.add('lens-ghost');
+  p.after(ghost);
+  const gws = [...ghost.querySelectorAll('.w')];
+  set(gws, 1);
+  const fit = Math.min(1, room / (gws[k].offsetWidth || 1)); // (a long word: no wider than the stage)
+  if (fit < 1) set(gws, fit);
+  const x = gws[k].offsetLeft + gws[k].offsetWidth / 2;
+  ghost.remove();
+  set(curWords, fit);
+  p.style.translate = `${(-x).toFixed(1)}px 0`;
 }
 // The self-laid styles (SELF_LAID) place the line's letters (Cylinder: words) themselves, round the middle of the
 // stage: layoutLyricShape measures them, sized to the stage, and turnLyricShape places them every frame, following
@@ -6757,25 +6831,6 @@ const CURVES = {
   // a long silk banner rippling through space (it turns over away from the singing: see curvePlace)
   Ribbon: { closed: false, tilt: .2, shape: (u, t) => { const x = (u - .5) * 16; return [x, .7 * Math.sin(x * .42 + t * .5) + .22 * Math.sin(x * 1.1 - t * .8), 1.1 * Math.sin(x * .3 + 1 + t * .35)]; },
           up: T => unit3([-T[0] * T[1], 1 - T[1] * T[1], -T[2] * T[1]]) },
-  // a roller coaster: the line rides a track that loops the loop and swings side to side, followed close up — the view
-  // rolling right round with it at every loop
-  Coaster: { closed: false, still: true, tilt: .16, shape: u => { const th = (u - .5) * 6 * Math.PI; return [1.15 * th - 2.5 * Math.sin(th), 2.5 * Math.cos(th), 1.4 * Math.sin(th * .5)]; },
-          up: T => unit3([-T[1], T[0], 0]) },
-  // a corkscrew: the line wound round and round a line through space, followed close up — the world turning round you
-  Corkscrew: { closed: false, still: true, tilt: .1, shape: u => { const x = (u - .5) * 40, a = x * .42; return [x, 2.4 * Math.cos(a), 2.4 * Math.sin(a)]; },
-          up: (T, u) => { const a = (u - .5) * 40 * .42; return [0, Math.cos(a), Math.sin(a)]; } },
-  // a star: a (2, 5) torus knot, turning — the line round its five points, passing over and under itself
-  Star: { closed: true, whole: true, tilt: .45, shape: u => { const a = u * 2 * Math.PI, r = 2 + Math.cos(5 * a); return [r * Math.cos(2 * a), r * Math.sin(2 * a), -1.1 * Math.sin(5 * a)]; },
-          up: T => unit3(cross3([0, 0, 1], T)) },
-  // infinity: a figure of eight through space, turning, the line turning over as it goes round
-  Infinity: { closed: true, whole: true, tilt: .3, shape: u => { const a = u * 2 * Math.PI; return [2.2 * Math.sin(a), 1.1 * Math.sin(2 * a), .9 * Math.cos(a)]; },
-          up: (T, u) => { const a = u * 2 * Math.PI; return unit3(mix3(unit3(cross3([0, 0, 1], T)), [0, 0, 1], Math.cos(a), .8 * Math.sin(a))); } },
-  // a coil: a spring wound round a ring — the line spiralling round and round a turning doughnut, its letters on its skin
-  Coil: { closed: true, whole: true, tilt: .55, shape: u => { const a = u * 2 * Math.PI, b = 5 * a, r = 1.7 + .85 * Math.cos(b); return [r * Math.cos(a), r * Math.sin(a), .85 * Math.sin(b)]; },
-          up: (T, u) => { const a = u * 2 * Math.PI, b = 5 * a; return [Math.cos(b) * Math.cos(a), Math.cos(b) * Math.sin(a), Math.sin(b)]; } },
-  // a Lissajous knot (3, 2, 5), turning: the line woven through itself, every way at once
-  Lissajous: { closed: true, whole: true, tilt: .4, shape: u => { const a = u * 2 * Math.PI; return [Math.cos(3 * a + .7), Math.cos(2 * a + .2), Math.cos(5 * a)]; },
-          up: T => unit3(cross3([0, 0, 1], T)) },
 };
 function curveTable(shape, len, closed, t = 0) {
   const N = closed ? 1200 : 600, raw = [], cum = [0];
@@ -6808,7 +6863,7 @@ function curveAt(s, x) {
 const BAND = [[.22, 0], [.16, 6], [.95, 1.4]];
 function curvePlace(s, lp) {
   const C = CURVES[s.kind], now = performance.now() / 1000;
-  if (!C.whole && !C.still) s.tab = curveTable(C.shape, s.tab.len, false, now); // (a still track — Coaster, Corkscrew — measured once)
+  if (!C.whole) s.tab = curveTable(C.shape, s.tab.len, false, now);
   s.off += (sungTo(s) + lp * s.fs * 14 - s.off) * (s.leave ? .25 : .15);
   const o = curveAt(s, s.start + s.off), N = cross3(o.T, o.U);
   const tl = C.tilt + Math.sin(now * .4) * .08, yaw = Math.sin(now * .27) * (C.whole ? .38 : .22);
@@ -6828,7 +6883,7 @@ function curvePlace(s, lp) {
   };
   // where a letter or a stretch of the band lies on the shape: a whole shape doesn't change as it turns (only the camera
   // moves round it), so that's worked out once for this line and kept; the banner ripples, so it's worked out each time
-  const on = (key, x) => { if (!C.whole && !C.still) return curveAt(s, x); const m = s.on ||= new Map(); let q = m.get(key); if (!q) m.set(key, q = curveAt(s, x)); return q; };
+  const on = (key, x) => { if (!C.whole) return curveAt(s, x); const m = s.on ||= new Map(); let q = m.get(key); if (!q) m.set(key, q = curveAt(s, x)); return q; };
   const seen = [0, 0, 0, 0];
   // (the banner turns over away from the singing: none round it, up to a turn and a half further off)
   const turn = (q, x) => {
