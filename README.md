@@ -422,6 +422,19 @@ Most of the code was written by **[Claude](https://www.anthropic.com/claude)**, 
 engine, every shader behind the backgrounds, the 3D races, the Android app, and most of this README. Every commit
 Claude worked on says so with a `Co-Authored-By: Claude` line.
 
+## Active testers
+
+Thanks to NetherFlow's active testers. Their testing found a lot of bugs and a lot of strange behaviour, and it made the
+app better.
+
+| Tester | Where |
+| --- | --- |
+| **unknown_brain_07** | Discord |
+| **ready2.play** | Discord |
+| **atharvvv.dev** | Discord |
+
+In the app: About (the NetherFlow name, top left) › Credits.
+
 ## Privacy
 
 NetherFlow has no accounts and no analytics, and nothing it sends reaches its developer in a form anyone there can read. Your settings, library and saved songs

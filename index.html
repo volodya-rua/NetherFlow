@@ -573,7 +573,16 @@ body.home .singbar { display: none; } /* (its voice slider is for the lyrics: no
 .legal-tabs { display: flex; gap: 22px; }
 .legal-tabs button { padding: 6px 0; border-bottom: 1px solid transparent; }
 .legal-tabs button[aria-current=true] { color: var(--a); border-color: var(--a); }
+/* the About page's Credits: who made it, who tested it */
+.credits { overflow-y: auto; max-width: 720px; padding: 8px 0 40px; }
+.credits[hidden] { display: none; }
+.credits h2 { margin: 0 0 22px; font: italic 400 clamp(40px, 6vw, 72px)/1 var(--serif); }
+.credits .lbl { margin: 26px 0 8px; color: var(--a); font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; }
+.credits .cr-name, .credits .cr-list li { margin: 0; font: 400 clamp(26px, 3.4vw, 40px)/1.15 var(--poster); letter-spacing: .01em; } /* (as they're written: a Discord name is found by its exact spelling) */
+.credits .cr-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.credits .cr-note { margin: 10px 0 0; max-width: 60ch; opacity: .7; line-height: 1.5; }
 .about iframe { width: 100%; height: 100%; border: 0; border-top: 1px solid var(--hair); background: var(--bg); }
+.about iframe[hidden] { display: none; }
 .legal-line { margin: 3.5vh 0 0; opacity: .5; }
 .legal-line .inline-link { color: inherit; }
 /* ---------- search history ---------- */
@@ -1754,8 +1763,17 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
 
 <dialog id="about" class="about" aria-label="About NetherFlow: terms, privacy and licenses">
   <div class="s-top lbl"><button id="closeAbout" class="link">← Back<kbd>esc</kbd></button><span tabindex="-1" autofocus>NetherFlow · by Volodya.rua</span></div>
-  <nav class="legal-tabs lbl"><button data-legal="terms">Terms of Use</button><button data-legal="privacy">Privacy</button><button data-legal="licenses">Licenses</button></nav>
+  <nav class="legal-tabs lbl"><button data-legal="terms">Terms of Use</button><button data-legal="privacy">Privacy</button><button data-legal="licenses">Licenses</button><button id="creditsTab">Credits</button></nav>
   <iframe id="legalFrame" title="Terms, privacy and licenses"></iframe>
+  <section id="creditsPane" class="credits" hidden aria-labelledby="creditsTitle">
+    <h2 id="creditsTitle">Credits</h2>
+    <p class="lbl">Made by</p>
+    <p class="cr-name">Volodya.rua</p>
+    <p class="cr-note">The idea, the vision and every design. Most of the code written with Claude, Anthropic's AI.</p>
+    <p class="lbl">Active testers</p>
+    <ul class="cr-list"><li>unknown_brain_07</li><li>ready2.play</li><li>atharvvv.dev</li></ul>
+    <p class="cr-note">On Discord. Their testing found a lot of bugs, and a lot of crazy stuff, and made NetherFlow better. Thank you.</p>
+  </section>
 </dialog>
 
 <dialog id="artistPage" class="search apage" aria-label="Artist">
@@ -11275,8 +11293,14 @@ for (const d of document.querySelectorAll('dialog')) d.addEventListener('close',
 function openLegal(section) {
   if (!$('about').open) { $('about').showModal(); placeWinctl(); }
   $('legalFrame').src = 'legal.html' + (section ? '#' + section : '');
+  $('legalFrame').hidden = false; $('creditsPane').hidden = true;
   for (const b of document.querySelectorAll('.legal-tabs button')) b.setAttribute('aria-current', b.dataset.legal === section);
 }
+// the Credits tab: who made NetherFlow and who tested it (on the page itself, not in legal.html)
+$('creditsTab').onclick = () => {
+  $('legalFrame').hidden = true; $('creditsPane').hidden = false;
+  for (const b of document.querySelectorAll('.legal-tabs button')) b.setAttribute('aria-current', b === $('creditsTab'));
+};
 document.addEventListener('click', e => {
   const t = e.target.closest('[data-legal]');
   if (t) { e.preventDefault(); openLegal(t.dataset.legal); }
