@@ -361,7 +361,6 @@ body.home .singbar { display: none; } /* (its voice slider is for the lyrics: no
    before the new words are much in it) */
 .la-wall .deck.leaving .cur .w { opacity: 0; translate: 0 -.4em -4em; animation: wall-out .55s; }
 @keyframes wall-out { from { opacity: 1; translate: none; animation-timing-function: cubic-bezier(.2,.7,.3,1); } 50% { opacity: 0; } }
-/* · */
 /* Fisheye, Fisheye Emoji: the line a word a row under a convex lens — the word being sung in the middle, full size and
    nearest, on a block of the mood's colour; each row further off smaller and flatter (squeezed more up and down than
    across, as near a dome's edge) and turned away a little, fading out at the glass's rim; the stack glides to keep the
@@ -391,7 +390,6 @@ body.home .singbar { display: none; } /* (its voice slider is for the lyrics: no
 .la-fisheye-emoji .emo { position: absolute; left: 100%; top: 50%; width: .8em; height: .8em; margin: -.42em 0 0 .26em; pointer-events: none; transform: scale(0) rotate(-30deg);
   transition: transform .5s cubic-bezier(.3,1.8,.45,1); filter: drop-shadow(0 .06em .1em rgba(0, 0, 0, .45)); }
 .la-fisheye-emoji .cur .w.on .emo { transform: rotate(8deg); }
-/* · */
 /* Emoji Stack: the line alone, in a few big rows of about the same length, stacked in the middle and each tilted a little;
    the word being sung on a slanted block of the mood's colour that grows across it as it's sung, its letters on the block
    in the background's colour (see LA_HOOKS['Emoji Stack']), and a word with an emoji of its own (fire, moon, dil, chai…)
@@ -1296,7 +1294,6 @@ body.home .home-now { display: flex; }
   -webkit-appearance: none; appearance: none; }
 .cc-pick input::-webkit-color-swatch-wrapper { padding: 0; }
 .cc-pick input::-webkit-color-swatch { border: 1px solid rgba(255,255,255,.18); border-radius: 50%; }
-/* · */
 /* background theme "Pictures": your own pictures (see "the Pictures background"), each filling the screen, the next fading
    in over it; dimmed in the background's own colour (Picture dim: darker on the moods, lighter on a light theme) so the
    lyrics stay easy to read. None yet: the mood's gradient. */
@@ -3260,7 +3257,7 @@ const scatter = ch => { for (const [v, m] of [['--dx', 1.4], ['--dy', 1.1], ['--
 // another app: no need of a 3D style working away unseen meanwhile)
 let lanimPick = LANIMS.includes(store.get('netherflow.lanim')) ? store.get('netherflow.lanim') : 'Classic', lanim = lanimPick;
 const lens = { k: -1, p: null }; // (Lens: the word it's on, in which line — see lensFocus)
-// The styles that bring their own code: LA_HOOKS[name] = { build({ p, deck, words, text }) as a line's laid out (buildStage),
+// The styles that bring their own code (Wall, Fisheye, Fisheye Emoji, Emoji Stack): LA_HOOKS[name] = { build({ p, deck, words, text }) as a line's laid out (buildStage),
 // frame() every frame (syncLyrics), fit(cur, { ls, h, phone }) to size the line (fitDeck) } — each optional.
 const LA_HOOKS = {};
 // Wall (see ".la-wall" in the CSS): the line a word or two a row — two short words share one, a long one stands alone, a
@@ -3291,7 +3288,6 @@ LA_HOOKS.Wall = {
     if (wall && f) wall.style.setProperty('--wp', Math.max(9, 1.8 * Math.max(wall.offsetWidth, wall.offsetHeight) / f).toFixed(2));
   },
 };
-// ·
 // Fisheye, Fisheye Emoji (see "Fisheye" in the CSS): each word's row placed by fishLay — out from the word being sung
 // (the last begun), each row smaller and flatter, and only the two rows' heights from the one before; in ems (a new size
 // for the line is no move) and only when the sung word changes: never a layout as the stack glides. fish.ry: the
@@ -3346,7 +3342,6 @@ LA_HOOKS['Fisheye Emoji'] = { ...LA_HOOKS.Fisheye,
   build() { fish.emo = false; if (kinEmojiOn) fishEmo(); fishLay(0); },
   frame() { if (fish.emo && emoji.codes.size) { fishEmo(); fitDeck(); } LA_HOOKS.Fisheye.frame(); },
 };
-// ·
 // Emoji Stack: the line in a few rows of about the same length, stacked in the middle (see the CSS); the word being sung on
 // a slanted block that grows across it as it's sung — frame() sets the block's width and the letters' colour from curP
 // together, one edge for both, so no letter is ever the colour of what's behind it — and a word with an emoji of its own
@@ -3994,7 +3989,6 @@ MOOD_HOOKS.push({
     return true;
   },
 });
-// ·
 // ---------- the Pictures background (Background › Pictures): your own pictures behind everything, full screen, the next
 // fading in over the last, slowly zooming. Kept on this device alone, in a database of their own (never synced, never
 // uploaded); a huge one shrunk first to 2560 px on its long side (a phone camera's photo as it is holds ~50 MB of memory
