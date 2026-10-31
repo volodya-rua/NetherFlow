@@ -1035,13 +1035,13 @@ body.home .singbar { display: none; } /* (its voice slider is for the lyrics: no
 /* ---------- cover view: the song's cover on a spinning record, with the beat ring round it (drawn on #viz) ---------- */
 .stage-wrap { display: grid; min-height: 0; min-width: 0; container: wrap / size; }
 .stage-wrap > * { grid-area: 1 / 1; min-height: 0; min-width: 0; }
-/* Back, everywhere: ← Home on the song's page (the song plays on), ← Back atop every panel */
-.to-home { display: none; justify-self: start; align-self: start; z-index: 4; align-items: center; gap: 6px; padding: 6px 13px 6px 8px; border-radius: 999px; font-size: 10.5px;
-  letter-spacing: .12em; color: var(--ink); background: color-mix(in srgb, var(--bg) 55%, transparent); box-shadow: inset 0 0 0 1px var(--hair); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
-  transition: color .2s, box-shadow .2s; }
-.to-home .ico { width: 14px; height: 14px; }
-.to-home:hover { color: var(--a); box-shadow: inset 0 0 0 1px var(--a); }
-body.has-song:not(.home, .fs) .to-home { display: inline-flex; }
+/* Back, everywhere: on the song's page a back arrow in the header, by the logo — one of the header's icons (the logo
+   easing aside to make room for it), home in a tap (the song plays on); ← Back atop every panel */
+.top-l { display: flex; align-items: center; min-width: 0; }
+.to-home { flex: none; display: grid; place-items: center; width: 0; height: 36px; margin: 0; padding: 0; border-radius: 50%; overflow: hidden; color: var(--ink);
+  opacity: 0; pointer-events: none; transition: width .4s cubic-bezier(.2,.8,.2,1), margin .4s cubic-bezier(.2,.8,.2,1), opacity .3s, background-color .2s, color .2s; }
+.to-home:hover { background: var(--hair); color: var(--a); }
+body.has-song:not(.home, .fs) .to-home { width: 36px; margin: 0 6px 0 -8px; opacity: 1; pointer-events: auto; }
 .panel-back { grid-column: 1 / -1; justify-self: start; display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px 8px 2px; font-size: 10.5px; letter-spacing: .12em; color: var(--a); }
 .panel-back .ico { width: 14px; height: 14px; }
 .cover-stage { display: none; position: relative; grid-template-columns: auto; place-content: center; justify-items: center; }
@@ -1758,7 +1758,8 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
 
 <div class="frame">
   <header class="top">
-    <button id="brand" class="brand" data-legal="" aria-label="About NetherFlow"><img class="brand-mark" src="logo.png" alt="">NetherFlow<sup>FM</sup></button>
+    <div class="top-l"><button id="toHome" class="to-home nav-ico" aria-label="Back to the home screen (the song plays on)" title="Home"><svg viewBox="0 0 24 24"><path d="M14.5 5.5L8 12l6.5 6.5"/></svg></button>
+    <button id="brand" class="brand" data-legal="" aria-label="About NetherFlow"><img class="brand-mark" src="logo.png" alt="">NetherFlow<sup>FM</sup></button></div>
     <button id="mood" class="mood lbl" popovertarget="moods" title="Pick a mood (M cycles)"><i></i><span>Mood</span> <b id="moodName">Ember</b><span class="hud" aria-hidden="true"><i class="hud-l"></i><b class="hud-sl">0</b><b class="hud-t">0:00</b><b class="hud-sr">0</b><i class="hud-r"></i></span><span class="dash" aria-hidden="true"><b class="d-gear">N</b><b class="d-spd">0</b><small>KM/H</small></span></button>
     <nav class="files lbl">
       <!-- Search: a lens with a sound wave in it. Library: a record sliding out of its sleeve. -->
@@ -1781,7 +1782,6 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
 
   <section class="mid">
     <div class="stage-wrap">
-    <button id="toHome" class="to-home lbl" aria-label="Back to the home screen (the song plays on)"><svg viewBox="0 0 24 24" class="ico"><path d="M14.5 5.5L8 12l6.5 6.5"/></svg>Home</button>
     <div id="coverStage" class="cover-stage">
       <div class="cs-disc" aria-hidden="true"><div class="cs-spin"></div><i class="cs-art"></i></div>
       <div class="cs-text"><p id="csTitle" class="cs-title"></p><p id="csSub" class="cs-sub lbl"></p><p id="csLine" class="cs-line" aria-live="off"></p></div>
@@ -3401,7 +3401,7 @@ const ES_WORDS = {
   '💯': 'hundred perfect', '🐢': 'slow slowly', '⚡': 'energy power spark electricity',
   '✨': 'soul spirit vibe vibes glow glowing sparks jugnu sunehri golden', '💪': 'muscle tough gabru', '👟': 'shoes sneakers jutti', '👠': 'heels',
   '👕': 'shirt', '🧥': 'jacket', '🎩': 'hat', '🕶️': 'shades', '💄': 'makeup', '💅': 'nails sassy nakhra nakhre', '💇': 'hair', '🦷': 'teeth', '🦶': 'feet',
-  '🦵': 'legs', '👳': 'turban pagg sardar', '😎': 'boss swag chill chilling', '🏆': 'legend legends victory', '📸': 'photos pictures flash',
+  '🦵': 'legs', '👳': 'turban pagg', '😎': 'boss swag chill chilling', '🏆': 'legend legends victory', '📸': 'photos pictures flash',
   '🔮': 'fate destiny jadoo kismat naseeb taqdeer', '🏠': 'pind watan', '💸': 'paise', '🌹': 'gulab', '🌸': 'phoolon', '🌠': 'wishes khwahish',
   '💫': 'khwab khwaab sapno', '🤝': 'trust', '🧠': 'smart genius',
 };
