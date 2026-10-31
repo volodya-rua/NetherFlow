@@ -465,6 +465,16 @@ body.home .singbar { display: none; } /* (its voice slider is for the lyrics: no
 #spec { position: absolute; inset: 0; width: 100%; height: 100%; }
 .range { --p: 0%; -webkit-appearance: none; appearance: none; background: transparent; margin: 0; cursor: var(--cur-hand, pointer); }
 .scrub .range { position: absolute; inset: 0; width: 100%; height: 100%; }
+/* Repeat a part: its stretch on the timeline (where the thumb's middle goes: 8 px in from each end), and its bar above
+   the timeline — Start, End, stop */
+.ab-range { position: absolute; top: 5px; bottom: 5px; left: calc(8px + (100% - 16px) * var(--abx, 0)); width: calc((100% - 16px) * (var(--aby, 0) - var(--abx, 0))); pointer-events: none;
+  background: color-mix(in srgb, var(--a) 20%, transparent); border-inline: 2px solid var(--a); border-radius: 3px; }
+.ab-bar { position: absolute; bottom: calc(100% + 8px); left: 50%; translate: -50% 0; z-index: 5; display: flex; align-items: center; gap: 8px; padding: 5px 6px 5px 14px; white-space: nowrap;
+  background: color-mix(in srgb, var(--bg) 80%, transparent); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); border: 1px solid var(--hair); border-radius: 999px;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, .5); animation: show .25s both; }
+.ab-bar[hidden], .ab-range[hidden] { display: none; }
+.ab-bar .lbl { font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--a); }
+.ab-bar .pill { padding: 6px 12px; font-variant-numeric: tabular-nums; }
 .scrub .range::-webkit-slider-runnable-track { height: 38px; background: transparent; }
 .scrub .range::-moz-range-track { height: 38px; background: transparent; }
 /* (invisible: each timeline style draws its own playhead; wide enough to grab) */
@@ -1658,6 +1668,8 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
     <div class="scrub">
       <canvas id="spec" aria-hidden="true"></canvas>
       <input id="seek" class="range" type="range" min="0" max="1000" value="0" aria-label="Seek">
+      <i id="abRange" class="ab-range" hidden></i>
+      <div id="abBar" class="ab-bar" role="group" aria-label="Repeat a part" hidden><span class="lbl">Repeat a part</span><button id="abA" class="pill ghost"></button><button id="abB" class="pill ghost"></button><button id="abX" class="icon-btn" aria-label="Stop repeating the part"><svg viewBox="0 0 24 24" class="ico"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
     </div>
     <div class="bar">
       <div class="transport">
@@ -5446,6 +5458,34 @@ function startRadio(t, of = t.trackName) {
   playTrack(t);
   toast(`Radio: ${of}, and songs like it`);
 }
+// ---------- Repeat a part (the song's ⋯ › Repeat a part): the bit of a song you love, over and over — where it starts
+// and ends set as it plays (Start, End: the moment they're tapped), shown on the timeline; till it's stopped or another
+// song starts ----------
+const ab = { a: null, b: null, id: null, timer: 0 };
+function abPaint() {
+  const on = !!current && ab.id === current.trackId, d = P.dur || 0, r = $('abRange');
+  $('abBar').hidden = !on;
+  r.hidden = !(on && ab.a != null && d);
+  if (!r.hidden) { r.style.setProperty('--abx', (ab.a / d).toFixed(4)); r.style.setProperty('--aby', (Math.max(ab.a, ab.b ?? P.t) / d).toFixed(4)); }
+  if (!on) return;
+  $('abA').textContent = ab.a == null ? 'Start here' : `Start ${fmt(ab.a)}`;
+  $('abB').textContent = ab.b == null ? 'End here' : `End ${fmt(ab.b)}`;
+}
+function abOpen() { if (!current) return; Object.assign(ab, { a: null, b: null, id: current.trackId }); abTick(); toast('Tap Start where the part begins, then End where it ends', 5000); }
+// (every 50 ms while it's on: back to the start the moment the end's reached — or the song's taken out of the part)
+function abTick() {
+  clearInterval(ab.timer);
+  ab.timer = setInterval(() => {
+    if (ab.id !== current?.trackId) return abStop(true);
+    if (ab.a != null && ab.b != null && (P.t >= ab.b || P.t < ab.a - 1)) P.seek(ab.a);
+    abPaint();
+  }, 50);
+  abPaint();
+}
+function abStop(quiet) { clearInterval(ab.timer); Object.assign(ab, { a: null, b: null, id: null, timer: 0 }); abPaint(); if (!quiet) toast('Repeating the part: off'); }
+$('abA').onclick = () => { ab.a = P.t; if (ab.b != null && ab.b < ab.a + 1) ab.b = null; abPaint(); };
+$('abB').onclick = () => { if (ab.a == null) ab.a = 0; ab.b = Math.min(Math.max(P.t, ab.a + 1), (P.dur || Infinity) - .4); P.seek(ab.a); toast(`Repeating ${fmt(ab.a)} to ${fmt(ab.b)}`); abPaint(); };
+$('abX').onclick = () => abStop();
 function setRepeat(mode) {
   repeat = mode;
   store.set('netherflow.repeat', mode === 'off' ? '' : mode);
@@ -7561,6 +7601,7 @@ const ICONS = {
   car: '<path d="M4 16.5v-4l2-5.5h12l2 5.5v4M4 12.5h16M4 16.5h16M6.5 16.5v2M17.5 16.5v2"/><circle cx="7.5" cy="14.5" r=".6"/><circle cx="16.5" cy="14.5" r=".6"/>',
   together: '<circle cx="9" cy="8" r="3.2"/><path d="M3 19.5c.6-3.3 3-5.2 6-5.2s5.4 1.9 6 5.2"/><circle cx="16.5" cy="9" r="2.6"/><path d="M16.8 14.3c2.3.2 3.9 1.8 4.4 4.4"/>',
   story: '<rect x="6" y="2.5" width="12" height="19" rx="2.5"/><circle cx="12" cy="10.5" r="3.2"/><path d="M9 16.5h6"/>',
+  loop: '<path d="M4.5 12.5V11a3.5 3.5 0 0 1 3.5-3.5h11M19.5 11.5V13a3.5 3.5 0 0 1-3.5 3.5H5"/><path d="M16 4.5l3 3-3 3M8 13.5l-3 3 3 3"/>',
 };
 // (each made once, then copied: a long list's rows each take two, and reading the markup each time was a third of a row's cost)
 const icoMade = new Map();
@@ -7608,6 +7649,7 @@ function songMenu(t, anchor, from = {}) {
     mi('plus', 'Add to playlist', lists, '›'),
     ...offlineItems(t, anchor, main),
     ...(from.playlist ? [mi('minus', `Remove from ${from.playlist.name}`, () => { hideMenu(); removeFromPlaylist(from.playlist, t); })] : []),
+    ...(t.trackId === current?.trackId && t.kind !== 'episode' ? [ab.id === t.trackId ? mi('loop', 'Stop repeating the part', () => { hideMenu(); abStop(); }) : mi('loop', 'Repeat a part', () => { hideMenu(); abOpen(); })] : []),
     mi('mic', 'Go to artist', () => { hideMenu(); openArtist(t); }),
     ...(t.kind !== 'episode' ? [mi('radio', 'Start radio', () => { hideMenu(); startRadio(t); })] : []),
     mi('out', 'Open on YouTube', () => { hideMenu(); openSource(t); }),
