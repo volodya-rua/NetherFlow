@@ -48,6 +48,7 @@
       "bridgethemusic.js",
       "jsqr.js",
       "karaoke.js",
+      "ai/**",
       "index.html",
       "legal.html",
       "licenses/**",
