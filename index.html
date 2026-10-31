@@ -6464,7 +6464,7 @@ function buildStage(idx) {
   curWords = words.map((w, i) => {
     const o = el('span', 'w' + (i === accent ? ' em' : '')), inner = el('span', '', LETTERED.has(lanim) ? null : w);
     o.style.setProperty('--i', i);
-    if (LETTERED.has(lanim)) o.chs = [...w].map(c => { const ch = el('span', 'ch', c); ch.style.setProperty('--k', k++); if (lanim === 'Shatter') scatter(ch); inner.append(ch); return ch; }); // (letter by letter)
+    if (LETTERED.has(lanim)) o.chs = graphemes(w).map(c => { const ch = el('span', 'ch', c); ch.style.setProperty('--k', k++); if (lanim === 'Shatter') scatter(ch); inner.append(ch); return ch; }); // (letter by letter)
     o.append(inner);
     p.append(o, ' ');
     return o;
@@ -6521,6 +6521,13 @@ function buildStage(idx) {
 // the next by a virama: their Unicode blocks share one layout); Hangul by its blocks, kana by its morae (the small ones
 // part of the one before), Chinese characters one each. It counted English vowels only: a Hindi word in its own
 // script was one syllable whatever its length, and its line's words lit up at the wrong pace.
+// A word's letters as they're seen: grapheme clusters, each vowel sign, virama or accent kept with its letter. Split by
+// code point, a Tamil, Hindi or Punjabi word in a letter style fell apart into marks on dotted circles (the user's
+// screenshot, 2026-11-01). Words of the joined scripts (Arabic, Urdu, Persian, Syriac, N'Ko, Mongolian) stay whole:
+// their letters join one another, and apart they'd lose their shapes.
+const SEG = typeof Intl !== 'undefined' && Intl.Segmenter ? new Intl.Segmenter(undefined, { granularity: 'grapheme' }) : null;
+const JOINED = /[\u0600-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF\u1800-\u18AF]/;
+const graphemes = w => JOINED.test(w) ? [w] : SEG ? Array.from(SEG.segment(w), x => x.segment) : [...w];
 function sylOf(w) {
   let n = 0;
   const cs = [...w];
@@ -6706,7 +6713,7 @@ function layoutLyricShape(p) {
   };
   // another line's letters, shown (not sung) on a ring or strand of their own, at most room long; measured as lay does
   const ghost = (text, fs, room = Infinity) => {
-    const items = [...text].map(ch => p.appendChild(el('span', 'ch ghost', ch)));
+    const items = graphemes(text).map(ch => p.appendChild(el('span', 'ch ghost', ch)));
     const measure = f => {
       for (const c of items) { c.style.fontSize = f + 'px'; c.fs = f; }
       let at = 0;
@@ -14465,7 +14472,7 @@ function kinLayout(S, look, CW, CH) {
 // each letter of a laid-out word: its middle's offset along the word (px), and its own small jitter
 function kinLetters(w, r) {
   const mg = kin.mg; mg.font = fnt(w.font, w.fs);
-  const chars = [...w.t], tw = mg.measureText(w.t).width;
+  const chars = graphemes(w.t), tw = mg.measureText(w.t).width;
   return chars.map((ch, j) => {
     const left = mg.measureText(chars.slice(0, j).join('')).width, adv = mg.measureText(chars.slice(0, j + 1).join('')).width - left;
     return { ch, dx: left + adv / 2 - tw / 2, adv, j: r(), k: r() };
