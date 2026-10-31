@@ -13,10 +13,12 @@ const [apkPath, outPath = path.join(root, 'dist', 'update.json')] = process.argv
 if (!apkPath || !fs.existsSync(apkPath)) throw new Error('usage: node tools/update-manifest.js <the release APK> [out]');
 const keyFile = path.join(process.env.NETHERFLOW_SIGNING || path.join(require('os').homedir(), '.netherflow-signing'), 'update-key.pem');
 const version = JSON.parse(blob('package.json')).version, gradle = f => +f.match(/versionCode\s+(\d+)/)[1], code = gradle(blob('android/app/build.gradle').toString());
-if (git('status', '--porcelain', '--', 'index.html', 'lib.js', 'flowstream.js', 'endverse.js', 'cast.js', 'bridgethemusic.js', 'jsqr.js', 'legal.html', 'fonts', 'licenses')) throw new Error('the page has changes not committed: commit them (and tag) first');
-
-// the page's files (as `npm run android:web` copies them)
-const list = [...['index.html', 'lib.js', 'flowstream.js', 'endverse.js', 'cast.js', 'bridgethemusic.js', 'jsqr.js', 'legal.html', 'logo.png'], ...git('ls-tree', '-r', '--name-only', 'HEAD', '--', 'licenses', 'fonts').split('\n').filter(Boolean)];
+// the page's files: the ones `npm run android:web` copies, read from its script in package.json (the phone's updated page
+// is a new folder of exactly these, so a file missing here would be missing there: karaoke.js and sw.js once were)
+const web = JSON.parse(blob('package.json')).scripts['android:web'], listed = re => JSON.parse(web.match(re)[1].replace(/'/g, '"'));
+const PAGE = listed(/const f of (\[[^\]]*\])/), DIRS = listed(/const d of (\[[^\]]*\])/);
+if (git('status', '--porcelain', '--', ...PAGE, ...DIRS)) throw new Error('the page has changes not committed: commit them (and tag) first');
+const list = [...PAGE, ...git('ls-tree', '-r', '--name-only', 'HEAD', '--', ...DIRS).split('\n').filter(Boolean)];
 const files = {};
 for (const f of list.sort()) { const b = blob(f); files[f] = [crypto.createHash('sha256').update(b).digest('hex'), b.length]; }
 
