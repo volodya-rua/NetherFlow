@@ -82,6 +82,8 @@ kbd { font: inherit; border: 1px solid currentColor; border-radius: 3px; padding
 body.home .singbar { display: none; } /* (its voice slider is for the lyrics: not over the home screen and its links) */
 .singbar svg { width: 18px; height: 18px; fill: none; stroke: var(--a); stroke-width: 1.8; }
 .singbar .sl { width: min(220px, 40vw); --p: 20%; }
+.singbar { max-width: calc(100vw - 16px); } /* (a phone: inside the screen, its "Voice" off, the slider shrinking) */
+@media (max-width: 460px) { .singbar > span { display: none; } .singbar .sl { width: auto; flex: 1 1 60px; min-width: 60px; } }
 .singbar b { min-width: 3.2em; text-align: right; font-weight: 600; }
 .singbar .sing-ai { color: var(--a); white-space: nowrap; }
 .singbar .sing-ai:empty { display: none; }
@@ -303,6 +305,9 @@ body.home .singbar { display: none; } /* (its voice slider is for the lyrics: no
    smaller, fainter and turned away the further off they are; the row gliding along (see lensFocus) */
 .la-lens .deck.lyr { overflow-x: clip; -webkit-mask-image: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent); mask-image: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent); } /* (what a long line can't fit fades at the edges, never cut in half) */
 .la-lens .deck.lyr :is(.prev, .next) { padding-inline: 4%; } /* (the lines before and after, clear of that fade) */
+/* (a mask also clips above and below its box: room for the sung word's accents, its block's turn and its glow, nothing
+   moved — on a short screen the deck is the sung line alone, and its tops were cut flat — QA) */
+.la-lens .deck.lyr { padding-block: var(--lens-pad, 48px); margin-block: calc(-1 * var(--lens-pad, 48px)); }
 .la-lens .lyr .cur { position: relative; left: 50%; width: max-content; white-space: nowrap; text-align: left; perspective: 900px; transition: translate .5s cubic-bezier(.2,.8,.2,1); }
 .la-lens .cur .w { --d: 3; font-size: calc((1.75 - min(var(--d), 3) * .32) * var(--fit, 1) * 1em); opacity: calc(1 - min(var(--d), 4) * .17); vertical-align: middle;
   transform: rotateY(calc(var(--side, 1) * min(var(--d), 3) * -13deg)); animation: none; transition: font-size .4s cubic-bezier(.2,.8,.2,1), opacity .4s, transform .4s; }
@@ -544,6 +549,7 @@ body.home .singbar { display: none; } /* (its voice slider is for the lyrics: no
   animation: rise 1.2s cubic-bezier(.16,1,.3,1) both; }
 .msg em { font: italic 400 1.08em/.8 var(--serif); text-transform: none; letter-spacing: -.035em; color: var(--a); }
 .msg.ghost { color: transparent; -webkit-text-stroke: 1.5px var(--ink); animation: rise 1.2s cubic-bezier(.16,1,.3,1) both, pulse 1.4s 1.2s ease-in-out infinite alternate; }
+.msg { pointer-events: none; } /* (only words: at the default window its box rose over the header, whose buttons took no click in their middle — QA) */
 .cta { margin-top: 4.5vh; font: italic 400 clamp(26px, 3vw, 42px)/1 var(--serif); letter-spacing: -.01em; display: inline-flex; gap: 14px;
   align-items: center; padding-bottom: 6px; border-bottom: 1px solid var(--a); animation: fade 1s .4s both; }
 .cta span { color: var(--a); transition: transform .4s cubic-bezier(.3,1.6,.5,1); }
@@ -1569,6 +1575,8 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
 .skin-ops, .skin-ops .lbl { letter-spacing: .08em; }
 .skin-ops :is(.brand, .title, .cta, .consent h2, .eq-top h3, .home-now b, .mrow.now .mname, .cs-title, .it-title, .row b, .acard b, .album b, .chip, .sm-head b, .prev, .dv-line) { font-style: normal; font-weight: 500; letter-spacing: .01em; }
 .skin-ops .msg { font-size: clamp(40px, 11vw, 190px); }
+.skin-ops .brand { text-shadow: 0 1px 2px rgba(0, 0, 0, .55); } /* (pale ink on the pale sky: the logo and name shadowed, as Ops' other words) */
+.skin-ops .brand-mark { filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, .55)); }
 .skin-ops .msg em { font-family: 'Chakra Petch', sans-serif; font-style: normal; font-weight: 500; text-transform: uppercase; font-size: .62em; letter-spacing: .06em; }
 .skin-ops .title { text-transform: uppercase; }
 .skin-ops .stage-wrap { background: radial-gradient(ellipse 70% 60% at 35% 50%, rgba(8,12,16,.5), transparent 75%); }
@@ -1699,7 +1707,7 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
 .skin-ops .hud-sl { background: #5d79ae; } .skin-ops .hud-sr { background: #de9b35; }
 .skin-ops .hud i i { display: block; width: 14px; height: 18px; border-radius: 2px; background: rgba(93,121,174,.75); box-shadow: inset 0 -3px 0 rgba(0,0,0,.3); }
 .skin-ops .hud-r i { background: rgba(222,155,53,.8); }
-@media (max-width: 720px) { .hud i { display: none; } }
+@media (max-width: 720px), (max-height: 400px) { .hud i { display: none; } } /* (short too: the header's one row, and they covered the logo — QA) */
 /* a round banner, in a chorus */
 .rbanner { display: none; position: fixed; z-index: 30; left: 50%; top: 9vh; translate: -50% 0; pointer-events: none; text-align: center; white-space: nowrap; }
 .rbanner.show { display: block; animation: rbanner 2.7s cubic-bezier(.16,1,.3,1) both; }
@@ -7062,10 +7070,10 @@ function buildStage(idx) {
     stage.replaceChildren(old, deck);
     setTimeout(() => old.remove(), 700);
   } else stage.replaceChildren(deck);
+  updateMap(idx); // (first: a new section's row in the map changes the deck's width, and Lens places its row by that width)
   fitDeck();
   if (SELF_LAID.has(lanim)) layoutLyricShape(p);
   if (lanim === 'Shatter') keepShardsIn(p);
-  updateMap(idx);
 
   // When each word starts and ends ({ t, e } in song seconds); the frame loop turns that into fill.
   const end = lines[idx + 1]?.t ?? (P.dur || line.t + 5);
@@ -7223,20 +7231,28 @@ function lensFocus() {
   p.after(ghost);
   const gws = [...ghost.querySelectorAll('.w')];
   set(gws, 1);
-  const fit = Math.min(1, deck * .9 / (gws[k].offsetWidth || 1)); // (a long word: no wider than the stage)
+  let fit = Math.min(1, deck * .9 / (gws[k].offsetWidth || 1)); // (a long word: no wider than the stage)
   if (fit < 1) set(gws, fit);
-  // a line wider than the stage: the other words smaller too (to 0.6 of their size at least), so more of it is in view
-  const safe = deck * .92, wk = gws[k].offsetWidth, w1 = ghost.offsetWidth;
-  const rest = w1 > safe && w1 > wk ? Math.max(.6, Math.min(1, (safe - wk) / (w1 - wk))) : 1;
-  if (rest < 1) set(gws, fit, rest);
-  const W = ghost.offsetWidth, x = gws[k].offsetLeft + gws[k].offsetWidth / 2;
+  // a line wider than the stage: the other words smaller too (to 0.6 of their size at least, 0.45 on a narrow stage), and
+  // on a short line the sung word as well, so short and middling lines show whole. (The gaps between the words keep their
+  // size: left out of the sums)
+  const safe = deck * .9, floor = deck < 600 ? .45 : .6, w1 = ghost.offsetWidth, wk = gws[k].offsetWidth;
+  const gaps = Math.max(0, w1 - gws.reduce((a, w) => a + w.offsetWidth, 0)), others = w1 - wk - gaps;
+  let rest = 1;
+  if (w1 > safe && others > 0) {
+    rest = Math.max(floor, Math.min(1, (safe - wk - gaps) / others));
+    if (rest === floor && gws.length <= 6) fit *= Math.max(.7, Math.min(1, (safe - gaps - floor * others) / wk));
+    set(gws, fit, rest);
+  }
+  const W = ghost.offsetWidth, x = gws[k].offsetLeft + gws[k].offsetWidth / 2, fs = parseFloat(getComputedStyle(gws[k]).fontSize) || 0;
   ghost.remove();
   set(curWords, fit, rest);
   // the row glides to put the sung word in the middle, but no further than leaves an end of the stage empty while the
-  // other is cut: whole lines stay whole, and in a long one the sung word stays clear of the edges' fade (QA, 1.6.2:
-  // words were cut in half at the stage's edges, the line's ends out of sight)
-  const half = safe / 2, lo = Math.min(half - W, -half), hi = Math.max(half - W, -half);
+  // other is cut: whole lines stay whole, and in a long one the sung word (its block too, .14em past it) stays clear of
+  // the edges' fade (QA, 1.6.2: words were cut in half at the stage's edges, the line's ends out of sight)
+  const half = safe / 2 - fs * .14, lo = Math.min(half - W, -half), hi = Math.max(half - W, -half);
   p.style.translate = `${Math.min(hi, Math.max(lo, -x)).toFixed(1)}px 0`;
+  p.closest('.deck')?.style.setProperty('--lens-pad', Math.round(fs * .7) + 'px'); // (the fade's box: room above and below, see the CSS)
 }
 // The self-laid styles (SELF_LAID) place the line's letters (Cylinder: words) themselves, round the middle of the
 // stage: layoutLyricShape measures them, sized to the stage, and turnLyricShape places them every frame, following

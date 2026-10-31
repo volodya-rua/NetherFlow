@@ -3,7 +3,7 @@ NetherFlow is a free, open-source music player with a look of its own. Search an
 <b>Features</b>
 <ul>
 <li>Search songs, artists and albums, and play them in full, with typos fixed and suggestions as you type</li>
-<li>Synced lyrics, word by word where available, with 25 lyric animations, from Wave and Fireworks to Black Hole and DNA</li>
+<li>Synced lyrics, word by word where available, with 27 lyric animations, from Tower, Lens and Emoji Stack to Wave, Black Hole and DNA</li>
 <li>5 themes that change the whole look at once, each with its own backdrop, timeline and cursor: Stickman, Spider, Blocks, Tactical and Ops</li>
 <li>27 animated backgrounds that take their colors from the album cover</li>
 <li>A beat ring and screen edges that move with the music</li>
