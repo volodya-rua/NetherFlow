@@ -316,9 +316,9 @@ body.home .singbar { display: none; } /* (its voice slider is for the lyrics: no
 /* Drift: the line on a page drifting and turning slowly in space; the word being sung lifts off it towards you */
 .la-drift .deck.lyr { perspective: 900px; perspective-origin: 50% 30%; }
 .la-drift .cur { transform-style: preserve-3d; animation: page-drift 14s ease-in-out infinite alternate; }
-@keyframes page-drift { from { transform: rotateX(22deg) rotateZ(-3.5deg) translateZ(-.2em); } to { transform: rotateX(12deg) rotateZ(2.5deg) translateZ(.25em) translateX(.25em); } }
+@keyframes page-drift { from { transform: rotateX(18deg) rotateZ(-2.5deg) translateZ(-.25em); } to { transform: rotateX(10deg) rotateZ(2deg) translateZ(.08em); } }
 .la-drift .cur .w { animation: drift-in .5s cubic-bezier(.2,.9,.3,1.1) backwards; animation-delay: calc(var(--i) * 35ms); transition: transform .4s cubic-bezier(.2,.9,.3,1.2); }
-.la-drift .cur .w.now { transform: translateZ(.55em) rotateX(-12deg); }
+.la-drift .cur .w.now { transform: translateZ(.32em) rotateX(-8deg); }
 @keyframes drift-in { from { opacity: 0; transform: translateZ(-2em) translateY(.4em); } }
 /* Wall: the line's words stacked into a wall, a word or two a row (see LA_HOOKS.Wall), the rows a little staggered; the wall
    floats in space, drifting slowly on two swings of their own lengths (never past ~12° each: always easy to read), in
@@ -3260,6 +3260,12 @@ const lens = { k: -1, p: null }; // (Lens: the word it's on, in which line — s
 // The styles that bring their own code (Wall, Fisheye, Fisheye Emoji, Emoji Stack): LA_HOOKS[name] = { build({ p, deck, words, text }) as a line's laid out (buildStage),
 // frame() every frame (syncLyrics), fit(cur, { ls, h, phone }) to size the line (fitDeck) } — each optional.
 const LA_HOOKS = {};
+// Drift: its line fitted into the middle 84% of the stage, room either side for the page's turn and the word lifted
+// towards you (both draw it bigger than it's laid out: a long word's ends went past the window's edge — the user's report)
+LA_HOOKS.Drift = { fit(cur, { ls, h, phone }) {
+  cur.style.width = '84%'; cur.style.marginInline = 'auto';
+  fitText(cur, Math.min(innerHeight * (phone ? .095 : .15), phone ? 80 : 150) * ls, h * (innerHeight <= 400 ? .86 : .54));
+} };
 // Wall (see ".la-wall" in the CSS): the line a word or two a row — two short words share one, a long one stands alone, a
 // break's dots all on one — in the wall (its depth) and its drifting face. Each new wall's drift (--wd) carries on from
 // where the last one's is, and so does the old one, kept a moment to sink back (LEAVING): moved to stay under the new
