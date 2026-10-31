@@ -1199,7 +1199,7 @@ body.home .home-now { display: flex; }
 .pic-bg img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; background: var(--bg); transition: opacity 1.6s ease; @starting-style { opacity: 0; } }
 /* (blurred: past each edge by three times the blur, so no edge fades — a blur thins out toward the edge) */
 .pic-bg.blur img { inset: calc(var(--pic-blur) * -3); width: calc(100% + var(--pic-blur) * 6); height: calc(100% + var(--pic-blur) * 6); filter: blur(var(--pic-blur)); }
-.pic-bg::after { content: ''; position: absolute; inset: 0; background: var(--bg); opacity: var(--pic-dim, .6); transition: opacity .4s; }
+.pic-bg::after { content: ''; position: absolute; inset: 0; background: var(--bg); opacity: var(--pic-dim, .7); transition: opacity .4s; }
 @keyframes picZoom { from { transform: scale(1.02); } to { transform: scale(1.12); } }
 .theme-pictures:not(.grain-still) .pic-bg img { animation: picZoom 34s ease-in-out infinite alternate; } /* (a slow zoom: not on Low, or with less motion asked for) */
 
@@ -3558,11 +3558,13 @@ const MOOD_HOOKS = [];
 // uploaded); a huge one shrunk first to 2560 px on its long side (a phone camera's photo as it is holds ~50 MB of memory
 // on screen). Its rows, under Background while it's on: Your pictures, Picture dim (dimmed in the background's own colour,
 // so the lyrics stay easy to read), Picture blur, Picture change. ----------
-const PIC_DIM = { Off: 0, Low: .4, Medium: .6, High: .78 }, PIC_BLUR = { Off: 0, Soft: 8, Strong: 22 };
+// (Medium: a white sky dimmed to the Cover background's ~30 %, where the words not yet sung read about as well as on the
+// app's own backgrounds; at .6 they sank to grey on grey)
+const PIC_DIM = { Off: 0, Low: .45, Medium: .7, High: .85 }, PIC_BLUR = { Off: 0, Soft: 8, Strong: 22 };
 const PIC_EVERY = { 'Each song': 0, 'Every 30 s': 3e4, 'Every 5 min': 3e5, Never: 0 };
 const picPref = (k, o, d) => Object.hasOwn(o, store.get(k)) ? store.get(k) : d;
 let picDim = picPref('netherflow.picdim', PIC_DIM, 'Medium'), picBlur = picPref('netherflow.picblur', PIC_BLUR, 'Off'), picEvery = picPref('netherflow.picevery', PIC_EVERY, 'Each song');
-let pics = null, picsP = null, picDbP = null, picAt = +store.get('netherflow.picat') || 0, picOn = false, picTok = 0, picTimer = 0, picWas = '', picIn = null;
+let pics = null, picsP = null, picDbP = null, picAt = +store.get('netherflow.picat') || 0, picOn = false, picTok = 0, picTimer = 0, picWas = [], picIn = null, picSong = 0;
 const picStore = (mode, f) => (picDbP ||= new Promise((res, rej) => { const r = indexedDB.open('netherflow-pictures', 1); r.onupgradeneeded = () => r.result.createObjectStore('pics', { autoIncrement: true }); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }))
   .then(db => new Promise((res, rej) => { const tx = db.transaction('pics', mode), r = f(tx.objectStore('pics')); tx.oncomplete = () => res(r?.result); tx.onerror = tx.onabort = () => rej(tx.error); }));
 const picLoad = () => picsP ||= picStore('readonly', s => s.getAll()).then(a => pics = a, () => pics = []);
@@ -3638,11 +3640,12 @@ function setPicDim(v) { picDim = v; store.set('netherflow.picdim', v === 'Medium
 function setPicBlur(v) { picBlur = v; store.set('netherflow.picblur', v === 'Off' ? '' : v); picLook(); renderMoodMenu(); }
 function setPicEvery(v) { picEvery = v; store.set('netherflow.picevery', v === 'Each song' ? '' : v); picPlan(); renderMoodMenu(); }
 MOOD_HOOKS.push({ rows() {
-  const was = picWas; picWas = theme;
+  const [wasSkin, was] = picWas; picWas = [skin, theme];
   if (theme !== 'Pictures') return [];
-  // (just picked, with none kept yet: the picker straight away. This runs in the click's own handler, by way of setTheme;
-  // the count can take a moment's look, well inside the few seconds a click gives to open it)
-  if (was !== 'Pictures' && navigator.userActivation?.isActive) picLoad().then(() => { if (!pics.length && theme === 'Pictures') picPick(); });
+  // (just picked in the Background row, with none kept yet: the picker straight away — not when a theme's switched off and
+  // NetherFlow's own background is Pictures again. This runs in the click's own handler, by way of setTheme; the count can
+  // take a moment's look, well inside the few seconds a click gives to open it)
+  if (was !== 'Pictures' && wasSkin === skin && navigator.userActivation?.isActive) picLoad().then(() => { if (!pics.length && theme === 'Pictures') picPick(); });
   const n = pics?.length || 0;
   return [settingRow('Your pictures', n ? ['Choose…', 'Clear'] : ['Choose…'], '', v => v === 'Clear' ? picClear() : picPick(),
       (n ? `${n} of your own, kept` : 'One or more of your own, from this device: kept') + ' on this device only, never uploaded or synced.' + (n ? ' Choose… adds more.' : '')),
@@ -3652,8 +3655,9 @@ MOOD_HOOKS.push({ rows() {
 } });
 queueMicrotask(() => {
   new MutationObserver(picSync).observe(body, { attributes: true, attributeFilter: ['class'] }); picSync();
-  // (Picture change, Each song: setNow writes each song's name here)
-  new MutationObserver(() => { if (picOn && picEvery === 'Each song' && pics?.length > 1) picShow(picAt + 1); }).observe($('title'), { childList: true });
+  // (Picture change, Each song: setNow writes each song's name here — once per song played (loadId), though it can write
+  // it again, an imported song's cover found a moment later)
+  new MutationObserver(() => { if (picSong === loadId) return; picSong = loadId; if (picOn && picEvery === 'Each song' && pics?.length > 1) picShow(picAt + 1); }).observe($('title'), { childList: true });
 });
 // the themes, as cards on top of the mood menu: each its own little picture
 const SKIN_ICONS = {
