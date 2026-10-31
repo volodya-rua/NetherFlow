@@ -2843,7 +2843,7 @@ function setKinetic(v) { kinetic = v === 'Music video'; store.set('netherflow.ki
 
 // ---------- background theme (mood menu): what the backdrop draws. The mood picks its colors. ----------
 // The shader draws all but Gradient and Cover (both CSS: see PLAIN). The index is the shader's style number (themeNo).
-const THEMES = ['Smoke', 'Aurora', 'Liquid', 'Lava', 'Rings', 'Nebula', 'Prism', 'Silk', 'Mesh', 'Fireflies', 'Black Hole', 'Tunnel', 'Storm', 'Kaleido', 'Gyroid', 'Mandala', 'Fractal', 'Julia', 'Crystal', 'Cosmos', 'Galaxy', 'Plasma', 'Ribbons', 'Synapse', 'Halo', 'Bloom', 'Hyperbolic', 'Apollonian', 'Newton', 'Coral', 'Mandelbrot', 'Vortex', 'Deep Field', 'Ridges', 'Spirograph', 'Moiré', 'Pictures', 'Gradient', 'Cover',
+const THEMES = ['Smoke', 'Aurora', 'Liquid', 'Lava', 'Rings', 'Nebula', 'Prism', 'Silk', 'Mesh', 'Fireflies', 'Black Hole', 'Tunnel', 'Storm', 'Kaleido', 'Gyroid', 'Mandala', 'Fractal', 'Julia', 'Crystal', 'Cosmos', 'Galaxy', 'Plasma', 'Ribbons', 'Synapse', 'Halo', 'Bloom', 'Hyperbolic', 'Apollonian', 'Newton', 'Coral', 'Mandelbrot', 'Vortex', 'Deep Field', 'Ridges', 'Rosette', 'Moiré', 'Pictures', 'Gradient', 'Cover',
   'Stickman', 'Spider', 'Blocks', 'Tactical', 'Ops', 'Redline'];
 // (the backgrounds the shader doesn't draw: Gradient, plain CSS; Cover, the album cover blurred, CSS too)
 const PLAIN = new Set(['Gradient', 'Cover', 'Pictures']);
@@ -13310,8 +13310,8 @@ void main(){
     float dd = p.y - yl, ln = px * px / (dd * dd + px * px);
     col += mix(C1, C2, fi / 27.) * (ln * .7 + exp(-abs(dd) * 70.) * .07) * smoothstep(1.35, .55, abs(p.x)) * (.55 + env * .45) * (.35 + .65 * fi / 27.) * F.w; // (the rows behind fainter)
   }
-#elif STYLE == ${themeNo('Spirograph')}
-  // Spirograph: rings of glowing line, each a curve looping round the middle (a rose: its radius rising and falling k
+#elif STYLE == ${themeNo('Rosette')}
+  // Rosette: rings of glowing line, each a curve looping round the middle (a rose: its radius rising and falling k
   // times a turn), turning at their own pace — the bass swelling them, the mids changing their loops
   vec2 p = uv / F.x; float r = length(p), a = atan(p.y, p.x), px = 1.4 / R.y * F.x;
   for (int i = 0; i < 9; i++) {

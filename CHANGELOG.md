@@ -23,7 +23,7 @@ What changed in each NetherFlow release. The builds are on the [releases page](h
   still, in your own colours if you like), plus Frame, Dots, Aurora, Spikes and Ripple
 - **Make it yours:** your own pictures as the background (kept on this device only, with dim and blur), your own colours
   for the lyrics, the highlight and the rest, 14 more moods and 9 more backgrounds (Apollonian, Newton, Coral,
-  Mandelbrot, Vortex, Deep Field, Ridges, Spirograph and Moiré)
+  Mandelbrot, Vortex, Deep Field, Ridges, Rosette and Moiré)
 - **360 sound, rebuilt:** the song split into 512 bands and set round you; 360 Orbit uses the browser's own 3D hearing
 - **Sing:** at 0% the voice is now taken out frequency by frequency, its reverb too. On Windows, AI karaoke takes the
   singer out with an AI built into the app, on your computer

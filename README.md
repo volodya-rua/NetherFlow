@@ -173,7 +173,7 @@ the lyrics come in. There are six (five on Android).
 
 ## Backgrounds
 
-There are 32, and they take their colours from the album cover: smoke, northern lights, liquid colour, starfields,
+There are 36, and they take their colours from the album cover: smoke, northern lights, liquid colour, starfields,
 galaxies, kaleidoscopes, fractals and more. A few of them:
 
 <table>
@@ -190,7 +190,7 @@ galaxies, kaleidoscopes, fractals and more. A few of them:
 </table>
 
 Quality goes from Low to Ultra, and on Windows there are **Extreme** and **Extreme+** for powerful graphics cards. On a
-slower phone it steps down by itself, so it never lags. The look also includes **46 moods**, **12 timeline styles** and a
+slower phone it steps down by itself, so it never lags. The look also includes **60 moods**, **12 timeline styles** and a
 **beat ring** with screen edges that move with the music.
 
 <a id="vs"></a>
@@ -263,9 +263,9 @@ NetherFlow is **first, or tied for first, in seven categories**. The others beat
 
 | | NetherFlow | Spotify | Apple Music | YouTube Music |
 |:--|:--|:--|:--|:--|
-| Moving backgrounds | ✓ 32, and they move with the beat | ~ Canvas loops, when the artist made one | ~ animated album covers | ~ music videos |
+| Moving backgrounds | ✓ 36, and they move with the beat | ~ Canvas loops, when the artist made one | ~ animated album covers | ~ music videos |
 | Themes that change the whole app | ✓ 6 | ✗ | ✗ | ✗ |
-| Colour moods | ✓ 46 | ✗ | ✗ | ✗ |
+| Colour moods | ✓ 60 | ✗ | ✗ | ✗ |
 | **Score** | **10** | 6 | 7 | 6 |
 
 ### Discovery
