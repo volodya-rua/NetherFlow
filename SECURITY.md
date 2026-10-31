@@ -5,8 +5,8 @@ privately as described here, not in a public issue, discussion or post.
 
 ## Supported versions
 
-Only the latest release gets security fixes, whether it came from
-[GitHub](https://github.com/volodya-rua/NetherFlow/releases/latest) or F-Droid. If you're on an older version, please
+Only the latest release gets security fixes. It is on
+[GitHub](https://github.com/volodya-rua/NetherFlow/releases/latest). If you're on an older version, please
 update first and check that the problem is still there.
 
 ## How to report
@@ -53,7 +53,7 @@ NetherFlow's own code in this repository, including:
 Out of scope:
 
 - **Problems in the services NetherFlow uses** (YouTube, Apple, Spotify, Audius, the lyrics services, the public MQTT
-  relays, GitHub, F-Droid and others). Report those to the service.
+  relays, GitHub and others). Report those to the service.
 - **Problems in the components NetherFlow includes** (Electron and Chromium, Capacitor,
   and the others listed under About › Licenses). Report those upstream. But do tell us if a NetherFlow release ships a
   version with a known vulnerability.
