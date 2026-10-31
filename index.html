@@ -3558,8 +3558,9 @@ function customCols(fresh) { // (fresh: Custom picked just now, from the colours
   if (fresh || !ccOk(c.base)) { c.base = ccOf(pal); store.set(CUSTOM_KEY, JSON.stringify(c)); }
   return c;
 }
-// (WCAG's relative luminance, 0…1: on the near-black background, lyric text of .3 reads at 7:1 or more, a highlight of .16
-// at 4:1 — the poster styles' sung word is in the background's colour on a block of the highlight)
+// (WCAG's relative luminance, 0…1: on the near-black background, lyric text of .5 reads at 10:1 or more, and its faded
+// shades — the words still to come, the next line — stay readable too (at .3 the next line fell to 2:1); a highlight of
+// .16 at 4:1 — the poster styles' sung word is in the background's colour on a block of it)
 const ccLum = c => c.reduce((s, v, i) => s + [.2126, .7152, .0722][i] * (v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4), 0);
 function ccLift(h, min) { // (toward white in small steps till it reads: the hue kept)
   const c = rgb(h);
@@ -3568,7 +3569,7 @@ function ccLift(h, min) { // (toward white in small steps till it reads: the hue
 }
 function customPal(c) {
   const a = ccLift(c.a, .16), top = rgb(a), mx = Math.max(...top);
-  return { name: 'Custom', bg: hex(top.map(v => v / mx * 255 * .045)), a, b: c.b, ink: ccLift(c.ink, .3), fx: [1, 1, 1, 1] };
+  return { name: 'Custom', bg: hex(top.map(v => v / mx * 255 * .045)), a, b: c.b, ink: ccLift(c.ink, .5), fx: [1, 1, 1, 1] };
 }
 let ccSw = null; // (the Custom chip's swatch: kept in step as a colour's dragged)
 const ccPaint = p => { if (ccSw) ccSw.style.background = `conic-gradient(${p.ink} 0 33.3%, ${p.a} 0 66.7%, ${p.b} 0)`; };
@@ -3585,8 +3586,8 @@ MOOD_HOOKS.push({
     if (skin || moodPref !== 'Custom') return [];
     const c = customCols(), q = el('div', 'bgq lbl'), head = el('span', 'sl-head'), rs = el('div', 'seg'), seg = el('div', 'seg'), note = el('small');
     const say = p => { const lit = [p.ink !== c.ink && 'lyric text', p.a !== c.a && 'highlight'].filter(Boolean);
-      note.textContent = 'Lyric text: the words being sung. Highlight: the word in focus, buttons and glows. Secondary: the background\'s second colour. The background is a deep shade of the highlight.' +
-        (lit.length ? ` Your ${lit.join(' and ')} ${lit.length > 1 ? 'are' : 'is'} shown a little lighter than picked, so the words read clearly on it.` : '') + ' Reset: back to the colours you came from.'; };
+      note.textContent = 'Lyric text: the words, and the app\'s own text. Highlight: the word in focus, buttons and glows. Secondary: the background\'s second colour. The background is a deep shade of the highlight.' +
+        (lit.length ? ` Your ${lit.join(' and ')} ${lit.length > 1 ? 'are' : 'is'} shown lighter than picked, so the words read clearly on it.` : '') + ' Reset: back to the colours you came from.'; };
     for (const [k, name] of CC_PARTS) {
       const lab = el('label', 'cc-pick'), inp = el('input');
       inp.type = 'color'; inp.value = c[k]; inp.setAttribute('aria-label', name + ' colour');
@@ -3595,6 +3596,7 @@ MOOD_HOOKS.push({
       seg.append(lab);
     }
     const reset = el('button', '', 'Reset'); // (on the heading's line, at its end)
+    reset.setAttribute('aria-label', 'Reset your colours');
     reset.onclick = () => { store.set(CUSTOM_KEY, JSON.stringify({ ...c.base, base: c.base })); applyMood(); renderMoodMenu(); };
     rs.append(reset); head.append('Your colours', rs);
     say(customPal(c));
