@@ -65,7 +65,7 @@ material in this repository keeps its own license and is not covered by it:
   docs/vendor/                           the website's copies of three.js and Lenis: MIT
   jsqr.js                                jsQR 1.4.0, by Cosmo Wolfe and the jsQR
                                          contributors: Apache License 2.0
-  AI karaoke (downloaded only on request) ONNX Runtime Web 1.30.0, by Microsoft: MIT
+  AI karaoke (desktop; phone on request) ONNX Runtime Web 1.30.0, by Microsoft: MIT
                                          (with its third-party notices); the Spleeter
                                          2-stem model, by Deezer SA, as converted to
                                          ONNX int8 for sherpa-onnx: MIT
@@ -73,13 +73,6 @@ material in this repository keeps its own license and is not covered by it:
                                          Hugging Face card: Apache License 2.0), as
                                          converted to ONNX by onnx-community; with
                                          ONNX Runtime Web (above)
-  AI assistant (Windows, on request)     Qwen3-1.7B, by the Qwen team (Alibaba Cloud),
-                                         and Kokoro-82M, by hexgrad (trained in part on
-                                         CC BY audio: Koniwa, SIWIS), both as converted
-                                         to ONNX by onnx-community: Apache License 2.0;
-                                         phonemizer.js, by Xenova: Apache License 2.0,
-                                         with eSpeak NG built in: GPL-3.0-or-later;
-                                         kokoro-js's text rules, by hexgrad: Apache 2.0
 
 Their license texts are in licenses/. The full list of components and licenses is in
 the app (About › Licenses), in legal.html, and on the website:
