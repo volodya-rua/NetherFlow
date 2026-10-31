@@ -126,7 +126,9 @@ body.home .singbar { display: none; } /* (its voice slider is for the lyrics: no
 .winctl .i-restore, .winctl.maxed .i-max { display: none; }
 .winctl.maxed .i-restore { display: inline; }
 .brand { display: inline-flex; align-items: center; gap: 11px; font: italic 400 28px/1 var(--serif); letter-spacing: -.01em; padding: 0; }
-.brand-mark { flex: none; width: 32px; height: 32px; transition: transform .5s cubic-bezier(.3,1.6,.5,1); }
+/* the logo, NO over LOGO (tools/logo-render.js's strokes, as the phone's status-bar icon has it: a one-line NOLOGO
+   would be 5 px tall here), in the header's own ink: logo.png is black on nothing, unseen on the dark page */
+.brand-mark { flex: none; width: 39px; height: 24px; transition: transform .5s cubic-bezier(.3,1.6,.5,1); }
 .brand:hover .brand-mark { transform: scale(1.08); }
 .brand sup { font: 500 9px var(--mono); letter-spacing: .15em; color: var(--a); margin-left: 4px; }
 .mood { display: flex; align-items: center; gap: 10px; }
@@ -1364,7 +1366,7 @@ body.home .home-now { display: flex; }
   fitDeck), a smaller play button; else the lyrics had a strip a line high */
   .top { flex-wrap: nowrap; gap: 12px; }
   .brand { font-size: 20px; gap: 8px; }
-  .brand-mark { width: 24px; height: 24px; }
+  .brand-mark { width: 31px; height: 19px; }
   .mood span { display: none; }
   .files { flex-wrap: nowrap; gap: 4px; }
   .map, .prev, .next { display: none; }
@@ -1759,7 +1761,7 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
 <div class="frame">
   <header class="top">
     <div class="top-l"><button id="toHome" class="to-home nav-ico" aria-label="Back to the home screen (the song plays on)" title="Home"><svg viewBox="0 0 24 24"><path d="M14.5 5.5L8 12l6.5 6.5"/></svg></button>
-    <button id="brand" class="brand" data-legal="" aria-label="About NetherFlow"><img class="brand-mark" src="logo.png" alt="">NetherFlow<sup>FM</sup></button></div>
+    <button id="brand" class="brand" data-legal="" aria-label="About NetherFlow"><svg class="brand-mark" viewBox="0 0 376 234" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"><path transform="translate(100 0)" d="M8 92L8 8L62 92L62 8"/><path transform="translate(186 0)" d="M82 50A37 42 0 1 1 8 50A37 42 0 1 1 82 50Z"/><path transform="translate(0 134)" d="M8 8L8 92L50 92"/><path transform="translate(74 134)" d="M82 50A37 42 0 1 1 8 50A37 42 0 1 1 82 50Z"/><path transform="translate(180 134)" d="M68.8 17.8A37 42 0 1 0 81.9 53.7L52 53.7"/><path transform="translate(286 134)" d="M82 50A37 42 0 1 1 8 50A37 42 0 1 1 82 50Z"/></g></svg>NetherFlow<sup>FM</sup></button></div>
     <button id="mood" class="mood lbl" popovertarget="moods" title="Pick a mood (M cycles)"><i></i><span>Mood</span> <b id="moodName">Ember</b><span class="hud" aria-hidden="true"><i class="hud-l"></i><b class="hud-sl">0</b><b class="hud-t">0:00</b><b class="hud-sr">0</b><i class="hud-r"></i></span><span class="dash" aria-hidden="true"><b class="d-gear">N</b><b class="d-spd">0</b><small>KM/H</small></span></button>
     <nav class="files lbl">
       <!-- Search: a lens with a sound wave in it. Library: a record sliding out of its sleeve. -->
@@ -4102,7 +4104,7 @@ queueMicrotask(() => {
 });
 // the themes, as cards on top of the mood menu: each its own little picture
 const SKIN_ICONS = {
-  '': '<img src="logo.png" alt="">',
+  '': $('brand').querySelector('.brand-mark').outerHTML.replace(' class="brand-mark"', ''), // (the header's logo)
   Stickman: '<svg viewBox="0 0 24 24"><circle cx="12" cy="4.8" r="2.7" fill="currentColor" stroke="none"/><path d="M12 7.5v7.2M12 14.7l-3.8 6.3M12 14.7l3.8 6.3M12 9.8L7.2 12.6M12 9.8l4.4-3.6"/></svg>',
   Spider: '<svg viewBox="0 0 24 24"><path d="M12 2v20M2 12h20M4.9 4.9l14.2 14.2M19.1 4.9 4.9 19.1"/><path d="m12 6.2 4.1 1.7 1.7 4.1-1.7 4.1-4.1 1.7-4.1-1.7L6.2 12l1.7-4.1z"/><path d="m12 9.4 1.8.8.8 1.8-.8 1.8-1.8.8-1.8-.8-.8-1.8.8-1.8z"/></svg>',
   Blocks: '<svg viewBox="0 0 24 24" stroke="none" shape-rendering="crispEdges"><path d="m12 3 8.5 4.6L12 12.2 3.5 7.6z" fill="#74b83c"/><path d="m3.5 7.6 8.5 4.6v9.3l-8.5-4.6z" fill="#8a5a2c"/><path d="m20.5 7.6-8.5 4.6v9.3l8.5-4.6z" fill="#664020"/><path d="m3.5 7.6 8.5 4.6 8.5-4.6v2.2L12 14.4 3.5 9.8z" fill="#5c9a2c"/></svg>',
