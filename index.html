@@ -3019,7 +3019,7 @@ function setBeat(name) { beatStyle = name; store.set('netherflow.beat', name ===
 // the wave along all four sides of the screen too (with the lyrics as well as the cover)
 let edges = store.get('netherflow.edges') === 'On';
 // its look (see drawEdges) and how far in from the sides it reaches
-const EDGE_STYLES = ['Wave', 'Bars', 'Neon', 'Glow'], EDGE_SIZES = { Small: .6, Medium: 1, Large: 1.5, Huge: 2.2 };
+const EDGE_STYLES = ['Wave', 'Bars', 'Neon', 'Glow', 'Frame', 'Dots', 'Aurora', 'Spikes', 'Ripple'], EDGE_SIZES = { Small: .6, Medium: 1, Large: 1.5, Huge: 2.2 };
 let edgeStyle = EDGE_STYLES.includes(store.get('netherflow.edgestyle')) ? store.get('netherflow.edgestyle') : 'Wave';
 let edgeSize = EDGE_SIZES[store.get('netherflow.edgesize')] ? store.get('netherflow.edgesize') : 'Medium';
 // the background beating with the music too: it swells and brightens with the bass (the album cover background as well)
@@ -3278,7 +3278,7 @@ function renderTextPanel() {
     ...(skin ? [] : [fontRow()]), // (a theme brings its own font and timeline)
     settingRow('Beat style', BEATS, beatStyle, setBeat, 'The ring round the record, in the Cover view.'),
     settingRow('Beat on the screen edges', ['Off', 'On'], edges ? 'On' : 'Off', setEdges, 'The beat also runs along all four sides of the screen, with the lyrics too.'),
-    ...(edges ? [settingRow('Edge look', EDGE_STYLES, edgeStyle, setEdgeStyle, 'Wave: a filled wave. Bars: the spectrum as bars. Neon: one glowing line. Glow: the sides light up on the bass.'),
+    ...(edges ? [settingRow('Edge look', EDGE_STYLES, edgeStyle, setEdgeStyle, 'Wave: a filled wave. Bars: the spectrum as bars. Neon: one glowing line. Glow: the sides light up on the bass. Frame: a frame round the screen breathing with the bass, two lights racing round it, leaping on the beat. Dots: a row of lights along each side. Aurora: soft curtains of light swaying in from the sides. Spikes: the spectrum as sharp spikes. Ripple: each beat sends a ripple of light in from the edges.'),
       settingRow('Edge size', Object.keys(EDGE_SIZES), edgeSize, setEdgeSize, 'How far in from the sides it reaches.')] : []),
     ...(skin ? [] : [settingRow('Timeline', BARS, barStyle, setBar, 'The bar under the lyrics that shows where the song is (drag it to move through the song).')]),
     settingRow('Lyrics size', Object.keys(LSIZE), lsize, setLsize, 'Long lines shrink just enough to stay on screen.'),
@@ -13513,7 +13513,7 @@ function drawRing(now, dt, live, kick) {
   for (let k = 0; k < 64; k++) ring.slow[k] += (ring.bands[k] - ring.slow[k]) * ease(ring.bands[k] > ring.slow[k] ? 0.25 : 0.04);
   ring.hist.push(ring.bands.slice());
   if (ring.hist.length > 21) ring.hist.shift();
-  if (edges) drawEdges(g, W, H);
+  if (edges) drawEdges(g, W, H, kick, now, dt);
   if (!ringOn) return;
   // glow behind the record, flaring on the kick
   let grd = g.createRadialGradient(cx, cy, R * 0.8, cx, cy, R * 2);
@@ -13652,7 +13652,8 @@ function drawRing(now, dt, live, kick) {
 
 // The wave along the four sides of the screen: the ring's Wave layers, mirrored on each side — the bass in the
 // middle of every side, the treble toward the corners — reaching in at most about a tenth of the screen.
-function drawEdges(g, W, H) {
+const edgeFx = { run: 0, beat: 0, rip: [] }; // (Frame's lights, how far round; the last beat seen; Ripple's ripples)
+function drawEdges(g, W, H, kick = 0, now = performance.now(), dt = 1 / 60) {
   const D = Math.min(W, H) * (W <= 720 ? .1 : .07) * EDGE_SIZES[edgeSize];
   const sides = [[W, (s, d) => [s, H - d]], [W, (s, d) => [W - s, d]], [H, (s, d) => [d, s]], [H, (s, d) => [W - d, s]]];
   // the curve along one side, d(k) in from it for band k; closed back along the edge for filling, or not, for lines
@@ -13667,6 +13668,34 @@ function drawEdges(g, W, H) {
   };
   const reach = (src, f) => k => D * (.04 + src[k] * .96) * f;
   g.lineJoin = g.lineCap = 'round';
+  const bass = (ring.bands[0] + ring.bands[1] + ring.bands[2] + ring.bands[3]) / 4, beat = ring.lastBeat !== edgeFx.beat;
+  edgeFx.beat = ring.lastBeat;
+  const frame = s => { g.beginPath(); g.roundRect(s, s, W - 2 * s, H - 2 * s, Math.max(4, Math.min(28, Math.min(W, H) * .04) - s * .3)); }; // (the screen's frame, s px in)
+  if (edgeStyle === 'Frame') { // (the frame breathing with the bass; two lights racing round it, leaping on each beat)
+    const inset = 3 + D * .08, per = 2 * (W + H - 4 * inset), seg = per * (.05 + kick * .07);
+    frame(inset);
+    g.strokeStyle = rgba(pal.a, .08 + bass * .22); g.lineWidth = 10 + bass * 24; g.stroke();
+    g.strokeStyle = rgba(pal.a, .4 + bass * .55); g.lineWidth = 1.5 + bass * 4; g.stroke();
+    edgeFx.run = (edgeFx.run + dt * per * (.06 + bass * .3) + (beat ? per * .1 : 0)) % per;
+    g.setLineDash([seg, per - seg]);
+    for (const [off, col] of [[0, pal.ink], [per / 2, pal.b]]) {
+      g.lineDashOffset = -edgeFx.run - off;
+      g.strokeStyle = rgba(col, .3); g.lineWidth = 9; g.stroke();
+      g.strokeStyle = rgba(col, .95); g.lineWidth = 2.5; g.stroke();
+    }
+    g.setLineDash([]); g.lineDashOffset = 0;
+    return;
+  }
+  if (edgeStyle === 'Ripple') { // (each beat sends a ripple of light in from the edges, fading as it goes)
+    if (beat) edgeFx.rip.push({ t: now, s: .55 + kick * .45 });
+    edgeFx.rip = edgeFx.rip.filter(r => now - r.t < 1100).slice(-8);
+    frame(2); g.strokeStyle = rgba(pal.a, .14 + bass * .4); g.lineWidth = 2 + bass * 6; g.stroke();
+    for (const r of edgeFx.rip) {
+      const a = (now - r.t) / 1100;
+      frame(2 + D * 2.4 * (1 - (1 - a) ** 2)); g.strokeStyle = rgba(a < .25 ? pal.ink : pal.a, (1 - a) * r.s); g.lineWidth = 1 + 4 * (1 - a); g.stroke();
+    }
+    return;
+  }
   if (edgeStyle === 'Glow') { // (each side lit from outside, deeper and brighter on the bass)
     const bass = (ring.bands[0] + ring.bands[1] + ring.bands[2]) / 3, slow = ring.slow.reduce((a, b) => a + b, 0) / ring.slow.length, deep = D * (.5 + bass * 1.6);
     for (const [x0, y0, x1, y1, w, h, x, y] of [[0, H, 0, H - deep, W, deep, 0, H - deep], [0, 0, 0, deep, W, deep, 0, 0], [0, 0, deep, 0, deep, H, 0, 0], [W, 0, W - deep, 0, deep, H, W - deep, 0]]) {
@@ -13676,7 +13705,39 @@ function drawEdges(g, W, H) {
     }
     return;
   }
+  const band = (i, B) => Math.min(63, Math.round(Math.abs((i + .5) / B - .5) * 126)); // (i of B along a side: its band, the bass in the middle)
+  const mids = edgeStyle === 'Aurora' ? ring.slow.slice(8, 40).reduce((a, b) => a + b, 0) / 32 : 0;
+  if (edgeStyle === 'Aurora') g.globalCompositeOperation = 'lighter';
   for (const [len, at] of sides) {
+    if (edgeStyle === 'Dots') { // (a row of lights along each side, each a band of the spectrum)
+      const B = Math.max(8, Math.round(len / Math.max(14, D * .32)));
+      for (let i = 0; i < B; i++) {
+        const v = ring.bands[band(i, B)], [x, y] = at((i + .5) / B * len, 4 + D * .14);
+        if (v > .35) { g.fillStyle = rgba(pal.a, (v - .35) * .35); g.beginPath(); g.arc(x, y, 3 + v * D * .16, 0, 6.2832); g.fill(); } // (a soft halo round the bright ones)
+        g.fillStyle = rgba(v > .6 ? pal.ink : pal.a, .2 + v * .8); g.beginPath(); g.arc(x, y, 1.6 + v * D * .07, 0, 6.2832); g.fill();
+      }
+      continue;
+    }
+    if (edgeStyle === 'Aurora') { // (soft curtains of light, swaying in from the side, brighter as the music swells)
+      const t = now / 1000, [x0, y0] = at(len / 2, 0), [x1, y1] = at(len / 2, D * 1.7);
+      for (const [k, col, sp] of [[0, pal.a, .5], [1, pal.b, .8], [2, pal.ink, 1.3]]) {
+        const gr = g.createLinearGradient(x0, y0, x1, y1);
+        gr.addColorStop(0, rgba(col, (k === 2 ? .07 : .2) * (.45 + mids * 1.1 + bass * .5))); gr.addColorStop(1, rgba(col, 0));
+        g.beginPath(); g.moveTo(...at(0, 0));
+        for (let i = 0; i <= 48; i++) { const u = i / 48; g.lineTo(...at(u * len, D * (.5 + .4 * Math.sin(u * 9 + t * sp + k * 2.1) * Math.sin(u * 3.3 - t * sp * .6 + k)) * (.7 + mids * 1.1 + bass * .5) * (.2 + .8 * Math.sin(Math.PI * u)))); } // (thinning to the corners: the sides' light not piling up there)
+        g.lineTo(...at(len, 0)); g.closePath(); g.fillStyle = gr; g.fill();
+      }
+      continue;
+    }
+    if (edgeStyle === 'Spikes') { // (the spectrum as sharp spikes standing in from each side)
+      const B = Math.max(24, Math.round(len / 18)), w = len / B, [x0, y0] = at(len / 2, 0), [x1, y1] = at(len / 2, D * 1.3);
+      g.beginPath(); g.moveTo(...at(0, 0));
+      for (let i = 0; i < B; i++) { g.lineTo(...at((i + .5) * w, reach(ring.bands, 1.3)(band(i, B)))); g.lineTo(...at((i + 1) * w, 0)); }
+      g.closePath();
+      const gr = g.createLinearGradient(x0, y0, x1, y1); gr.addColorStop(0, rgba(pal.a, .8)); gr.addColorStop(1, rgba(pal.b, .06));
+      g.fillStyle = gr; g.fill(); g.strokeStyle = rgba(pal.ink, .45); g.lineWidth = 1; g.stroke();
+      continue;
+    }
     if (edgeStyle === 'Bars') { // (the spectrum, bass in the middle of each side, as bars standing in from it)
       const B = Math.max(24, Math.round(len / 15)), bw = Math.max(2, len / B * .34);
       g.beginPath();
@@ -13702,6 +13763,7 @@ function drawEdges(g, W, H) {
     g.strokeStyle = pal.a; g.lineWidth = 2; g.stroke();
     wave(len, at, reach(ring.bands, .55), false); g.strokeStyle = rgba(pal.ink, .4); g.lineWidth = 1; g.stroke();
   }
+  g.globalCompositeOperation = 'source-over';
 }
 
 // What one drawing of the backdrop needs (fxEngine draws it). The backdrop reacts to the music only with the Background
