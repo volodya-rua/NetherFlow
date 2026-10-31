@@ -8766,7 +8766,7 @@ async function importPlaylistNow(link, { quiet = false, sync = false } = {}) {
 // A song plays; an album or a playlist is imported. The camera's picture is read here, a few times a second, by jsQR
 // (jsqr.js, loaded the first time), and never kept or sent anywhere; the camera's off as the scanner closes. Or a picture
 // of a code (a screenshot) chosen instead. ----------
-const SCAN_HOSTS = { 'open.spotify.com': 'Spotify', 'spotify.link': 'Spotify', 'spotify.app.link': 'Spotify', 'music.apple.com': 'Apple Music', 'music.youtube.com': 'YouTube Music' };
+const SCAN_HOSTS = { 'open.spotify.com': 'Spotify', 'spotify.link': 'Spotify', 'spotify.app.link': 'Spotify', 'music.apple.com': 'Apple Music', 'music.youtube.com': 'YouTube Music', 'volodya-rua.github.io': 'NetherFlow' };
 // the code's link, if it's one of those three's (https; a spotify:track:… one as its open.spotify.com link), else ''
 const scanLink = text => {
   try {
@@ -8792,10 +8792,11 @@ let scanMode = 'music';
 async function openScan(mode = 'music') {
   const d = $('scanQr'), v = $('scVideo');
   scanMode = mode; scanLast = '';
-  $('scTitle').textContent = mode === 'sync' ? 'The code on your computer' : 'Spotify, Apple Music, YouTube Music';
-  $('scHint').hidden = mode === 'sync'; // (Spotify Codes — its bars, not a QR code — aren't read: Legal, private lookup; a link pasted instead)
+  $('scTitle').textContent = mode === 'sync' ? 'The code on your computer' : mode === 'together' ? 'The Listen together code' : 'Spotify, Apple Music, YouTube Music, NetherFlow';
+  $('scHint').hidden = mode !== 'music'; // (Spotify Codes — its bars, not a QR code — aren't read: Legal, private lookup; a link pasted instead)
   scanSay(mode === 'sync' ? 'Point the camera at the QR code NetherFlow shows on your computer (Settings › Sync with phone).'
-    : 'Point the camera at a song\'s, an album\'s or a playlist\'s code. Only Spotify, Apple Music and YouTube Music links open.');
+    : mode === 'together' ? 'Point the camera at the QR code on the screen of whoever started the session (their people button).'
+    : 'Point the camera at a song\'s, an album\'s or a playlist\'s code: Spotify, Apple Music, YouTube Music, or a playlist shared from NetherFlow.');
   d.showModal(); placeWinctl();
   loadJsqr().catch(() => {});
   try {
@@ -8821,12 +8822,15 @@ function scanGot(text) {
   const link = scanLink(text), said = m => { if (text !== scanLast) { scanLast = text; scanSay(m); } return false; };
   if (scanMode === 'sync') { // (the computer's sync code: synced with it at once)
     const s = syncQrRead(text);
-    if (!s) return said('That isn\'t the sync code from NetherFlow on your computer. On it: Settings › Sync with phone › Show a code.');
+    if (!s) return said('That isn\'t the sync code from NetherFlow on your computer. On it: Settings › Sync with phone › Show the QR code.');
     $('scanQr').close(); if (!$('syncPanel').matches(':popover-open')) $('syncPanel').showPopover(); syncJoin(s.code, s);
     return true;
   }
-  if (!link) return said(/^\s*https?:\/\//i.test(text) ? 'That code\'s link isn\'t Spotify, Apple Music or YouTube Music, so it isn\'t opened.' : 'That code isn\'t a Spotify, Apple Music or YouTube Music link.');
-  const song = !!ytIdIn(link) || SONG_LINK.test(link), list = !song && (PLAYLIST_LINK.test(link) || /^https:\/\/spotify\.(app\.)?link\/\w/.test(link));
+  const tgm = String(text).trim().match(TG_LINK); // (a Listen together session's code: joined)
+  if (tgm) { $('scanQr').close(); if (tg.role) tgLeave(true); $('togetherPanel').showPopover(); tgJoin(tgm[1]); return true; }
+  if (scanMode === 'together') return said('That isn\'t a Listen together code. Whoever started the session: the people button shows it.');
+  if (!link) return said(/^\s*https?:\/\//i.test(text) ? 'That code\'s link isn\'t Spotify, Apple Music, YouTube Music or NetherFlow, so it isn\'t opened.' : 'That code isn\'t a Spotify, Apple Music, YouTube Music or NetherFlow link.');
+  const song = !!ytIdIn(link) || SONG_LINK.test(link), list = !song && (PLAYLIST_LINK.test(link) || SHARE_LINK.test(link) || COLLAB_LINK.test(link) || /^https:\/\/spotify\.(app\.)?link\/\w/.test(link));
   if (!song && !list) return said(`That's a ${SCAN_HOSTS[new URL(link).hostname]} link, but not to a song, an album or a playlist.`);
   $('scanQr').close();
   song ? playSongLink(link) : importPlaylist(link);
@@ -9171,6 +9175,7 @@ async function tgOpen(bytes) {
 }
 const tgCode = () => Array.from(crypto.getRandomValues(new Uint8Array(9)), x => TG_ABC[x % TG_ABC.length]).join(''); // (~45 bits: years of a GPU's tries)
 const tgShow = c => c.match(/.{1,3}/g).join('-');
+const tgLink = c => SHARE_URL + 't.' + c, TG_LINK = /^https:\/\/volodya-rua\.github\.io\/NetherFlow\/p\/?#t\.([A-Z0-9]{9})$/i; // (the code after the #: never sent anywhere)
 // connected through the first relay of the three (in an order the topic picks, so both ends try the same, and which one
 // it is says nothing more about the code) that answers
 // (from: how many of them to pass over first — a guest that found no host on one moves on; see tgJoin)
@@ -9327,11 +9332,14 @@ function tgRender() {
     const code = el('input', 'name-in'); code.placeholder = 'Code (XXX-XXX-XXX)'; code.maxLength = 12; code.setAttribute('aria-label', 'Session code'); code.autocapitalize = 'characters';
     const join = el('button', 'pill ghost', 'Join'); join.onclick = () => tgJoin(code.value);
     code.onkeydown = e => { if (e.key === 'Enter') tgJoin(code.value); };
-    out.push(box('tg-row', name), box('tg-row', start), sectionHead('Have a code?'), box('tg-row', code, join));
+    const scan = el('button', 'pill ghost'); scan.append(ico('qr'), 'Scan the code'); scan.onclick = () => { $('togetherPanel').hidePopover(); openScan('together'); };
+    out.push(box('tg-row', name), box('tg-row', start), sectionHead('Have a code?'), box('tg-row', scan), box('tg-row', code, join));
   } else {
     if (tg.role === 'host') {
       const copy = el('button', 'link', 'Copy'); copy.onclick = () => navigator.clipboard.writeText(tgShow(tg.code)).then(() => toast('Code copied'), () => {});
-      out.push(box('tg-code', el('b', '', tgShow(tg.code)), copy), el('p', 'q-empty lbl', 'Share this code: friends join with it (in NetherFlow, the people button).'));
+      const qr = document.createElement('canvas'); qr.className = 'sync-qr'; qr.setAttribute('role', 'img'); qr.setAttribute('aria-label', 'The session\'s code, as a QR code to scan');
+      drawQr(qr, netherflowLib.qr(tgLink(tg.code)), 6);
+      out.push(qr, box('tg-code', el('b', '', tgShow(tg.code)), copy), el('p', 'q-empty lbl', 'Friends scan this in NetherFlow (the people button › Scan the code), or type the code.'));
     } else out.push(el('p', 'q-empty lbl', tg.host ? 'You\'re in. What plays is the session\'s: a song you pick plays next for everyone, Next skips for everyone.' : 'Joining…'));
     out.push(sectionHead(`Listening · ${tg.members.size} of ${TG_MAX}`), ...[...tg.members].map(([id, m]) => el('div', 'tg-mem', m.name + (id === tg.me ? ' (you)' : '') + (id === (tg.role === 'host' ? tg.me : tg.host) ? ' · started it' : ''))));
     const reacts = box('tg-reacts'); for (const e of TG_REACTS) { const b = el('button', 'icon-btn', e); b.onclick = () => tgReact(e); reacts.append(b); }
@@ -9660,7 +9668,7 @@ function syncRender() {
   if (!$('syncPanel').matches(':popover-open')) return;
   const out = [sectionHead(native ? 'Sync with your computer' : 'Sync with your phone')];
   if (native) {
-    out.push(el('p', 'q-empty lbl', 'Your liked songs, playlists, history and stats, swapped with NetherFlow on your computer over your Wi-Fi: no account. On the computer: Settings › Sync with phone › Show a code, then scan it here, or type it.'));
+    out.push(el('p', 'q-empty lbl', 'Your liked songs, playlists, history and stats, swapped with NetherFlow on your computer over your Wi-Fi: no account. On the computer: Settings › Sync with phone › Show the QR code, then scan it here, or type its code.'));
     const scan = el('button', 'pill'); scan.append(ico('qr'), 'Scan the code');
     scan.onclick = () => { $('syncPanel').hidePopover(); openScan('sync'); };
     out.push(box('tg-row', scan));
@@ -9678,7 +9686,7 @@ function syncRender() {
     out.push(box('tg-row', stop));
   } else {
     out.push(el('p', 'q-empty lbl', 'Your liked songs, playlists, history and stats, swapped with NetherFlow on your phone over your Wi-Fi: no account, nothing leaves your network.'));
-    const go = el('button', 'pill', 'Show a code'); go.onclick = () => syncHost();
+    const go = el('button', 'pill'); go.append(ico('qr'), 'Show the QR code'); go.onclick = () => syncHost();
     out.push(box('tg-row', go));
   }
   if (syStatus) out.push(el('p', 'q-empty lbl tg-status', syStatus));
