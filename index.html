@@ -1186,7 +1186,15 @@ body.home .home-now { display: flex; }
 /* (out of the page unless it's the background chosen: even unseen, a full-screen layer is a layer to blend) */
 .theme-cover .cover-bg { display: block; opacity: 1; @starting-style { opacity: 0; } } /* the canvas stays under it, plain */
 .theme-cover:not(.grain-still) .cover-bg { animation: drift 40s ease-in-out infinite alternate; } /* (only when it's seen) */
-/* @slot:colors-css */
+/* the Custom mood's own colours (mood menu): pills like the choices beside them, each with a dot of its colour (a tap opens
+   its picker) */
+.cc-pick { display: inline-flex; align-items: center; gap: 8px; padding: 4px 13px 4px 5px; border: 1px solid var(--hair); border-radius: 999px;
+  font-size: 10px; letter-spacing: .1em; text-transform: uppercase; cursor: var(--cur-hand, pointer); transition: border-color .2s, color .2s; }
+.cc-pick:hover, .cc-pick:has(:focus-visible) { border-color: var(--a); color: var(--a); }
+.cc-pick input { flex: none; width: 18px; height: 18px; padding: 0; border: 0; border-radius: 50%; background: none; outline: none; cursor: inherit;
+  -webkit-appearance: none; appearance: none; }
+.cc-pick input::-webkit-color-swatch-wrapper { padding: 0; }
+.cc-pick input::-webkit-color-swatch { border: 1px solid rgba(255,255,255,.18); border-radius: 50%; }
 /* · */
 /* @slot:pictures-css */
 
@@ -3538,7 +3546,68 @@ function chooseMood(name) {
 // (more in the mood menu: MOOD_HOOKS = [{ chips() after the moods, rows() after Background, apply() true when it set the
 // colours }] — each optional)
 const MOOD_HOOKS = [];
-// @slot:colors-js
+// The "Custom" mood: the three colours your own — lyric text (ink), highlight (a), secondary (b) — picked in the mood menu
+// and kept (netherflow.customcolors: { ink, a, b, base }, base the colours on screen as Custom was picked: what Reset
+// brings back, and the first time where yours start). The background is a deep shade of the highlight, as the cover's is
+// (see paletteFromArt); a lyric text or highlight too dark to read on it is shown lighter (the same hue).
+const CUSTOM_KEY = 'netherflow.customcolors', CC_PARTS = [['ink', 'Lyric text'], ['a', 'Highlight'], ['b', 'Secondary']];
+const ccOf = p => ({ ink: p.ink, a: p.a, b: p.b }), ccOk = c => CC_PARTS.every(([k]) => /^#[0-9a-f]{6}$/i.test(c?.[k]));
+const ccRead = () => { try { const c = JSON.parse(store.get(CUSTOM_KEY)); if (ccOk(c)) return c; } catch {} return null; };
+function customCols(fresh) { // (fresh: Custom picked just now, from the colours on screen)
+  const c = ccRead() || ccOf(pal);
+  if (fresh || !ccOk(c.base)) { c.base = ccOf(pal); store.set(CUSTOM_KEY, JSON.stringify(c)); }
+  return c;
+}
+// (WCAG's relative luminance, 0…1: on the near-black background, lyric text of .3 reads at 7:1 or more, a highlight of .16
+// at 4:1 — the poster styles' sung word is in the background's colour on a block of the highlight)
+const ccLum = c => c.reduce((s, v, i) => s + [.2126, .7152, .0722][i] * (v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4), 0);
+function ccLift(h, min) { // (toward white in small steps till it reads: the hue kept)
+  const c = rgb(h);
+  for (let t = 0; t < 1; t += .04) { const m = c.map(v => v + (1 - v) * t); if (ccLum(m) >= min) return t ? hex(m.map(v => v * 255)) : h; }
+  return '#ffffff';
+}
+function customPal(c) {
+  const a = ccLift(c.a, .16), top = rgb(a), mx = Math.max(...top);
+  return { name: 'Custom', bg: hex(top.map(v => v / mx * 255 * .045)), a, b: c.b, ink: ccLift(c.ink, .3), fx: [1, 1, 1, 1] };
+}
+let ccSw = null; // (the Custom chip's swatch: kept in step as a colour's dragged)
+const ccPaint = p => { if (ccSw) ccSw.style.background = `conic-gradient(${p.ink} 0 33.3%, ${p.a} 0 66.7%, ${p.b} 0)`; };
+MOOD_HOOKS.push({
+  chips() {
+    const b = el('button', 'mchip');
+    ccSw = el('i'); ccPaint(customPal(ccRead() || pal));
+    b.setAttribute('aria-pressed', moodPref === 'Custom');
+    b.append(ccSw, el('span', '', 'Custom'));
+    b.onclick = () => { if (moodPref !== 'Custom') customCols(true); chooseMood('Custom'); };
+    return [b];
+  },
+  rows() {
+    if (skin || moodPref !== 'Custom') return [];
+    const c = customCols(), q = el('div', 'bgq lbl'), head = el('span', 'sl-head'), rs = el('div', 'seg'), seg = el('div', 'seg'), note = el('small');
+    const say = p => { const lit = [p.ink !== c.ink && 'lyric text', p.a !== c.a && 'highlight'].filter(Boolean);
+      note.textContent = 'Lyric text: the words being sung. Highlight: the word in focus, buttons and glows. Secondary: the background\'s second colour. The background is a deep shade of the highlight.' +
+        (lit.length ? ` Your ${lit.join(' and ')} ${lit.length > 1 ? 'are' : 'is'} shown a little lighter than picked, so the words read clearly on it.` : '') + ' Reset: back to the colours you came from.'; };
+    for (const [k, name] of CC_PARTS) {
+      const lab = el('label', 'cc-pick'), inp = el('input');
+      inp.type = 'color'; inp.value = c[k]; inp.setAttribute('aria-label', name + ' colour');
+      inp.oninput = () => { c[k] = inp.value; store.set(CUSTOM_KEY, JSON.stringify(c)); const p = customPal(c); applyPalette(p); ccPaint(p); say(p); }; // (live, as it's dragged)
+      lab.append(inp, el('span', '', name));
+      seg.append(lab);
+    }
+    const reset = el('button', '', 'Reset'); // (on the heading's line, at its end)
+    reset.onclick = () => { store.set(CUSTOM_KEY, JSON.stringify({ ...c.base, base: c.base })); applyMood(); renderMoodMenu(); };
+    rs.append(reset); head.append('Your colours', rs);
+    say(customPal(c));
+    q.append(head, seg, note);
+    q.dataset.set = 'Your colours';
+    return [q];
+  },
+  apply() {
+    if (moodPref !== 'Custom') return false;
+    applyPalette(customPal(customCols()));
+    return true;
+  },
+});
 // ·
 // @slot:pictures-js
 // the themes, as cards on top of the mood menu: each its own little picture
