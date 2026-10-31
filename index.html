@@ -16147,7 +16147,7 @@ function frame(now) {
   const dur = P.dur, t = P.t, p = dur ? t / dur : 0;
   visDt += dt;
   if (++visN % Q.every === 0) { // (the timeline and the beat ring: at the quality's pace — Low, every other frame)
-    const gpuFree = fxStyle >= 0 || now > 2500; // (not before the backdrop's first shader's made: a canvas's first drawing waited on it, ~0.25 s frozen at every start)
+    const gpuFree = fxStyle >= 0 || !fxOn || PLAIN.has(theme) || now > 8000; // (not before the backdrop's first shader's made — slower on a first start, with nothing compiled yet: a canvas's first drawing waited on it, ~0.25 s frozen)
     if (!covered && gpuFree) drawSpec(now, p, kick);
     if (!covered && gpuFree && (coverShown() || edges) && body.classList.contains('has-song') && !body.classList.contains('home')) drawRing(now, Math.min(.1, visDt), live, kick);
     visDt = 0;
