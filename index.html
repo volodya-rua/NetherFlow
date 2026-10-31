@@ -339,10 +339,12 @@ body.home .singbar { display: none; } /* (its voice slider is for the lyrics: no
 .la-emoji-stack .cur .w.now { scale: 1.05; }
 .la-emoji-stack .cur .w > span { --dim: color-mix(in srgb, var(--ink) 48%, transparent); } /* (the longest word too: its own colour once sung) */
 .la-emoji-stack .cur .w.em > span { font: inherit; letter-spacing: inherit; text-transform: inherit; }
-.la-emoji-stack .cur .w.now > span { transform: none; filter: none; } /* (the block doesn't lift with it: the two would part) */
+.la-emoji-stack .lyr .cur .w.now > span { transform: none; filter: none; } /* (the block doesn't lift with it: the two would part — nor a theme's lift) */
 .es-blk { position: absolute; z-index: -1; inset: .06em -.14em .02em; border-radius: .16em; background: var(--a); pointer-events: none;
-  box-shadow: 0 .08em .4em color-mix(in srgb, var(--a) 45%, transparent); transform: skewX(-8deg) scaleX(0); transform-origin: 0 50%; opacity: 0; transition: opacity .3s; }
-.w.now > .es-blk { opacity: 1; transition-duration: .1s; }
+  box-shadow: 0 .08em .4em color-mix(in srgb, var(--a) 45%, transparent); transform: skewX(-8deg) scaleX(0); transform-origin: 0 50%; opacity: 0; }
+/* (no fade, in or out: as the word ends its letters turn its sung colour, and a block fading out under them hid them a
+   moment — the longest word's, the mood's own colour, always; every word's in a pale mood. Growing, it needs no fade in) */
+.w.now > .es-blk { opacity: 1; }
 /* (waiting small and faint, like its word: an empty gap there read as a missing word) */
 .es-emo { display: inline-block; width: .6em; height: .6em; margin-left: .1em; vertical-align: .2em; transform: scale(.5) rotate(-20deg); opacity: .3; pointer-events: none;
   transition: transform .55s cubic-bezier(.3,1.9,.45,1), opacity .2s; filter: drop-shadow(0 .05em .08em rgba(0, 0, 0, .45)); }
@@ -3085,7 +3087,7 @@ const LA_HOOKS = {};
 // a slanted block that grows across it as it's sung — frame() sets the block's width and the letters' colour from curP
 // together, one edge for both, so no letter is ever the colour of what's behind it — and a word with an emoji of its own
 // popping it in beside it. ES_WORDS: ~800 more words with emoji of their own (lyrics' own, in English and in Hindi and
-// Punjabi in Latin letters), merged into emoji.words the first time (it's declared further down; EMOJI_WORDS wins a tie)
+// Punjabi in Latin letters; none of them in EMOJI_WORDS), for this style alone (see esEmojiFor)
 const ES_WORDS = {
   '💓': 'heartbeat heartbeats beating pulse dhadkan dhadkane dhadkanein', '💕': 'romance romantic darling sweetheart lovers', '💘': 'cupid valentine crush',
   '💖': 'jaan jaanu jaana jaanam jaaneman jind jindri sanam mahi maahi mahiya dhola dilbar dildar mehboob saajan sajna sajjna sajan heer',
@@ -3102,7 +3104,7 @@ const ES_WORDS = {
   '😭': 'weep weeping aansoo', '💦': 'sweat sweating', '🥵': 'heat garmi', '🥶': 'thand', '🎧': 'dj headphones', '🥁': 'beat beats rhythm dhol dholi',
   '🔊': 'bass speaker speakers volume', '🎹': 'piano', '🎷': 'sax', '💿': 'vinyl record records album', '🎤': 'concert karaoke singer',
   '🎭': 'stage drama mask masks theatre theater', '🪩': 'club disco dancefloor nightclub', '🕺': 'groove boogie shake shaking',
-  '💃': 'dances danced naach nach nachle nacho bhangra giddha mutiyar', '🎶': 'tune tunes sang sung lyrics gaana gaane geet dhun',
+  '💃': 'dances danced naach nach nachle nacho bhangra giddha', '🎶': 'tune tunes sang sung lyrics gaana gaane geet dhun',
   '🎉': 'celebration fiesta weekend jashn mehfil balle shava', '🎊': 'confetti', '🥂': 'cheers toast', '🍾': 'bottle bottles', '🍷': 'nasha sharaab jaam',
   '🍺': 'beer beers daaru', '🥃': 'whiskey whisky vodka tequila shots peg', '🍸': 'cocktail cocktails martini', '🍹': 'drinks', '☕': 'coffee chai',
   '🍵': 'tea', '🚬': 'cigarettes smoking', '💨': 'smoke fast faster speed', '🌿': 'weed mehndi', '🎂': 'cake birthday', '🍔': 'burger', '🍟': 'fries',
@@ -3119,13 +3121,13 @@ const ES_WORDS = {
   '🦈': 'sharks', '🐳': 'whale', '🐰': 'bunny rabbit', '🐝': 'bee bees', '🐉': 'dragons', '🦄': 'unicorns', '👹': 'monster monsters beast', '🧟': 'zombies',
   '🧛': 'vampires', '🧙': 'wizard witch', '🧚': 'pari', '🧜': 'mermaid', '🤖': 'robots', '🤡': 'clown clowns', '💀': 'killed marna', '🦴': 'bones',
   '🏴‍☠️': 'pirate pirates', '🦸': 'hero heroes', '🦹': 'villain thief steal stole', '🤠': 'cowboy', '👸': 'rani', '🤴': 'raja shehzada', '👑': 'throne taj',
-  '👦': 'boys munda mundeya', '👧': 'girls kudi kuri', '👩': 'mama mom mommy maa', '👨': 'papa dad daddy', '🧒': 'kids children', '🏡': 'family',
+  '👦': 'boys munda mundeya', '👧': 'girls kudi kuri mutiyar', '👩': 'mama mom mommy maa', '👨': 'papa dad daddy', '🧒': 'kids children', '🏡': 'family',
   '🫂': 'friend friends dost dosti yaar yaara yaari yaariyan', '🦚': 'mor', '🦋': 'titli', '🤥': 'lies liar lying jhooth dhokha',
   '⏰': 'clock alarm hour hours', '⏱️': 'minute minutes seconds', '📅': 'tomorrow yesterday today', '⏳': 'waiting moments intezaar lamha',
   '📱': 'text texting cellphone screen mobile', '📺': 'tv', '🎬': 'movie movies film', '📹': 'video', '💻': 'computer', '🌐': 'internet online',
   '📖': 'book story', '📄': 'page pages', '✍️': 'write writing wrote written pen', '🛕': 'temple mandir', '🛏️': 'pillow sheets', '🚪': 'doors',
   '🪟': 'windows', '🧱': 'wall walls', '🌉': 'bridge bridges', '🛣️': 'road roads highway raah', '🏙️': 'streets downtown', '🚆': 'trains',
-  '⛵': 'boat sail sailing', '🚢': 'ships', '🚲': 'bike', '🏍️': 'motorbike', '🚚': 'truck', '🚕': 'cab', '🚜': 'jatt', '🚗': 'gaddi gadi',
+  '⛵': 'boat sail sailing', '🚢': 'ships', '🚲': 'bike', '🏍️': 'motorbike', '🚚': 'truck', '🚕': 'cab', '🚗': 'gaddi gadi',
   '🧳': 'travel suitcase journey safar', '🗺️': 'map', '🧭': 'lost', '🏁': 'finish manzil', '🚩': 'flag flags', '❤️': 'red laal', '💙': 'blue neela',
   '💚': 'green hara', '💛': 'yellow peela', '💜': 'purple', '🧡': 'orange', '🩷': 'pink gulabi', '🖤': 'black kaala kaali', '🤍': 'white safed', '🤎': 'brown',
   '🩶': 'grey gray', '🥈': 'silver chandi', '💵': 'dollar dollars bills', '💎': 'jewel jewels bling heera', '🛍️': 'shopping', '🪽': 'wings pankh',
@@ -3144,19 +3146,19 @@ const ES_WORDS = {
   '🔮': 'fate destiny jadoo kismat naseeb taqdeer', '🏠': 'pind watan', '💸': 'paise', '🌹': 'gulab', '🌸': 'phoolon', '🌠': 'wishes khwahish',
   '💫': 'khwab khwaab sapno', '🤝': 'trust', '🧠': 'smart genius',
 };
-let esMerged = false;
+// (looked up here, before emojiFor, and not merged into emoji.words: merged, Pop's and Extreme lyrics' emoji changed once
+// Emoji Stack had been on — "cat" a face, not a cat — and only from then till the app closed)
+let esMap = null;
+const esEmojiFor = w => { const c = esMap.get(w.toLowerCase().replace(/[^\p{L}]/gu, '')); return c && emoji.codes?.has(c) ? c : emojiFor(w); };
 LA_HOOKS['Emoji Stack'] = {
   build({ p, words, text }) {
     if (!text) return; // (a break's dots: as they are)
-    if (kinEmojiOn) {
-      if (!esMerged) { esMerged = true; const own = new Map(EMOJI_WORDS); for (const [g, ws] of Object.entries(ES_WORDS)) for (const w of ws.split(' ')) if (!own.has(w)) emoji.words.set(w, emojiCode(g)); }
-      kinEmojiIndex();
-    }
+    if (kinEmojiOn) { esMap ||= new Map(Object.entries(ES_WORDS).flatMap(([g, ws]) => ws.split(' ').map(w => [w, emojiCode(g)]))); kinEmojiIndex(); }
     // the rows: as many as the letters need (a phone's narrower), each word on the row it most belongs to
     const phone = innerWidth <= 720, len = words.reduce((a, w) => a + w.length + 1, 0), n = Math.min(phone ? 6 : 5, Math.ceil(len / (phone ? 10 : 15))), aim = len / n;
     const rows = []; let at = 0;
     curWords.forEach((o, i) => {
-      const m = words[i].length + 1, c = kinEmojiOn && emojiFor(words[i]);
+      const m = words[i].length + 1, c = kinEmojiOn && esEmojiFor(words[i]);
       if (!rows.length || at && at + m / 2 > aim && rows.length < n) { rows.push(el('span', 'es-row')); rows[rows.length - 1].style.setProperty('--r', rows.length - 1); at = 0; }
       at += m;
       o.append(o.blk = el('i', 'es-blk')); // (after the letters: syncLyrics colours the word's first child)
@@ -3172,7 +3174,7 @@ LA_HOOKS['Emoji Stack'] = {
       const o = curWords[i], q = curP[i];
       if (!o.blk || q === o.esP) continue;
       o.esP = q;
-      if (q <= 0 || q >= 1) continue; // (not being sung: syncLyrics' own fill, and the block fading — see the CSS)
+      if (q <= 0 || q >= 1) continue; // (not being sung: syncLyrics' own fill, and no block — see the CSS)
       // the letters turn at the block's edge where it's furthest back (its slant: .07em either way at the top and bottom)
       o.blk.style.transform = `skewX(-8deg) scaleX(${q.toFixed(3)})`;
       o.firstChild.style.backgroundImage = `linear-gradient(90deg, var(--bg) calc(${(q * 100).toFixed(1)}% - .07em), var(--dim) 0)`;
