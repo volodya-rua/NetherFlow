@@ -6,12 +6,13 @@ What changed in each NetherFlow release. The builds are on the [releases page](h
 
 - **Voice control:** say a song, an artist or what to do ("next", "pause", "volume 40"). On Android it uses the phone's
   own speech recognition. On Windows it uses Windows' own, or the optional voice pack: Whisper, running on your
-  computer, so names and accents are heard right
+  computer, so names and accents are heard better
 - **"Hey NetherFlow"** (Windows, with the voice pack): hands-free, off unless you turn it on, and paused when you click
   the glowing mic or say "stop listening"
 - **In the car:** Android Auto, music that doesn't break when the car connects, Drive mode coming up by itself, and
-  NetherFlow starting by itself when Android Auto connects (with "Display over other apps", your choice). **Road trip**
-  saves a list and more like it for offline in one tap before a drive
+  NetherFlow starting by itself when Android Auto connects (with "Display over other apps", your choice). Android Auto
+  shows NetherFlow once you turn on Unknown sources in its developer settings. **Road trip:** a playlist for the drive
+  that keeps playing without signal
 - **Visualiser:** a third view beside Lyrics and Cover, the whole screen moving with the music, in eight looks
 - **Lyrics you can read:** eight new styles where every word stays big and clear and the word being sung sits on a
   block of the mood's colour: Tower, Lens, Pop (with emoji popping in by the words), Drift, Wall, Fisheye, Fisheye
@@ -23,19 +24,17 @@ What changed in each NetherFlow release. The builds are on the [releases page](h
 - **Make it yours:** your own pictures as the background (kept on this device only, with dim and blur), your own colours
   for the lyrics, the highlight and the rest, 14 more moods and 9 more backgrounds (Apollonian, Newton, Coral,
   Mandelbrot, Vortex, Deep Field, Ridges, Spirograph and Moiré)
-- **360 sound, rebuilt:** the song split into 512 bands and set round you, nothing of its sound lost; 360 Orbit uses the
-  browser's own 3D hearing
-- **Sing:** the voice really goes at 0%. On computers, AI karaoke takes the singer out with an AI built into the app,
-  on your computer
+- **360 sound, rebuilt:** the song split into 512 bands and set round you; 360 Orbit uses the browser's own 3D hearing
+- **Sing:** at 0% the voice is now taken out frequency by frequency, its reverb too. On Windows, AI karaoke takes the
+  singer out with an AI built into the app, on your computer
 - **Shuffle** plays every song of a list once before any song comes round again, even when you tap another song or close
   the app. A song tapped in the middle of a playlist plays the songs above it too, after the last one
 - **Repeat a part:** the song's ⋯ › Repeat a part, then Start and End as it plays
 - **Offline:** when the internet drops, the list carries on with the songs saved on this device, shuffled or in order
-- **Bring your music:** scan a song's, album's or playlist's QR code (Spotify, Apple Music, YouTube Music, or a playlist
-  shared from NetherFlow), or bring everything over from your own Spotify data download. Big playlists show how far
-  they've got
-- **Share and play together:** a playlist's short link, whose QR code holds the whole list; Listen together and Sync with
-  your phone by QR code too
+- **Bring your music:** scan a QR code holding a Spotify, Apple Music or YouTube Music link, or a playlist shared from
+  NetherFlow; or bring everything over from your own Spotify data download. Big playlists show how far they've got
+- **Share and play together:** a playlist's short link and QR code, kept encrypted on NetherFlow's relay so only people
+  with the link can read it; Listen together and Sync with your phone by QR code too
 - **Smart playlists** that fill themselves, and **Autoplay** held to the song you chose, learning from what you skip
 - **MobiVib** (Android): the phone vibrates with the music. **Sound › Quality:** Best, Normal or Data saver
 - **Quicker:** covers you've already seen show at once when you open NetherFlow again, and the start is faster
@@ -46,8 +45,8 @@ What changed in each NetherFlow release. The builds are on the [releases page](h
   skips, and a song tapped in search plays that song, then Autoplay
 - NetherFlow's data is no longer included in Android's Google Drive backup: it stays on your phone (use Phone ↔ PC sync
   to move your library)
-- The terms and privacy policy changed (voice control, the camera for QR codes, in the car, AI karaoke, and the covers,
-  pictures and list kept on your device), so you're asked to accept them again
+- The terms and privacy policy changed (voice control, the camera for QR codes, in the car, AI karaoke, short share
+  links, and the covers, pictures and list kept on your device), so you're asked to accept them again
 
 ## 1.6.1: Your computer's name stays private while syncing
 
