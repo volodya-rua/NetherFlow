@@ -433,7 +433,8 @@ app better.
 | **ready2.play** | Discord |
 | **atharvvv.dev** | Discord |
 
-In the app: About (the NetherFlow name, top left) › Credits.
+In the app: About (the NetherFlow name, top left) › Credits. Want your name changed or removed? Message me on Discord or
+[open an issue](https://github.com/volodya-rua/NetherFlow/issues/new/choose).
 
 ## Privacy
 
