@@ -324,7 +324,29 @@ body.home .singbar { display: none; } /* (its voice slider is for the lyrics: no
 /* · */
 /* @slot:fisheye-css */
 /* · */
-/* @slot:emojistack-css */
+/* Emoji Stack: the line alone, in a few big rows of about the same length, stacked in the middle and each tilted a little;
+   the word being sung on a slanted block of the mood's colour that grows across it as it's sung, its letters on the block
+   in the background's colour (see LA_HOOKS['Emoji Stack']), and a word with an emoji of its own (fire, moon, dil, chai…)
+   popping it in beside it with a bounce */
+.la-emoji-stack .lyr .prev, .la-emoji-stack .lyr .next { display: none; }
+.la-emoji-stack .lyr .cur { text-align: center; }
+.es-row { display: block; width: fit-content; margin: 0 auto .14em; white-space: nowrap; rotate: var(--tilt, -2deg);
+  animation: es-in .55s cubic-bezier(.2,1.4,.4,1) backwards; animation-delay: calc(var(--r) * 70ms); }
+.es-row:nth-child(2n) { --tilt: 1.6deg; }
+.es-row:nth-child(3n) { --tilt: -1.2deg; }
+@keyframes es-in { from { opacity: 0; transform: translateY(.4em) scale(.9); } }
+.la-emoji-stack .cur .w { position: relative; isolation: isolate; animation: none; transition: scale .3s cubic-bezier(.3,1.6,.5,1); }
+.la-emoji-stack .cur .w.now { scale: 1.05; }
+.la-emoji-stack .cur .w > span { --dim: color-mix(in srgb, var(--ink) 48%, transparent); } /* (the longest word too: its own colour once sung) */
+.la-emoji-stack .cur .w.em > span { font: inherit; letter-spacing: inherit; text-transform: inherit; }
+.la-emoji-stack .cur .w.now > span { transform: none; filter: none; } /* (the block doesn't lift with it: the two would part) */
+.es-blk { position: absolute; z-index: -1; inset: .06em -.14em .02em; border-radius: .16em; background: var(--a); pointer-events: none;
+  box-shadow: 0 .08em .4em color-mix(in srgb, var(--a) 45%, transparent); transform: skewX(-8deg) scaleX(0); transform-origin: 0 50%; opacity: 0; transition: opacity .3s; }
+.w.now > .es-blk { opacity: 1; transition-duration: .1s; }
+/* (waiting small and faint, like its word: an empty gap there read as a missing word) */
+.es-emo { display: inline-block; width: .6em; height: .6em; margin-left: .1em; vertical-align: .2em; transform: scale(.5) rotate(-20deg); opacity: .3; pointer-events: none;
+  transition: transform .55s cubic-bezier(.3,1.9,.45,1), opacity .2s; filter: drop-shadow(0 .05em .08em rgba(0, 0, 0, .45)); }
+.w.on + .es-emo { transform: rotate(8deg); opacity: 1; animation: emo-bob 2.4s .55s ease-in-out infinite; }
 /* The self-laid styles (Spiral, Swarm, Cylinder, Globe, Helix, DNA, Tornado, Orbit, Atom): the letters (Cylinder:
    words) are placed one by one, every frame, round the middle of the stage (see layoutLyricShape / turnLyricShape) */
 .la-self .deck.lyr { position: absolute; inset: 0; transform: none; }
@@ -3059,7 +3081,111 @@ const LA_HOOKS = {};
 // ·
 // @slot:fisheye-js
 // ·
-// @slot:emojistack-js
+// Emoji Stack: the line in a few rows of about the same length, stacked in the middle (see the CSS); the word being sung on
+// a slanted block that grows across it as it's sung — frame() sets the block's width and the letters' colour from curP
+// together, one edge for both, so no letter is ever the colour of what's behind it — and a word with an emoji of its own
+// popping it in beside it. ES_WORDS: ~800 more words with emoji of their own (lyrics' own, in English and in Hindi and
+// Punjabi in Latin letters), merged into emoji.words the first time (it's declared further down; EMOJI_WORDS wins a tie)
+const ES_WORDS = {
+  '💓': 'heartbeat heartbeats beating pulse dhadkan dhadkane dhadkanein', '💕': 'romance romantic darling sweetheart lovers', '💘': 'cupid valentine crush',
+  '💖': 'jaan jaanu jaana jaanam jaaneman jind jindri sanam mahi maahi mahiya dhola dilbar dildar mehboob saajan sajna sajjna sajan heer',
+  '💗': 'chahat chaahat', '🥰': 'adore adorable cute pyaari pyara pyaara', '🤗': 'hug hugs hugging embrace cuddle welcome', '💞': 'together couple humsafar',
+  '😍': 'pretty lovely aashiq aashiqui sohni sohna soniye sohneya sundar haseen khoobsurat', '😵‍💫': 'deewana deewani dizzy', '🤪': 'pagal paagal silly',
+  '💔': 'break breaking breakup shattered heartache dard judaai bewafa tadap', '💌': 'letter letters', '👄': 'lips', '💋': 'kissed',
+  '😂': 'laugh laughing laughter laughed funny lol hasna hansi', '😁': 'grin grinning', '😄': 'joy joyful cheerful', '😊': 'blush smiles smiled muskaan',
+  '🙈': 'shy hide hiding', '😡': 'angry mad rage hate hatred furious gussa', '😱': 'scream screaming scared shock shocked', '😨': 'afraid fear fears',
+  '😬': 'nervous awkward', '😟': 'worried worry', '🤕': 'hurt hurts hurting', '🩸': 'blood bleed bleeding', '🤒': 'sick fever', '💊': 'pills medicine drugs',
+  '🤔': 'thinking wondering', '😕': 'confused', '🤫': 'secret secrets quiet silence silent whisper whispers hush khamoshi chup',
+  '📢': 'shout shouting loud louder', '🗣️': 'speak voice voices awaaz awaz', '💬': 'talking baatein gall gallan message messages',
+  '👂': 'listen listening hear hearing ears', '👀': 'watching stare staring akhiyan ankhiyan naina nain nainaa aankhon', '👁️': 'aankh', '😉': 'wink',
+  '🥱': 'bored boring yawn', '💤': 'asleep neend', '💭': 'memory memories remember yaad yaadein mann', '😔': 'sorrow sorry regret gham tanhai akela',
+  '😭': 'weep weeping aansoo', '💦': 'sweat sweating', '🥵': 'heat garmi', '🥶': 'thand', '🎧': 'dj headphones', '🥁': 'beat beats rhythm dhol dholi',
+  '🔊': 'bass speaker speakers volume', '🎹': 'piano', '🎷': 'sax', '💿': 'vinyl record records album', '🎤': 'concert karaoke singer',
+  '🎭': 'stage drama mask masks theatre theater', '🪩': 'club disco dancefloor nightclub', '🕺': 'groove boogie shake shaking',
+  '💃': 'dances danced naach nach nachle nacho bhangra giddha mutiyar', '🎶': 'tune tunes sang sung lyrics gaana gaane geet dhun',
+  '🎉': 'celebration fiesta weekend jashn mehfil balle shava', '🎊': 'confetti', '🥂': 'cheers toast', '🍾': 'bottle bottles', '🍷': 'nasha sharaab jaam',
+  '🍺': 'beer beers daaru', '🥃': 'whiskey whisky vodka tequila shots peg', '🍸': 'cocktail cocktails martini', '🍹': 'drinks', '☕': 'coffee chai',
+  '🍵': 'tea', '🚬': 'cigarettes smoking', '💨': 'smoke fast faster speed', '🌿': 'weed mehndi', '🎂': 'cake birthday', '🍔': 'burger', '🍟': 'fries',
+  '🍩': 'donut donuts', '🍪': 'cookies', '🍎': 'apple apples', '🍑': 'peaches', '🍋': 'lemonade', '🥛': 'milk', '🫐': 'berry berries blueberry',
+  '🍦': 'icecream', '🌅': 'dawn savera subah', '🌆': 'evening dusk shaam sheher shehar', '☀️': 'daylight sunny summer sooraj dhoop',
+  '🌙': 'moonlit chandni chaandni chanda chandaa chann', '⭐': 'taara sitara sitaare taaron', '🌟': 'famous fame superstar bright brighter',
+  '🌧️': 'rainy barsaat saawan sawan', '🌦️': 'weather mausam', '☁️': 'aasman aasmaan asmaan badal',
+  '🌬️': 'wind breeze blow blowing air breathe breath breathing hawa saans', '🌫️': 'foggy mist', '⛈️': 'thunderstorm', '🌀': 'hurricane spin spinning',
+  '🌊': 'tide samundar samandar', '🏞️': 'river rivers lake dariya nadiya', '💧': 'water drops wet paani', '🏖️': 'beach sand shore vacation',
+  '⛰️': 'mountains hill hills pahad', '🌳': 'tree trees baagh', '🌲': 'forest woods jungle', '🌷': 'garden spring', '🌱': 'grow growing seed grass',
+  '🍂': 'autumn leaves', '🌑': 'shadow shadows andhera', '💡': 'lights idea ideas lamp bulb roshni roshan', '🔥': 'hell blaze burned burnt junoon',
+  '🪐': 'planet planets saturn', '☄️': 'meteor', '🌍': 'globe', '🌈': 'colors colours umeed', '🐦': 'birds parinda panchhi chidiya koyal',
+  '🕊️': 'free freedom udna udd', '🐦‍⬛': 'crow raven', '🐱': 'cat cats kitty kitten', '🐶': 'dog dogs puppy', '🐴': 'horse horses', '🐯': 'tiger',
+  '🦈': 'sharks', '🐳': 'whale', '🐰': 'bunny rabbit', '🐝': 'bee bees', '🐉': 'dragons', '🦄': 'unicorns', '👹': 'monster monsters beast', '🧟': 'zombies',
+  '🧛': 'vampires', '🧙': 'wizard witch', '🧚': 'pari', '🧜': 'mermaid', '🤖': 'robots', '🤡': 'clown clowns', '💀': 'killed marna', '🦴': 'bones',
+  '🏴‍☠️': 'pirate pirates', '🦸': 'hero heroes', '🦹': 'villain thief steal stole', '🤠': 'cowboy', '👸': 'rani', '🤴': 'raja shehzada', '👑': 'throne taj',
+  '👦': 'boys munda mundeya', '👧': 'girls kudi kuri', '👩': 'mama mom mommy maa', '👨': 'papa dad daddy', '🧒': 'kids children', '🏡': 'family',
+  '🫂': 'friend friends dost dosti yaar yaara yaari yaariyan', '🦚': 'mor', '🦋': 'titli', '🤥': 'lies liar lying jhooth dhokha',
+  '⏰': 'clock alarm hour hours', '⏱️': 'minute minutes seconds', '📅': 'tomorrow yesterday today', '⏳': 'waiting moments intezaar lamha',
+  '📱': 'text texting cellphone screen mobile', '📺': 'tv', '🎬': 'movie movies film', '📹': 'video', '💻': 'computer', '🌐': 'internet online',
+  '📖': 'book story', '📄': 'page pages', '✍️': 'write writing wrote written pen', '🛕': 'temple mandir', '🛏️': 'pillow sheets', '🚪': 'doors',
+  '🪟': 'windows', '🧱': 'wall walls', '🌉': 'bridge bridges', '🛣️': 'road roads highway raah', '🏙️': 'streets downtown', '🚆': 'trains',
+  '⛵': 'boat sail sailing', '🚢': 'ships', '🚲': 'bike', '🏍️': 'motorbike', '🚚': 'truck', '🚕': 'cab', '🚜': 'jatt', '🚗': 'gaddi gadi',
+  '🧳': 'travel suitcase journey safar', '🗺️': 'map', '🧭': 'lost', '🏁': 'finish manzil', '🚩': 'flag flags', '❤️': 'red laal', '💙': 'blue neela',
+  '💚': 'green hara', '💛': 'yellow peela', '💜': 'purple', '🧡': 'orange', '🩷': 'pink gulabi', '🖤': 'black kaala kaali', '🤍': 'white safed', '🤎': 'brown',
+  '🩶': 'grey gray', '🥈': 'silver chandi', '💵': 'dollar dollars bills', '💎': 'jewel jewels bling heera', '🛍️': 'shopping', '🪽': 'wings pankh',
+  '⚽': 'ball football soccer', '🥅': 'goal goals', '🎯': 'target aim', '🏃': 'running runner bhaag', '🚶': 'walking walked', '🧗': 'climb climbing',
+  '🏊': 'swim swimming', '🏄': 'surf surfing', '🛹': 'skate', '🏅': 'medal medals', '🃏': 'cards poker', '🎰': 'casino jackpot', '🎲': 'gamble khel',
+  '♟️': 'chess', '🧩': 'puzzle pieces', '🧸': 'toy toys teddy', '🎈': 'balloons', '🪁': 'patang', '🥊': 'fight fighting fighter boxing', '👊': 'punch',
+  '⚔️': 'war battle jung', '🗡️': 'sword talwar', '🔫': 'gun guns shoot bullet bullets', '🔪': 'kill killer', '💣': 'bombs', '💥': 'crash explosion',
+  '🚨': 'siren sirens emergency', '🚓': 'police cops', '⛓️': 'chain prison jail', '🏰': 'palace', '🗼': 'tower', '🕯️': 'candles', '🪔': 'diya diwali',
+  '🔔': 'bells ringing', '🎁': 'surprise tohfa', '🎄': 'christmas xmas', '🎅': 'santa', '🎃': 'halloween pumpkin', '🎨': 'holi paint art', '👰': 'bride dulhan',
+  '🤵': 'groom dulha', '💍': 'shaadi', '🙏': 'rabba rab bless blessed blessing thanks thank khuda bhagwan dua waheguru forgive amen', '😇': 'holy',
+  '😈': 'sin sins evil wicked', '👋': 'goodbye bye farewell', '👏': 'clap clapping applause', '🤞': 'promise promises hope hoping fingers',
+  '💯': 'hundred perfect', '🐢': 'slow slowly', '⚡': 'energy power spark electricity',
+  '✨': 'soul spirit vibe vibes glow glowing sparks jugnu sunehri golden', '💪': 'muscle tough gabru', '👟': 'shoes sneakers jutti', '👠': 'heels',
+  '👕': 'shirt', '🧥': 'jacket', '🎩': 'hat', '🕶️': 'shades', '💄': 'makeup', '💅': 'nails sassy nakhra nakhre', '💇': 'hair', '🦷': 'teeth', '🦶': 'feet',
+  '🦵': 'legs', '👳': 'turban pagg sardar', '😎': 'boss swag chill chilling', '🏆': 'legend legends victory', '📸': 'photos pictures flash',
+  '🔮': 'fate destiny jadoo kismat naseeb taqdeer', '🏠': 'pind watan', '💸': 'paise', '🌹': 'gulab', '🌸': 'phoolon', '🌠': 'wishes khwahish',
+  '💫': 'khwab khwaab sapno', '🤝': 'trust', '🧠': 'smart genius',
+};
+let esMerged = false;
+LA_HOOKS['Emoji Stack'] = {
+  build({ p, words, text }) {
+    if (!text) return; // (a break's dots: as they are)
+    if (kinEmojiOn) {
+      if (!esMerged) { esMerged = true; const own = new Map(EMOJI_WORDS); for (const [g, ws] of Object.entries(ES_WORDS)) for (const w of ws.split(' ')) if (!own.has(w)) emoji.words.set(w, emojiCode(g)); }
+      kinEmojiIndex();
+    }
+    // the rows: as many as the letters need (a phone's narrower), each word on the row it most belongs to
+    const phone = innerWidth <= 720, len = words.reduce((a, w) => a + w.length + 1, 0), n = Math.min(phone ? 6 : 5, Math.ceil(len / (phone ? 10 : 15))), aim = len / n;
+    const rows = []; let at = 0;
+    curWords.forEach((o, i) => {
+      const m = words[i].length + 1, c = kinEmojiOn && emojiFor(words[i]);
+      if (!rows.length || at && at + m / 2 > aim && rows.length < n) { rows.push(el('span', 'es-row')); rows[rows.length - 1].style.setProperty('--r', rows.length - 1); at = 0; }
+      at += m;
+      o.append(o.blk = el('i', 'es-blk')); // (after the letters: syncLyrics colours the word's first child)
+      const row = rows[rows.length - 1];
+      row.append(o);
+      if (c) row.append(Object.assign(el('img', 'es-emo'), { alt: '', src: 'emoji/' + c + '.webp', decoding: 'async', onerror() { this.remove(); } }));
+      row.append(' ');
+    });
+    p.replaceChildren(...rows);
+  },
+  frame() {
+    for (let i = 0; i < curWords.length; i++) {
+      const o = curWords[i], q = curP[i];
+      if (!o.blk || q === o.esP) continue;
+      o.esP = q;
+      if (q <= 0 || q >= 1) continue; // (not being sung: syncLyrics' own fill, and the block fading — see the CSS)
+      // the letters turn at the block's edge where it's furthest back (its slant: .07em either way at the top and bottom)
+      o.blk.style.transform = `skewX(-8deg) scaleX(${q.toFixed(3)})`;
+      o.firstChild.style.backgroundImage = `linear-gradient(90deg, var(--bg) calc(${(q * 100).toFixed(1)}% - .07em), var(--dim) 0)`;
+    }
+  },
+  fit(cur, { ls, h, phone }) {
+    const rows = [...cur.querySelectorAll('.es-row')], max = Math.min(innerHeight * (phone ? .1 : .16), phone ? 90 : 160) * ls;
+    if (!rows.length) return fitText(cur, max, h * .58);
+    cur.style.fontSize = max + 'px'; // (rows that never wrap: the whole stack scales with the size, so one look is enough)
+    const W = cur.clientWidth, wide = Math.max(...rows.map(r => r.offsetWidth)) * 1.1, tall = cur.offsetHeight * 1.08;
+    if (W) cur.style.fontSize = Math.max(6, max * Math.min(1, W / wide, h * .88 / tall)).toFixed(1) + 'px';
+  },
+};
 function applyLanim() {
   for (const n of LANIMS) body.classList.toggle('la-' + n.toLowerCase().replace(/ /g, '-'), n === lanim);
   body.classList.toggle('la-letters', LETTERED.has(lanim)); body.classList.toggle('la-hush', HUSHED.has(lanim));
