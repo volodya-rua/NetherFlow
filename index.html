@@ -3088,9 +3088,10 @@ const LA_HOOKS = {};
 // Fisheye, Fisheye Emoji (see "Fisheye" in the CSS): each word's row placed by fishLay — out from the word being sung
 // (the last begun), each row smaller and flatter, and only the two rows' heights from the one before; in ems (a new size
 // for the line is no move) and only when the sung word changes: never a layout as the stack glides. fish.ry: the
-// glass's height in ems (a row fades out at it); fish.emo: the emoji list still on its way (put in once it's here).
+// glass's height in ems (a row reaching its rim goes); fish.emo: the emoji list still on its way (put in once it's
+// here); fish.wh: the stage's size the line was fitted to (fish.ro: refitted when it changes).
 HUSHED.add('Fisheye'); HUSHED.add('Fisheye Emoji');
-const fish = { k: 0, p: null, ry: 3, emo: false };
+const fish = { k: 0, p: null, ry: 3, emo: false, wh: '', ro: null };
 function fishLay(k) {
   fish.k = k; fish.p = curWords;
   const lh = (+stage.style.getPropertyValue('--cur-lh') || 1.02) * .96, sx = a => 1 / (1 + .23 * a), sy = a => sx(a) ** 1.5, Y = [0];
@@ -3098,7 +3099,7 @@ function fishLay(k) {
   curWords.forEach((w, i) => {
     const a = Math.abs(i - k), s = Math.sign(i - k), edge = (Y[a] + lh * sy(a) / 2) / fish.ry, e = curP[i] > 0 && w.querySelector('.emo') ? .53 : 0; // (e: a word begun, its emoji up: the two together in the middle)
     w.style.transform = `translateY(${(s * Y[a]).toFixed(3)}em) rotateX(${-s * Math.min(a * 9, 28)}deg) scale(${sx(a).toFixed(3)}, ${sy(a).toFixed(3)}) translate(calc(-50% - ${e}em), -50%)`;
-    w.style.opacity = (Math.max(0, Math.min(1, (1 - edge) / .2)) * (1 - .06 * Math.min(a, 5))).toFixed(3);
+    w.style.opacity = edge < .9 ? (1 - .06 * Math.min(a, 5)).toFixed(2) : 0; // (a row at the rim gone, not left a faint ghost no one can read: it fades as it glides out)
     w.style.zIndex = Math.max(1, 40 - a);
     w.classList.toggle('fish-k', !a);
   });
@@ -3118,7 +3119,11 @@ LA_HOOKS.Fisheye = {
   // the line sized so its widest word fits across it on the block, and about three rows either side of the sung one
   // inside it (a very short screen: one, at a size that can be read)
   fit(cur, { ls, h, phone }) {
-    if (curWords[0]?.parentElement !== cur || !h || !stage.clientWidth) return; // (not on screen: the home page)
+    // (the stage resized by itself, no window resize — on a phone the song map's row growing as the first line comes, back
+    // from the home page, which hid it: the glass and the line were left too big for it, words past its edge)
+    if (!fish.ro) (fish.ro = new ResizeObserver(() => { if (lanim.startsWith('Fisheye') && fish.wh !== stage.clientWidth + 'x' + stage.clientHeight) fitDeck(); })).observe(stage);
+    if (curWords[0]?.parentElement !== cur || !h || !stage.clientWidth) { fish.wh = ''; return; } // (not on screen: the home page — fitted once it's back)
+    fish.wh = stage.clientWidth + 'x' + h;
     const short = innerHeight <= 400, rx = Math.min(stage.clientWidth, short ? h * 2.3 : h) * .47, ry = Math.min(h * .47, rx * 1.3), lh = (+stage.style.getPropertyValue('--cur-lh') || 1.02) * .96;
     cur.classList.add('fish-snap');
     const f0 = parseFloat(getComputedStyle(cur).fontSize), wide = Math.max(...curWords.map(w => w.offsetWidth + (w.querySelector('.emo') ? 1.06 * f0 : 0))) / f0;
