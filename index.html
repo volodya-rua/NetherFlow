@@ -11969,17 +11969,27 @@ function queueBack() {
     const have = new Map([...[...saved.values()].map(s => s.track), ...library.liked, ...library.playlists.flatMap(x => x.tracks), ...(hist?.tracks || [])].map(t => [t.trackId, t])), list = q.ids.map(id => have.get(id)).filter(Boolean);
     if (!list.some(t => t.trackId === current.trackId)) return;
     queue = list; queueFrom = p ? { p, queue } : null; qi = queue.findIndex(t => t.trackId === current.trackId);
+    // (its go round matched by the key the list had when it was kept, then re-keyed: a Downloads list whose first song
+    // was removed meanwhile starts with another one, and its round was dropped, heard songs coming round again)
     const k = JSON.parse(store.get(SHUF) || 'null');
-    if (k?.key === listKey()) Object.assign(shuf, { key: k.key, heard: new Set(k.heard), order: k.order, trail: [] });
+    if (k?.key === (p ? 'p:' + p.id : String(q.ids[0]))) Object.assign(shuf, { key: listKey(), heard: new Set(k.heard), order: k.order, trail: [] });
     updateSkips();
   } catch {}
 }
 function keepLast() { if (current && current.kind !== 'episode' && !current.castUri && P.loaded && !lastSong) store.set(LAST, JSON.stringify({ t: slim(current), at: Math.round(P.t) })); }
 setInterval(() => { if (!P.paused) { keepLast(); store.set('netherflow.playingat', String(Date.now())); } }, 5000); // (playing at: see the page lost, below)
 addEventListener('pagehide', keepLast);
-function resumeLast() {
+// (just opened — a car's or a headset's Play arrives this early — it waits for the library and the songs saved on this
+// device first, a few seconds at most: its list comes back with it, and a saved song plays from the device, even offline.
+// Played before the saved songs were read, the list was lost for good — QA, 1.6.2)
+let resuming = false;
+async function resumeLast() {
+  if (resuming || !lastSong) return;
+  resuming = true;
+  for (let i = 0; i < 50 && !(libReady && savedTried); i++) await new Promise(r => setTimeout(r, 100));
+  queueBack();
   const { t, at } = lastSong;
-  lastSong = null;
+  lastSong = null; resuming = false;
   replay(t, at);
 }
 // a song played again from where it was (at its place before it's heard): a fresh start, a fresh stream
@@ -14918,7 +14928,7 @@ function kinChunks(ws) {
   });
   return out;
 }
-const kinWord = w => w.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}!?]+$/gu, '') || w;
+const kinWord = w => w.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{M}\p{N}!?]+$/gu, '') || w; // (a word's own last vowel sign, nasal mark or virama kept, \p{M}: मैं came out म — QA, 1.6.2)
 const kinSmall = w => /^(a|an|the|in|on|at|of|to|for|and|or|but|by|as|is|it|so|if|my|with|from|into)$/i.test(w); // (set smaller, over the word after)
 
 // ---- the atlas: entries ({ w, h: their size on screen, px; draw(g): drawn round (0, 0) in masks — red: fill, green:
@@ -15542,7 +15552,7 @@ const KIN_LOOKS = {
       const R = Math.max(Rm * .7, Math.min(Rm, L / (2 * Math.PI * .85)));
       let at = 0;
       S.ring = [];
-      ws.forEach((w, wi) => { for (const ch of w.t) { const adv = mg.measureText(ch).width; S.ring.push({ w: wi, a: (at + adv / 2) / R, e: kWord(S, ch, font, fr) }); at += adv; } at += gap; });
+      ws.forEach((w, wi) => { for (const ch of graphemes(w.t)) { const adv = mg.measureText(ch).width; S.ring.push({ w: wi, a: (at + adv / 2) / R, e: kWord(S, ch, font, fr) }); at += adv; } at += gap; });
       S.R = R; S.spin = r() * 6.28;
     },
     draw(S, K) {
@@ -16239,7 +16249,7 @@ function kinShot(now) {
     kin.lineIdx = activeIdx; kin.lineTxt = shown.text;
     const list = [];
     (shown.words || shown.text.split(/\s+/)).forEach((w, i) => {
-      const em = (w.match(/\p{Extended_Pictographic}(\u200d\p{Extended_Pictographic}|\ufe0f)*/u) || [''])[0], t = kinWord(w.replace(/[\p{Extended_Pictographic}\u200d\ufe0f]/gu, ''));
+      const em = (w.match(/\p{Extended_Pictographic}(\u200d\p{Extended_Pictographic}|\ufe0f)*/u) || [''])[0], t = kinWord(w.replace(/\p{Extended_Pictographic}(\u200d\p{Extended_Pictographic}|\ufe0f)*|\ufe0f/gu, '')); // (only the emoji: a ZWJ inside a word, as in Sinhala's \u0dc1\u0dca\u200d\u0dbb\u0dd3, stays)
       if (/[\p{L}\p{N}]/u.test(t)) list.push({ t, i, em: em ? emojiCode(em) : emojiFor(t) });
       else if (em && list.length) list[list.length - 1].em ||= emojiCode(em);
     });
