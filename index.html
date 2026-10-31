@@ -3073,7 +3073,83 @@ const EDGE_STYLES = ['Wave', 'Bars', 'Neon', 'Glow', 'Frame', 'Dots', 'Aurora', 
 let edgeStyle = EDGE_STYLES.includes(store.get('netherflow.edgestyle')) ? store.get('netherflow.edgestyle') : 'Wave';
 // (an edge look bringing its own code: EDGE_HOOKS[name] = { draw(g, W, H, o) from drawEdges, rows() its own Settings rows })
 const EDGE_HOOKS = {};
-// @slot:rim-js
+// Rim: the screen's edges lit like a rim light — a soft band hugging all four, round the corners, its two colours flowing
+// round it: the mood's (with the Auto mood, the cover's) or your own. Music: it swells and brightens on the beat, the bass
+// pushing the colours round; Still: a steady glow breathing slowly (so too with reduced motion). Its softness is a blurred
+// frame made once, at half size (again only for a new size or glow), coloured each frame: a few fills and a stroke, no blur.
+const RIM_GLOWS = { Soft: { reach: .65, wash: .22, core: .8 }, Medium: { reach: 1, wash: .4, core: .9 }, Bright: { reach: 1.45, wash: .62, core: 1 } };
+const RIM_MIXES = { '50/50': .5, '70/30': .7, '85/15': .85 }, rimHex = k => /^#[0-9a-f]{6}$/i.test(store.get(k)) ? store.get(k) : '';
+const rimFx = { still: store.get('netherflow.rimmotion') === 'Still', glow: RIM_GLOWS[store.get('netherflow.rimglow')] ? store.get('netherflow.rimglow') : 'Medium',
+  own: store.get('netherflow.rimcolours') === 'Custom', mix: RIM_MIXES[store.get('netherflow.rimmix')] ? store.get('netherflow.rimmix') : '50/50',
+  a: rimHex('netherflow.rima'), b: rimHex('netherflow.rimb'), rot: 0, pulse: 0, key: '' };
+// white light falling off inward from the edge, round the corners: the shape drawn off the canvas, only its blurred shadow
+// landing on it — twice, a blurred edge being half as bright where it lies (so full at the edge itself)
+function rimMask(c, w, h, r, blur) {
+  c.width = w; c.height = h;
+  const x = c.getContext('2d'), m = blur * 3, off = w + h + m * 2;
+  x.shadowColor = x.fillStyle = '#fff'; x.shadowBlur = blur; x.shadowOffsetX = off; x.globalCompositeOperation = 'lighter';
+  x.beginPath(); x.rect(-off - m, -m, w + m * 2, h + m * 2); x.roundRect(-off, 0, w, h, r);
+  x.fill('evenodd'); x.fill('evenodd');
+}
+EDGE_HOOKS.Rim = {
+  draw(g, W, H, o) {
+    const f = rimFx, G = RIM_GLOWS[f.glow], w = Math.ceil(W / 2), h = Math.ceil(H / 2), key = `${w}x${h} ${Math.round(o.D)} ${f.glow}`;
+    if (f.key !== key) { // (half size: the light's soft anyway)
+      f.key = key; f.core ||= el('canvas'); f.wash ||= el('canvas'); f.c ||= el('canvas'); f.x ||= f.c.getContext('2d');
+      f.c.width = w; f.c.height = h;
+      const r = Math.max(2, Math.min(14, Math.min(w, h) * .04)); // (frame()'s corners, at half size)
+      rimMask(f.core, w, h, r, o.D * .14); rimMask(f.wash, w, h, r, o.D * .6 * G.reach);
+    }
+    const still = f.still || !motion, x = f.x;
+    f.pulse = still ? 0 : Math.max(o.beat ? .6 + o.kick * .4 : 0, f.pulse * Math.exp(-o.dt * 5)); // (a beat: up at once, back in ~0.2 s)
+    f.rot += o.dt * (still ? .035 : .08 + o.bass * .3 + f.pulse * .6); // (the colours flowing round, ~20 s a lap on a loud song; Still, three minutes)
+    const lift = still ? .8 + .12 * Math.sin(o.now / 1250) : .58 + o.bass * .2 + o.kick * .2 + f.pulse * .3; // (Still: a breath every ~8 s)
+    const [ca, cb] = f.own ? [f.a || pal.a, f.b || pal.b] : [pal.a, pal.b], p = f.own ? RIM_MIXES[f.mix] : .5, q = p / 2, s = Math.min(p, 1 - p) * .45;
+    const flow = (c, cx, cy) => { const gr = c.createConicGradient(f.rot, cx, cy); // (the primary round p of the edge, blending into the secondary)
+      for (const [at, col] of [[0, ca], [q - s, ca], [q + s, cb], [1 - q - s, cb], [1 - q + s, ca], [1, ca]]) gr.addColorStop(at, col);
+      return gr; };
+    x.globalCompositeOperation = 'copy'; x.globalAlpha = Math.min(1, G.core * lift); x.drawImage(f.core, 0, 0);
+    x.globalCompositeOperation = 'lighter';
+    if (f.pulse > .02) { x.globalAlpha = f.pulse * .6; x.drawImage(f.core, 0, 0); } // (the beat: the rim wider and brighter)
+    x.globalAlpha = Math.min(1, (W <= 720 ? .6 : 1) / EDGE_SIZES[edgeSize], G.wash * lift * (1 + f.pulse * .7)); x.drawImage(f.wash, 0, 0); // (the lyrics start inside the wash, a phone's 16 px in: the further it reaches, the softer, so their first letters stay easy to read on the beat)
+    x.globalCompositeOperation = 'source-in'; x.globalAlpha = 1; x.fillStyle = flow(x, w / 2, h / 2); x.fillRect(0, 0, w, h);
+    g.drawImage(f.c, 0, 0, W, H);
+    o.frame(1); g.strokeStyle = flow(g, W / 2, H / 2); g.globalAlpha = Math.min(1, .35 + lift * .5); g.lineWidth = 1.2 + f.pulse * 1.4; g.stroke(); g.globalAlpha = 1; // (the bezel's own crisp line)
+  },
+  rows() {
+    if (edgeStyle !== 'Rim') return [];
+    const f = rimFx, keep = (k, v, d) => { store.set('netherflow.rim' + k, v === d ? '' : v); renderTextPanel(); };
+    return [settingRow('Rim motion', ['Music', 'Still'], f.still ? 'Still' : 'Music', v => { f.still = v === 'Still'; keep('motion', v, 'Music'); },
+        'Music: it swells and brightens on the beat, its colours flowing round with the bass. Still: a steady glow, breathing slowly.'),
+      settingRow('Rim glow', Object.keys(RIM_GLOWS), f.glow, v => { f.glow = v; keep('glow', v, 'Medium'); }, 'Soft: a whisper of light along the edges. Bright: a wash of colour reaching in.'),
+      settingRow('Rim colours', ['Mood', 'Custom'], f.own ? 'Custom' : 'Mood', v => {
+        f.own = v === 'Custom';
+        if (f.own && !f.a) for (const k of ['a', 'b']) store.set('netherflow.rim' + k, f[k] = pal[k]); // (your own start from the colours on screen)
+        keep('colours', v, 'Mood');
+      }, 'Mood: the mood\'s two colours (with the Auto mood, the cover\'s). Custom: two of your own.'),
+      ...(f.own ? [rimPickers(), settingRow('Rim mix', Object.keys(RIM_MIXES), f.mix, v => { f.mix = v; keep('mix', v, '50/50'); }, 'How much of the rim is the primary colour, and how much the secondary.')] : [])];
+  },
+};
+// Rim's own two colours: a button each (a .seg button, so each theme dresses it as its own), a glowing dot of its colour
+// in it, opening the system's colour picker (the rim follows as it's dragged; the panel isn't drawn again meanwhile). The
+// picker's input itself stays hidden: no stop of its own for Tab or a TV's arrows.
+function rimPickers() {
+  const q = el('div', 'bgq lbl'), seg = el('div', 'seg');
+  seg.setAttribute('role', 'group'); seg.setAttribute('aria-label', 'Your rim colours');
+  for (const [k, name] of [['a', 'Primary'], ['b', 'Secondary']]) {
+    const b = el('button', '', name), dot = el('i'), inp = el('input'), say = `Rim ${name.toLowerCase()} colour`, paint = v => { dot.style.background = v; dot.style.boxShadow = `0 0 9px ${v}`; };
+    b.style.cssText = 'display: inline-flex; align-items: center; gap: 8px';
+    dot.style.cssText = 'width: 12px; height: 12px; border-radius: 50%';
+    inp.type = 'color'; inp.value = rimFx[k] || pal[k]; paint(inp.value);
+    b.setAttribute('aria-label', say); inp.setAttribute('aria-label', say);
+    inp.style.cssText = 'position: absolute; width: 1px; height: 1px; visibility: hidden';
+    inp.oninput = () => { rimFx[k] = inp.value; paint(inp.value); store.set('netherflow.rim' + k, inp.value); };
+    b.onclick = () => { try { inp.showPicker(); } catch { inp.click(); } }; // (showPicker: Chromium 99+, as roundRect; before it, its click)
+    b.prepend(dot); seg.append(b, inp);
+  }
+  q.append(el('span', '', 'Your rim colours'), seg); q.dataset.set = 'Your rim colours';
+  return q;
+}
 let edgeSize = EDGE_SIZES[store.get('netherflow.edgesize')] ? store.get('netherflow.edgesize') : 'Medium';
 // the background beating with the music too: it swells and brightens with the bass (the album cover background as well)
 let bgBeat = store.get('netherflow.bgbeat') === 'On', bgKick = 0;
@@ -3339,7 +3415,7 @@ function renderTextPanel() {
     ...(skin ? [] : [fontRow()]), // (a theme brings its own font and timeline)
     settingRow('Beat style', BEATS, beatStyle, setBeat, 'The ring round the record, in the Cover view.'),
     settingRow('Beat on the screen edges', ['Off', 'On'], edges ? 'On' : 'Off', setEdges, 'The beat also runs along all four sides of the screen, with the lyrics too.'),
-    ...(edges ? [settingRow('Edge look', EDGE_STYLES, edgeStyle, setEdgeStyle, 'Wave: a filled wave. Bars: the spectrum as bars. Neon: one glowing line. Glow: the sides light up on the bass. Frame: a frame round the screen breathing with the bass, two lights racing round it, leaping on the beat. Dots: a row of lights along each side. Aurora: soft curtains of light swaying in from the sides. Spikes: the spectrum as sharp spikes. Ripple: each beat sends a ripple of light in from the edges.'),
+    ...(edges ? [settingRow('Edge look', EDGE_STYLES, edgeStyle, setEdgeStyle, 'Wave: a filled wave. Bars: the spectrum as bars. Neon: one glowing line. Glow: the sides light up on the bass. Frame: a frame round the screen breathing with the bass, two lights racing round it, leaping on the beat. Dots: a row of lights along each side. Aurora: soft curtains of light swaying in from the sides. Spikes: the spectrum as sharp spikes. Ripple: each beat sends a ripple of light in from the edges. Rim: a soft glow hugging the edges, its two colours flowing round them, brighter on the beat.'),
       settingRow('Edge size', Object.keys(EDGE_SIZES), edgeSize, setEdgeSize, 'How far in from the sides it reaches.')] : []),
     ...(edges ? Object.values(EDGE_HOOKS).flatMap(h => h.rows?.() || []) : []), // (an edge look's own rows)
     ...(skin ? [] : [settingRow('Timeline', BARS, barStyle, setBar, 'The bar under the lyrics that shows where the song is (drag it to move through the song).')]),
