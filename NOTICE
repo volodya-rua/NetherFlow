@@ -65,7 +65,7 @@ material in this repository keeps its own license and is not covered by it:
   docs/vendor/                           the website's copies of three.js and Lenis: MIT
   jsqr.js                                jsQR 1.4.0, by Cosmo Wolfe and the jsQR
                                          contributors: Apache License 2.0
-  AI karaoke (desktop; phone on request) ONNX Runtime Web 1.30.0, by Microsoft: MIT
+  AI karaoke (Windows; phone on request) ONNX Runtime Web 1.30.0, by Microsoft: MIT
                                          (with its third-party notices); the Spleeter
                                          2-stem model, by Deezer SA, as converted to
                                          ONNX int8 for sherpa-onnx: MIT
