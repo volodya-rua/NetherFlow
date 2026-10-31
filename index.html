@@ -328,8 +328,9 @@ body.home .singbar { display: none; } /* (its voice slider is for the lyrics: no
 .la-wall .lyr :is(.prev, .next) { display: none; } /* (the line alone, in the middle of the stage) */
 .la-wall .lyr .cur { width: 90%; } /* (the room left: for the wall's turning) */
 /* (the depth its own, in its own size — the same on a phone as on a TV — and seen from its middle, wherever the line is
-   aligned: from the stage's, a wall at the side swung out past the edge; and no deck's depth on top of it) */
-.la-wall .wall { display: block; width: fit-content; margin-inline: .12em; perspective: 9em; } /* (a little in from the side: its near edge, swung out, stays on the stage) */
+   aligned: from the stage's, a wall at the side swung out past the edge; and no deck's depth on top of it. --wp: that depth,
+   in em, more for a bigger wall — see LA_HOOKS.Wall.fit) */
+.la-wall .wall { display: block; width: fit-content; margin-inline: .12em; perspective: calc(var(--wp, 9) * 1em); } /* (a little in from the side: its near edge, swung out, stays on the stage) */
 .lyr-center.la-wall :is(.lyr .cur, .wall) { margin-inline: auto; }
 .lyr-right.la-wall :is(.lyr .cur, .wall) { margin-left: auto; }
 .la-wall .wtilt { display: block; transform-style: preserve-3d; rotate: y -7deg; transform: rotateX(5deg); /* (held there, with reduced motion) */
@@ -344,8 +345,8 @@ body.home .singbar { display: none; } /* (its voice slider is for the lyrics: no
 .la-wall .cur .w { position: relative; isolation: isolate; transition: transform .5s cubic-bezier(.2,.9,.3,1.15);
   animation: wall-in .6s cubic-bezier(.2,.8,.25,1) backwards; animation-delay: calc(.08s + var(--r, 0) * 45ms); }
 /* (lifted, it's seen from the wall's middle, so it looks further from it too, and covered the row above or below: kept to its
-   row — --r its row, --rows how many, the rows --cur-lh em high, the wall's depth 9 em) */
-.la-wall .cur .w.now { transform: translate3d(0, calc((var(--r) - (var(--rows) - 1) / 2) * var(--cur-lh, 1.02) * -.0556em), .5em); }
+   row — --r its row, --rows how many, the rows --cur-lh em high, the wall's depth --wp em) */
+.la-wall .cur .w.now { transform: translate3d(0, calc((var(--r) - (var(--rows) - 1) / 2) * var(--cur-lh, 1.02) * -.5em / var(--wp, 9)), .5em); }
 @keyframes wall-in { from { opacity: 0; translate: 0 .4em -3em; } }
 .la-wall .cur:not(.rest) .w > span { --dim: color-mix(in srgb, var(--ink) 42%, transparent); }
 .la-wall .cur .w.em > span { --dim: color-mix(in srgb, var(--a) 45%, transparent); font: inherit; letter-spacing: inherit; text-transform: inherit; }
@@ -3095,10 +3096,10 @@ const lens = { k: -1, p: null }; // (Lens: the word it's on, in which line — s
 // frame() every frame (syncLyrics), fit(cur, { ls, h, phone }) to size the line (fitDeck) } — each optional.
 const LA_HOOKS = {};
 // Wall (see ".la-wall" in the CSS): the line a word or two a row — two short words share one, a long one stands alone, a
-// break's dots all on one — in the wall (its depth) and its drifting face. The drift is in step with the clock (--wd),
-// so each new wall carries on where the last one was, and so does the old one, kept a moment to sink back (LEAVING):
-// moved to stay under the new one, its drift starts again (as any CSS animation of a moved element does), from the
-// clock's place.
+// break's dots all on one — in the wall (its depth) and its drifting face. Each new wall's drift (--wd) carries on from
+// where the last one's is, and so does the old one, kept a moment to sink back (LEAVING): moved to stay under the new
+// one, its drift starts again (as any CSS animation of a moved element does). (From the old wall's own animation, not
+// the clock: paused while the app was away, its drift fell behind the clock's, and jumped there at the next line.)
 LEAVING.add('Wall');
 LA_HOOKS.Wall = {
   build({ p, words, text, deck }) {
@@ -3106,11 +3107,21 @@ LA_HOOKS.Wall = {
     words.forEach((w, i) => { const r = rows.at(-1); if (r && (!text || r.length === 1 && [...words[r[0]]].length + [...w].length <= room)) r.push(i); else rows.push([i]); });
     tilt.append(...rows.map((r, n) => { const row = el('span', 'wrow'); row.style.setProperty('--r', n); r.forEach((i, k) => row.append(...(k ? [' ', curWords[i]] : [curWords[i]]))); return row; }));
     tilt.style.setProperty('--rows', rows.length); wall.append(tilt); p.replaceChildren(wall);
-    const wd = -(performance.now() % 374000).toFixed(0) + 'ms'; // (374 s: both swings' whole rounds, 34 s and 22 s, fit it exactly)
+    const old = stage.querySelector('.deck.lyr:not(.leaving)'), ct = old?.querySelector('.wtilt')?.getAnimations()[0]?.effect.getComputedTiming();
+    const wd = -((ct?.localTime != null ? ct.localTime - ct.delay : performance.now()) % 374000).toFixed(0) + 'ms'; // (374 s: both swings' whole rounds, 34 s and 22 s, fit it exactly)
     deck.style.setProperty('--wd', wd);
-    stage.querySelector('.deck.lyr:not(.leaving)')?.style.setProperty('--wd', wd);
+    old?.style.setProperty('--wd', wd);
   },
-  fit(cur, { ls, h, phone }) { fitText(cur, (cur.classList.contains('rest') ? .45 : 1) * Math.min(innerHeight * (phone ? .1 : .16), phone ? 84 : 160) * ls, h * .84); },
+  fit(cur, { ls, h, phone }) {
+    // (on a short stage a little less of it, so the wall's top row stays clear of ← Home in its corner — on a 360 × 640
+    // phone it ran under it; not on a very short one, a phone on its side, where the words need all the room there is)
+    const share = innerHeight <= 400 ? .84 : Math.min(.84, Math.max(.7, 1 - 64 / h));
+    fitText(cur, (cur.classList.contains('rest') ? .45 : 1) * Math.min(innerHeight * (phone ? .1 : .16), phone ? 84 : 160) * ls, h * share);
+    // (its depth in step with its size, so a big wall turns as mildly as a small one: at 9 em, a long word's wall — one row
+    // 14 em wide, or a Chinese line's — swung its near end past the stage, its first letters cut off by the window's edge)
+    const wall = cur.querySelector('.wall'), f = parseFloat(cur.style.fontSize);
+    if (wall && f) wall.style.setProperty('--wp', Math.max(9, 1.8 * Math.max(wall.offsetWidth, wall.offsetHeight) / f).toFixed(2));
+  },
 };
 // ·
 // @slot:fisheye-js
