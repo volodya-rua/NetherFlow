@@ -322,7 +322,35 @@ body.home .singbar { display: none; } /* (its voice slider is for the lyrics: no
 @keyframes drift-in { from { opacity: 0; transform: translateZ(-2em) translateY(.4em); } }
 /* @slot:wall-css */
 /* · */
-/* @slot:fisheye-css */
+/* Fisheye, Fisheye Emoji: the line a word a row under a convex lens — the word being sung in the middle, full size and
+   nearest, on a block of the mood's colour; each row further off smaller and flatter (squeezed more up and down than
+   across, as near a dome's edge) and turned away a little, fading out at the glass's rim; the stack glides to keep the
+   sung word in the middle (see fishLay). The glass: a faint rim and a darker edge behind the words, a soft highlight
+   over them (never enough to hide one). Fisheye Emoji: a word's own emoji pops up beside it as it's sung. */
+:is(.la-fisheye, .la-fisheye-emoji) .deck.lyr { position: absolute; inset: 0; max-width: none; }
+:is(.la-fisheye, .la-fisheye-emoji) .lyr .cur { position: absolute; left: 50%; top: 50%; width: 0; height: 0; margin: 0; perspective: 5em; }
+:is(.la-fisheye, .la-fisheye-emoji) .cur .w { position: absolute; left: 0; top: 0; width: max-content; white-space: nowrap; isolation: isolate; transform-origin: 0 0;
+  animation: fish-in .45s cubic-bezier(.2,.9,.3,1) backwards; animation-delay: calc(var(--i) * 25ms); transition: transform .55s cubic-bezier(.2,.8,.2,1), opacity .45s; }
+.fish-snap .w { transition: none !important; } /* (a new size: taken at once, not glided to) */
+@keyframes fish-in { from { opacity: 0; scale: .8; } } /* (out from the glass's middle, where transform-origin is; not so far that words overlap) */
+:is(.la-fisheye, .la-fisheye-emoji) .cur:not(.rest) .w > span { --dim: color-mix(in srgb, var(--ink) 58%, transparent); transform: none; }
+:is(.la-fisheye, .la-fisheye-emoji) .cur .w.em > span { --dim: color-mix(in srgb, var(--a) 72%, transparent); font: inherit; letter-spacing: inherit; text-transform: inherit; }
+:is(.la-fisheye, .la-fisheye-emoji) .cur:not(.rest) .w::before { content: ''; position: absolute; z-index: -1; inset: .03em -.16em 0; border-radius: .12em; background: var(--a);
+  box-shadow: 0 .08em .45em color-mix(in srgb, var(--a) 50%, transparent); transform: scaleX(0); opacity: 0; transition: transform .3s cubic-bezier(.2,.9,.3,1.15), opacity .2s; }
+:is(.la-fisheye, .la-fisheye-emoji) .cur:not(.rest) .w.fish-k.on::before { transform: none; opacity: 1; }
+:is(.la-fisheye, .la-fisheye-emoji) .cur:not(.rest) .w.fish-k.on > span { color: var(--bg); filter: none; }
+:is(.la-fisheye, .la-fisheye-emoji) .lyr .cur::before, :is(.la-fisheye, .la-fisheye-emoji) .lyr .cur::after { content: ''; position: absolute; border-radius: 50%; pointer-events: none;
+  left: calc(var(--fish-rx, 30vmin) * -1); top: calc(var(--fish-ry, 30vmin) * -1); width: calc(var(--fish-rx, 30vmin) * 2); height: calc(var(--fish-ry, 30vmin) * 2); }
+:is(.la-fisheye, .la-fisheye-emoji) .lyr .cur::before {
+  background: radial-gradient(closest-side, transparent 58%, color-mix(in srgb, var(--bg) 50%, transparent) 93%, color-mix(in srgb, var(--a) 24%, transparent) 99%, transparent),
+              radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--a) 10%, transparent), transparent 70%);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink) 22%, transparent), 0 0 0 1px color-mix(in srgb, var(--bg) 45%, transparent),
+              0 24px 70px color-mix(in srgb, var(--bg) 60%, transparent), 0 0 70px color-mix(in srgb, var(--a) 16%, transparent); }
+:is(.la-fisheye, .la-fisheye-emoji) .lyr .cur::after { z-index: 99; background: radial-gradient(ellipse 34% 20% at 31% 14%, rgba(255,255,255,.15), transparent 70%);
+  box-shadow: inset 5px 9px 12px -8px rgba(255,255,255,.45), inset -4px -8px 14px -8px color-mix(in srgb, var(--a) 55%, transparent); }
+.la-fisheye-emoji .emo { position: absolute; left: 100%; top: 50%; width: .8em; height: .8em; margin: -.42em 0 0 .26em; pointer-events: none; transform: scale(0) rotate(-30deg);
+  transition: transform .5s cubic-bezier(.3,1.8,.45,1); filter: drop-shadow(0 .06em .1em rgba(0, 0, 0, .45)); }
+.la-fisheye-emoji .cur .w.on .emo { transform: rotate(8deg); }
 /* · */
 /* Emoji Stack: the line alone, in a few big rows of about the same length, stacked in the middle and each tilted a little;
    the word being sung on a slanted block of the mood's colour that grows across it as it's sung, its letters on the block
@@ -3197,7 +3225,60 @@ const lens = { k: -1, p: null }; // (Lens: the word it's on, in which line — s
 const LA_HOOKS = {};
 // @slot:wall-js
 // ·
-// @slot:fisheye-js
+// Fisheye, Fisheye Emoji (see "Fisheye" in the CSS): each word's row placed by fishLay — out from the word being sung
+// (the last begun), each row smaller and flatter, and only the two rows' heights from the one before; in ems (a new size
+// for the line is no move) and only when the sung word changes: never a layout as the stack glides. fish.ry: the
+// glass's height in ems (a row reaching its rim goes); fish.emo: the emoji list still on its way (put in once it's
+// here); fish.wh: the stage's size the line was fitted to (fish.ro: refitted when it changes).
+HUSHED.add('Fisheye'); HUSHED.add('Fisheye Emoji');
+const fish = { k: 0, p: null, ry: 3, emo: false, wh: '', ro: null };
+function fishLay(k) {
+  fish.k = k; fish.p = curWords;
+  const lh = (+stage.style.getPropertyValue('--cur-lh') || 1.02) * .96, sx = a => 1 / (1 + .23 * a), sy = a => sx(a) ** 1.5, Y = [0];
+  for (let a = 1; a < curWords.length; a++) Y[a] = Y[a - 1] + lh * (sy(a - 1) + sy(a)) / 2;
+  curWords.forEach((w, i) => {
+    const a = Math.abs(i - k), s = Math.sign(i - k), edge = (Y[a] + lh * sy(a) / 2) / fish.ry, e = curP[i] > 0 && w.querySelector('.emo') ? .53 : 0; // (e: a word begun, its emoji up: the two together in the middle)
+    w.style.transform = `translateY(${(s * Y[a]).toFixed(3)}em) rotateX(${-s * Math.min(a * 9, 28)}deg) scale(${sx(a).toFixed(3)}, ${sy(a).toFixed(3)}) translate(calc(-50% - ${e}em), -50%)`;
+    w.style.opacity = edge < .9 ? (1 - .06 * Math.min(a, 5)).toFixed(2) : 0; // (a row at the rim gone, not left a faint ghost no one can read: it fades as it glides out)
+    w.style.zIndex = Math.max(1, 40 - a);
+    w.classList.toggle('fish-k', !a);
+  });
+}
+// (a word's own emoji beside it, popping up as it's sung)
+function fishEmo() {
+  kinEmojiIndex(); fish.emo = !emoji.codes.size;
+  for (const o of curWords) { const c = emojiFor(o.textContent); if (c && !o.querySelector('.emo')) o.append(Object.assign(el('img', 'emo'), { alt: '', src: 'emoji/' + c + '.webp', decoding: 'async', onerror() { this.remove(); if (curWords.includes(o)) fishLay(fish.k); } })); }
+}
+LA_HOOKS.Fisheye = {
+  build() { fish.emo = false; fishLay(0); },
+  frame() {
+    let k = 0; for (let i = 0; i < curWords.length; i++) if (curP[i] > 0) k = i;
+    if (k !== fish.k || fish.p !== curWords) fishLay(k);
+  },
+  // the glass as tall as the stage allows (round, an upright oval on a narrow screen, a wide one on a very short one);
+  // the line sized so its widest word fits across it on the block, and about three rows either side of the sung one
+  // inside it (a very short screen: one, at a size that can be read)
+  fit(cur, { ls, h, phone }) {
+    // (the stage resized by itself, no window resize — on a phone the song map's row growing as the first line comes, back
+    // from the home page, which hid it: the glass and the line were left too big for it, words past its edge)
+    if (!fish.ro) (fish.ro = new ResizeObserver(() => { if (lanim.startsWith('Fisheye') && fish.wh !== stage.clientWidth + 'x' + stage.clientHeight) fitDeck(); })).observe(stage);
+    if (curWords[0]?.parentElement !== cur || !h || !stage.clientWidth) { fish.wh = ''; return; } // (not on screen: the home page — fitted once it's back)
+    fish.wh = stage.clientWidth + 'x' + h;
+    const short = innerHeight <= 400, rx = Math.min(stage.clientWidth, short ? h * 2.3 : h) * .47, ry = Math.min(h * .47, rx * 1.3), lh = (+stage.style.getPropertyValue('--cur-lh') || 1.02) * .96;
+    cur.classList.add('fish-snap');
+    const f0 = parseFloat(getComputedStyle(cur).fontSize), wide = Math.max(...curWords.map(w => w.offsetWidth + (w.querySelector('.emo') ? 1.06 * f0 : 0))) / f0;
+    const px = Math.min((phone ? 80 : 150) * ls, 1.8 * rx / (wide + .32), ry / ((short ? 1.7 : 2.7) * lh) * ls);
+    cur.style.fontSize = px.toFixed(1) + 'px';
+    cur.style.setProperty('--fish-rx', rx.toFixed(1) + 'px'); cur.style.setProperty('--fish-ry', ry.toFixed(1) + 'px');
+    fish.ry = ry / px; fishLay(fish.p === curWords ? fish.k : 0);
+    cur.offsetWidth; // (the new places taken now, while nothing glides)
+    cur.classList.remove('fish-snap');
+  },
+};
+LA_HOOKS['Fisheye Emoji'] = { ...LA_HOOKS.Fisheye,
+  build() { fish.emo = false; if (kinEmojiOn) fishEmo(); fishLay(0); },
+  frame() { if (fish.emo && emoji.codes.size) { fishEmo(); fitDeck(); } LA_HOOKS.Fisheye.frame(); },
+};
 // ·
 // Emoji Stack: the line in a few rows of about the same length, stacked in the middle (see the CSS); the word being sung on
 // a slanted block that grows across it as it's sung — frame() sets the block's width and the letters' colour from curP
