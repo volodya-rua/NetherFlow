@@ -16,7 +16,7 @@
         <item name="android:windowLightNavigationBar" tools:targetApi="27">false</item>
     </style>
 
-    <!-- The opening splash: the record alone (cut out of the icon, with a soft light behind it) on the app's own
+    <!-- The opening splash: the logo, the question mark alone (nothing behind it) on the app's own
          background, so it reads as one with the app, no square around it; held until the page has built itself, then
          faded into it (MainActivity). splash_icon: a 288 dp canvas, all of it inside the middle 192 dp circle. -->
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">

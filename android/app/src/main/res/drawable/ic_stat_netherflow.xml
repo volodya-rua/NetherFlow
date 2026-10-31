@@ -1,12 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Status-bar icon for the "now playing" notification: a record (white on transparent, as Android requires). -->
+<!-- Status-bar icon for the "now playing" notification: NetherFlow's question mark (white on transparent, as Android
+     requires: it's tinted by the system). The same path as tools/logo-render.js draws. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
-    android:viewportWidth="24"
-    android:viewportHeight="24">
+    android:viewportWidth="100"
+    android:viewportHeight="100">
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="13.5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M30.5,35.5 A19.5,19.5 0 1,1 64.6,48.5 C57,54.5 50,57 50,67" />
     <path
         android:fillColor="#FFFFFFFF"
-        android:fillType="evenOdd"
-        android:pathData="M12,2a10,10 0 1,1 0,20a10,10 0 1,1 0,-20z M12,9a3,3 0 1,0 0,6a3,3 0 1,0 0,-6z M12,11a1,1 0 1,1 0,2a1,1 0 1,1 0,-2z" />
+        android:pathData="M42.4,84 a7.6,7.6 0 1,0 15.2,0 a7.6,7.6 0 1,0 -15.2,0 z" />
 </vector>
