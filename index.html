@@ -282,8 +282,10 @@ body.home .singbar { display: none; } /* (its voice slider is for the lyrics: no
 :is(.la-tower, .la-lens, .la-pop, .la-drift) .cur .w.em > span { --dim: color-mix(in srgb, var(--a) 45%, transparent); font: inherit; letter-spacing: inherit; text-transform: inherit; }
 :is(.la-tower, .la-lens, .la-pop, .la-drift) .cur:not(.rest) .w::before { content: ''; position: absolute; z-index: -1; inset: .04em -.14em 0 calc(var(--x, 0) * 1em - .14em);
   border-radius: .12em; background: var(--a); box-shadow: 0 .1em .45em color-mix(in srgb, var(--a) 45%, transparent);
-  transform: rotate(-2.5deg) scaleX(0); transform-origin: left center; transition: transform .3s cubic-bezier(.2,.9,.3,1.15); }
-:is(.la-tower, .la-lens, .la-pop, .la-drift) .cur:not(.rest) .w.now::before { transform: rotate(-2.5deg) scaleX(1); }
+  transform: rotate(-2.5deg) scaleX(0); transform-origin: left center; }
+/* (it sweeps in, and goes at once: shrinking away it hid the letters still on it, since the word was already back in
+   its own colour, the accent word in the block's own — QA, 1.6.2) */
+:is(.la-tower, .la-lens, .la-pop, .la-drift) .cur:not(.rest) .w.now::before { transform: rotate(-2.5deg) scaleX(1); transition: transform .3s cubic-bezier(.2,.9,.3,1.15); }
 :is(.la-tower, .la-lens, .la-pop, .la-drift) .cur:not(.rest) .w.now > span { color: var(--bg); filter: none; } /* (its sweep left clipped to the letters: the colour over it) */
 /* Tower: the line's words stacked a word a row, staggered, the stack turned a little in space, swaying slowly; each
    word swings in as the line comes */
@@ -299,7 +301,8 @@ body.home .singbar { display: none; } /* (its voice slider is for the lyrics: no
 @keyframes tower-sway { from { transform: rotateY(-9deg) rotateX(4deg) rotate(-1.5deg); } to { transform: rotateY(5deg) rotateX(-2deg) rotate(1deg); } }
 /* Lens: the line in one row through a magnifying glass — the word being sung nearest, big in the middle; the others
    smaller, fainter and turned away the further off they are; the row gliding along (see lensFocus) */
-.la-lens .deck.lyr { overflow-x: clip; }
+.la-lens .deck.lyr { overflow-x: clip; -webkit-mask-image: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent); mask-image: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent); } /* (what a long line can't fit fades at the edges, never cut in half) */
+.la-lens .deck.lyr :is(.prev, .next) { padding-inline: 4%; } /* (the lines before and after, clear of that fade) */
 .la-lens .lyr .cur { position: relative; left: 50%; width: max-content; white-space: nowrap; text-align: left; perspective: 900px; transition: translate .5s cubic-bezier(.2,.8,.2,1); }
 .la-lens .cur .w { --d: 3; font-size: calc((1.75 - min(var(--d), 3) * .32) * var(--fit, 1) * 1em); opacity: calc(1 - min(var(--d), 4) * .17); vertical-align: middle;
   transform: rotateY(calc(var(--side, 1) * min(var(--d), 3) * -13deg)); animation: none; transition: font-size .4s cubic-bezier(.2,.8,.2,1), opacity .4s, transform .4s; }
@@ -570,6 +573,10 @@ body.home .singbar { display: none; } /* (its voice slider is for the lyrics: no
   background: color-mix(in srgb, var(--bg) 80%, transparent); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); border: 1px solid var(--hair); border-radius: 999px;
   box-shadow: 0 14px 40px rgba(0, 0, 0, .5); animation: show .25s both; }
 .ab-bar[hidden], .ab-range[hidden] { display: none; }
+/* (with Sing on, above Sing's bar: under it, its Start, End and stop couldn't be pressed — QA, 1.6.2. On the home
+   screen Sing's bar is hidden) */
+body.sing:not(.home) .ab-bar { bottom: calc(100% + 44px); }
+@media (max-width: 460px) { .ab-bar .lbl { display: none; } } /* (a phone: its 413 px ran past the screen's edges; the group keeps its name) */
 .ab-bar .lbl { font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--a); }
 .ab-bar .pill { padding: 6px 12px; font-variant-numeric: tabular-nums; }
 .scrub .range::-webkit-slider-runnable-track { height: 38px; background: transparent; }
@@ -1041,9 +1048,10 @@ body.home .singbar { display: none; } /* (its voice slider is for the lyrics: no
    easing aside to make room for it), home in a tap (the song plays on); ← Back atop every panel */
 .top-l { display: flex; align-items: center; min-width: 0; }
 .to-home { flex: none; display: grid; place-items: center; width: 0; height: 36px; margin: 0; padding: 0; border-radius: 50%; overflow: hidden; color: var(--ink);
-  opacity: 0; pointer-events: none; transition: width .4s cubic-bezier(.2,.8,.2,1), margin .4s cubic-bezier(.2,.8,.2,1), opacity .3s, background-color .2s, color .2s; }
+  opacity: 0; pointer-events: none; visibility: hidden; /* (hidden: no keyboard, remote or screen-reader stop on it either — QA) */
+  transition: width .4s cubic-bezier(.2,.8,.2,1), margin .4s cubic-bezier(.2,.8,.2,1), opacity .3s, visibility 0s .4s, background-color .2s, color .2s; }
 .to-home:hover { background: var(--hair); color: var(--a); }
-body.has-song:not(.home, .fs) .to-home { width: 36px; margin: 0 6px 0 -8px; opacity: 1; pointer-events: auto; }
+body.has-song:not(.home, .fs) .to-home { width: 36px; margin: 0 6px 0 -8px; opacity: 1; pointer-events: auto; visibility: visible; transition-delay: 0s; }
 .panel-back { grid-column: 1 / -1; justify-self: start; display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px 8px 2px; font-size: 10.5px; letter-spacing: .12em; color: var(--a); }
 .panel-back .ico { width: 14px; height: 14px; }
 .cover-stage { display: none; position: relative; grid-template-columns: auto; place-content: center; justify-items: center; }
@@ -3689,7 +3697,7 @@ function renderTextPanel() {
     settingRow('Interface size', UI_SIZES, uiSize, setUiSize, 'Everything larger or smaller: the buttons, the text, the panels.'),
     settingRow('Show', VIEWS, view, setView, 'Cover: the record spinning, with a ring that moves to the beat. Visualiser: the whole screen moving with the music. Tap the cover in the player (or press V) to go round them. A song with no timed lyrics shows its cover by itself: tap it for the words.'),
     ...(view === 'Visualiser' ? [settingRow('Visualiser', ['Auto', ...VIS], visPick, setVis, `How the visualiser looks. Auto: a new one with each song. Tap the visualiser for the next. ${VIS_NOTE}`)] : []),
-    settingRow('Lyrics animation', LANIMS, lanimPick, setLanim, 'How the lyrics move. Easy to read, every word big and the one being sung on a block of colour: Tower (a word a row), Lens (the sung word nearest), Pop (words and their emoji popping in), Drift (a page turning in space). 2D: Wave, Spiral, Shatter, Fireworks. 3D: Swarm, Black Hole, Cylinder, Globe, Helix, DNA, Tornado, Knot, Möbius, Ribbon, Orbit, Atom, Tunnel, Cube.' + (kin.on ? ' (Extreme lyrics are on, in the mood menu: this is for when they\x27re off.)' : '')),
+    settingRow('Lyrics animation', LANIMS, lanimPick, setLanim, 'How the lyrics move. Easy to read, every word big and the one being sung on a block of colour: Tower (a word a row), Lens (the sung word nearest), Pop (words and their emoji popping in), Drift (a page turning in space), Wall (a word or two a row, built into a wall), Fisheye and Fisheye Emoji (a word a row under a lens, the sung one in the middle), Emoji Stack (a few big tilted rows, with emoji). 2D: Wave, Spiral, Shatter, Fireworks. 3D: Swarm, Black Hole, Cylinder, Globe, Helix, DNA, Tornado, Knot, Möbius, Ribbon, Orbit, Atom, Tunnel, Cube.' + (kin.on ? ' (Extreme lyrics are on, in the mood menu: this is for when they\x27re off.)' : '')),
     ...(skin ? [] : [fontRow()]), // (a theme brings its own font and timeline)
     settingRow('Beat style', BEATS, beatStyle, setBeat, 'The ring round the record, in the Cover view.'),
     settingRow('Beat on the screen edges', ['Off', 'On'], edges ? 'On' : 'Off', setEdges, 'The beat also runs along all four sides of the screen, with the lyrics too.'),
@@ -7086,9 +7094,14 @@ function buildStage(idx) {
 // code point, a Tamil, Hindi or Punjabi word in a letter style fell apart into marks on dotted circles (the user's
 // screenshot, 2026-11-01). Words of the joined scripts (Arabic, Urdu, Persian, Syriac, N'Ko, Mongolian) stay whole:
 // their letters join one another, and apart they'd lose their shapes.
+// A cluster ending in a virama (maybe with a ZWJ) takes the next one too: Unicode keeps conjuncts together only for six
+// scripts, so Punjabi (\u0A2A\u0A4D\u0A30\u0A47\u0A2E), Kannada (\u0CAA\u0CCD\u0CB0\u0CC0\u0CA4\u0CBF), Tamil (\u0BB8\u0BCD\u0BB0\u0BC0) and Sinhala still came apart into a bare halant and a
+// full-size letter (QA, 1.6.2). Where Unicode already joins them this changes nothing; a ZWNJ still splits on purpose.
 const SEG = typeof Intl !== 'undefined' && Intl.Segmenter ? new Intl.Segmenter(undefined, { granularity: 'grapheme' }) : null;
 const JOINED = /[\u0600-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF\u1800-\u18AF]/;
-const graphemes = w => JOINED.test(w) ? [w] : SEG ? Array.from(SEG.segment(w), x => x.segment) : [...w];
+const VIRAMA_END = /[\u094D\u09CD\u0A4D\u0ACD\u0B4D\u0BCD\u0C4D\u0CCD\u0D4D\u0DCA]\u200D?$/;
+const graphemes = w => JOINED.test(w) ? [w] : (SEG ? Array.from(SEG.segment(w), x => x.segment) : [...w])
+  .reduce((a, x) => (a.length && VIRAMA_END.test(a[a.length - 1]) ? a[a.length - 1] += x : a.push(x), a), []);
 function sylOf(w) {
   let n = 0;
   const cs = [...w];
@@ -7204,18 +7217,26 @@ function lensFocus() {
   let k = 0; for (let i = 0; i < curWords.length; i++) if (curP[i] > 0) k = i;
   if (!curWords.length || k === lens.k && lens.p === curWords) return;
   lens.k = k; lens.p = curWords;
-  const set = (ws, fit) => ws.forEach((w, i) => { w.style.setProperty('--d', Math.abs(i - k)); w.style.setProperty('--side', i < k ? -1 : 1); if (i === k && fit < 1) w.style.setProperty('--fit', fit.toFixed(3)); else w.style.removeProperty('--fit'); });
-  const p = curWords[0].parentElement, ghost = p.cloneNode(true), room = (p.closest('.deck')?.clientWidth || stage.clientWidth) * .9;
+  const set = (ws, fit, rest = 1) => ws.forEach((w, i) => { w.style.setProperty('--d', Math.abs(i - k)); w.style.setProperty('--side', i < k ? -1 : 1); const f = i === k ? fit : rest; if (f < 1) w.style.setProperty('--fit', f.toFixed(3)); else w.style.removeProperty('--fit'); });
+  const p = curWords[0].parentElement, ghost = p.cloneNode(true), deck = p.closest('.deck')?.clientWidth || stage.clientWidth;
   ghost.classList.add('lens-ghost');
   p.after(ghost);
   const gws = [...ghost.querySelectorAll('.w')];
   set(gws, 1);
-  const fit = Math.min(1, room / (gws[k].offsetWidth || 1)); // (a long word: no wider than the stage)
+  const fit = Math.min(1, deck * .9 / (gws[k].offsetWidth || 1)); // (a long word: no wider than the stage)
   if (fit < 1) set(gws, fit);
-  const x = gws[k].offsetLeft + gws[k].offsetWidth / 2;
+  // a line wider than the stage: the other words smaller too (to 0.6 of their size at least), so more of it is in view
+  const safe = deck * .92, wk = gws[k].offsetWidth, w1 = ghost.offsetWidth;
+  const rest = w1 > safe && w1 > wk ? Math.max(.6, Math.min(1, (safe - wk) / (w1 - wk))) : 1;
+  if (rest < 1) set(gws, fit, rest);
+  const W = ghost.offsetWidth, x = gws[k].offsetLeft + gws[k].offsetWidth / 2;
   ghost.remove();
-  set(curWords, fit);
-  p.style.translate = `${(-x).toFixed(1)}px 0`;
+  set(curWords, fit, rest);
+  // the row glides to put the sung word in the middle, but no further than leaves an end of the stage empty while the
+  // other is cut: whole lines stay whole, and in a long one the sung word stays clear of the edges' fade (QA, 1.6.2:
+  // words were cut in half at the stage's edges, the line's ends out of sight)
+  const half = safe / 2, lo = Math.min(half - W, -half), hi = Math.max(half - W, -half);
+  p.style.translate = `${Math.min(hi, Math.max(lo, -x)).toFixed(1)}px 0`;
 }
 // The self-laid styles (SELF_LAID) place the line's letters (Cylinder: words) themselves, round the middle of the
 // stage: layoutLyricShape measures them, sized to the stage, and turnLyricShape places them every frame, following
@@ -8745,6 +8766,7 @@ const idb = (() => {
            put: v => run('readwrite', s => s.put(v)), del: id => run('readwrite', s => s.delete(id)) };
 })();
 const saved = new Map(); // trackId → { track, size, lyrics, savedAt, coverUrl }
+let savedTried = false; // (they've been read, or couldn't be: the last list can come back — queueBack)
 const savedInfo = r => ({ track: r.track, size: r.size, lyrics: !!r.lyrics, savedAt: r.savedAt, coverUrl: r.cover ? URL.createObjectURL(r.cover) : '',
   ytId: r.ytId, old: r.method !== METHOD });
 idb.all().then(list => {
@@ -8752,7 +8774,7 @@ idb.all().then(list => {
   dlLoaded = true; resumeDownloads();
   renderFolders();
   if ($('library').open) renderLibrary();
-}).catch(() => {});
+}).catch(() => {}).finally(() => { savedTried = true; if (lastSong) queueBack(); });
 async function removeSaved(id) {
   await idb.del(id).catch(() => {});
   const s = saved.get(id);
@@ -11941,8 +11963,10 @@ const keepQueue = () => store.set(LASTQ, JSON.stringify({ p: queueFrom?.p?.id ||
 function queueBack() {
   try {
     const q = JSON.parse(store.get(LASTQ) || 'null'), p = q?.p && library.playlists.find(x => x.id === q.p);
-    if (!q?.ids?.length || !current || queue.length > 1) return;
-    const have = new Map([...library.liked, ...library.playlists.flatMap(x => x.tracks), ...(hist?.tracks || [])].map(t => [t.trackId, t])), list = q.ids.map(id => have.get(id)).filter(Boolean);
+    // (once both the library and the songs saved on this device are in, whichever comes last: a shuffled Downloads list
+    // came back as only the songs already heard, the rest never looked for — QA, 1.6.2)
+    if (!libReady || !savedTried || !q?.ids?.length || !current || queue.length > 1) return;
+    const have = new Map([...[...saved.values()].map(s => s.track), ...library.liked, ...library.playlists.flatMap(x => x.tracks), ...(hist?.tracks || [])].map(t => [t.trackId, t])), list = q.ids.map(id => have.get(id)).filter(Boolean);
     if (!list.some(t => t.trackId === current.trackId)) return;
     queue = list; queueFrom = p ? { p, queue } : null; qi = queue.findIndex(t => t.trackId === current.trackId);
     const k = JSON.parse(store.get(SHUF) || 'null');

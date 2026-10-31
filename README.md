@@ -98,9 +98,10 @@ The full notes for this release and every earlier one are in the [changelog](CHA
 
 ### Lyrics
 
-- **Synced lyrics**, word by word where the song has them, lined up to the exact recording that's playing, with **25 animations**: Wave, Spiral,
-  Shatter, Fireworks, Swarm, Black Hole, Cylinder, Globe, Helix, DNA, Tornado, Knot, Möbius, Ribbon, Coaster,
-  Corkscrew, Star, Infinity, Coil, Lissajous, Orbit, Atom, Tunnel, Cube and Classic
+- **Synced lyrics**, word by word where the song has them, lined up to the exact recording that's playing, with **27 animations**. Eight keep
+  every word big and clear, the word being sung on a block of colour: Tower, Lens, Pop, Drift, Wall, Fisheye, Fisheye Emoji and Emoji Stack.
+  The others: Wave, Spiral, Shatter, Fireworks, Swarm, Black Hole, Cylinder, Globe, Helix, DNA, Tornado, Knot, Möbius, Ribbon, Orbit,
+  Atom, Tunnel, Cube and Classic
 - **Extreme lyrics** (Windows): the lyrics cut like a music video or a lyric edit, every word landing as it's sung
   <details><summary>58 looks, emoji, and the music video behind it</summary>
 
@@ -253,7 +254,7 @@ NetherFlow is **first, or tied for first, in seven categories**. The others beat
 | | NetherFlow | Spotify | Apple Music | YouTube Music |
 |:--|:--|:--|:--|:--|
 | Synced lyrics | ✓ word by word | ✓ line by line | ✓ word by word | ~ line by line, on many songs |
-| Lyrics animations | ✓ 25, plus 58 Extreme looks | ✗ | ~ one style (a very good one) | ✗ |
+| Lyrics animations | ✓ 27, plus 58 Extreme looks | ✗ | ~ one style (a very good one) | ✗ |
 | Karaoke | ✓ Sing | ✗ | ✓ Apple Music Sing | ✗ |
 | Lyrics fonts | ✓ 13 | ✗ | ✗ | ✗ |
 | **Score** | **10** | 7 | 9 | 5 |
