@@ -3071,7 +3071,7 @@ EDGE_HOOKS.Rim = {
     x.globalCompositeOperation = 'copy'; x.globalAlpha = Math.min(1, G.core * lift); x.drawImage(f.core, 0, 0);
     x.globalCompositeOperation = 'lighter';
     if (f.pulse > .02) { x.globalAlpha = f.pulse * .6; x.drawImage(f.core, 0, 0); } // (the beat: the rim wider and brighter)
-    x.globalAlpha = Math.min(1, G.wash * lift * (1 + f.pulse * .7)); x.drawImage(f.wash, 0, 0);
+    x.globalAlpha = Math.min(1, (W <= 720 ? .6 : 1) / EDGE_SIZES[edgeSize], G.wash * lift * (1 + f.pulse * .7)); x.drawImage(f.wash, 0, 0); // (the lyrics start inside the wash, a phone's 16 px in: the further it reaches, the softer, so their first letters stay easy to read on the beat)
     x.globalCompositeOperation = 'source-in'; x.globalAlpha = 1; x.fillStyle = flow(x, w / 2, h / 2); x.fillRect(0, 0, w, h);
     g.drawImage(f.c, 0, 0, W, H);
     o.frame(1); g.strokeStyle = flow(g, W / 2, H / 2); g.globalAlpha = Math.min(1, .35 + lift * .5); g.lineWidth = 1.2 + f.pulse * 1.4; g.stroke(); g.globalAlpha = 1; // (the bezel's own crisp line)
@@ -3090,21 +3090,22 @@ EDGE_HOOKS.Rim = {
       ...(f.own ? [rimPickers(), settingRow('Rim mix', Object.keys(RIM_MIXES), f.mix, v => { f.mix = v; keep('mix', v, '50/50'); }, 'How much of the rim is the primary colour, and how much the secondary.')] : [])];
   },
 };
-// Rim's own two colours: a glowing dot each, the system's colour picker over it (the rim follows as it's dragged; the
-// panel isn't drawn again meanwhile)
+// Rim's own two colours: a button each (a .seg button, so each theme dresses it as its own), a glowing dot of its colour
+// in it, opening the system's colour picker (the rim follows as it's dragged; the panel isn't drawn again meanwhile). The
+// picker's input itself stays hidden: no stop of its own for Tab or a TV's arrows.
 function rimPickers() {
   const q = el('div', 'bgq lbl'), seg = el('div', 'seg');
+  seg.setAttribute('role', 'group'); seg.setAttribute('aria-label', 'Your rim colours');
   for (const [k, name] of [['a', 'Primary'], ['b', 'Secondary']]) {
-    const lab = el('label', '', name), dot = el('i'), inp = el('input'), paint = v => { dot.style.background = v; dot.style.boxShadow = `0 0 9px ${v}`; };
-    lab.style.cssText = 'position: relative; display: inline-flex; align-items: center; gap: 8px; padding: 5px 13px 5px 6px; border: 1px solid var(--hair); border-radius: 999px; font-size: 10px; letter-spacing: .1em; outline-offset: 3px; cursor: pointer';
-    dot.style.cssText = 'width: 16px; height: 16px; border-radius: 50%';
+    const b = el('button', '', name), dot = el('i'), inp = el('input'), say = `Rim ${name.toLowerCase()} colour`, paint = v => { dot.style.background = v; dot.style.boxShadow = `0 0 9px ${v}`; };
+    b.style.cssText = 'display: inline-flex; align-items: center; gap: 8px';
+    dot.style.cssText = 'width: 12px; height: 12px; border-radius: 50%';
     inp.type = 'color'; inp.value = rimFx[k] || pal[k]; paint(inp.value);
-    inp.setAttribute('aria-label', `Rim ${name.toLowerCase()} colour`);
-    inp.style.cssText = 'position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer';
+    b.setAttribute('aria-label', say); inp.setAttribute('aria-label', say);
+    inp.style.cssText = 'position: absolute; width: 1px; height: 1px; visibility: hidden';
     inp.oninput = () => { rimFx[k] = inp.value; paint(inp.value); store.set('netherflow.rim' + k, inp.value); };
-    inp.onfocus = () => { if (body.classList.contains('kb')) lab.style.outline = '2px solid var(--a)'; }; // (Tab: the app's ring, on the pill)
-    inp.onblur = () => { lab.style.outline = ''; };
-    lab.prepend(dot); lab.append(inp); seg.append(lab);
+    b.onclick = () => { try { inp.showPicker(); } catch { inp.click(); } }; // (showPicker: Chromium 99+, as roundRect; before it, its click)
+    b.prepend(dot); seg.append(b, inp);
   }
   q.append(el('span', '', 'Your rim colours'), seg); q.dataset.set = 'Your rim colours';
   return q;
