@@ -4319,6 +4319,8 @@ async function othersOver() {
 }
 // the internet gone mid-song: the song waits where it was, said so, and carries on by itself when it's back
 function waitOnline(t, at) {
+  const s = savedAhead(t); // (the internet gone: the list carries on with its songs saved here — the rest when it's back)
+  if (s) { toast(`Offline: on to ${s.trackName}, saved on this device`); return playTrack(s, '', false, true); }
   A().pause(); setPlaying(false);
   trouble.wait = { t, at };
   status('◌ waiting for the internet: it carries on when it\'s back');
@@ -4911,19 +4913,35 @@ epAudio.onerror = () => {
 let queue = [], qi = -1, upNext = [], fromUpNext = false;
 const REPEATS = ['off', 'all', 'one'];
 let repeat = REPEATS.includes(store.get('netherflow.repeat')) ? store.get('netherflow.repeat') : 'off';
-// Shuffle (the button by Repeat; a list's Shuffle): Next plays one of the list's songs not heard yet in this go round
-// it, at random — picked a song ahead (so it's readied, shown up next, and Smooth mix can blend into it); songs the list
-// gains meanwhile (a playlist still being imported: see queueFrom) are among them; Back, the one heard before. A go
-// round starts when a song's picked; all heard, Repeat all starts another. Talk (episodes, chapters) and Radio: in order.
+// Shuffle (the button by Repeat; a list's Shuffle): the whole list in a random order, every song once (a go round), the
+// song playing first: none twice till all have played (listeners asked). The order's kept — shown in the queue, the
+// next song readied ahead (Smooth mix blends into it); songs the list gains meanwhile (a playlist still being imported:
+// see queueFrom) go in at random places. Back: the one heard before (and Next, the same again). Another song of the
+// same list picked: its go round carries on; remembered on this device (SHUF) when NetherFlow's closed. All heard,
+// Repeat all starts another. Talk (episodes, chapters) and Radio: in order.
 let shuffleOn = store.get('netherflow.shuffle') === 'On';
-const shuf = { heard: new Set(), trail: [], pick: null };
+const SHUF = 'netherflow.shufround', shuf = { heard: new Set(), trail: [], order: [], key: '' };
 const shuffling = () => shuffleOn && current?.kind !== 'episode' && radio !== queue;
-function shufflePick() {
-  const ok = t => t && t.trackId !== current?.trackId && !shuf.heard.has(t.trackId) && queue.some(x => x.trackId === t.trackId);
-  if (ok(shuf.pick)) return shuf.pick;
-  const left = queue.filter(t => t.trackId !== current?.trackId && !shuf.heard.has(t.trackId));
-  return shuf.pick = left.length ? left[Math.floor(Math.random() * left.length)] : null;
+const listKey = () => queueFrom?.p ? 'p:' + queueFrom.p.id : String(queue[0]?.trackId); // (shuffled, a list isn't turned round: see fromHere)
+// the rest of this go round, in its order
+function shuffleOrder() {
+  const inQ = new Map(queue.map(t => [t.trackId, t])), cur = current?.trackId, had = new Set();
+  shuf.order = shuf.order.filter(id => inQ.has(id) && !shuf.heard.has(id) && id !== cur && !had.has(id) && had.add(id));
+  const add = [...inQ.keys()].filter(id => !had.has(id) && !shuf.heard.has(id) && id !== cur);
+  if (add.length > shuf.order.length) { // (a new go round, or mostly new songs: all shuffled at once — Fisher–Yates)
+    const all = [...shuf.order, ...add];
+    for (let i = all.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [all[i], all[j]] = [all[j], all[i]]; }
+    shuf.order = all;
+  } else for (const id of add) shuf.order.splice(Math.floor(Math.random() * (shuf.order.length + 1)), 0, id);
+  return shuf.order.map(id => inQ.get(id));
 }
+const shufflePick = () => shuffleOrder()[0] || null;
+const shufKeep = () => store.set(SHUF, shuffleOn && shuf.key ? JSON.stringify({ key: shuf.key, heard: [...shuf.heard].slice(-5000), order: shuf.order.slice(0, 5000) }) : '');
+// a list played from a song in it: from that song to the list's end, then the songs above it — the whole list (only the
+// songs below the one tapped played: listeners asked) — then Autoplay. Shuffled: as it is.
+const fromHere = (list, s) => { const i = shuffleOn ? -1 : list.indexOf(s); return i > 0 ? [...list.slice(i), ...list.slice(0, i)] : list.slice(); };
+// the next song saved on this device, as the list plays (shuffled, or in order): what plays with no internet
+const savedAhead = t => (shuffling() ? shuffleOrder() : [...queue.slice(qi + 1), ...(repeat === 'all' ? queue.slice(0, qi) : [])]).find(x => saved.has(x.trackId) && x.trackId !== t?.trackId);
 const hasNext = () => upNext.length > 0 || (shuffling() ? !!shufflePick() : qi + 1 < queue.length) || (repeat === 'all' && queue.length > 0);
 function nextTrack() {
   if (tgIntercept('next')) return;
@@ -4935,12 +4953,13 @@ function nextTrack() {
 }
 // (from a song added by hand, back is the list's song that played before it; shuffling, the one heard before)
 function prevTrack() {
-  if (shuffling() && P.t <= 3 && shuf.trail.length > 1) { shuf.trail.pop(); const back = shuf.trail.pop(); shuf.heard.delete(back.trackId); return playTrack(back, '', false, true); }
+  if (shuffling() && P.t <= 3 && shuf.trail.length > 1) { const was = shuf.trail.pop(), back = shuf.trail.pop(); shuf.heard.delete(back.trackId); shuf.heard.delete(was.trackId); shuf.order.unshift(was.trackId); return playTrack(back, '', false, true); }
   const at = fromUpNext ? qi : qi - 1; if (P.t > 3 || !queue[at]) P.seek(0); else playTrack(queue[at], '', false, true);
 }
 function setShuffle(on, quiet = false) {
-  shuffleOn = on; store.set('netherflow.shuffle', on ? 'On' : ''); shuf.pick = null;
-  if (on && current) { shuf.heard = new Set([current.trackId]); shuf.trail = [current]; } // (from the song playing, a go round the rest)
+  shuffleOn = on; store.set('netherflow.shuffle', on ? 'On' : '');
+  if (on && current) Object.assign(shuf, { heard: new Set([current.trackId]), trail: [current], order: [], key: listKey() }); // (from the song playing, a go round the rest)
+  shufKeep();
   paintShuffle();
   if (!quiet) toast(on ? 'Shuffle on: the list in a random order' : 'Shuffle off: the list in its order');
   queueChanged();
@@ -7143,8 +7162,10 @@ async function playTrack(t, term = '', queued = false, stay = false, mixed = nul
   if (!stay) goHome(false);
   fromUpNext = queued;
   if (!queued) { qi = queue.findIndex(x => x.trackId === t.trackId); if (qi < 0) { queue = [t]; qi = 0; } }
-  if (!queued && !stay) Object.assign(shuf, { heard: new Set(), trail: [], pick: null }); // (a song picked: a new go round the list)
-  if (shuffling()) { shuf.heard.add(t.trackId); if (shuf.trail.at(-1) !== t) shuf.trail.push(t); shuf.pick = null; }
+  // (another list: a new go round; a song of the same list picked: its go round carries on, till it's over)
+  if (!queued && (shuf.key !== listKey() || shuffleOn && !stay && !shufflePick())) Object.assign(shuf, { heard: new Set(), trail: [], order: [], key: listKey() });
+  if (shuffling()) { shuf.heard.add(t.trackId); if (shuf.trail.at(-1) !== t) shuf.trail.push(t); shufKeep(); }
+  if (!queued) keepQueue();
   wantNext(); // (an imported playlist's songs coming up: matched now, so they start at once)
   if ($('queuePanel').matches(':popover-open')) renderQueue();
   const ep = t.kind === 'episode';
@@ -7160,7 +7181,7 @@ async function playTrack(t, term = '', queued = false, stay = false, mixed = nul
   // Offline, and this one isn't saved here: the list plays on from the next song that is (a song coming up by itself);
   // one picked, or none saved after it: said so — not a preview that can't load either, and the music stopped.
   if (!navigator.onLine && fullSongs) {
-    const after = [...queue.slice(qi + 1), ...(repeat === 'all' ? queue.slice(0, qi) : [])], later = after.find(x => saved.has(x.trackId) && x.trackId !== t.trackId);
+    const later = savedAhead(t);
     if (later && stay) { toast(`Offline: ${t.trackName} isn't saved here, so on to ${later.trackName}`); return playTrack(later, '', false, true); }
     useEngine('audio'); audio.pause(); audio.removeAttribute('src'); audio.load(); setPlaying(false); status('◇ offline · it plays when the internet\'s back');
     trouble.wait = { t, at: 0 }; // (and it does: see waitOnline)
@@ -7325,7 +7346,7 @@ function showHistory() {
       const cover = saved.get(t.trackId)?.coverUrl || artUrl(t, 200);
       if (cover) pic.style.backgroundImage = `url(${JSON.stringify(cover)})`;
       b.append(pic, el('b', '', t.trackName), el('small', '', t.artistName));
-      b.onclick = () => { queue = library.liked.slice(); playTrack(t); };
+      b.onclick = () => { queue = fromHere(library.liked, t); playTrack(t); };
       box.append(b);
     }
     out.push(sectionHead('Liked songs', 'See all', () => openLibrary({ kind: 'liked' })), box);
@@ -7381,6 +7402,7 @@ libStore('readonly', kv => kv.get(LIB)).catch(() => null).then(s => {
   const liked = early.liked.filter(t => !library.liked.some(x => x.trackId === t.trackId)), lists = early.playlists.filter(p => !library.playlists.some(x => x.id === p.id));
   library.liked.unshift(...liked); library.playlists.push(...lists);
   libReady = true;
+  if (lastSong) queueBack();
   if (old || liked.length || lists.length) saveLib(); else { renderFolders(); if ($('library').open) renderLibrary(); carLibrary(); }
   collabStart();
   updateLikeBtn?.();
@@ -7593,10 +7615,10 @@ function renderQueue() {
   if (current) out.push(sectionHead('Now playing'), qrow(current, () => $('queuePanel').hidePopover()));
   if (upNext.length) out.push(sectionHead('Next in queue', 'Clear', () => { upNext = []; queueChanged(); }),
     ...upNext.map((t, i) => qrow(t, () => { upNext.splice(i, 1); playTrack(t, '', true); }, () => { upNext.splice(i, 1); queueChanged(); }, upNext, i)));
-  if (shuffling()) { // (the song picked next, then the rest at random)
-    const n = shufflePick(), left = queue.filter(t => t.trackId !== current?.trackId && !shuf.heard.has(t.trackId)).length;
-    if (n) out.push(sectionHead('Next from the list · shuffled', 'Shuffle off', () => setShuffle(false)), qrow(n, () => playTrack(n, '', false, true)),
-      ...(left > 1 ? [el('p', 'q-empty lbl', `Then the other ${left - 1} at random`)] : []));
+  if (shuffling()) { // (the rest of this go round, in the order it plays)
+    const left = shuffleOrder();
+    if (left.length) out.push(sectionHead('Next from the list · shuffled', 'Shuffle off', () => setShuffle(false)), ...left.slice(0, 50).map(t => qrow(t, () => playTrack(t, '', false, true))),
+      ...(left.length > 50 ? [el('p', 'q-empty lbl', `Then ${left.length - 50} more: every song once`)] : []));
   }
   if (mine.length) out.push(sectionHead('Next from the list'),
     ...mine.map(t => qrow(t, () => playTrack(t), () => { queue.splice(queue.indexOf(t), 1); queueChanged(); }, queue, queue.indexOf(t))));
@@ -11032,7 +11054,7 @@ function row(s, i, list, from = {}) {
   // it came from, as it did, kept by the next save)
   // (one from the search: that song alone, Autoplay carrying on with songs like it — the rest of the search's list is
   // covers, karaoke takes and other songs of the name, which played next as if at random)
-  b.onclick = () => { queue = dlg.open && !from.playlist ? [s] : list.slice(); queueFrom = from.playlist ? { p: from.playlist, queue } : null; playTrack(s, dlg.open ? $('q').value.trim() : ''); };
+  b.onclick = () => { queue = dlg.open && !from.playlist ? [s] : fromHere(list, s); queueFrom = from.playlist ? { p: from.playlist, queue } : null; playTrack(s, dlg.open ? $('q').value.trim() : ''); };
   b.onpointerdown = e => { if (e.pointerType === 'mouse' && fullSongs && !saved.has(s.trackId)) videosFor(s).catch(() => {}); };
   more.append((dotsMade ||= Object.assign(document.createElement('template'), { innerHTML: DOTS }).content.firstChild).cloneNode(true));
   more.setAttribute('aria-label', `Options for ${s.trackName}`);
@@ -11164,6 +11186,22 @@ $('play').onclick = toggle;
 // carries on from there (a podcast episode or audiobook chapter: their own place is kept, see Podcasts)
 const LAST = 'netherflow.last';
 let lastSong = null; // ({ t, at }: shown, not loaded yet)
+// the list it plays from (its songs' IDs, found again in the library when NetherFlow's opened again): Next carries on in
+// it after a restart, a shuffle's go round too — not the one song alone
+const LASTQ = 'netherflow.lastq';
+const keepQueue = () => store.set(LASTQ, JSON.stringify({ p: queueFrom?.p?.id || '', ids: queue.slice(0, 5000).map(t => t.trackId) }));
+function queueBack() {
+  try {
+    const q = JSON.parse(store.get(LASTQ) || 'null'), p = q?.p && library.playlists.find(x => x.id === q.p);
+    if (!q?.ids?.length || !current || queue.length > 1) return;
+    const have = new Map([...library.liked, ...library.playlists.flatMap(x => x.tracks), ...(hist?.tracks || [])].map(t => [t.trackId, t])), list = q.ids.map(id => have.get(id)).filter(Boolean);
+    if (!list.some(t => t.trackId === current.trackId)) return;
+    queue = list; queueFrom = p ? { p, queue } : null; qi = queue.findIndex(t => t.trackId === current.trackId);
+    const k = JSON.parse(store.get(SHUF) || 'null');
+    if (k?.key === listKey()) Object.assign(shuf, { key: k.key, heard: new Set(k.heard), order: k.order, trail: [] });
+    updateSkips();
+  } catch {}
+}
 function keepLast() { if (current && current.kind !== 'episode' && !current.castUri && P.loaded && !lastSong) store.set(LAST, JSON.stringify({ t: slim(current), at: Math.round(P.t) })); }
 setInterval(() => { if (!P.paused) { keepLast(); store.set('netherflow.playingat', String(Date.now())); } }, 5000); // (playing at: see the page lost, below)
 addEventListener('pagehide', keepLast);
