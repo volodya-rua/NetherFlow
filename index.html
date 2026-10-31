@@ -2696,7 +2696,7 @@ function setKinetic(v) { kinetic = v === 'Music video'; store.set('netherflow.ki
 
 // ---------- background theme (mood menu): what the backdrop draws. The mood picks its colors. ----------
 // The shader draws all but Gradient and Cover (both CSS: see PLAIN). The index is the shader's style number (themeNo).
-const THEMES = ['Smoke', 'Aurora', 'Liquid', 'Lava', 'Rings', 'Nebula', 'Prism', 'Silk', 'Mesh', 'Fireflies', 'Black Hole', 'Tunnel', 'Storm', 'Kaleido', 'Gyroid', 'Mandala', 'Fractal', 'Julia', 'Crystal', 'Cosmos', 'Galaxy', 'Plasma', 'Ribbons', 'Synapse', 'Halo', 'Bloom', 'Hyperbolic', 'Apollonian', 'Newton', 'Coral', 'Mandelbrot', 'Vortex', 'Gradient', 'Cover',
+const THEMES = ['Smoke', 'Aurora', 'Liquid', 'Lava', 'Rings', 'Nebula', 'Prism', 'Silk', 'Mesh', 'Fireflies', 'Black Hole', 'Tunnel', 'Storm', 'Kaleido', 'Gyroid', 'Mandala', 'Fractal', 'Julia', 'Crystal', 'Cosmos', 'Galaxy', 'Plasma', 'Ribbons', 'Synapse', 'Halo', 'Bloom', 'Hyperbolic', 'Apollonian', 'Newton', 'Coral', 'Mandelbrot', 'Vortex', 'Deep Field', 'Ridges', 'Spirograph', 'Moiré', 'Gradient', 'Cover',
   'Stickman', 'Spider', 'Blocks', 'Tactical', 'Ops', 'Redline'];
 // (the backgrounds the shader doesn't draw: Gradient, plain CSS; Cover, the album cover blurred, CSS too)
 const PLAIN = new Set(['Gradient', 'Cover']);
@@ -3467,6 +3467,20 @@ const MOODS = [
   { name: 'Amethyst',      bg: '#06030b', a: '#b36bff', b: '#5c2bd6', ink: '#f4ecff', fx: [.9, 1.2, .8, 1.2] },
   { name: 'Moonlight',     bg: '#03040a', a: '#dfe7ff', b: '#7d8cff', ink: '#f2f5ff', fx: [.7, .8, .5, .9] },
   { name: 'Rave',          bg: '#050309', a: '#c6ff00', b: '#8c1eff', ink: '#f7ffe6', fx: [1.4, 1.4, 1.6, 1.5] },
+  { name: 'Lagoon',        bg: '#020809', a: '#1fe0d0', b: '#ff7a59', ink: '#e9fffd', fx: [.9, 1.1, .8, 1.1] },
+  { name: 'Sunset Strip',  bg: '#0a0408', a: '#ff9a3c', b: '#c2185b', ink: '#fff1e8', fx: [1, 1.1, .9, 1.2] },
+  { name: 'Lavender Haze', bg: '#07050b', a: '#cdb4ff', b: '#ff9ecd', ink: '#f8f3ff', fx: [.8, 1, .6, .9] },
+  { name: 'Emerald City',  bg: '#010805', a: '#00d47e', b: '#e9c46a', ink: '#ecfff6', fx: [1, 1, .9, 1.2] },
+  { name: 'Cobalt',        bg: '#01040b', a: '#3d7bff', b: '#e6ecff', ink: '#eef3ff', fx: [1.1, .9, 1, 1.1] },
+  { name: 'Ruby',          bg: '#0a0205', a: '#e0115f', b: '#ff8fab', ink: '#ffeef3', fx: [1.1, 1.2, 1, 1.3] },
+  { name: 'Citrus',        bg: '#080700', a: '#fff23a', b: '#ff8a00', ink: '#fffbe3', fx: [1.2, 1.1, 1.3, 1.2] },
+  { name: 'Mint Chip',     bg: '#040706', a: '#98ffcc', b: '#7b4a2a', ink: '#f0fff7', fx: [.8, .9, .7, .9] },
+  { name: 'Thunderstorm',  bg: '#030407', a: '#ffe14d', b: '#5b6bff', ink: '#f3f4ff', fx: [1.3, 1.4, 1.4, 1.5] },
+  { name: 'Desert Night',  bg: '#0a0604', a: '#e9b872', b: '#c1440e', ink: '#fbf1e4', fx: [.9, .8, .6, .9] },
+  { name: 'Nebula Pink',   bg: '#07030a', a: '#ff4fa3', b: '#3dd6ff', ink: '#fff0f8', fx: [1, 1.3, .9, 1.3] },
+  { name: 'Plasma Core',   bg: '#03020a', a: '#ff00e5', b: '#00b3ff', ink: '#fbeeff', fx: [1.3, 1.5, 1.4, 1.6] },
+  { name: 'Autumn',        bg: '#090402', a: '#ff8c1a', b: '#a4161a', ink: '#fff2e5', fx: [1, 1, .8, 1] },
+  { name: 'Velvet',        bg: '#080206', a: '#b5179e', b: '#f72585', ink: '#ffeefa', fx: [.9, 1.1, .8, 1.2] },
 ];
 const rgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16) / 255);
 const hex = c => '#' + c.map(v => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, '0')).join('');
@@ -12632,6 +12646,61 @@ void main(){
   col = C0 + mix(C2, C1, clamp(glow, 0., 1.)) * glow * .48 * F.w + mix(C1, vec3(1.), .55) * lines * .4 * F.w;
   col += mix(C1, vec3(1.), .6) * exp(-r * 10.) * .45 * F.w;                       // (the eye of it)
   col *= smoothstep(.0, .1, r) * .75 + .25;
+#elif STYLE == ${themeNo('Deep Field')}
+  // Deep Field: flying slowly through a volume of glowing filaments — Fractal's abs(p)/dot(p,p) fold in 3D, in mirrored
+  // cells of space, summed along each ray (fewer steps on lower qualities), nearer ones brighter, the bass lighting it
+  vec3 rd = normalize(vec3(uv / F.x, 1.5)), ro = vec3(t * 1.1, t * .7, t * .45);
+  float ca = cos(t * .35), sa = sin(t * .35); rd.xy = mat2(ca, -sa, sa, ca) * rd.xy;
+  float glow = 0., lines = 0., steps = QF > 1.5 ? 12. : QF > .5 ? 9. : 6., d = .15;
+  for (int j = 0; j < 12; j++) {
+    if (float(j) >= steps) break;
+    vec3 p = abs(mod(ro + rd * d, 2.) - 1.);
+    float acc = 0., last = 0., trap = 9.;
+    for (int i = 0; i < 9; i++) {
+      p = abs(p) / max(dot(p, p), .06) - vec3(.66 + .05 * sin(t * .8), .53, .41);
+      float m = length(p); acc += exp(-abs(m - last) * 2.2); last = m; trap = min(trap, abs(p.z));
+    }
+    float w = exp(-d * .45);
+    glow += pow(acc / 9., 4.) * w; lines += exp(-trap * 55.) * w; // (only the densest knots glow, the finest threads shine: dark space between)
+    d += .24;
+  }
+  glow *= 6. / steps; lines *= 3. / steps;
+  col = C0 + mix(C2, C1, clamp(glow * 2., 0., 1.)) * glow * 1.1 * (.7 + B * .9) * F.w + mix(C1, vec3(1.), .5) * pow(lines, 1.5) * .6 * F.w;
+#elif STYLE == ${themeNo('Ridges')}
+  // Ridges: rows of thin glowing lines one behind another, rising into peaks in the middle — the bass lifting them,
+  // each row's dark ground hiding the rows behind
+  vec2 p = uv / F.x; float px = 1.3 / R.y * F.x;
+  for (int i = 0; i < 28; i++) {
+    float fi = float(i), y0 = .46 - fi * .034, env = exp(-p.x * p.x * 7.);
+    float hg = (n(vec2(p.x * 4. + fi * 7.1, fi * 1.7 + t * 3.)) * .7 + n(vec2(p.x * 11. - fi * 3.3, t * 5. + fi)) * .3 - .32) * env * (.16 + B * .14 + M * .05);
+    float yl = y0 + max(hg, 0.) + env * .012 * sin(p.x * 30. + fi + t * 9.) * H;
+    if (p.y < yl) col = C0;
+    float dd = p.y - yl, ln = px * px / (dd * dd + px * px);
+    col += mix(C1, C2, fi / 27.) * (ln * .7 + exp(-abs(dd) * 70.) * .07) * smoothstep(1.35, .55, abs(p.x)) * (.55 + env * .45) * (.35 + .65 * fi / 27.) * F.w; // (the rows behind fainter)
+  }
+#elif STYLE == ${themeNo('Spirograph')}
+  // Spirograph: rings of glowing line, each a curve looping round the middle (a rose: its radius rising and falling k
+  // times a turn), turning at their own pace — the bass swelling them, the mids changing their loops
+  vec2 p = uv / F.x; float r = length(p), a = atan(p.y, p.x), px = 1.4 / R.y * F.x;
+  for (int i = 0; i < 9; i++) {
+    float fi = float(i), k = 3. + mod(fi * 2., 7.), sp = (mod(fi, 2.) * 2. - 1.) * (.4 + fi * .07);
+    float rr = (.12 + fi * .05) * (1. + B * .08) * (1. + (.16 + M * .06) * cos(k * a + t * sp * 6. + fi));
+    float dd = abs(r - rr), ln = px * px / (dd * dd + px * px);
+    col += mix(C1, C2, fi / 8.) * (ln * .62 + exp(-dd * 55.) * .05) * F.w;
+  }
+  col += mix(C1, vec3(1.), .6) * exp(-r * 18.) * .35 * F.w;
+#elif STYLE == ${themeNo('Moiré')}
+  // Moiré: two fields of fine glowing lines, each slowly turning and swelling, laid over each other — where they cross,
+  // waves of light ripple out that neither has
+  vec2 p = uv / F.x; float px = 1.2 / R.y * F.x, acc = 0.;
+  for (int i = 0; i < 2; i++) {
+    float fi = float(i), an = t * (.6 - fi * 1.1) + fi * .8, fq = 46. + fi * 5. + B * 3.;
+    vec2 c = vec2(sin(t * .7 + fi * 2.) * .25, cos(t * .5 + fi) * .18);
+    float g = length(p - c) * fq + dot(p, vec2(cos(an), sin(an))) * 6.;
+    float dd = abs(fract(g) - .5) / fq;
+    acc += px * px / (dd * dd + px * px);
+  }
+  col += mix(C2, C1, clamp(acc - .5, 0., 1.)) * acc * .38 * (.7 + M * .5) * F.w * smoothstep(1.2, .2, length(p));
 #elif STYLE == ${themeNo('Stickman')}
   // Stickman: notebook paper, inked by hand — stick figures dancing to the beat on the timeline (its pencil line: see
   // drawSpec, where one runs along it too), notes floating up off them, a doodled sun and clouds. The lines boil
