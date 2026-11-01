@@ -765,7 +765,7 @@ body.sing:not(.home) .ab-bar { bottom: calc(100% + 44px); }
 
 /* ---------- previous / next ---------- */
 .transport { display: flex; align-items: center; gap: 2px; }
-.skip { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: color-mix(in srgb, var(--ink) 72%, transparent);
+.skip { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: color-mix(in srgb, var(--ink) 88%, transparent);
   transition: color .2s, background-color .2s, opacity .2s; }
 .skip:hover { color: var(--ink); background: var(--hair); }
 .skip:disabled { opacity: .22; pointer-events: none; }
@@ -998,7 +998,7 @@ body.sing:not(.home) .ab-bar { bottom: calc(100% + 44px); }
 .lyb.synced { color: var(--a); }
 .lyb.none { border-style: dashed; }
 .icon-btn { position: relative; width: 36px; height: 36px; flex: none; border-radius: 50%; display: grid; place-items: center;
-  color: color-mix(in srgb, var(--ink) 72%, transparent); transition: color .2s, background-color .2s, opacity .2s; }
+  color: color-mix(in srgb, var(--ink) 88%, transparent); transition: color .2s, background-color .2s, opacity .2s; }
 .icon-btn:hover { color: var(--ink); background: var(--hair); }
 .icon-btn svg { width: 16px; height: 16px; fill: currentColor; }
 .icon-btn:disabled { opacity: .22; pointer-events: none; }
@@ -1877,8 +1877,8 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
 .skin-glass .top-l { padding: 0 20px 0 14px; flex: none; }
 .skin-glass .mood { padding: 0 14px 0 18px; gap: 6px; font: 400 var(--fs-3)/1 var(--ui); }
 .skin-glass .mood b { color: var(--ink); font-weight: 600; }
-.skin-glass .mood .k { color: color-mix(in srgb, var(--ink) 72%, transparent); }
-.skin-glass .mood .chev { display: block; flex: none; width: 16px; height: 16px; fill: none; stroke: color-mix(in srgb, var(--ink) 72%, transparent); stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+.skin-glass .mood .k { color: color-mix(in srgb, var(--ink) 88%, transparent); }
+.skin-glass .mood .chev { display: block; flex: none; width: 16px; height: 16px; fill: none; stroke: color-mix(in srgb, var(--ink) 88%, transparent); stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
 @media (max-width: 900px) { .skin-glass .mood .k { display: none; } }
 .skin-glass .mood > i { display: none; }
 .skin-glass .files { padding: 0 9px; gap: 2px; flex-wrap: nowrap; } /* (the end icons a little in from the round ends: inside the band their light's held under, 4.5 : 1 over white) */
@@ -1896,7 +1896,7 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
 .skin-glass .tg-count { right: -3px; top: -2px; }
 .skin-glass .brand { font: italic 500 27px/1 'Cormorant Garamond', Georgia, serif; letter-spacing: 0; text-shadow: 0 1px 10px rgba(0,0,0,.4); }
 .skin-glass .wm { display: block; }
-.skin-glass .brand sup { margin-left: 6px; font: 600 11px/1 var(--ui); font-style: normal; color: color-mix(in srgb, var(--ink) 72%, transparent); text-shadow: none; vertical-align: baseline; letter-spacing: 0; }
+.skin-glass .brand sup { margin-left: 6px; font: 600 11px/1 var(--ui); font-style: normal; color: color-mix(in srgb, var(--ink) 88%, transparent); text-shadow: none; vertical-align: baseline; letter-spacing: 0; }
 /* (going round by Tab, or on a TV: the light ring the app draws, a dark halo round it, so it shows on bright glass too) */
 .skin-glass.kb :is(.files > .link, .to-home, .brand, .skip, .icon-btn, .play, .nudge button):focus-visible { box-shadow: 0 0 0 6px rgba(3,4,10,.62); }
 .skin-glass.kb .mood:focus-visible { box-shadow: inset 0 0 2.2px 1.2px rgba(0,0,0,.3), inset 0 -9px 14px -10px rgba(0,0,10,.28), 0 7px 18px -6px rgba(0,0,0,.5), 0 0 0 7px rgba(3,4,10,.62); }
@@ -1968,7 +1968,7 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
 .skin-glass .sub > :first-child, .skin-glass .from-link { opacity: 1; } /* (all words full white: the weight tells them apart) */
 .skin-glass :is(.sub, .time, .nudge, .brand, .mood) { text-shadow: 0 0 1px rgba(3,4,10,.6), 0 0 2px rgba(3,4,10,.45); } /* (small words on clear glass: a fine dark halo of their own — what's under them is held down by the glass itself) */
 .skin-glass .bgq small { opacity: .85; }
-.skin-glass .sub { gap: 6px; margin-top: 4px; align-items: center; font: 600 var(--fs-2)/var(--lh-2) var(--ui); color: color-mix(in srgb, var(--ink) 72%, transparent); }
+.skin-glass .sub { gap: 6px; margin-top: 4px; align-items: center; font: 600 var(--fs-2)/var(--lh-2) var(--ui); color: color-mix(in srgb, var(--ink) 88%, transparent); }
 .skin-glass .sub > :first-child { max-width: none; flex: 0 1 auto; min-width: 0; }
 .skin-glass .status { color: inherit; flex: 0 1 auto; min-width: 0; }
 .skin-glass .status:not(.st-live) { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); } /* (still read out: aria-live) */
@@ -1977,14 +1977,14 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
   -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='8.5'/%3E%3Cpath d='M12 7.8v7.6M8.8 12.4l3.2 3.2 3.2-3.2'/%3E%3C/svg%3E") center / 14px no-repeat;
   mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='8.5'/%3E%3Cpath d='M12 7.8v7.6M8.8 12.4l3.2 3.2 3.2-3.2'/%3E%3C/svg%3E") center / 14px no-repeat; }
 .skin-glass .time { justify-items: center; }
-.skin-glass .time > div:first-child { font: 600 var(--fs-2)/var(--lh-2) var(--ui); color: color-mix(in srgb, var(--ink) 72%, transparent); }
+.skin-glass .time > div:first-child { font: 600 var(--fs-2)/var(--lh-2) var(--ui); color: color-mix(in srgb, var(--ink) 88%, transparent); }
 .skin-glass #cur { color: var(--ink); }
-.skin-glass .nudge { gap: 8px; font: 600 var(--fs-1)/var(--lh-1) var(--ui); color: color-mix(in srgb, var(--ink) 72%, transparent); }
+.skin-glass .nudge { gap: 8px; font: 600 var(--fs-1)/var(--lh-1) var(--ui); color: color-mix(in srgb, var(--ink) 88%, transparent); }
 .skin-glass #off { display: inline-block; } .skin-glass #off::first-letter { text-transform: uppercase; }
 .skin-glass .nudge button { position: relative; width: var(--h-xs); height: var(--h-xs); border: 0; border-radius: 50%; background: var(--f-rest); box-shadow: none; color: var(--ink); font-size: 0; transition: background-color .15s; }
 .skin-glass .nudge button::before { content: ''; width: 12px; height: 12px; background: currentColor; -webkit-mask: var(--ic) center / 12px no-repeat; mask: var(--ic) center / 12px no-repeat; }
-.skin-glass #later { --ic: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M6 12h12'/%3E%3C/svg%3E"); }
-.skin-glass #sooner { --ic: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M12 6v12M6 12h12'/%3E%3C/svg%3E"); }
+.skin-glass #later { --ic: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.75' stroke-linecap='round'%3E%3Cpath d='M6 12h12'/%3E%3C/svg%3E"); }
+.skin-glass #sooner { --ic: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.75' stroke-linecap='round'%3E%3Cpath d='M12 6v12M6 12h12'/%3E%3C/svg%3E"); }
 @media (pointer: coarse) { .skin-glass .nudge button::after { content: ''; position: absolute; inset: -8px; } }
 .skin-glass .ink-dark .nudge button { background: rgba(11,13,22,.08); }
 .skin-glass :is(#dur, .nudge) { opacity: 1; }
@@ -2002,6 +2002,7 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
 .skin-glass #repeatBtn > svg:not(.g24) { display: none; } .skin-glass #repeatBtn > .g24 { display: block; }
 .skin-glass :is(.rep[data-mode=all], .rep[data-mode=one], #shuffleBtn[aria-pressed=true]) { color: var(--ink); background: radial-gradient(circle, rgba(255,255,255,.16) 15.5px, transparent 16px); }
 .skin-glass .ink-dark :is(.rep[data-mode=all], .rep[data-mode=one], #shuffleBtn[aria-pressed=true]) { background: radial-gradient(circle, rgba(11,13,22,.1) 15.5px, transparent 16px); }
+.skin-glass .singb[aria-pressed="true"] { background: radial-gradient(circle, rgba(255,255,255,.16) 15.5px, transparent 16px); } .skin-glass .singb[aria-pressed="true"] svg { stroke: currentColor; filter: none; } /* (Sing on: the dock's own on, no glow) */
 .skin-glass .rep b { font: 600 8px/1 var(--ui); }
 .skin-glass .vi .spk { fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linejoin: round; } .skin-glass .vi path:not(.spk) { stroke-width: 1.75; }
 .skin-glass .vol::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: linear-gradient(90deg, transparent calc(50% - .5px), rgba(243,246,255,.5) 0 calc(50% + .5px), transparent 0),
@@ -2024,7 +2025,8 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
    far one, nothing between), a lip of light inside the lit edge, a darkened edge, a shade inside the far edge and one
    shadow. No border, no white wash, no contrast(). The dialogs' glass is a layer of their own behind the card (glass on
    the dialog itself would make it the frame for the window buttons put inside it), their edge light another. */
-.skin-glass :is(.moods, .eq, .smenu, .voice-ui, .toast, .singbar, .ab-bar), .skin-glass .consent { --gp-tint: 14%; }
+.skin-glass :is(.moods, .eq, .smenu, .voice-ui, .toast, .singbar, .ab-bar), .skin-glass .consent { --gp-tint: 20%; }
+.skin-glass.gl-frost :is(.moods, .eq, .smenu, .voice-ui, .toast, .singbar, .ab-bar), .skin-glass.gl-frost .consent { --gp-tint: 42%; }
 .skin-glass :is(.moods, .eq, .smenu, .voice-ui, .toast, .singbar, .ab-bar), .skin-glass .consent::before {
   border: 0; color: var(--t1);
   background: var(--g-grain, none) 0 0 / var(--g-gs, 64px) repeat, color-mix(in srgb, var(--bg) var(--gp-tint), transparent);
@@ -2053,7 +2055,7 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
 .skin-glass.gl-lens :is(.moods, .eq, .smenu, .voice-ui, .toast, .singbar, .ab-bar) { -webkit-backdrop-filter: blur(16px) saturate(3) brightness(.8); backdrop-filter: blur(16px) saturate(3) brightness(.8); }
 .skin-glass.gl-lens .consent::before { -webkit-backdrop-filter: var(--gl-f, blur(16px) saturate(3) brightness(.8)); backdrop-filter: var(--gl-f, blur(16px) saturate(3) brightness(.8)); }
 .skin-glass.gl-frost :is(.moods, .eq, .smenu, .voice-ui, .toast, .singbar, .ab-bar), .skin-glass.gl-frost .consent::before {
-  -webkit-backdrop-filter: blur(12px) saturate(var(--fr-sat, 5)) brightness(var(--fr-bri, .74)); backdrop-filter: blur(12px) saturate(var(--fr-sat, 5)) brightness(var(--fr-bri, .74)); }
+  -webkit-backdrop-filter: blur(12px) saturate(var(--fr-sat, 5)) brightness(var(--fr-bri, .64)); backdrop-filter: blur(12px) saturate(var(--fr-sat, 5)) brightness(var(--fr-bri, .64)); }
 .skin-glass:is(.gl-tint, .gl-solid) :is(.moods, .eq, .smenu, .voice-ui, .toast, .singbar, .ab-bar), .skin-glass:is(.gl-tint, .gl-solid) .consent::before { -webkit-backdrop-filter: none; backdrop-filter: none; }
 .skin-glass.gl-tint :is(.moods, .eq, .smenu, .voice-ui, .toast, .singbar, .ab-bar), .skin-glass.gl-tint .consent { --gp-tint: 90%; }
 .skin-glass.gl-solid :is(.moods, .eq, .smenu, .voice-ui, .toast, .singbar, .ab-bar), .skin-glass.gl-solid .consent { --gp-tint: 96%; }
@@ -2088,7 +2090,7 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
 .skin-glass :is(.gp-back, .gp-up) svg, .skin-glass .gs-v svg, .skin-glass .gs-help svg, .skin-glass .ck { fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
 @media (pointer: coarse) { .skin-glass .gp-head { min-height: 52px; padding-left: 2px; gap: 2px; } .skin-glass .gp-back { display: grid; width: 44px; height: 44px; } }
 .skin-glass.tv .gp-head { padding-left: 2px; gap: 2px; } .skin-glass.tv .gp-back { display: grid; width: 44px; height: 44px; }
-.skin-glass .gp-body { flex: 1 1 auto; min-height: 0; overflow: hidden auto; margin-right: -4px; padding-right: 4px; overscroll-behavior: contain;
+.skin-glass .gp-body { flex: 1 1 auto; min-height: 0; overflow: hidden auto; margin-right: -4px; padding-right: 4px; overscroll-behavior: contain; scroll-padding-block: 24px; /* (a control brought into sight by the keys clear of the fades) */
   -webkit-mask: linear-gradient(transparent, #000 var(--ft), #000 calc(100% - var(--fb)), transparent); mask: linear-gradient(transparent, #000 var(--ft), #000 calc(100% - var(--fb)), transparent); transition: --ft .2s, --fb .2s; }
 .skin-glass .gp-body::-webkit-scrollbar { width: 8px; }
 .skin-glass .gp-body::-webkit-scrollbar-button { display: none; }
@@ -2107,14 +2109,14 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
   .app.skin-glass:not(.fs) .files { margin-right: 150px; }
   .app.skin-glass:not(.fs) :is(.textp, .qpanel, .eq) { right: calc(var(--pad) + 150px); }
 }
-.skin-glass :is(.moods, .textp, .qpanel, .eq) { top: calc(var(--g-head, 62px) + 12px); max-height: calc(100dvh - var(--g-head, 62px) - var(--g-slab, 158px) - 24px); }
+.skin-glass :is(.moods, .textp, .qpanel, .eq) { top: calc(var(--g-head, 62px) + 12px); max-height: max(calc(100dvh - var(--g-head, 62px) - var(--g-slab, 158px) - 24px), min(300px, calc(100dvh - var(--g-head, 62px) - 24px))); } /* (a short screen — a phone sideways, a small window — over the dock rather than a sliver) */
 @media (pointer: coarse) {
   .skin-glass :is(.textp, .qpanel, .eq) { left: 16px; right: 16px; width: auto; max-height: calc(100dvh - var(--g-head, 62px) - 24px); }
   body.skin-glass:has(:is(.textp, .qpanel, .eq):popover-open) .bar { visibility: hidden; }
 }
-/* (the button a panel came from, while it's open: the pressed platter) */
+/* (the button a panel came from, while it's open: a platter — light, its icon on clear glass) */
 .skin-glass:has(#textPanel:popover-open) #textBtn, .skin-glass:has(#eqPanel:popover-open) #eqBtn, .skin-glass:has(#togetherPanel:popover-open) #togetherBtn,
-.skin-glass:has(#castPanel:popover-open) #castBtn, .skin-glass:has(#queuePanel:popover-open) #queueBtn { background: var(--f-press); }
+.skin-glass:has(#castPanel:popover-open) #castBtn, .skin-glass:has(#queuePanel:popover-open) #queueBtn { background: rgba(255,255,255,.1); } /* (a pressed one's .19 under a white icon over a bright scene: 4 : 1) */
 
 /* Settings and the menus: sections of rows on insets, one rhythm — 12 at the top (15 on a phone), so a one-line row is
    44 and every title sits 12 under its row's top; a 15 title, one 13 grey line (its long note folded under it), the
@@ -2170,6 +2172,14 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
 .skin-glass .switch[aria-checked=true] { background: var(--acc); box-shadow: none; }
 .skin-glass .switch[aria-checked=true]::after { translate: 18px 0; transform: none; background: #fff; }
 @media (pointer: coarse) { .skin-glass .switch { --ch: 32px; width: 52px; height: 32px; border-radius: 16px; } .skin-glass .switch::after { width: 28px; height: 28px; } .skin-glass .switch[aria-checked=true]::after { translate: 20px 0; } }
+/* (a finger: 44 px to touch, whatever's drawn — the switch, a segment, a folded note's line, the steppers, a small button, the queue's) */
+@media (pointer: coarse) {
+  .skin-glass :is(.switch, .gs-help > summary, .stepper .step)::before, .skin-glass :is(.gs-row > .pill, .acts2 .pill, .toast-act, .hist-h .link)::after { content: ''; display: block; position: absolute; inset: min(0px, calc((100% - 44px) / 2)) min(0px, calc((100% - 44px) / 2)); height: auto; transform: none; background: none; }
+  .skin-glass .gs-help > summary { position: relative; overflow: visible; } /* (its words cut in their own box: cut here, its area to touch went with them) */
+  .skin-glass .seg button { height: calc(var(--h-ctl) + 4px); margin-block: -4px; padding-block: 4px; background-clip: content-box; } /* (a segment 44 to touch, its fill drawn 36 as before) */
+  .skin-glass .gs-row > :is(.seg, .acts2) { margin-top: 16px; } /* (under a folded note's line: each its own 44 to touch, not one over the other) */
+  .skin-glass :is(.qrow, .qplay) { min-height: 64px; } .skin-glass .qend { width: 96px; } .skin-glass .qend .hv .icon-btn { width: 44px; height: 44px; }
+}
 /* the checkbox (an option a button confirms: the consent's Count me once) */
 .skin-glass :is(.chk, .consent .count-me input) { appearance: none; -webkit-appearance: none; flex: none; display: grid; place-items: center; width: 22px; height: 22px; margin: 0; border-radius: 7px;
   background: rgba(255,255,255,.36); box-shadow: inset 0 1px 2px rgba(0,0,0,.25); cursor: var(--cur-hand, pointer); }
@@ -2180,7 +2190,7 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
   border: 0; border-radius: calc(var(--h-ctl) / 2); color: var(--ink-on-acc); background: linear-gradient(180deg, rgb(255 255 255 / .16), rgb(255 255 255 / 0) 55%, rgb(0 0 30 / .07)), var(--acc);
   box-shadow: none; font: 600 var(--fs-2)/1 var(--ui); white-space: nowrap; transition: background-color .15s, scale .2s var(--spring); }
 .skin-glass .pill.ghost { color: var(--t1); background: var(--f-btn); box-shadow: none; }
-.skin-glass .pill.tinted { color: var(--acc); background: rgb(var(--acc-rgb) / .16); }
+.skin-glass .pill.tinted { color: var(--acc); background: linear-gradient(rgb(var(--acc-rgb) / .16), rgb(var(--acc-rgb) / .16)), rgba(5,6,11,.3); }
 .skin-glass .pill > * { position: relative; z-index: 1; }
 .skin-glass .pill .ico { width: 16px; height: 16px; stroke: currentColor; }
 .skin-glass .link::after { display: none; }
@@ -2197,6 +2207,7 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
 
 /* the theme menu: the themes as tiles (each its own little picture), one line about the picked one, its background */
 .skin-glass .skins { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; padding: 2px 0 0; margin: 0; border: 0; }
+@media (max-width: 400px) { .skin-glass .skins { grid-template-columns: repeat(3, minmax(0, 1fr)); } } /* (a phone 360 wide: four to a row cut Tactical's name) */
 .skin-glass .skin-card { position: relative; align-content: center; height: 82px; padding: 8px 4px 9px; border-radius: var(--r-group); clip-path: none; box-shadow: none; transform: none; }
 .skin-glass .skin-card[aria-pressed=true] { box-shadow: inset 0 0 0 2px var(--acc), inset 0 0 0 4px rgba(5,6,11,.85); }
 .skin-glass .skin-card::after { content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; transition: background-color .15s; }
@@ -2206,7 +2217,7 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
    slot, its length at rest, its buttons under the pointer or while it's moved */
 .skin-glass .hist-h { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 32px; padding: 14px var(--row-x) 6px; font: 600 var(--fs-2)/var(--lh-2) var(--ui); color: var(--t2); }
 .skin-glass .hist-h:first-child { padding-top: 6px; }
-.skin-glass .hist-h .link { display: inline-flex; align-items: center; height: var(--h-ctl); margin: -8px 0 -8px auto; padding: 0 14px; border-radius: calc(var(--h-ctl) / 2); color: var(--acc); background: rgb(var(--acc-rgb) / .16); opacity: 1; font: 600 var(--fs-2)/1 var(--ui); }
+.skin-glass .hist-h .link { display: inline-flex; align-items: center; height: var(--h-ctl); margin: -8px 0 -8px auto; padding: 0 14px; border-radius: calc(var(--h-ctl) / 2); color: var(--acc); background: linear-gradient(rgb(var(--acc-rgb) / .16), rgb(var(--acc-rgb) / .16)), rgba(5,6,11,.3); opacity: 1; font: 600 var(--fs-2)/1 var(--ui); }
 .skin-glass .qrow { position: relative; gap: 0; min-height: 56px; padding: 0 4px 0 0; border-radius: var(--r-group); transition: background-color .15s, transform .18s cubic-bezier(.2,.9,.3,1), box-shadow .15s, scale .15s; }
 .skin-glass .qplay { gap: 12px; min-height: 56px; padding: 8px 8px; color: var(--t1); }
 .skin-glass .qplay img, .skin-glass .qplay .cov { width: 40px; height: 40px; border-radius: 8px; }
@@ -2251,7 +2262,7 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
 .skin-glass .toast:popover-open { display: flex; align-items: center; gap: 10px; min-height: var(--h-row); padding: 12px 20px 12px 16px; font: 600 var(--fs-3)/var(--lh-3) var(--ui); color: var(--t1); text-wrap: balance; animation: glDrop .44s var(--g-press) both; }
 .skin-glass .toast.with-act { border-radius: 22px; padding-block: 6px; padding-right: 6px; }
 .skin-glass .toast-act { position: relative; display: inline-flex; align-items: center; flex: none; height: var(--h-ctl); margin: 0 0 0 4px; padding: 0 14px; border-radius: calc(var(--h-ctl) / 2);
-  color: var(--acc); background: rgb(var(--acc-rgb) / .16); font: 600 var(--fs-3)/1 var(--ui); }
+  color: var(--acc); background: linear-gradient(rgb(var(--acc-rgb) / .16), rgb(var(--acc-rgb) / .16)), rgba(5,6,11,.3); font: 600 var(--fs-3)/1 var(--ui); }
 @keyframes glDrop { from { opacity: 0; transform: translateY(-12px) scale(.94); } 40% { opacity: 1; } }
 
 /* Sing's bar and Repeat a part's: one recipe, one left edge, Repeat a part 8 over Sing's, Sing's 12 over the timeline
@@ -2265,7 +2276,7 @@ body.skin-glass.sing:not(.home) .ab-bar { bottom: calc(100% + 12px + 48px + 8px)
 .skin-glass .singbar .sl { flex: 1; width: auto; min-width: 60px; }
 .skin-glass .singbar b { min-width: 34px; font: 600 var(--fs-2)/1 var(--ui); color: var(--t1); font-variant-numeric: tabular-nums; }
 .skin-glass :is(.singbar .link, .ab-bar .pill) { position: relative; display: inline-flex; align-items: center; height: 36px; padding: 0 14px; border-radius: 18px; font: 600 var(--fs-3)/1 var(--ui); font-variant-numeric: tabular-nums; }
-.skin-glass .singbar .link { color: var(--acc); background: rgb(var(--acc-rgb) / .16); } .skin-glass .singbar .sing-get { background: none; padding: 0 10px; }
+.skin-glass .singbar .link { color: var(--acc); background: linear-gradient(rgb(var(--acc-rgb) / .16), rgb(var(--acc-rgb) / .16)), rgba(5,6,11,.3); } .skin-glass .singbar .sing-get { background: none; padding: 0 10px; }
 .skin-glass .singbar .sing-ai:not(:empty) { font: 400 var(--fs-2)/1 var(--ui); color: var(--t2); }
 .skin-glass .ab-bar #abX { margin-left: auto; width: 36px; height: 36px; background: var(--f-rest); color: var(--t1); }
 .skin-glass .ab-bar #abX svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; }
@@ -2294,7 +2305,7 @@ body.skin-glass.sing:not(.home) .ab-bar { bottom: calc(100% + 12px + 48px + 8px)
 .skin-glass .eq-graph .node { fill: var(--bg); stroke: var(--acc); stroke-width: 2; }
 .skin-glass .eq-graph .node.tv-edit { r: 12; fill: #fff; stroke: #0b0d16; stroke-width: 2; }
 .skin-glass .eq-graph text { fill: var(--t2); opacity: 1; font: 600 11px var(--ui); letter-spacing: 0; }
-.skin-glass .eq-graph .db { fill: var(--t2); }
+.skin-glass .eq-graph .db { fill: var(--t2); } .skin-glass .eq-graph .db.z { display: none; } .skin-glass #eqFill stop { stop-color: var(--acc) !important; }
 .skin-glass .eq-note { padding: 0 var(--row-x); opacity: 1; font: 400 var(--fs-2)/var(--lh-2) var(--ui); color: var(--t2); }
 .skin-glass :is(.eq-hp, .eq-loud) { gap: 0; border: 0; padding: 0; border-radius: var(--r-group); background: var(--f-group); overflow: clip; font: 400 var(--fs-3)/var(--lh-3) var(--ui); }
 .skin-glass :is(.eq-hp, .eq-loud):empty { display: none; }
@@ -2365,13 +2376,34 @@ body.skin-glass.sing:not(.home) .ab-bar { bottom: calc(100% + 12px + 48px + 8px)
 .skin-glass .q { font-family: var(--ui); }
 .skin-glass .chip { border: 0; background: var(--f-rest); color: var(--t1); font: 400 var(--fs-2)/1 var(--ui); padding: 9px 14px; }
 .skin-glass .chip[aria-pressed=true] { background: var(--f-thumb); font-weight: 600; color: var(--t1); }
+/* Search: its field a capsule with the lens, the words in the UI face; what it shows a segmented control */
+.skin-glass .q { height: 48px; margin-top: 12px; padding: 0 16px 0 46px; border: 0; border-radius: 24px; box-shadow: inset 0 1px 2px rgba(0,0,0,.2); color: var(--t1); font: 400 17px/1 var(--ui); text-transform: none; letter-spacing: 0;
+  background: var(--f-rest) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ebf0ff' stroke-opacity='.72' stroke-width='1.75' stroke-linecap='round'%3E%3Ccircle cx='10.5' cy='10.5' r='7'/%3E%3Cpath d='m15.6 15.6 5.4 5.4'/%3E%3C/svg%3E") 16px 50% / 20px no-repeat; }
+.skin-glass .q:focus { background-color: var(--f-hover); box-shadow: inset 0 0 0 2px var(--acc); }
+.skin-glass .q::placeholder { color: var(--t2); }
+.skin-glass .s-kinds { display: inline-flex; flex-wrap: nowrap; gap: 2px; width: fit-content; max-width: calc(100% - 24px); margin: 4px 12px 10px; padding: 2px; border-radius: 16px; background: var(--f-well); overflow-x: auto; }
+.skin-glass .s-kinds::-webkit-scrollbar { display: none; }
+.skin-glass .s-kinds .chip { flex: none; height: 28px; padding: 0 12px; border-radius: 14px; background: none; font: 400 var(--fs-2)/28px var(--ui); }
+.skin-glass .s-kinds .chip[aria-pressed=true] { background: var(--f-thumb); font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 3px 8px -3px rgba(0,0,0,.4); }
+.skin-glass .s-top span { opacity: 1; color: var(--t2); }
+/* Play on: the device playing here checked on its title line (its words gone) */
+.skin-glass .cast-dev { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: 12px; }
+.skin-glass .cast-dev small { grid-column: 1; }
+.skin-glass .cast-dev.on { background: none; }
+.skin-glass .cast-dev.on small { display: none; }
+.skin-glass .cast-dev.on::after { content: ''; grid-column: 2; grid-row: 1; width: 18px; height: 18px; background: var(--acc);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 12.5 4.5 4.5L19 7.5'/%3E%3C/svg%3E") center / 18px no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 12.5 4.5 4.5L19 7.5'/%3E%3C/svg%3E") center / 18px no-repeat; }
 .skin-glass .row:focus-visible { padding-left: 12px; background: var(--f-row); color: var(--t1); border-radius: 14px; }
 @media (hover: hover) and (pointer: fine) { .skin-glass .row:hover { padding-left: 12px; background: var(--f-row); color: var(--t1); box-shadow: none; border-radius: 14px; } }
 .skin-glass .row:hover { padding-left: 12px; }
 .skin-glass .row:focus-visible { box-shadow: inset 0 0 0 2px var(--acc); }
 .skin-glass .row:is(:hover, :focus-visible) .idx, .skin-glass .ritem:has(.row:hover, .row:focus-visible) .rmore { color: inherit; }
 .skin-glass .row small { opacity: 1; font: 400 var(--fs-2)/var(--lh-2) var(--ui); color: var(--t2); }
-.skin-glass .ltile .ico { filter: none; stroke: var(--t1); stroke-width: 1.75; }
+.skin-glass .ltile { border-radius: var(--r-group); background: var(--f-group); box-shadow: none; } .skin-glass .ltile.ghost::before { border-radius: 10px; border-color: rgba(255,255,255,.18); }
+.skin-glass .ltile .lt-ring { display: none; } /* (the library's tiles: the icon alone — no ring of words round it) */
+.skin-glass .ltile .ico { width: 24px; height: 24px; filter: none; stroke: var(--t1); stroke-width: 1.75; }
+.skin-glass .lt-n { left: 10%; bottom: 8%; font: 600 var(--fs-2)/1 var(--ui); color: var(--t2); font-variant-numeric: tabular-nums; }
 .skin-glass .top-hit { border: 0; background: var(--f-group); box-shadow: none; border-radius: 22px; }
 
 /* states: hover only where there's a mouse; pressed on every press (touch too: the script's .pressed); one selected look a
@@ -2384,7 +2416,7 @@ body.skin-glass.sing:not(.home) .ab-bar { bottom: calc(100% + 12px + 48px + 8px)
   .skin-glass .switch[aria-checked=true]:hover { background: color-mix(in srgb, var(--acc), white 12%); }
   .skin-glass .pill:not(.ghost, .tinted, :disabled):hover { background: linear-gradient(180deg, rgb(255 255 255 / .26), rgb(255 255 255 / .06) 55%, rgb(0 0 30 / .04)), var(--acc); }
   .skin-glass :is(.pill.ghost, .stepper .step, .consent .acts .link):not(:disabled):hover { background: var(--f-hover); }
-  .skin-glass :is(.pill.tinted, .toast-act, .singbar .link, .hist-h .link):hover { background: rgb(var(--acc-rgb) / .24); }
+  .skin-glass :is(.pill.tinted, .toast-act, .singbar .link, .hist-h .link):hover { background: linear-gradient(rgb(var(--acc-rgb) / .24), rgb(var(--acc-rgb) / .24)), rgba(5,6,11,.3); }
   .skin-glass :is(.gp-back, .gp-up, .qend .icon-btn, .nudge button, #abX):hover { background: rgba(255,255,255,.1); }
   .skin-glass .skin-card:hover::after { background: rgba(255,255,255,.06); }
   .skin-glass .chip:hover { background: var(--f-hover); color: var(--t1); }
@@ -2392,7 +2424,7 @@ body.skin-glass.sing:not(.home) .ab-bar { bottom: calc(100% + 12px + 48px + 8px)
 .skin-glass :is(.pill, .seg button, .stepper .step, .toast-act, .consent .acts .link, .singbar .link, .hist-h .link, .mi, .gs-row.is-nav).pressed { scale: .97; transition-duration: .08s; }
 .skin-glass :is(.pill.ghost, .stepper .step, .consent .acts .link).pressed { background: var(--f-press); }
 .skin-glass .pill:not(.ghost, .tinted).pressed { background: linear-gradient(180deg, rgb(0 0 30 / .06), rgb(0 0 30 / .12)), var(--acc); }
-.skin-glass :is(.pill.tinted, .toast-act, .singbar .link, .hist-h .link).pressed { background: rgb(var(--acc-rgb) / .3); }
+.skin-glass :is(.pill.tinted, .toast-act, .singbar .link, .hist-h .link).pressed { background: linear-gradient(rgb(var(--acc-rgb) / .3), rgb(var(--acc-rgb) / .3)), rgba(5,6,11,.3); }
 .skin-glass .seg button.pressed { background: var(--f-press); }
 .skin-glass :is(.mi, .gs-row.is-nav).pressed { background: var(--f-press); }
 .skin-glass :is(.skip, .icon-btn, .files > .link, .to-home).pressed { scale: .92; }
@@ -2408,6 +2440,7 @@ body.skin-glass.sing:not(.home) .ab-bar { bottom: calc(100% + 12px + 48px + 8px)
   outline: 0; scale: 1.06; background: var(--t1); color: #0b0d16; box-shadow: 0 10px 24px rgba(0,0,0,.45); z-index: 2; }
 .skin-glass.tv :is(.mi, .gs-row.is-nav, .qplay, .cast-dev):focus-visible :is(.gs-t, .gs-d, .gs-v, small, b, .ico, svg) { color: #0b0d16; }
 .skin-glass.tv .gs-row.is-nav:focus-visible { border-radius: var(--r-group); }
+.skin-glass.tv :is(.mi, .gs-row.is-nav, .qplay, .cast-dev):focus-visible { scale: 1.02; } .skin-glass.tv .gs-group:has(:focus-visible) { overflow: visible; } /* (a full-width row lifts as far as its panel's body leaves room: it was cut at its sides) */
 .skin-glass.tv .switch:focus-visible { outline: 3px solid var(--t1); outline-offset: 3px; scale: 1.06; box-shadow: 0 10px 24px rgba(0,0,0,.45); }
 .skin-glass.tv .gs-help > summary:focus-visible { outline: 0; scale: 1.04; background: var(--t1); color: #0b0d16; box-shadow: 0 10px 24px rgba(0,0,0,.45); padding: 2px 8px; margin: -2px -8px; border-radius: 10px; }
 .skin-glass.tv .gs-help > summary:focus-visible svg { color: #0b0d16; }
@@ -2471,7 +2504,7 @@ body.skin-glass.sing:not(.home) .ab-bar { bottom: calc(100% + 12px + 48px + 8px)
   .skin-glass .mood { height: 42px; padding: 0 16px 0 13px; }
 }
 @media (max-width: 900px) and (forced-colors: none) { /* (and a soft shade of its own behind the bare name: the light along the top never washes it out) */
-  .skin-glass .top .top-l::after { content: ''; position: absolute; pointer-events: none; display: block; inset: -12px -22px; z-index: 0; opacity: 1; border-radius: 32px; transition: none; background: radial-gradient(closest-side, rgba(3,4,10,.58), rgba(3,4,10,.32) 72%, transparent); -webkit-mask: none; mask: none; }
+  .skin-glass .top .top-l::after { content: ''; position: absolute; pointer-events: none; display: block; inset: -12px -22px; z-index: 0; opacity: 1; border-radius: 32px; transition: none; background: radial-gradient(closest-side, rgba(3,4,10,.68), rgba(3,4,10,.42) 72%, transparent); -webkit-mask: none; mask: none; } /* (.68: the name and its FM over the brightest scenes) */
   .skin-glass .top .top-l.ink-dark::after { background: radial-gradient(closest-side, rgba(250,251,255,.62), rgba(250,251,255,.36) 72%, transparent); } /* (dark ink, over something bright: a light shade) */
   .skin-glass .top .top-l .brand { text-shadow: 0 0 2px rgba(3,4,10,.9), 0 0 7px rgba(3,4,10,.85); } /* (no glass under the bare name to hold what's bright: its own wide halo kept) */
   .skin-glass .top .top-l .to-home svg { filter: drop-shadow(0 0 2.5px rgba(3,4,10,.75)); }
@@ -3906,13 +3939,13 @@ const GLASS_KIND = {
   dock: { prof: 'bezel', tb: .6, D: .3, e: .05, soft: .5, frost: 12, fz: [6.4, 14], a: .64, ad: .4, edge: .4, sheen: .2, band: .3, cau: .16, w: .08, g: 1.05, sat: 1.3, css: 'saturate(1.3)' },
   // a panel's own (the panels, the menu, a toast, the bars, the dialogs): the dock's bezel (its rim pulling as far as it
   // can and never fold: D under 4/9 — the slope of where each point looks stays above 0), its frost held calmer under
-  // small words (frost 16, a .78: grey words 4.6 : 1 over the brightest lyric), its colour carried through (fsat: the
+  // small words (frost 16, a .82: grey words 4.5 : 1 over the lyrics' brightest white), its colour carried through (fsat: the
   // frost saturated after the blur, so the scene's thin lights come through as soft glows; 1.6 over a picture or the
   // music video, the script's glassPanelTint), its rim lit by the scene's own colour and nothing else (w 0: no ring over a dark scene)
-  panel: { id: 'panel', prof: 'bezel', tb: .5, D: .42, e: .06, soft: 1.2, frost: 16, fz: [5, 12], a: .78, ad: .4, fsat: 3, edge: .35, sheen: .22, band: .5, cau: .06, w: 0, g: 1.1, sat: 1.4, css: 'saturate(1.6)' } };
+  panel: { id: 'panel', prof: 'bezel', tb: .5, D: .42, e: 0, soft: 1.2, frost: 16, fz: [5, 12], a: .82, ad: .4, fsat: 3, edge: .35, sheen: .22, band: .5, cau: .06, w: 0, g: 1.1, sat: 1.4, css: 'saturate(1.6)' } };
 const GLASS_PANEL = '.moods, .eq, .smenu, .voice-ui, .toast, .singbar, .ab-bar, dialog.consent';
 // (the band each capsule's icons and words take, px from its middle line: half their height and 3 px)
-const GLASS_TL = { '.top-l': 12.9, '#mood': 7.8, '.files': 11.5 };
+const GLASS_TL = { '.top-l': 12.9, '#mood': 10.5, '.files': 12 }; // (#mood: its words 15 px since the chip says "Theme · Glass"; .files: its icons 20 px, were 19)
 const GLASS_TIERS = ['lens', 'frost', 'tint']; // (and SVGNS, further down: all of this runs once the script's all there)
 const glass = { tier: '', defs: null, ro: null, bounds: null, maps: new Map(), decoding: [], redo: null, n: 0, grow: 1, gi: 1, raf: 0, gpu: null, fast: false, aim: 0, px: 0, py: 0, from: null, src: new WeakMap(), hid: false, hidAt: 0, glow: '', spec: false, ink: null };
 const glassQuiet = matchMedia('(prefers-reduced-transparency: reduce), (prefers-contrast: more), (forced-colors: active)');
@@ -4126,14 +4159,15 @@ function glassFit(e, glow = false) {
   let S, flood = '';
   if (r >= h / 2 - .5) { const T = glassCap(h, o, drop ? Math.min(.9, GLASS_TL[q] / r) : 0), c = Math.min(T.c, w / 2); S = T.Sc; put(T.l, 0, 0, c, h); put(T.m, c, 0, w - 2 * c, h, 's'); put(T.r, w - c, 0, c, h, 'r'); e.glassC = c; }
   else { const R = glassRect(w, h, r, o, r > 30 ? .6 : 1); S = R.Sc; for (const p of R.pieces) put(...p); flood = '<feFlood flood-color="rgb(128,128,0)" result="f0"/>'; e.glassC = Math.ceil(r); }
-  const dm = (s, n) => `<feDisplacementMap in="src" in2="map" scale="0" data-s="${s.toFixed(3)}" xChannelSelector="R" yChannelSelector="G" result="d${n}"/>`;
+  const dm = (s, n, res = 'd' + n) => `<feDisplacementMap in="src" in2="map" scale="0" data-s="${s.toFixed(3)}" xChannelSelector="R" yChannelSelector="G" result="${res}"/>`;
   f.innerHTML = flood + img.join('') + `<feMerge result="map">${flood && '<feMergeNode in="f0"/>'}${img.map((p, i) => `<feMergeNode in="m${i}"/>`).join('')}</feMerge>`
     // the lens: each colour bent from the same picture by a little less, the same, a little more (each bent picture with
     // one use: one used twice is drawn twice)
-    + `<feGaussianBlur in="SourceGraphic" stdDeviation="${o.soft}" result="src"/>${dm(S * (1 - o.e), 'r')}${dm(S, 'g')}${dm(S * (1 + o.e), 'b')}`
+    + `<feGaussianBlur in="SourceGraphic" stdDeviation="${o.soft}" result="src"/>` + (o.e ? `${dm(S * (1 - o.e), 'r')}${dm(S, 'g')}${dm(S * (1 + o.e), 'b')}`
     + `<feColorMatrix in="dr" type="matrix" values="1 0 0 0 0 ${GLM.Z} ${GLM.Z} ${GLM.A}" result="cr"/><feColorMatrix in="dg" type="matrix" values="${GLM.Z} 0 1 0 0 0 ${GLM.Z} ${GLM.A}" result="cg"/>`
     + `<feColorMatrix in="db" type="matrix" values="${GLM.Z} ${GLM.Z} 0 0 1 0 0 ${GLM.A}" result="cb"/>`
     + `<feComposite in="cr" in2="cg" operator="arithmetic" k2="1" k3="1" result="crg"/><feComposite in="crg" in2="cb" operator="arithmetic" k2="1" k3="1" result="bent"/>`
+      : dm(S, 'g', 'bent')) // (no split — a panel's: its rim pulls 5 px at most, a split of it a third of a pixel, unseen — one picture bent, seven steps fewer)
     // its light, in the colour of what's behind, where the map says — and, pressed, the light under the finger (white at its
     // core, so it shows over a dark room): both before what holds the words, so a press never washes them out
     + `<feColorMatrix in="src" type="matrix" values="${glassSat(o.sat, o.g, o.w)}" result="lit"/>`
@@ -4221,22 +4255,24 @@ function glassPanelOn(p) {
   if (glass.tier === 'lens') glassFit(p);
 }
 // The tint and the colour follow what's behind a panel: L, the median luminance glassInk reads over its box (your picture
-// with its dim, the cover; else the mood's dark — and with the visualiser on frost, at least .25: glassInk counts it dark,
-// its burst is bright). Lens: 14 % + 28 % × √L; frost: 28 % + 38 % × √L, its brightness .74 − .16 × √L. The frost's colour
+// with its dim, the cover; else the mood's dark), at least what glassInk can't read — Extreme lyrics' big white words
+// (.5), the visualiser's burst (.25 on frost, .1 on a lens), a scene with broad bright light (GLASS_LIT, measured). Lens:
+// 20 % + 28 % × √L; frost: 42 % + 38 % × √L, its brightness .64 − .16 × √L (grey words 4.5 : 1 over the lyrics' white
+// letters, on the brightest 0.5 % behind them, over all 40 backgrounds). The frost's colour
 // saturated 3 (frost: 5) over the scenes and the visualiser, whose colour is in thin lights; 1.6 (2.4) over the Cover and
 // Pictures backgrounds and Extreme lyrics, whose colour is broad. On tint and Solid, the stylesheet's.
+const GLASS_LIT = { 'Black Hole': .2, Julia: .05 }; // (the scenes whose light behind a panel is broad and bright: Black Hole's disk, Julia's arms)
 function glassPanelTint(p) {
   const t = glass.tier, I = glass.ink;
   if (t !== 'lens' && t !== 'frost') { for (const k of ['--gp-tint', '--fr-bri', '--fr-sat']) p.style.removeProperty(k); return; }
-  const r = p.getBoundingClientRect(), L = [], W = 64, H = I ? I.Ls.length / W : 0;
+  const r = getComputedStyle(p).position === 'fixed' ? { left: p.offsetLeft, top: p.offsetTop, right: p.offsetLeft + p.offsetWidth, bottom: p.offsetTop + p.offsetHeight, width: p.offsetWidth } : p.getBoundingClientRect(), L = [], W = 64, H = I ? I.Ls.length / W : 0; // (its laid-out box: growing out of its button, its drawn one is the button's)
   if (I && r.width) for (let y = Math.max(0, Math.floor(r.top / innerHeight * H)); y <= Math.min(H - 1, r.bottom / innerHeight * H); y++)
     for (let x = Math.max(0, Math.floor(r.left / innerWidth * W)); x <= Math.min(W - 1, r.right / innerWidth * W); x++) L.push(I.Ls[y * W + x]);
-  let m = L.length ? L.sort((a, b) => a - b)[L.length >> 1] : .002;
-  const bc = body.classList, broad = theme === 'Cover' || theme === 'Pictures' || kin.on && bc.contains('has-song') && !bc.contains('home');
-  if (t === 'frost' && bc.contains('view-vis')) m = Math.max(m, .25);
+  const bc = body.classList, ext = kin.on && bc.contains('has-song') && !bc.contains('home'), broad = theme === 'Cover' || theme === 'Pictures' || ext;
+  const m = Math.max(L.length ? L.sort((a, b) => a - b)[L.length >> 1] : .002, ext ? .5 : 0, bc.contains('view-vis') ? (t === 'frost' ? .25 : .1) : 0, GLASS_LIT[theme] || 0);
   const q = Math.sqrt(m);
-  if (t === 'lens') { p.style.setProperty('--gp-tint', (14 + 28 * q).toFixed(1) + '%'); p.gpSat = broad ? 1.6 : 3; p.glassLens?.fsat?.setAttribute('values', p.gpSat); }
-  else { p.style.setProperty('--gp-tint', (28 + 38 * q).toFixed(1) + '%'); p.style.setProperty('--fr-bri', (.74 - .16 * q).toFixed(3)); p.style.setProperty('--fr-sat', broad ? '2.4' : '5'); }
+  if (t === 'lens') { p.style.setProperty('--gp-tint', (20 + 28 * q).toFixed(1) + '%'); p.gpSat = broad ? 1.6 : 3; p.glassLens?.fsat?.setAttribute('values', p.gpSat); }
+  else { p.style.setProperty('--gp-tint', (42 + 38 * q).toFixed(1) + '%'); p.style.setProperty('--fr-bri', (.64 - .16 * q).toFixed(3)); p.style.setProperty('--fr-sat', broad ? '2.4' : '5'); }
 }
 // a spring, 0 → 1 over t seconds: its period and its bounce (0, none; its stiffness (2π / period)², its damping from the bounce)
 function glassSpring(t, period, bounce) {
@@ -5056,6 +5092,7 @@ function gsSeg(label, names, cur, pick, fit) {
   return sg;
 }
 function segPlace(sg, now) {
+  if (!sg.isConnected) return glass.segRo?.unobserve(sg); // (one drawn over: no longer watched)
   const b = sg.querySelector('button[aria-pressed=true]'), t = sg.querySelector('.seg-thumb');
   if (!t) return;
   if (now) { t.style.transition = 'none'; requestAnimationFrame(() => requestAnimationFrame(() => t.style.transition = '')); }
@@ -7176,7 +7213,7 @@ function drawEq() {
     svgEl('path', { class: 'area', d: line + ' L600,210 L0,210 Z', fill: 'url(#eqFill)' }), ...(hp ? [svgEl('path', { class: 'hpcurve', d: hpCurve() })] : []), svgEl('path', { class: 'curve', d: line })];
   kids[0].innerHTML = '<linearGradient id="eqFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--a);stop-opacity:.35"/><stop offset="1" style="stop-color:var(--a);stop-opacity:0"/></linearGradient>';
   eqState.gains.forEach((v, i) => {
-    kids.push(svgEl('text', { class: 'db', x: EQX(i), y: EQY(v) - 16, 'text-anchor': 'middle' }, (v > 0 ? '+' : '') + v));
+    kids.push(svgEl('text', { class: v ? 'db' : 'db z', x: EQX(i), y: EQY(v) - 16, 'text-anchor': 'middle' }, (v > 0 ? '+' : '') + v)); // (z: at 0 — Glass shows a band's value only off it)
     kids.push(svgEl('text', { x: EQX(i), y: 204, 'text-anchor': 'middle' }, EQ.labels[i]));
     kids.push(svgEl('circle', { class: 'node', cx: EQX(i), cy: EQY(v), r: 8, tabindex: 0, role: 'slider', 'data-band': i,
       'aria-label': EQ.labels[i] + ' hertz', 'aria-valuemin': -12, 'aria-valuemax': 12, 'aria-valuenow': v }));
