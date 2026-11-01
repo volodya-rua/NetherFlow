@@ -2292,7 +2292,7 @@ body.skin-glass.sing:not(.home) .ab-bar { bottom: calc(100% + 12px + 48px + 8px)
 
 /* the equalizer: its head its name and its switch; the curve a plain line in the accent, its points the glass's dark
    ringed in it; the presets a segmented row; headphones and loudness rows */
-.skin-glass .eq-top { flex: 1; min-width: 0; }
+.skin-glass .eq-top { flex: 1; min-width: 0; } .skin-glass .gp-head.is-sub > .eq-top { display: none; } /* (a list open: its own head, the equalizer's kept in the page) */
 .skin-glass .eq-top h3 { font: 600 var(--fs-4)/var(--lh-4) var(--ui); color: var(--t1); }
 .skin-glass #eqState { display: none; }
 .skin-glass .eq .gp-body { padding-bottom: 6px; } .skin-glass .eq .gp-body > * + * { margin-top: 12px; }
@@ -7246,10 +7246,16 @@ function gsEqRender() {
   const p = $('eqPanel'), old = document.getElementById('eqPreset'), row = gsEqRow();
   if (old) old.replaceWith(row); else $('eqPresets').before(row);
   if (!p.gpBody || !gsOn()) return;
-  let L = p.gpBody.querySelector(':scope > .gs-sublist');
-  p.classList.toggle('gs-sub', !!p.gpSub);
-  if (p.gpSub) { if (!L) { L = el('div', 'gs-sublist'); p.gpBody.prepend(L); } L.replaceChildren(...gsList(p, row)); }
+  let L = p.gpBody.querySelector(':scope > .gs-sublist'), k = gsFocus(p);
+  // (the list of the row opened — the presets', or Play on's or 360 sound's: it was always the presets'; and the
+  // equalizer's own head kept in the page under the list's, hidden — taken out, drawEq couldn't find its switch, and a
+  // preset picked in the list threw before it was applied or kept)
+  const sub = p.gpSub && (p.gpSub === 'Preset' ? row : [...p.gpBody.querySelectorAll('.gs-row')].find(r => r.gsList && r.dataset.set === p.gpSub && !r.closest('.gs-sublist')));
+  if (!sub) p.gpSub = null;
+  p.classList.toggle('gs-sub', !!sub);
+  if (sub) { if (!L) { L = el('div', 'gs-sublist'); p.gpBody.prepend(L); } L.replaceChildren(...gsList(p, sub)); p.gpHead.append(EQ_TOP); }
   else if (L || p.gpHead.classList.contains('is-sub')) { L?.remove(); p.gpHead.classList.remove('is-sub'); p.gpHead.replaceChildren(p.gpBack, EQ_TOP); }
+  gsRefocus(p, k);
 }
 function setBand(i, v, focus, save = true) {
   const editing = document.activeElement?.classList?.contains('tv-edit'); // (a TV's band being changed: still, once drawn anew)
