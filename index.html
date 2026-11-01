@@ -11347,8 +11347,10 @@ const sameWords = (a, b) => words(a).join(' ') === words(b).join(' ');
 const contains = (big, small) => { const w = words(big); return words(small).every(x => w.includes(x)); };
 const playable = s => s.kind === 'song' && (s.previewUrl || fullSongs);
 // (at about the size it's shown: Apple's and YouTube Music's covers come at any size, Spotify's at 640 or 300 — a list's
-// 56 px row loaded a 640 px picture each, and a long list's covers came slowly; a YouTube video's, small, without its bars)
-const artUrl = (x, size) => (x?.artworkUrl100 || '').replace('100x100bb', `${size}x${size}bb`).replace(/=w\d+-h\d+/, `=w${size}-h${size}`)
+// 56 px row loaded a 640 px picture each, and a long list's covers came slowly; a YouTube video's, small, without its bars).
+// YouTube Music's never past 544, its own size: Google's image server kept turning down a cover asked bigger (600, for the
+// player), so the player's and the record's stayed an empty square while the lists, smaller, had it (the user's report)
+const artUrl = (x, size) => (x?.artworkUrl100 || '').replace('100x100bb', `${size}x${size}bb`).replace(/=w\d+-h\d+/, `=w${Math.min(size, 544)}-h${Math.min(size, 544)}`)
   .replace(/(\/\/i\.scdn\.co\/image\/ab67616d0000)b273/, (m, a) => size <= 300 ? a + '1e02' : m).replace(/\/hqdefault\.jpg$/, m => size <= 200 ? '/mqdefault.jpg' : m);
 
 async function searchSongs(term, signal) {
