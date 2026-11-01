@@ -13,6 +13,12 @@
 //   curl -X DELETE -H "Authorization: Bearer $(cat ~/.netherflow-signing/relay-admin.key)" https://netherflow-relay.netherflow.workers.dev/s/<id>
 // (<id>: the 12 letters and numbers after #s. in the link reported. The key: a Worker secret, set once with
 //  npx wrangler secret put ADMIN_KEY — never in this repository.)
+// And NetherFlow's install count (the app's Count me once; the README's badge): one number, and nothing else. An install
+// sends POST /c once, when its terms are agreed to with Count me once ticked: an empty request, which adds 1 to it; GET /c
+// gives the number to shields.io for the badge. Kept: that number. Never kept: an address, a device, a time, or anything
+// sent with a request (an address is held in this Worker's memory only, to stop one sending many: 3 counts an hour,
+// forgotten after an hour unused). And GET /dl, the downloads badge: how many times NetherFlow's installers and APKs were
+// downloaded from its GitHub releases, added up from GitHub's own counts at most once an hour.
 // Nothing is logged: no console output, and the Worker's observability off (wrangler.toml). Deploy: npx wrangler deploy
 const TOPIC = /^(nf2\/[0-9a-f]{32}|nf1\/l[0-9a-f]{32})$/;
 const KEEP = 365 * 864e5; // a kept copy, after its last change

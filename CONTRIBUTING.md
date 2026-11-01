@@ -31,9 +31,10 @@ For anything bigger than a small fix, open an issue first so the approach can be
 4. Third-party code, fonts, images or sounds need their license text in [`licenses/`](licenses) and a line in
    [NOTICE](NOTICE).
 
-NetherFlow has no accounts, no analytics and no ads of its own, and it stays that way. Changes that add tracking, ads or
-sign-ins won't be merged, and a change that makes NetherFlow talk to a new online service needs a privacy review first,
-so mention it in the pull request.
+No account, no ads of its own, no tracking of what you do. Each install is counted once, with nothing about you (untick
+Count me once to skip it). NetherFlow stays that way: changes that add tracking, an identifier of any kind, anything more
+to the count, ads or sign-ins won't be merged, and a change that makes NetherFlow talk to a new online service needs a
+privacy review first, so mention it in the pull request.
 
 ## License
 

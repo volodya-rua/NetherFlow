@@ -25,7 +25,7 @@ NetherFlow is a free, open-source music player with a look of its own. Search an
 <li>Liked songs, playlists, queue and history</li>
 <li>Save songs for offline listening, one at a time or a whole playlist at once</li>
 <li>Make a short video clip of a song with its lyrics for your story</li>
-<li>No account, no ads of its own, no analytics or tracking</li>
+<li>No account, no ads of its own, no tracking of what you do. Count me once, off unless you tick it, adds 1 to a public count</li>
 </ul>
 
 <b>A HuCla build (Human × Claude)</b>
