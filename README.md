@@ -51,28 +51,23 @@ need a powerful graphics card anyway), about 18 MB smaller, and it updates to Li
 
 <a id="whats-new"></a>
 
-## What's new in 1.6.2
+## What's new in 1.6.3
 
-**Talk to it, drive with it, watch it move, and read every word.** The biggest update yet:
+**Glass, lyrics in more typefaces, and controls that get out of the way:**
 
-- **Voice control** on Android and Windows: say a song, an artist or what to do. On Windows, **"Hey NetherFlow"** works
-  hands-free with the optional voice pack, which runs on your computer
-- **Android Auto** (turn on Unknown sources in Android Auto's developer settings), with music that doesn't break when
-  the car connects, and **Road trip** for a drive offline
-- **A visualiser:** the whole screen moving with the music, in eight looks
-- **Lyrics you can read:** eight new styles (Tower, Lens, Pop, Drift, Wall, Fisheye, Fisheye Emoji, Emoji Stack), the
-  word being sung on a block of the mood's colour; Tamil, Hindi and other scripts no longer break apart
-- **Light round your screen:** Trace, one long arc of light gliding round the screen in the album's colour, Rim and five
-  more edge looks
-- **Make it yours:** your own pictures as the background, your own colours, 14 more moods and 9 more backgrounds
-- **Shuffle that plays every song once** before any repeats, **Repeat a part,** and saved songs that carry on offline
-- **360 sound rebuilt,** AI karaoke on Windows, MobiVib on phones, QR codes for sharing, importing, Listen together and
-  sync, Smart playlists, covers that show at once, Classic and Advanced Settings, and Back everywhere
+- **Glass**, a new theme: on a computer the header's buttons and the player are clear drops of glass that bend the
+  light behind them, over a scene of light through rippled glass; on a phone they're frosted. Settings › Glass picks
+  Auto, Frosted, Tinted or Solid
+- **19 new lyric font pairs** (32 in all), and lyrics in Hindi, Marathi, Bengali, Punjabi, Gujarati, Tamil, Telugu,
+  Kannada, Malayalam, Arabic and Urdu in typefaces of their own, on phones too
+- **Hide controls:** while a song plays, the header and the buttons fade away after a few seconds, and a touch, the
+  mouse, a key or the remote brings them back. On to start with on a TV
+- **Count me once** adds 1 to a public count of installs, with nothing about you. It's ticked in NetherFlow's own
+  releases; untick it to skip it
+- **Fixed:** the playing song's cover on PC, Lens lyrics on phones, and a black screen at start on some Android TVs
 
 > [!NOTE]
-> The terms and privacy policy changed (voice control, the camera for QR codes, in the car, AI karaoke, short share
-> links, and what's kept on your device), so you're asked to accept them again. On Android, NetherFlow's data no longer
-> goes into Google Drive backup: it stays on your phone (Phone ↔ PC sync moves your library).
+> The terms and privacy policy now describe Count me once, so you're asked to accept them again.
 
 The full notes for this release and every earlier one are in the [changelog](CHANGELOG.md).
 
