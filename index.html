@@ -250,6 +250,22 @@ body.home .singbar { display: none; } /* (its voice slider is for the lyrics: no
 .fp-glow .cur .w > span { filter: drop-shadow(0 0 .1em color-mix(in srgb, var(--a) 70%, transparent)); }
 .fp-glow .cur .w.now > span { filter: drop-shadow(0 0 .12em var(--a)) drop-shadow(0 0 .4em color-mix(in srgb, var(--a) 50%, transparent)); }
 .fp-glow .cur .ch.lit, .fp-glow .cs-line, .fp-glow .dv-title { text-shadow: 0 0 .15em color-mix(in srgb, var(--a) 70%, transparent), 0 0 .45em color-mix(in srgb, var(--a) 30%, transparent); }
+/* the colour fonts (Voxel, Hype, Glaze, Foil): their own colours, turned to the mood's (moodPalette). Under background-clip:
+   text a colour letter is painted as a one-colour silhouette, so their sweep dims what's still to come with a mask
+   instead (syncLyrics); a colour letter takes no colour, only its alpha */
+.fp-colr .cur .w > span { color: var(--ink); background-image: none !important; -webkit-background-clip: border-box; background-clip: border-box; }
+.fp-colr .cur .w.em > span, .fp-colr .cur.rest .w > span { color: var(--a); }
+.fp-colr :is(.cur, .next, .cs-line, .dv-title) { font-palette: --nf-mood; }
+.la-letters .fp-colr .cur .ch { color: inherit; opacity: .3; transition: opacity .15s; }
+.la-letters .fp-colr .cur .ch.lit { opacity: 1; }
+/* (the poster styles' sung word, dark on its block as theirs is: peach on orange it couldn't be read. Its colour can't
+   follow Emoji Stack's block letter by letter, so that block is there at once, as Wall's is) */
+:is(.la-tower, .la-lens, .la-pop, .la-drift, .la-wall, .la-emoji-stack) .fp-colr .cur:not(.rest) .w.now > span,
+:is(.la-fisheye, .la-fisheye-emoji) .fp-colr .cur:not(.rest) .w.fish-k.on > span { filter: brightness(0); -webkit-mask-image: none !important; }
+.la-emoji-stack .fp-colr .cur .w.now > .es-blk { transform: skewX(-8deg) !important; }
+/* a script face (Waltz): in its own case (in capitals it can't be read), with room for its swashes */
+.fp-script :is(.cur, .next, .cs-line, .dv-title) { text-transform: none; }
+.fp-script .cur .w > span { padding-inline: .32em; margin-inline: -.32em; }
 .fonts-row .seg button { display: inline-flex; align-items: baseline; gap: 7px; padding: 6px 13px 7px; letter-spacing: .02em; }
 .fonts-row .fp-a { font-size: 14px; font-weight: 400; text-transform: uppercase; }
 .fonts-row .fp-b { font-size: 16px; font-style: italic; text-transform: none; opacity: .7; }
@@ -3501,7 +3517,9 @@ function useLanim(name) {
 }
 // ---------- the lyrics' typefaces (Settings › Lyrics font): a display face for the line, and a second for its accent
 // word, the line before and the Cover view's title. Bundled (fonts/pairs.css) and loaded only once picked. lh: the
-// line's line height (some faces stand taller). ----------
+// line's line height (some faces stand taller); glow: lit tubes; script: a script face, never in capitals; colr: a colour
+// font (COLRv1), its colours following the mood (moodPalette) — its palette 0 turned to the mood's hue, 'ab' the mood's
+// two colours, true its own. ----------
 const FONT_PAIRS = [
   { name: 'Poster', poster: "'Anton'", serif: "'Instrument Serif'" },
   { name: 'Vogue', poster: "'Abril Fatface'", serif: "'Playfair Display'", lh: 1.08 },
@@ -3516,23 +3534,42 @@ const FONT_PAIRS = [
   { name: 'Bubble', poster: "'Bagel Fat One'", serif: "'Pacifico'", lh: 1.08 },
   { name: 'Melt', poster: "'Climate Crisis'", serif: "'Libre Bodoni'", lh: 1.06 },
   { name: 'Gothic', poster: "'Pirata One'", serif: "'IM Fell English'", lh: 1.04 },
+  { name: 'Voxel', poster: "'Nabla'", serif: "'Instrument Serif'", lh: 1.12, colr: ['#ffd214', '#ff552d', '#ff9b00', '#ff9123', '#ffd214', '#ffeb6e', '#ffd214', '#ffeb6e', '#fffabe', '#ffffff'] },
+  { name: 'Hype', poster: "'Bungee Spice'", serif: "'Shrikhand'", lh: 1.06, colr: 'ab' },
+  { name: 'Glaze', poster: "'Kalnia Glaze'", serif: "'Libre Bodoni'", lh: 1.06, colr: ['#66357a', '#3b171f', '#b740af', '#ff306f', '#a762ff', '#9a8bc7', '#ff29f2', '#ff4db2', '#9a8bc7'] },
+  { name: 'Foil', poster: "'Foldit'", serif: "'Chakra Petch'", lh: 1.04, colr: true },
+  { name: 'Groove', poster: "'Fraunces'", serif: "'Fraunces'", lh: 1.04 },
+  { name: 'Epic', poster: "'Cinzel'", serif: "'Cormorant Garamond'", lh: 1.04 },
+  { name: 'Rodeo', poster: "'Sancreek'", serif: "'Yellowtail'", lh: 1.06 },
+  { name: 'Waltz', poster: "'Corinthia'", serif: "'Cormorant Garamond'", lh: 1.16, script: true },
+  { name: 'Bounce', poster: "'Shantell Sans'", serif: "'Shantell Sans'", lh: 1.1 },
+  { name: 'Varsity', poster: "'Anybody'", serif: "'Anybody'", lh: 1.02 },
+  { name: 'Marquee', poster: "'Doto'", serif: "'Space Mono'", lh: 1.1, glow: true },
+  { name: 'Gummy', poster: "'Sour Gummy'", serif: "'Sour Gummy'", lh: 1.06 },
+  { name: 'Boom', poster: "'Bangers'", serif: "'Permanent Marker'", lh: 1.04 },
+  { name: 'Letter', poster: "'Special Elite'", serif: "'Xanh Mono'", lh: 1.1 },
+  { name: 'Laser', poster: "'Tilt Prism'", serif: "'Space Mono'", lh: 1.08, glow: true },
 ];
 let fontPair = FONT_PAIRS.some(f => f.name === store.get('netherflow.font')) ? store.get('netherflow.font') : 'Poster';
 const curPair = () => SKINS[skin]?.font || FONT_PAIRS.find(x => x.name === fontPair); // (a theme's own, while it's on)
+let colrPair = false; // (a colour font's sweep is a mask: see syncLyrics)
 function applyFontPair() {
   const f = curPair();
+  colrPair = !!f.colr;
   for (const e of [stage, $('coverStage'), $('drive')]) {
     e.style.setProperty('--poster', f.poster + ', Impact, sans-serif');
     e.style.setProperty('--serif', f.serif + ', Georgia, serif');
     e.style.setProperty('--cur-lh', f.lh || 1.02);
     e.classList.toggle('fp-glow', !!f.glow); // (Neon: lit tubes)
+    e.classList.toggle('fp-colr', colrPair);
+    e.classList.toggle('fp-script', !!f.script);
   }
   document.fonts.load('40px ' + f.poster).then(refitLyrics, () => {}); // (measured in a stand-in face till it's here)
 }
 applyFontPair();
 function setFontPair(name) {
   fontPair = name; store.set('netherflow.font', name === 'Poster' ? '' : name);
-  applyFontPair(); renderTextPanel();
+  applyFontPair(); moodPalette(); renderTextPanel();
   if (activeIdx >= 0 && synced) { stage.replaceChildren(); buildStage(activeIdx); }
 }
 // its row in Settings: each choice shown in its own pair
@@ -3542,6 +3579,7 @@ function fontRow() {
   q.querySelectorAll('.seg button').forEach((b, i) => {
     const f = FONT_PAIRS[i], a = el('b', 'fp-a', f.name), z = el('i', 'fp-b', 'Aa');
     a.style.fontFamily = f.poster; z.style.fontFamily = f.serif;
+    if (f.script) a.style.textTransform = 'none';
     b.replaceChildren(a, z); b.setAttribute('aria-label', f.name);
   });
   return q;
@@ -3924,6 +3962,25 @@ function applyPalette(m) {
   setCursors(m.a, m.b);
   $('moodName').textContent = m.name;
   target = [rgb(m.bg), rgb(m.a), rgb(m.b), (m.fx || [1, 1, 1, 1]).slice()];
+  moodPalette();
+}
+// The colour fonts follow the mood: each colour of the font's own palette takes the highlight's hue and keeps its
+// lightness and chroma (OKLCH), so the font's light and shade stay as drawn; greys stay grey. Written out as a rule:
+// @font-palette-values can't take var().
+const lin = c => c <= .04045 ? c / 12.92 : ((c + .055) / 1.055) ** 2.4, gam = c => c <= .0031308 ? 12.92 * c : 1.055 * c ** (1 / 2.4) - .055;
+function toLch(h) {
+  const [r, g, b] = rgb(h).map(lin), l = Math.cbrt(.4122214708 * r + .5363325363 * g + .0514459929 * b), m = Math.cbrt(.2119034982 * r + .6806995451 * g + .1073969566 * b), s = Math.cbrt(.0883024619 * r + .2817188376 * g + .6299787005 * b);
+  const L = .2104542553 * l + .793617785 * m - .0040720468 * s, A = 1.9779984951 * l - 2.428592205 * m + .4505937099 * s, B = .0259040371 * l + .7827717662 * m - .808675766 * s;
+  return [L, Math.hypot(A, B), Math.atan2(B, A)];
+}
+function fromLch([L, C, H]) {
+  const A = C * Math.cos(H), B = C * Math.sin(H), l = (L + .3963377774 * A + .2158037573 * B) ** 3, m = (L - .1055613458 * A - .0638541728 * B) ** 3, s = (L - .0894841775 * A - 1.291485548 * B) ** 3;
+  return hex([4.0767416621 * l - 3.3077115913 * m + .2309699292 * s, -1.2684380046 * l + 2.6097574011 * m - .3413193965 * s, -.0041960863 * l - .7034186147 * m + 1.707614701 * s].map(v => Math.max(0, Math.min(1, gam(v))) * 255));
+}
+function moodPalette() {
+  const f = curPair(), st = $('fpPal') || document.head.appendChild(Object.assign(el('style'), { id: 'fpPal' }));
+  const [, ca, ha] = toLch(pal.a), cols = f.colr === 'ab' ? [pal.a, pal.b] : Array.isArray(f.colr) ? f.colr.map(c => { const [L, C] = toLch(c); return C < .03 ? c : fromLch([L, ca < .03 ? 0 : C, ha]); }) : null;
+  st.textContent = cols ? `@font-palette-values --nf-mood { font-family: ${f.poster}; override-colors: ${cols.map((c, i) => i + ' ' + c).join(', ')}; }` : '';
 }
 const setMood = i => { mood = ((i % MOODS.length) + MOODS.length) % MOODS.length; applyPalette(MOODS[mood]); };
 
@@ -3963,7 +4020,7 @@ function customCols(fresh) { // (fresh: Custom picked just now, from the colours
 // (WCAG's relative luminance, 0…1: on the near-black background, lyric text of .5 reads at 10:1 or more, and its faded
 // shades — the words still to come, the next line — stay readable too (at .3 the next line fell to 2:1); a highlight of
 // .16 at 4:1 — the poster styles' sung word is in the background's colour on a block of it)
-const ccLum = c => c.reduce((s, v, i) => s + [.2126, .7152, .0722][i] * (v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4), 0);
+const ccLum = c => c.reduce((s, v, i) => s + [.2126, .7152, .0722][i] * lin(v), 0);
 function ccLift(h, min) { // (toward white in small steps till it reads: the hue kept)
   const c = rgb(h);
   for (let t = 0; t < 1; t += .04) { const m = c.map(v => v + (1 - v) * t); if (ccLum(m) >= min) return t ? hex(m.map(v => v * 255)) : h; }
@@ -7209,7 +7266,11 @@ function syncLyrics() {
     const w = wordTimes[i], p = Math.min(1, Math.max(0, (t - w.t) / Math.max(0.05, w.e - w.t)));
     if (p === curP[i]) continue;
     curP[i] = p;
-    if (!curWords[i].chs) curWords[i].firstChild.style.backgroundImage = `linear-gradient(90deg, var(--lit) ${(p * 118 - 18).toFixed(1)}%, var(--dim) ${(p * 118).toFixed(1)}%)`;
+    if (!curWords[i].chs) {
+      const s = curWords[i].firstChild.style, a = (p * 118 - 18).toFixed(1), b = (p * 118).toFixed(1);
+      if (colrPair) s.webkitMaskImage = `linear-gradient(90deg, #000 ${a}%, rgb(0 0 0 / .3) ${b}%)`; // (a colour font: see .fp-colr; -webkit-: WebView 114 to 119 have no mask-image)
+      else s.backgroundImage = `linear-gradient(90deg, var(--lit) ${a}%, var(--dim) ${b}%)`;
+    }
     curWords[i].classList.toggle('now', p > 0 && p < 1);
     curWords[i].classList.toggle('on', p > 0);
     const chs = curWords[i].chs;
@@ -15067,8 +15128,9 @@ function kinLayout(S, look, CW, CH) {
   const bx = r0.width ? [r0.left * d, r0.top * d, r0.right * d, r0.bottom * d] : [0, 0, CW, CH];
   const m = Math.min(bx[2] - bx[0], bx[3] - bx[1]) * .05;
   const box = { x0: bx[0] + m, y0: bx[1] + m, x1: bx[2] - m, y1: bx[3] - m }, W = box.x1 - box.x0, H = box.y1 - box.y0;
-  const fp = curPair();
+  const fp = curPair().colr ? FONT_PAIRS[0] : curPair(); // (a colour font's own colours would spoil the atlas's masks — the fill red, the outline green: Poster's face)
   const font = look.font || { family: fp.poster + ', Impact, sans-serif' }, kfont = look.kicker || font, lh = (look.lh || .95) * (look.font ? 1 : fp.lh || 1);
+  const caps = look.caps && !(fp.script && !look.font); // (a script face in capitals can't be read)
   const ws = S.words.map(t => ({ t, small: kinSmall(t) && S.words.length > 1 }));
   let rows = [];
   const kind = look.rows;
@@ -15081,7 +15143,7 @@ function kinLayout(S, look, CW, CH) {
     if (row && ws[row[row.length - 1]].small && ws[i].small) row.push(i); else rows.push([i]);
   }
   const kicker = row => kind !== 'one' && rows.length > 1 && row.every(k => ws[k].small);
-  rows.forEach(row => { for (const k of row) { const kk = kicker(row); ws[k].font = kk ? kfont : font; if (look.caps && !kk) ws[k].t = ws[k].t.toLocaleUpperCase(); } });
+  rows.forEach(row => { for (const k of row) { const kk = kicker(row); ws[k].font = kk ? kfont : font; if (caps && !kk) ws[k].t = ws[k].t.toLocaleUpperCase(); } });
   const mg = kin.mg, wd = ws.map(w => { mg.font = fnt(w.font, 100); return mg.measureText(w.t).width; });
   const sp = k => { mg.font = fnt(ws[k].font, 100); return mg.measureText(' ').width * (look.gap || 1); }; // (gap: wider, for a look with thick edges)
   const wide = look.wide || .9, cap = look.cap || .4;

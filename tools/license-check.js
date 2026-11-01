@@ -11,12 +11,19 @@ const linked = new Set([...legal.matchAll(/href="(licenses\/[^"#]+)"/g)].map(m =
 for (const f of fs.readdirSync('licenses')) if (!linked.has('licenses/' + f)) problems.push(`licenses/${f} isn't linked from legal.html's Licenses`);
 for (const f of linked) if (!fs.existsSync(f)) problems.push(`legal.html links ${f}, which doesn't exist`);
 
-// 2. Every font has its license text: the app's in licenses/, the website's next to it in docs/fonts/
+// 2. Every font family has its own license text, one: the SIL OFL 1.1 with the family's copyright line, or the Apache
+// License 2.0 (<Family>-OFL.txt or <Family>-Apache-2.0.txt, the family as its files start: TiltPrism-400-latin.woff2 is
+// Tilt Prism's, and Tilt Neon's text doesn't cover it). The app's in licenses/, the website's next to it in docs/fonts/
 const family = f => f.split('-')[0];
 for (const [dir, texts] of [['fonts', 'licenses'], ['docs/fonts', 'docs/fonts']]) {
-  const have = fs.readdirSync(texts).filter(f => f.endsWith('.txt')).map(family);
-  for (const f of fs.readdirSync(dir).filter(f => f.endsWith('.woff2')))
-    if (!have.includes(family(f))) problems.push(`${dir}/${f} has no license text in ${texts}/`);
+  const own = fs.readdirSync(texts).filter(f => /^[^-]+-(OFL|Apache-2\.0)\.txt$/.test(f));
+  for (const fam of new Set(fs.readdirSync(dir).filter(f => /\.(woff2|ttf)$/.test(f)).map(family))) {
+    const t = own.filter(f => family(f) === fam);
+    if (t.length !== 1) { problems.push(`${dir}/: ${fam} has ${t.length ? t.length + ' license texts' : 'no license text'} in ${texts}/ (one: ${fam}-OFL.txt or ${fam}-Apache-2.0.txt)`); continue; }
+    const s = read(path.join(texts, t[0]));
+    if (t[0].endsWith('-OFL.txt') ? !/Version 1\.1/.test(s) || !/Copyright/i.test(s.split('This Font Software is licensed')[0]) : !/Version 2\.0/.test(s))
+      problems.push(`${texts}/${t[0]} isn't ${t[0].endsWith('-OFL.txt') ? 'the SIL OFL 1.1 with the family\'s copyright line' : 'the Apache License 2.0'}`);
+  }
 }
 
 // 3. The copies that must stay identical
