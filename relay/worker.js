@@ -23,11 +23,17 @@ const LIMITS = { // per topic: people at once, the biggest message, and messages
 
 const SHARE = /^\/s\/([A-Za-z0-9]{12})$/, SHARE_MAX = 256 * 1024; // (a short link's copy: the biggest — a 10,000-song playlist of any kind, with room; a bigger one gets the long link)
 const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, PUT, POST, DELETE, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type, X-Delete-Hash, X-Delete-Token, Authorization', 'Access-Control-Max-Age': '86400' };
-// (per address: so many at once, then so many an hour — held only in this Worker's memory, never kept or logged)
+// (per address: so many at once, then so many an hour — held only in this Worker's memory, never kept or logged, and
+// forgotten after an hour unused, when its allowance is whole again anyway)
 const limit = (burst, hourly) => {
-  const m = new Map();
-  return ip => { const now = Date.now(), b = m.get(ip) || { tokens: burst, at: now }; b.tokens = Math.min(burst, b.tokens + (now - b.at) * hourly / 3600e3); b.at = now;
-    if (m.size > 5000) m.clear(); m.set(ip, b); if (b.tokens < 1) return false; b.tokens -= 1; return true; };
+  const m = new Map(); // (in the order they were last used: the oldest first)
+  return ip => {
+    const now = Date.now();
+    for (const [k, v] of m) { if (now - v.at < 3600e3) break; m.delete(k); }
+    const b = m.get(ip) || { tokens: burst, at: now }; b.tokens = Math.min(burst, b.tokens + (now - b.at) * hourly / 3600e3); b.at = now;
+    m.delete(ip); if (m.size >= 5000) m.clear(); m.set(ip, b);
+    if (b.tokens < 1) return false; b.tokens -= 1; return true;
+  };
 };
 const putOk = limit(20, 20); // (short links made)
 const countOk = limit(3, 3); // (counts: loose — a school's or a phone network's people can share one address)
