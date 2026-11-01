@@ -12250,6 +12250,7 @@ function toggleFull() {
 // Android back button: close what's open, leave full screen, leave the song for the home page (it keeps playing),
 // and from the home page, put the app in the background
 if (native) Capacitor.Plugins.App.addListener('backButton', () => {
+  wake(); // (a press, as any key's: the controls back, their wait counted from it — not gone a moment after a panel's closed)
   const pop = document.querySelector(':popover-open:not(.toast)');
   if (pop) pop.hidePopover();
   else if (topDialog()) { // the one on top
