@@ -3283,7 +3283,7 @@ const scatter = ch => { for (const [v, m] of [['--dx', 1.4], ['--dy', 1.1], ['--
 // lanimPick: the user's pick; lanim: the one in use — Classic while Extreme lyrics are on (the lines then only show behind
 // another app: no need of a 3D style working away unseen meanwhile)
 let lanimPick = LANIMS.includes(store.get('netherflow.lanim')) ? store.get('netherflow.lanim') : 'Classic', lanim = lanimPick;
-const lens = { k: -1, p: null }; // (Lens: the word it's on, in which line — see lensFocus)
+const lens = { k: -1, p: null, laid: '' }; // (Lens: the word it's on, in which line, the size of that line's own layout — see lensFocus)
 // The styles that bring their own code (Wall, Fisheye, Fisheye Emoji, Emoji Stack): LA_HOOKS[name] = { build({ p, deck, words, text }) as a line's laid out (buildStage),
 // frame() every frame (syncLyrics), fit(cur, { ls, h, phone }) to size the line (fitDeck) } — each optional.
 const LA_HOOKS = {};
@@ -7233,7 +7233,7 @@ function syncLyrics() {
 // to keep it in the middle — where it'll be once the sizes have settled, from an unseen copy laid out at once. The words
 // aren't laid out again: each is scaled and moved there from where it is (see the CSS). from, from fitDeck: a new line's
 // words glide in from the size the line had before fitDeck gave it Lens's (as a share of that), as they did when their font
-// size glided; the line already there takes its new size or typeface at once, as the layout did
+// size glided. A line whose own layout changes under it (a new size, its typeface arriving) takes it at once, as it did
 function lensFocus(from) {
   let k = 0; for (let i = 0; i < curWords.length; i++) if (curP[i] > 0) k = i;
   if (!curWords.length || k === lens.k && lens.p === curWords) return;
@@ -7241,6 +7241,8 @@ function lensFocus(from) {
   lens.k = k; lens.p = curWords;
   const set = (ws, fit, rest = 1) => ws.forEach((w, i) => { w.style.setProperty('--d', Math.abs(i - k)); w.style.setProperty('--side', i < k ? -1 : 1); const f = i === k ? fit : rest; if (f < 1) w.style.setProperty('--fit', f.toFixed(3)); else w.style.removeProperty('--fit'); });
   const p = curWords[0].parentElement, ghost = p.cloneNode(true), dk = p.closest('.deck'), deck = dk?.clientWidth || stage.clientWidth;
+  const laid = p.offsetWidth + 'x' + p.offsetHeight, snap = !fresh && laid !== lens.laid; // (the words' own layout: changed, or not)
+  lens.laid = laid;
   const around = [p.previousElementSibling, p.nextElementSibling]; // (the lines before and after: the copy goes in between)
   ghost.classList.add('lens-ghost');
   p.after(ghost);
@@ -7276,7 +7278,6 @@ function lensFocus(from) {
   }
   const W = ghost.offsetWidth, x = gws[k].offsetLeft + gws[k].offsetWidth / 2, fs = parseFloat(getComputedStyle(gws[k]).fontSize) || 0, goal = at();
   ghost.remove();
-  const snap = !fresh && from !== undefined;
   if (snap) dk?.classList.add('lens-snap');
   set(curWords, fit, rest);
   put(goal);
