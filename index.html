@@ -1959,7 +1959,7 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
 .skin-glass.has-art .core::after { background: linear-gradient(172deg, rgba(255,255,255,.3), rgba(255,255,255,.05) 40%, transparent 50%),
   repeating-radial-gradient(circle, transparent 0 2.2px, rgba(255,255,255,.075) 2.5px 2.8px, transparent 3.1px 3.6px); }
 .skin-glass.has-art .core svg { filter: drop-shadow(0 1px 2px rgba(0,0,0,.7)); }
-.skin-glass .play:hover .core { transform: scale(1.08); }
+@media (hover: hover) and (pointer: fine) { .skin-glass .play:hover .core { transform: scale(1.08); } }
 .skin-glass .play:active .core { transform: scale(.92); box-shadow: inset 0 0 0 1px #fff, inset 0 -3px 7px rgba(110,140,220,.24), 0 6px 16px rgba(0,0,0,.45); }
 .skin-glass .core svg { width: 18px; height: 18px; }
 .skin-glass .i-play path { d: path('M7.5 5.3v13.4a1.3 1.3 0 0 0 1.98 1.1l10.7-6.7a1.3 1.3 0 0 0 0-2.2L9.48 4.2A1.3 1.3 0 0 0 7.5 5.3z'); }
@@ -2137,7 +2137,7 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
 .skin-glass .ck { --ch: 18px; width: 18px; height: 18px; color: var(--acc); stroke-width: 2; }
 .skin-glass .gs-row.is-nav { cursor: var(--cur-hand, pointer); transition: background-color .15s; }
 .skin-glass .gs-help { min-width: 0; }
-.skin-glass .gs-help > summary { list-style: none; display: flex; align-items: center; gap: 4px; min-width: 0; cursor: var(--cur-hand, pointer); border-radius: 4px; }
+.skin-glass .gs-help > summary { list-style: none; display: inline-flex; max-width: 100%; align-items: center; gap: 4px; min-width: 0; cursor: var(--cur-hand, pointer); border-radius: 4px; }
 .skin-glass .gs-help > summary::-webkit-details-marker { display: none; }
 .skin-glass .gs-help > summary span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .skin-glass .gs-help > summary svg { flex: none; width: 12px; height: 12px; color: var(--t2); transition: rotate .2s; }
@@ -2365,7 +2365,9 @@ body.skin-glass.sing:not(.home) .ab-bar { bottom: calc(100% + 12px + 48px + 8px)
 .skin-glass .q { font-family: var(--ui); }
 .skin-glass .chip { border: 0; background: var(--f-rest); color: var(--t1); font: 400 var(--fs-2)/1 var(--ui); padding: 9px 14px; }
 .skin-glass .chip[aria-pressed=true] { background: var(--f-thumb); font-weight: 600; color: var(--t1); }
-.skin-glass .row:is(:hover, :focus-visible) { padding-left: 12px; background: var(--f-row); color: var(--t1); box-shadow: none; border-radius: 14px; }
+.skin-glass .row:focus-visible { padding-left: 12px; background: var(--f-row); color: var(--t1); border-radius: 14px; }
+@media (hover: hover) and (pointer: fine) { .skin-glass .row:hover { padding-left: 12px; background: var(--f-row); color: var(--t1); box-shadow: none; border-radius: 14px; } }
+.skin-glass .row:hover { padding-left: 12px; }
 .skin-glass .row:focus-visible { box-shadow: inset 0 0 0 2px var(--acc); }
 .skin-glass .row:is(:hover, :focus-visible) .idx, .skin-glass .ritem:has(.row:hover, .row:focus-visible) .rmore { color: inherit; }
 .skin-glass .row small { opacity: 1; font: 400 var(--fs-2)/var(--lh-2) var(--ui); color: var(--t2); }
@@ -2380,7 +2382,7 @@ body.skin-glass.sing:not(.home) .ab-bar { bottom: calc(100% + 12px + 48px + 8px)
   .skin-glass .seg button:not([aria-pressed=true]):hover, .skin-glass .presets button:not([aria-pressed=true]):hover { background: rgba(255,255,255,.06); }
   .skin-glass .switch:hover { background: rgba(255,255,255,.22); }
   .skin-glass .switch[aria-checked=true]:hover { background: color-mix(in srgb, var(--acc), white 12%); }
-  .skin-glass .pill:not(:disabled):hover { background: linear-gradient(180deg, rgb(255 255 255 / .26), rgb(255 255 255 / .06) 55%, rgb(0 0 30 / .04)), var(--acc); }
+  .skin-glass .pill:not(.ghost, .tinted, :disabled):hover { background: linear-gradient(180deg, rgb(255 255 255 / .26), rgb(255 255 255 / .06) 55%, rgb(0 0 30 / .04)), var(--acc); }
   .skin-glass :is(.pill.ghost, .stepper .step, .consent .acts .link):not(:disabled):hover { background: var(--f-hover); }
   .skin-glass :is(.pill.tinted, .toast-act, .singbar .link, .hist-h .link):hover { background: rgb(var(--acc-rgb) / .24); }
   .skin-glass :is(.gp-back, .gp-up, .qend .icon-btn, .nudge button, #abX):hover { background: rgba(255,255,255,.1); }
@@ -2407,7 +2409,7 @@ body.skin-glass.sing:not(.home) .ab-bar { bottom: calc(100% + 12px + 48px + 8px)
 .skin-glass.tv :is(.mi, .gs-row.is-nav, .qplay, .cast-dev):focus-visible :is(.gs-t, .gs-d, .gs-v, small, b, .ico, svg) { color: #0b0d16; }
 .skin-glass.tv .gs-row.is-nav:focus-visible { border-radius: var(--r-group); }
 .skin-glass.tv .switch:focus-visible { outline: 3px solid var(--t1); outline-offset: 3px; scale: 1.06; box-shadow: 0 10px 24px rgba(0,0,0,.45); }
-.skin-glass.tv .gs-help > summary:focus-visible { outline: 0; scale: 1.04; background: var(--t1); color: #0b0d16; box-shadow: 0 10px 24px rgba(0,0,0,.45); padding: 0 6px; margin-inline: -6px; }
+.skin-glass.tv .gs-help > summary:focus-visible { outline: 0; scale: 1.04; background: var(--t1); color: #0b0d16; box-shadow: 0 10px 24px rgba(0,0,0,.45); padding: 2px 8px; margin: -2px -8px; border-radius: 10px; }
 .skin-glass.tv .gs-help > summary:focus-visible svg { color: #0b0d16; }
 .skin-glass.tv .skin-card:focus-visible { outline: 3px solid var(--t1); outline-offset: 3px; scale: 1.06; box-shadow: 0 10px 24px rgba(0,0,0,.45); }
 .skin-glass.tv .qrow:has(.qgrip.tv-edit) { translate: 0 -2px; background: rgba(255,255,255,.14); }
@@ -2660,7 +2662,7 @@ body.skin-glass.sing:not(.home) .ab-bar { bottom: calc(100% + 12px + 48px + 8px)
 <dialog id="consent" class="consent" aria-labelledby="consentTitle">
   <div class="kicker lbl">Welcome to NetherFlow · by Volodya.rua</div>
   <h2 id="consentTitle" tabindex="-1" autofocus>Before you press play</h2>
-  <p><span class="c-lead">NetherFlow is a free, open-source player for personal use.</span> <span class="c-p">It plays songs from YouTube, podcasts from their own hosts and free audiobooks from the Internet Archive, and shows lyrics from third-party services. It doesn't host any music, podcasts or lyrics, and it isn't affiliated with any of those services. It shows no ads of its own and doesn't block or skip anything.</span> <span class="c-p">It can also save songs on your device for offline listening by downloading them from YouTube, which YouTube's terms don't allow (and the rights holders or the law where you live may not either), and make short story clips of a song to share: those choices are yours.</span> <span class="c-p">A playlist you choose to edit together is kept, encrypted, on NetherFlow's own relay (with public relays as a backup), and anyone with its link can see and change it. There are no accounts and no tracking of what you do. <span id="countSay">Each install is counted once, with nothing about you (untick Count me once to skip it).</span></span></p>
+  <p>NetherFlow is a free, open-source player for personal use. It plays songs from YouTube, podcasts from their own hosts and free audiobooks from the Internet Archive, and shows lyrics from third-party services. It doesn't host any music, podcasts or lyrics, and it isn't affiliated with any of those services. It shows no ads of its own and doesn't block or skip anything. It can also save songs on your device for offline listening by downloading them from YouTube, which YouTube's terms don't allow (and the rights holders or the law where you live may not either), and make short story clips of a song to share: those choices are yours. A playlist you choose to edit together is kept, encrypted, on NetherFlow's own relay (with public relays as a backup), and anyone with its link can see and change it. There are no accounts and no tracking of what you do. <span id="countSay">Each install is counted once, with nothing about you (untick Count me once to skip it).</span></p>
   <p>By continuing you agree to the <button class="inline-link" data-legal="terms">Terms of Use</button> and the <button class="inline-link" data-legal="privacy">Privacy Policy</button>.</p>
   <p id="declined" hidden>You need to accept the terms to use NetherFlow.</p>
   <label class="count-me"><input type="checkbox" id="countMe" aria-describedby="countSay"><span><b>Count me once</b></span></label>
@@ -4393,6 +4395,7 @@ function applySkin() {
   body.classList.toggle('skinned', !!S);
   showTheme(S ? (THEMES.includes(bg) && !SCENES.has(bg) ? bg : skin) : ownTheme());
   for (const id of ['moods', 'textPanel', 'queuePanel', 'togetherPanel', 'castPanel', 'syncPanel', 'eqPanel']) $(id).gpKeep?.();
+  gsConsent();
   document.querySelector('.badge textPath').textContent = S?.badge || BADGE;
   const [m1, m2] = S?.msg || ['Turn silence', 'into song'], msg = document.querySelector('.home-stage .msg');
   msg.replaceChildren(m1, el('br'), el('em', '', m2));
@@ -4413,6 +4416,18 @@ function fitHome() {
 }
 { const ro = new ResizeObserver(() => fitHome()); ro.observe($('home')); ro.observe($('home').querySelector('.home-now')); ro.observe($('recent')); } // (not the headline's own box: fitting it, it'd ask again)
 document.fonts?.ready.then(() => fitHome());
+// (the consent's words in Glass: its first sentence a lead, the rest three paragraphs — the same words, in boxes of their
+// own only while Glass is on: every other theme's paragraph stays one run of text, as it was)
+function gsConsent() {
+  const say = $('countSay'), p = say.closest('p'), split = !!p.querySelector('.c-lead');
+  if (skin === 'Glass' && !split && p.firstChild.nodeType === 3) {
+    const t = p.firstChild.data, cuts = ['for personal use. ', 'block or skip anything. ', 'those choices are yours. '].map(c => t.indexOf(c) + c.length - 1);
+    if (cuts.some(c => c < 1)) return; // (the words not as they were: left as one)
+    const box = (cls, ...k) => { const e = el('span', cls); e.append(...k); return e; };
+    p.gsText = t;
+    p.replaceChildren(box('c-lead', t.slice(0, cuts[0])), ' ', box('c-p', t.slice(cuts[0] + 1, cuts[1])), ' ', box('c-p', t.slice(cuts[1] + 1, cuts[2])), ' ', box('c-p', t.slice(cuts[2] + 1), say));
+  } else if (skin !== 'Glass' && split) p.replaceChildren(p.gsText, say);
+}
 function setSkin(name) {
   const need = SKINS[name]?.needs;
   if (need && bgq !== need && SKIN_LIST.includes(name)) { bgq = need; store.set('netherflow.bg', need); resize(); applyKin(); } // (a theme for one quality: that quality on)
