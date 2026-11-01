@@ -308,9 +308,19 @@ body.home .singbar { display: none; } /* (its voice slider is for the lyrics: no
 /* (a mask also clips above and below its box: room for the sung word's accents, its block's turn and its glow, nothing
    moved — on a short screen the deck is the sung line alone, and its tops were cut flat — QA) */
 .la-lens .deck.lyr { padding-block: var(--lens-pad, 48px); margin-block: calc(-1 * var(--lens-pad, 48px)); }
-.la-lens .lyr .cur { position: relative; left: 50%; width: max-content; white-space: nowrap; text-align: left; perspective: 900px; transition: translate .5s cubic-bezier(.2,.8,.2,1); }
-.la-lens .cur .w { --d: 3; font-size: calc((1.75 - min(var(--d), 3) * .32) * var(--fit, 1) * 1em); opacity: calc(1 - min(var(--d), 4) * .17); vertical-align: middle;
-  transform: rotateY(calc(var(--side, 1) * min(var(--d), 3) * -13deg)); animation: none; transition: font-size .4s cubic-bezier(.2,.8,.2,1), opacity .4s, transform .4s; }
+.la-lens .lyr .cur { position: relative; left: 50%; width: max-content; white-space: nowrap; text-align: left; perspective: 900px;
+  transition: translate .5s cubic-bezier(.2,.8,.2,1), perspective-origin .4s cubic-bezier(.2,.8,.2,1); }
+/* (a word's size, --z: laid out only in lensFocus's unseen copy. The words themselves stay laid out as they came in, every
+   one far off, and are scaled and moved to where the copy has them, the lines before and after by the room the sung word
+   takes — a size gliding in the layout laid the line out again every frame of the glide: a stutter on a phone (1.6.3).
+   Their letters a little closer, so the sung word's are as far apart as .cur's .012em once it's scaled up, as in the copy) */
+.la-lens .cur .w { --d: 3; --z: calc((1.75 - min(var(--d), 3) * .32) * var(--fit, 1)); font-size: .79em; letter-spacing: calc(.012em / 1.75);
+  opacity: calc(1 - min(var(--d), 4) * .17); vertical-align: middle; animation: none;
+  translate: var(--tx, 0) var(--ty, 0); rotate: y calc(var(--side, 1) * min(var(--d), 3) * -13deg); scale: calc(var(--z) / .79);
+  transition: translate .4s cubic-bezier(.2,.8,.2,1), scale .4s cubic-bezier(.2,.8,.2,1), rotate .4s, opacity .4s; }
+.la-lens .lens-ghost .w { font-size: calc(var(--z) * 1em); letter-spacing: inherit; }
+.la-lens .deck.lyr :is(.prev, .next) { transition: translate .4s cubic-bezier(.2,.8,.2,1); }
+.lens-snap, .lens-snap * { transition: none !important; } /* (a new line's words put where they come in from, a refitted line's where they go: see lensFocus) */
 .lens-ghost { position: absolute !important; visibility: hidden; translate: none !important; }
 .lens-ghost, .lens-ghost * { transition: none !important; animation: none !important; }
 /* Pop: the words not sung yet a little small and faint; each pops up full as it's sung, and a word with an emoji of its
@@ -3818,7 +3828,7 @@ function fitDeck() {
   if (!deck) return;
   const phone = innerWidth <= 720, ls = LSIZE[lsize], h = stage.clientHeight, cur = deck.querySelector('.cur'), title = deck.querySelector('.it-title');
   if (cur && LA_HOOKS[lanim]?.fit) LA_HOOKS[lanim].fit(cur, { ls, h, phone }); // (a style that sizes its own line)
-  else if (cur && lanim === 'Lens') { cur.style.fontSize = Math.min(innerHeight * (phone ? .07 : .1), stage.clientWidth / 10) * ls + 'px'; lens.k = -1; lensFocus(); }
+  else if (cur && lanim === 'Lens') { const was = parseFloat(getComputedStyle(cur).fontSize), px = Math.min(innerHeight * (phone ? .07 : .1), stage.clientWidth / 10) * ls; cur.style.fontSize = px + 'px'; lens.k = -1; lensFocus(was / px); }
   else if (cur && !SELF_LAID.has(lanim)) fitText(cur, Math.min(innerHeight * (phone ? .095 : .15), phone ? 80 : 150) * ls, h * (innerHeight <= 400 ? .92 : lanim === 'Tower' ? .86 : .58)); // (very short: alone on the stage; Tower: the line alone)
   if (title) fitText(title, Math.min(innerHeight * .13, phone ? 64 : 140), h * .42);
 }
@@ -7220,16 +7230,36 @@ function syncLyrics() {
   else LA_HOOKS[lanim]?.frame?.();
 }
 // Lens: the word being sung (the last one begun) given the most room, the rest by how far off they are; the row moved
-// to keep it in the middle — where it'll be once the sizes have settled, from an unseen copy laid out at once
-function lensFocus() {
+// to keep it in the middle — where it'll be once the sizes have settled, from an unseen copy laid out at once. The words
+// aren't laid out again: each is scaled and moved there from where it is (see the CSS). from, from fitDeck: a new line's
+// words glide in from the size the line had before fitDeck gave it Lens's (as a share of that), as they did when their font
+// size glided; the line already there takes its new size or typeface at once, as the layout did
+function lensFocus(from) {
   let k = 0; for (let i = 0; i < curWords.length; i++) if (curP[i] > 0) k = i;
   if (!curWords.length || k === lens.k && lens.p === curWords) return;
+  const fresh = lens.p !== curWords;
   lens.k = k; lens.p = curWords;
   const set = (ws, fit, rest = 1) => ws.forEach((w, i) => { w.style.setProperty('--d', Math.abs(i - k)); w.style.setProperty('--side', i < k ? -1 : 1); const f = i === k ? fit : rest; if (f < 1) w.style.setProperty('--fit', f.toFixed(3)); else w.style.removeProperty('--fit'); });
-  const p = curWords[0].parentElement, ghost = p.cloneNode(true), deck = p.closest('.deck')?.clientWidth || stage.clientWidth;
+  const p = curWords[0].parentElement, ghost = p.cloneNode(true), dk = p.closest('.deck'), deck = dk?.clientWidth || stage.clientWidth;
   ghost.classList.add('lens-ghost');
   p.after(ghost);
   const gws = [...ghost.querySelectorAll('.w')];
+  // each word moved from its own place to the copy's (both read in one layout), the turned ones seen from the copy's middle.
+  // The words' own row is lower than the copy's, whose sung word stands tall: the stage keeps the line in its middle, so
+  // the lines before and after are moved by half that gap each
+  const at = () => { const dy = (p.offsetHeight - ghost.offsetHeight) / 2, mid = gws[k].offsetTop + gws[k].offsetHeight / 2 + dy;
+    return { dy, W: ghost.offsetWidth, to: curWords.map((w, i) => [gws[i].offsetLeft + gws[i].offsetWidth / 2 - w.offsetLeft - w.offsetWidth / 2, mid - w.offsetTop - w.offsetHeight / 2]) }; };
+  const put = ({ dy, W, to }) => {
+    curWords.forEach((w, i) => { w.style.setProperty('--tx', to[i][0].toFixed(1) + 'px'); w.style.setProperty('--ty', to[i][1].toFixed(1) + 'px'); });
+    p.style.perspectiveOrigin = (W / 2).toFixed(1) + 'px 50%';
+    p.previousElementSibling?.style.setProperty('translate', `0 ${dy.toFixed(1)}px`);
+    p.nextElementSibling?.style.setProperty('translate', `0 ${(-dy).toFixed(1)}px`);
+  };
+  if (fresh && from > 0 && isFinite(from) && Math.abs(from - 1) > .01) { // (every word still far off, at that size: put there at once, to glide from)
+    for (const w of [...gws, ...curWords]) w.style.setProperty('--fit', from.toFixed(3));
+    put(at());
+    dk?.classList.add('lens-snap'); p.offsetWidth; dk?.classList.remove('lens-snap');
+  }
   set(gws, 1);
   let fit = Math.min(1, deck * .9 / (gws[k].offsetWidth || 1)); // (a long word: no wider than the stage)
   if (fit < 1) set(gws, fit);
@@ -7244,15 +7274,19 @@ function lensFocus() {
     if (rest === floor && gws.length <= 6) fit *= Math.max(.7, Math.min(1, (safe - gaps - floor * others) / wk));
     set(gws, fit, rest);
   }
-  const W = ghost.offsetWidth, x = gws[k].offsetLeft + gws[k].offsetWidth / 2, fs = parseFloat(getComputedStyle(gws[k]).fontSize) || 0;
+  const W = ghost.offsetWidth, x = gws[k].offsetLeft + gws[k].offsetWidth / 2, fs = parseFloat(getComputedStyle(gws[k]).fontSize) || 0, goal = at();
   ghost.remove();
+  const snap = !fresh && from !== undefined;
+  if (snap) dk?.classList.add('lens-snap');
   set(curWords, fit, rest);
+  put(goal);
+  if (snap) { p.offsetWidth; dk?.classList.remove('lens-snap'); }
   // the row glides to put the sung word in the middle, but no further than leaves an end of the stage empty while the
   // other is cut: whole lines stay whole, and in a long one the sung word (its block too, .14em past it) stays clear of
   // the edges' fade (QA, 1.6.2: words were cut in half at the stage's edges, the line's ends out of sight)
   const half = safe / 2 - fs * .14, lo = Math.min(half - W, -half), hi = Math.max(half - W, -half);
   p.style.translate = `${Math.min(hi, Math.max(lo, -x)).toFixed(1)}px 0`;
-  p.closest('.deck')?.style.setProperty('--lens-pad', Math.round(fs * .7) + 'px'); // (the fade's box: room above and below, see the CSS)
+  dk?.style.setProperty('--lens-pad', Math.round(fs * .7 - goal.dy) + 'px'); // (the fade's box: room above and below the words as drawn, see the CSS)
 }
 // The self-laid styles (SELF_LAID) place the line's letters (Cylinder: words) themselves, round the middle of the
 // stage: layoutLyricShape measures them, sized to the stage, and turnLyricShape places them every frame, following
