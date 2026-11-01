@@ -1876,13 +1876,14 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
    reading brighter than a curve. It follows the pointer (--la; on Solid it rests), brighter pressed (--pl), with the
    growing in (--g). The stops (--g-spec) and the radius (--g-r) from the script. */
 .skin-glass :is(.top-l, .mood, .files, .bar, .singbar, .ab-bar)::before { content: ''; position: absolute; inset: 0; z-index: 2; border-radius: inherit; padding: 1px; pointer-events: none;
-  --c: cos(var(--la));
-  --at: calc(.06 + .94 * (pow(max(var(--c), 0), 12) + .55 * pow(max(-1 * var(--c), 0), 12)) + .14 * (pow(max(var(--c), 0), 1.6) + .55 * pow(max(-1 * var(--c), 0), 1.6)));
-  --ab: calc(.06 + .94 * (pow(max(-1 * var(--c), 0), 12) + .55 * pow(max(var(--c), 0), 12)) + .14 * (pow(max(-1 * var(--c), 0), 1.6) + .55 * pow(max(var(--c), 0), 1.6)));
+  --at: .21; --ab: .14; /* (the straight runs as they are at rest, where pow() isn't known — Android WebView 114 to 119, no pointer there to move them: with it in, the whole edge went) */
   background: conic-gradient(from var(--la) at 100% 50%, var(--g-spec, #fff, #fff)) 0 0 / var(--g-r, 23px) 100% no-repeat, conic-gradient(from var(--la) at 0 50%, var(--g-spec, #fff, #fff)) 100% 0 / var(--g-r, 23px) 100% no-repeat,
     linear-gradient(rgba(255,255,255,calc(.82 * var(--at))), rgba(255,255,255,calc(.82 * var(--ab)))) 50% 0 / calc(100% - 2 * var(--g-r, 23px) + 1px) 100% no-repeat;
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
   opacity: var(--g, 1); filter: brightness(calc(1 + .3 * var(--pl))); transition: --la .45s cubic-bezier(.2,.8,.2,1); } /* (--pl set only while pressed: no filter at rest) */
+@supports (width: calc(1px * pow(2, 2))) { .skin-glass :is(.top-l, .mood, .files, .bar, .singbar, .ab-bar)::before { --c: cos(var(--la));
+  --at: calc(.06 + .94 * (pow(max(var(--c), 0), 12) + .55 * pow(max(-1 * var(--c), 0), 12)) + .14 * (pow(max(var(--c), 0), 1.6) + .55 * pow(max(-1 * var(--c), 0), 1.6)));
+  --ab: calc(.06 + .94 * (pow(max(-1 * var(--c), 0), 12) + .55 * pow(max(var(--c), 0), 12)) + .14 * (pow(max(-1 * var(--c), 0), 1.6) + .55 * pow(max(var(--c), 0), 1.6))); } }
 /* a glint just inside the rim where it faces the light (.11–.18 of its radius in), a fainter one opposite: each round end
    shows the part on its own outer half, so it moves from end to end as the light goes round (not on Solid) */
 .skin-glass:not(.gl-solid) :is(.top-l, .mood, .files, .bar)::after { content: ''; position: absolute; inset: 0; z-index: 2; border-radius: inherit; pointer-events: none; opacity: var(--g, 1);
@@ -1902,6 +1903,7 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
 @keyframes glGlyph { 0%, 44% { opacity: 0; } 82% { opacity: 1; } }
 /* over something bright (the script's glassInk), a lens's icons and words dark — the glass stays clear, lifting what's dark behind them instead */
 .skin-glass .ink-dark { --ink: #0b0d16; --a: #1b2a5e; color: var(--ink); }
+.skin-glass .ink-dark :is(.tg-count, .dl-count) { color: #fff; } /* (the icons' counts: on the accent, now dark, their words light — dark on it they read 1.4 : 1) */
 .skin-glass .ink-dark :is(.sub, .time, .nudge, .brand), .skin-glass .mood.ink-dark { text-shadow: 0 0 1px rgba(255,255,255,.5), 0 0 2px rgba(255,255,255,.35); }
 .skin-glass .ink-dark :is(.link, .to-home) svg { filter: drop-shadow(0 0 1.2px rgba(255,255,255,.5)); }
 .skin-glass .bar.ink-dark .vol::-webkit-slider-thumb { background: var(--ink); box-shadow: 0 0 6px rgba(255,255,255,.6); }
@@ -2085,7 +2087,7 @@ body.skin-glass.sing:not(.home) .ab-bar { bottom: calc(100% + 66px); }
   .skin-glass .mood { height: 42px; padding: 0 16px 0 13px; }
 }
 @media (max-width: 900px) and (forced-colors: none) { /* (and a soft shade of its own behind the bare name: the light along the top never washes it out) */
-  .skin-glass .top .top-l::after { display: block; inset: -12px -22px; z-index: 0; opacity: 1; border-radius: 32px; transition: none; background: radial-gradient(closest-side, rgba(3,4,10,.58), rgba(3,4,10,.32) 72%, transparent); -webkit-mask: none; mask: none; }
+  .skin-glass .top .top-l::after { content: ''; position: absolute; pointer-events: none; display: block; inset: -12px -22px; z-index: 0; opacity: 1; border-radius: 32px; transition: none; background: radial-gradient(closest-side, rgba(3,4,10,.58), rgba(3,4,10,.32) 72%, transparent); -webkit-mask: none; mask: none; }
   .skin-glass .top .top-l.ink-dark::after { background: radial-gradient(closest-side, rgba(250,251,255,.62), rgba(250,251,255,.36) 72%, transparent); } /* (dark ink, over something bright: a light shade) */
   .skin-glass .top .top-l .brand { text-shadow: 0 0 2px rgba(3,4,10,.9), 0 0 7px rgba(3,4,10,.85); } /* (no glass under the bare name to hold what's bright: its own wide halo kept) */
   .skin-glass .top .top-l .to-home svg { filter: drop-shadow(0 0 2.5px rgba(3,4,10,.75)); }
@@ -3570,7 +3572,7 @@ function applyGlass() {
     glassInkSoon();
   });
   cancelAnimationFrame(glass.raf); glass.grow = glass.gi = 1;
-  for (const e of els) { cancelAnimationFrame(e.glassRaf); e.glassP = null; glassOff(e); }
+  for (const e of els) { cancelAnimationFrame(e.glassRaf); e.glassP = null; e.style.removeProperty('--pl'); e.style.removeProperty('transform-origin'); glassOff(e); } // (a press cut short by the change: its light gone with it — it stayed lit)
   glass.defs?.replaceChildren();
   if (t !== 'lens' && t !== 'frost') for (const e of els) e.classList.remove('ink-dark'); // (dark ink: over a lens or frost alone — a tint's own colour is dark)
   if (!t || t === 'solid') for (const e of all) { for (const k of ['--la', '--px', '--py', '--pl', '--g', 'scale', 'transform-origin']) e.style.removeProperty(k); e.glassLa = undefined; e.classList.remove('gl-grow'); } // (its light at rest)
@@ -3735,17 +3737,21 @@ function glassFit(e, glow = false) {
     // core, so it shows over a dark room): both before what holds the words, so a press never washes them out
     + `<feColorMatrix in="src" type="matrix" values="${glassSat(o.sat, o.g, o.w)}" result="lit"/>`
     + `<feColorMatrix in="map" type="matrix" values="${glassLightV(1)}" result="lightA" data-r="lightA"/><feComposite in="lit" in2="lightA" operator="in" result="light"/>`
+    + (drop ? '' : `<feGaussianBlur in="SourceGraphic" stdDeviation="${o.frost}" result="fr"/>`) // (the dock's frost, its middle)
+    // (the finger's light the colour of what it lights: a drop's clear picture, the dock's frost — from the clear one the
+    // frosted middle went sharp under it — and what holds the words knows of it, the dock's as a drop's: without it, a
+    // press on the dock lit its words away, 1.5 : 1 by the finger)
     + (glow ? `<feImage href="${glassGlow()}" x="0" y="0" width="1" height="1" preserveAspectRatio="none" result="glowI" data-r="glowI"/>`
-      + `<feColorMatrix in="src" type="matrix" values="${glassSat(1.25, 1, .42)}" result="glowL"/><feComposite in="glowL" in2="glowI" operator="in" result="glowC"/>`
+      + `<feColorMatrix in="${drop ? 'src' : 'fr'}" type="matrix" values="${glassSat(1.25, 1, .42)}" result="glowL"/><feComposite in="glowL" in2="glowI" operator="in" result="glowC"/>`
       + `<feComposite in="light" in2="glowC" operator="arithmetic" k2="1" k3="0" result="light2" data-r="glowK"/>`
-      + (drop ? `<feComposite in="dg" in2="glowC" operator="arithmetic" k2="1" k3="0" result="kin" data-r="glowK2"/>` : '') : '')
+      + `<feComposite in="${drop ? 'dg' : 'fr'}" in2="glowC" operator="arithmetic" k2="1" k3="0" result="kin" data-r="glowK2"/>` : '')
     // under its icons and words, what's bright behind held down (dark ink: what's dark lifted) by the map's band — a drop by
     // its own bent picture; the dock frosted in the middle (from the picture as it is), giving way to the bent rim, held by
     // the frost's own light
     + (drop ? `<feComposite in="bent" in2="${L}" operator="arithmetic" k2="1" k3="1" result="bl"/><feColorMatrix in="${glow ? 'kin' : 'dg'}" type="matrix" values="${glassKeepV(dark ? o.ad : o.a, dark)}" result="keep"/>`
-      : `<feGaussianBlur in="SourceGraphic" stdDeviation="${o.frost}" result="fr"/><feColorMatrix in="map" type="matrix" values="${glassZoneV(1)}" result="zone" data-r="zone"/>`
+      : `<feColorMatrix in="map" type="matrix" values="${glassZoneV(1)}" result="zone" data-r="zone"/>`
         + `<feComposite in="bent" in2="zone" operator="in" result="rim"/><feMerge result="body"><feMergeNode in="fr"/><feMergeNode in="rim"/></feMerge>`
-        + `<feComposite in="body" in2="${L}" operator="arithmetic" k2="1" k3="1" result="bl"/><feColorMatrix in="fr" type="matrix" values="${glassKeepV(dark ? o.ad : o.a, dark)}" result="keep"/>`)
+        + `<feComposite in="body" in2="${L}" operator="arithmetic" k2="1" k3="1" result="bl"/><feColorMatrix in="${glow ? 'kin' : 'fr'}" type="matrix" values="${glassKeepV(dark ? o.ad : o.a, dark)}" result="keep"/>`)
     + `<feColorMatrix in="map" type="matrix" values="${glassHoldV(1)}" result="hold" data-r="hold"/><feComposite in="keep" in2="hold" operator="arithmetic" k1="1" k3="-1" k4="1" result="keepm"/>`
     + `<feComposite in="bl" in2="keepm" operator="arithmetic" k1="1"${dark ? ' k3="-1" k4="1"' : ''}/>`;
   glass.defs.append(f);
