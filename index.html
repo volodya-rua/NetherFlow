@@ -1806,10 +1806,13 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
   clip-path: polygon(50% 0, 60% 22%, 86% 6%, 76% 32%, 100% 40%, 79% 55%, 96% 80%, 68% 72%, 60% 100%, 46% 78%, 22% 96%, 26% 70%, 0 66%, 20% 50%, 4% 24%, 32% 28%); }
 @keyframes sfx { 0% { transform: scale(0); opacity: 0; } 18% { transform: scale(1.12); opacity: 1; } 30% { transform: scale(1); } 80% { opacity: 1; } 100% { transform: scale(1.06); opacity: 0; } }
 /* — Glass: clear glass over a dark room of light. The floating controls (the header's capsules and the player's dock)
-     are lenses: on a computer each bends what's under it — magnified a little under a capsule, folded back on itself
-     along the rim, red, green and blue bent a little differently, so the rim splits the light (the script's applyGlass
-     and glassFit); a bright edge where the light catches it, following the pointer; light under a finger that presses
-     it. They grow in, their bending rising from none, rather than fading in. The panels, Sing's and Repeat a part's
+     are lenses: on a computer each capsule a clear drop, what's under it magnified and packed tighter toward the rim,
+     never folded, red and blue bent a little differently, so the rim splits the light; the dock frosted in the middle,
+     its rim a lens (the script's applyGlass and glassFit). Their light: a fine edge gathered where it faces the light
+     and fainter opposite, following the pointer, a glint just inside it, the rim lit in the colour of what's behind; a
+     darkened edge, a shade inside the bottom, a soft shadow, a fine grain. Under their icons and words what's bright
+     behind is held down; over something bright, their icons and words turn dark. A press gives like gel, light
+     spreading from the finger. They grow in, their bending rising first, rather than fading in. The panels, Sing's and Repeat a part's
      bars, toasts and dialogs are frosted glass with the same edge and a thin spectrum where the light meets their top;
      a panel grows out of the button that opened it, and goes back into it. The play button a lens, tinted by the cover.
      Tiers (body classes, from the script): gl-lens (the lenses), gl-frost (blur: a phone), gl-tint (no blur: Low
@@ -1819,7 +1822,7 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
      glass itself or what's in it fades. Nothing in the glass moves by itself (no spinning dot or record, no streak): an
      animation there redraws every lens at the screen's own rate, 240 times a second on a fast one, where the page's own
      work keeps to 60. — */
-@property --la { syntax: '<angle>'; inherits: true; initial-value: 340deg; } /* (the light's angle on each piece of glass: 0 up, clockwise — inherited, so its rim, a ::before, follows it) */
+@property --la { syntax: '<angle>'; inherits: true; initial-value: 322deg; } /* (the light's angle on each piece of glass: 0 up, clockwise — inherited, so its edge and glints follow it) */
 .sk-glass { background: radial-gradient(120% 85% at 16% -12%, rgba(170,196,255,.32), transparent 56%), linear-gradient(165deg, #0e1222, #05060b 72%); color: #f3f6ff;
   box-shadow: inset 0 0 0 1px rgba(255,255,255,.16), inset 0 1px 0 rgba(255,255,255,.5), inset 0 -1px 0 rgba(140,180,255,.22); }
 .sk-glass b { font: italic 500 19px/1 'Cormorant Garamond', Georgia, serif; letter-spacing: .01em; }
@@ -1840,40 +1843,72 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
 .skin-glass ::-webkit-scrollbar-thumb:hover { background: rgba(232,239,255,.55) padding-box; }
 .skin-glass .frame { padding-top: 16px; }
 /* the lenses: capsules over the backdrop (the dock a slab on a phone), dimmed a little in the middle, an edge of light */
-.skin-glass :is(.top-l, .mood, .files, .bar) { position: relative; } /* (Sing's bar fixed, Repeat a part's absolute: placed as they are) */
-.skin-glass :is(.top-l, .mood, .files, .bar, .singbar, .ab-bar) { border: 0; background: var(--g-clear); box-shadow: var(--g-edge), var(--g-drop); transition: box-shadow .3s, scale .44s var(--g-press); }
+.skin-glass :is(.top-l, .mood, .files, .bar) { position: relative; --ink: #fff; color: var(--ink); } /* (Sing's bar fixed, Repeat a part's absolute: placed as they are; their words and icons full white) */
+.skin-glass :is(.top-l, .mood, .files, .bar, .singbar, .ab-bar) { border: 0; background: var(--g-clear); box-shadow: var(--g-edge), var(--g-drop); }
+/* (the lenses, but on Solid: a darkened edge just inside the rim, a shade inside the bottom, a soft shadow below — each
+   with --g, its growing in: the script's glassGrow) */
+.skin-glass:not(.gl-solid) :is(.top-l, .mood, .files, .bar) { box-shadow: inset 0 0 2.2px 1.2px rgba(0,0,0,calc(.3 * var(--g, 1))), inset 0 -9px 14px -10px rgba(0,0,10,calc(.28 * var(--g, 1))),
+  0 7px 18px -6px rgba(0,0,0,calc(.5 * var(--g, 1))), 0 1px 3px rgba(0,0,0,calc(.28 * var(--g, 1))); }
+.skin-glass:not(.gl-solid) .bar { box-shadow: inset 0 0 2.2px 1.2px rgba(0,0,0,calc(.3 * var(--g, 1))), inset 0 -9px 14px -10px rgba(0,0,10,calc(.34 * var(--g, 1))),
+  0 18px 38px -12px rgba(0,0,0,calc(.66 * var(--g, 1))), 0 3px 8px rgba(0,0,0,calc(.3 * var(--g, 1))); }
 .skin-glass :is(.top-l, .mood, .files) { height: 46px; border-radius: 23px; }
 .skin-glass .top-l { padding: 0 20px 0 14px; flex: none; }
 .skin-glass .mood { padding: 0 20px 0 16px; gap: 10px; }
-.skin-glass .mood b { color: #fff; font-weight: 500; }
+.skin-glass .mood b { color: var(--ink); font-weight: 500; }
 .skin-glass .mood > i { width: 15px; height: 15px; animation: none; background: conic-gradient(from 200deg, #ff5f7a, #ffd27a, #8dffbf, #7fb2ff, #b88cff, #ff5f7a); box-shadow: 0 0 10px rgba(180,200,255,.5), inset 0 0 0 1.5px rgba(255,255,255,.5); }
-.skin-glass .files { padding: 0 5px; gap: 2px; flex-wrap: nowrap; }
+.skin-glass .files { padding: 0 9px; gap: 2px; flex-wrap: nowrap; } /* (the end icons a little in from the round ends: inside the band their light's held under, 4.5 : 1 over white) */
 .skin-glass .files > .link { flex: none; width: 36px; height: 36px; transition: background-color .2s, scale .44s var(--g-press); } /* (never squeezed narrower: in a narrow window the row takes the whole width instead) */
-.skin-glass :is(.files > .link, .to-home) svg { filter: drop-shadow(0 0 2.5px rgba(3,4,10,.75)); } /* (clear glass: the icons keep a faint dark halo of their own) */
+.skin-glass :is(.files > .link, .to-home) svg { filter: drop-shadow(0 0 1.2px rgba(3,4,10,.6)); } /* (clear glass: the icons keep a faint dark halo of their own) */
 .skin-glass.view-vis :is(.top-l, .mood, .files) { background: rgba(3,4,10,.42); } /* (the visualiser, the brightest thing behind them: dimmed more) */
-.skin-glass.gl-lens :is(.top-l, .mood, .files) { background: rgba(3,4,10,.05); } /* (a lens: it holds down what's bright behind its icons and words itself — clear, the rest as bright as it is) */
-.skin-glass .files > .link:hover, .skin-glass .to-home:hover { background: rgba(255,255,255,.09); color: #fff; box-shadow: inset 0 0 0 1px rgba(255,255,255,.1); }
+.skin-glass.gl-lens :is(.top-l, .mood, .files, .bar) { background: var(--g-grain, none) 0 0 / var(--g-gs, 64px) repeat, rgba(4,6,14,.03); } /* (a lens: it holds down what's bright behind its icons and words itself — clear, the rest as bright as it is; its grain its own) */
+.skin-glass .files > .link:hover, .skin-glass .to-home:hover { background: rgba(255,255,255,.09); color: var(--ink); box-shadow: inset 0 0 0 1px rgba(255,255,255,.1); }
+.skin-glass .files > .link.hot { color: var(--ink); } /* (Search too: full white, not the pale highlight) */
 .skin-glass :is(.files > .link, .to-home, .skip, .icon-btn):active { scale: .9; transition-duration: .12s; }
 .skin-glass .files .dl-count { right: -2px; }
 .skin-glass .tg-count { right: -3px; top: -2px; }
 .skin-glass .brand { font: italic 500 27px/1 'Cormorant Garamond', Georgia, serif; letter-spacing: 0; text-shadow: 0 1px 10px rgba(0,0,0,.4); }
-.skin-glass .brand sup { color: rgba(232,239,255,.75); }
+.skin-glass .brand sup { color: var(--ink); }
 /* (going round by Tab, or on a TV: the light ring the app draws, a dark halo round it, so it shows on bright glass too) */
 .skin-glass.kb :is(.files > .link, .to-home, .brand, .skip, .icon-btn, .play, .nudge button):focus-visible { box-shadow: 0 0 0 6px rgba(3,4,10,.62); }
-.skin-glass.kb .mood:focus-visible { box-shadow: var(--g-edge), var(--g-drop), 0 0 0 7px rgba(3,4,10,.62); }
-/* the light on them: a bright edge toward it, a fainter one opposite (two-sided, as a lens's rim), following the pointer */
-.skin-glass :is(.top-l, .mood, .files, .bar, .singbar, .ab-bar)::before { content: ''; position: absolute; inset: 0; z-index: 2; border-radius: inherit; padding: 1.4px; pointer-events: none;
-  background: conic-gradient(from var(--la), #fff, rgba(255,255,255,.42) 9%, rgba(255,255,255,.2) 22%, rgba(255,255,255,.2) 34%, rgba(255,255,255,.62) 50%, rgba(255,255,255,.2) 66%, rgba(255,255,255,.2) 78%, rgba(255,255,255,.42) 91%, #fff);
+.skin-glass.kb .mood:focus-visible { box-shadow: inset 0 0 2.2px 1.2px rgba(0,0,0,.3), inset 0 -9px 14px -10px rgba(0,0,10,.28), 0 7px 18px -6px rgba(0,0,0,.5), 0 0 0 7px rgba(3,4,10,.62); }
+/* the light on them: a fine edge gathered where it faces the light and, fainter, opposite — not a ring all round — each
+   round end a conic about its own centre (there the angle is the edge's own), the straight runs flat, a straight line
+   reading brighter than a curve. It follows the pointer (--la; on Solid it rests), brighter pressed (--pl), with the
+   growing in (--g). The stops (--g-spec) and the radius (--g-r) from the script. */
+.skin-glass :is(.top-l, .mood, .files, .bar, .singbar, .ab-bar)::before { content: ''; position: absolute; inset: 0; z-index: 2; border-radius: inherit; padding: 1px; pointer-events: none;
+  --at: .21; --ab: .14; /* (the straight runs as they are at rest, where pow() isn't known — Android WebView 114 to 119, no pointer there to move them: with it in, the whole edge went) */
+  background: conic-gradient(from var(--la) at 100% 50%, var(--g-spec, #fff, #fff)) 0 0 / var(--g-r, 23px) 100% no-repeat, conic-gradient(from var(--la) at 0 50%, var(--g-spec, #fff, #fff)) 100% 0 / var(--g-r, 23px) 100% no-repeat,
+    linear-gradient(rgba(255,255,255,calc(.82 * var(--at))), rgba(255,255,255,calc(.82 * var(--ab)))) 50% 0 / calc(100% - 2 * var(--g-r, 23px) + 1px) 100% no-repeat;
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
-  transition: --la .45s cubic-bezier(.2,.8,.2,1), filter .3s; }
-/* a press: light under the finger, spreading through that piece of glass, its rim brighter, the glass a little bigger
-   (its lens swelling too: the script's glassPress) */
-.skin-glass :is(.top-l, .mood, .files, .bar)::after { content: ''; position: absolute; inset: 0; z-index: 1; border-radius: inherit; pointer-events: none; opacity: 0; transition: opacity .7s ease-out;
-  background: radial-gradient(circle 78px at var(--px, 50%) var(--py, 50%), rgba(255,255,255,.26), rgba(196,214,255,.1) 46%, transparent 76%); }
-.skin-glass :is(.top-l, .mood, .files, .bar).lit { scale: var(--g-sc, 1.01); }
-.skin-glass :is(.top-l, .mood, .files, .bar).lit::after { opacity: 1; transition-duration: .06s; }
-.skin-glass :is(.top-l, .mood, .files, .bar).lit::before { filter: brightness(1.4); transition-duration: 0s, .06s; }
+  opacity: var(--g, 1); filter: brightness(calc(1 + .3 * var(--pl))); transition: --la .45s cubic-bezier(.2,.8,.2,1); } /* (--pl set only while pressed: no filter at rest) */
+@supports (width: calc(1px * pow(2, 2))) { .skin-glass :is(.top-l, .mood, .files, .bar, .singbar, .ab-bar)::before { --c: cos(var(--la));
+  --at: calc(.06 + .94 * (pow(max(var(--c), 0), 12) + .55 * pow(max(-1 * var(--c), 0), 12)) + .14 * (pow(max(var(--c), 0), 1.6) + .55 * pow(max(-1 * var(--c), 0), 1.6)));
+  --ab: calc(.06 + .94 * (pow(max(-1 * var(--c), 0), 12) + .55 * pow(max(var(--c), 0), 12)) + .14 * (pow(max(-1 * var(--c), 0), 1.6) + .55 * pow(max(var(--c), 0), 1.6))); } }
+/* a glint just inside the rim where it faces the light (.11–.18 of its radius in), a fainter one opposite: each round end
+   shows the part on its own outer half, so it moves from end to end as the light goes round (not on Solid) */
+.skin-glass:not(.gl-solid) :is(.top-l, .mood, .files, .bar)::after { content: ''; position: absolute; inset: 0; z-index: 2; border-radius: inherit; pointer-events: none; opacity: var(--g, 1);
+  --gd: calc(2 * var(--g-r, 23px)); --g0: calc(.11 * var(--g-r, 23px)); --g1: calc(.18 * var(--g-r, 23px));
+  --ring: transparent calc(100% - var(--g1)), #000 calc(100% - var(--g1) + .5px), #000 calc(100% - var(--g0) - .5px), transparent calc(100% - var(--g0));
+  background: conic-gradient(from calc(var(--la) - 15deg), transparent, rgba(255,255,255,.25) 8.25deg, rgba(255,255,255,.82) 15deg, rgba(255,255,255,.25) 21.75deg, transparent 30deg) 0 0 / var(--gd) var(--gd) no-repeat,
+    conic-gradient(from calc(var(--la) + 163.5deg), transparent, rgba(255,255,255,.2) 16.5deg, transparent 33deg) 0 0 / var(--gd) var(--gd) no-repeat,
+    conic-gradient(from calc(var(--la) - 15deg), transparent, rgba(255,255,255,.25) 8.25deg, rgba(255,255,255,.82) 15deg, rgba(255,255,255,.25) 21.75deg, transparent 30deg) 100% 0 / var(--gd) var(--gd) no-repeat,
+    conic-gradient(from calc(var(--la) + 163.5deg), transparent, rgba(255,255,255,.2) 16.5deg, transparent 33deg) 100% 0 / var(--gd) var(--gd) no-repeat;
+  -webkit-mask: radial-gradient(circle farthest-side at 100% 50%, var(--ring)) 0 0 / var(--g-r, 23px) 100% no-repeat, radial-gradient(circle farthest-side at 0 50%, var(--ring)) 100% 0 / var(--g-r, 23px) 100% no-repeat;
+  mask: radial-gradient(circle farthest-side at 100% 50%, var(--ring)) 0 0 / var(--g-r, 23px) 100% no-repeat, radial-gradient(circle farthest-side at 0 50%, var(--ring)) 100% 0 / var(--g-r, 23px) 100% no-repeat;
+  transition: --la .45s cubic-bezier(.2,.8,.2,1); }
+.skin-glass:not(.gl-solid) .bar::after { --g0: calc(.1 * var(--g-r, 23px)); --g1: calc(.16 * var(--g-r, 23px)); }
 .skin-glass :is(.top-l, .mood, .files, .bar, .singbar, .ab-bar) > * { position: relative; z-index: 3; }
+/* the growing in: their icons and words last, on the lenses' own clock (the script's glassGrow: as its spring passes .55 → .9) */
+.skin-glass :is(.top-l, .mood, .files, .bar).gl-grow > * { animation: glGlyph .25s ease-in-out backwards; }
+@keyframes glGlyph { 0%, 44% { opacity: 0; } 82% { opacity: 1; } }
+/* over something bright (the script's glassInk), a lens's icons and words dark — the glass stays clear, lifting what's dark behind them instead */
+.skin-glass .ink-dark { --ink: #0b0d16; --a: #1b2a5e; color: var(--ink); }
+.skin-glass .ink-dark :is(.tg-count, .dl-count) { color: #fff; } /* (the icons' counts: on the accent, now dark, their words light — dark on it they read 1.4 : 1) */
+.skin-glass .ink-dark :is(.sub, .time, .nudge, .brand), .skin-glass .mood.ink-dark { text-shadow: 0 0 1px rgba(255,255,255,.5), 0 0 2px rgba(255,255,255,.35); }
+.skin-glass .ink-dark :is(.link, .to-home) svg { filter: drop-shadow(0 0 1.2px rgba(255,255,255,.5)); }
+.skin-glass .bar.ink-dark .vol::-webkit-slider-thumb { background: var(--ink); box-shadow: 0 0 6px rgba(255,255,255,.6); }
+.skin-glass .bar.ink-dark .vol::-webkit-slider-runnable-track { background: linear-gradient(90deg, transparent calc(50% - .5px), rgba(11,13,22,.55) 0 calc(50% + .5px), transparent 0) 0 0 / 100% 7px no-repeat,
+  linear-gradient(90deg, var(--ink) 0 min(var(--p), 50%), #33427a min(var(--p), 50%) var(--p), rgba(11,13,22,.22) var(--p)); }
 /* the player's dock: the timeline above it (light, not glass), the play button in it */
 .skin-glass .bottom { gap: 12px; }
 .skin-glass .bar { padding: 7px 26px 7px 10px; gap: 20px; border-radius: 46px; background: rgba(3,4,10,.08); }
@@ -1899,17 +1934,12 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
 .skin-glass .play:hover .core { transform: scale(1.08); }
 .skin-glass .play:active .core { transform: scale(.92); box-shadow: inset 0 0 0 1px #fff, inset 0 -3px 7px rgba(110,140,220,.24), 0 0 0 1px rgba(0,0,0,.35), 0 8px 22px rgba(0,0,0,.5), 0 0 34px 6px rgba(200,220,255,.55); }
 .skin-glass .title { font: italic 500 clamp(24px, 2.6vw, 36px)/1.05 'Cormorant Garamond', Georgia, serif; letter-spacing: -.005em; }
-.skin-glass .sub > :first-child, .skin-glass .from-link { opacity: .86; }
-.skin-glass :is(.sub, .time, .nudge, .brand, .mood, .singbar) { text-shadow: 0 0 2px rgba(3,4,10,.9), 0 0 7px rgba(3,4,10,.85); } /* (small words on clear glass: a dark halo of their own, so the light bent under them never washes them out) */
+.skin-glass .sub > :first-child, .skin-glass .from-link { opacity: 1; } /* (all words full white: the weight tells them apart) */
+.skin-glass :is(.sub, .time, .nudge, .brand, .mood, .singbar) { text-shadow: 0 0 1px rgba(3,4,10,.6), 0 0 2px rgba(3,4,10,.45); } /* (small words on clear glass: a fine dark halo of their own — what's under them is held down by the glass itself) */
 .skin-glass .bgq small { opacity: .85; }
-/* (the dock's words: the light bent at its rim kept a little away from them, a soft shade of their own behind them) */
-.skin-glass.gl-lens :is(.now-l, .time) { position: relative; }
-.skin-glass.gl-lens :is(.now-l, .time)::before { content: ''; position: absolute; inset: -8px -20px; z-index: -1; border-radius: 22px; pointer-events: none;
-  background: radial-gradient(closest-side, rgba(3,4,10,.62), rgba(3,4,10,.38) 72%, transparent); }
-.skin-glass .status { color: #dfe8ff; }
-.skin-glass #dur { opacity: .78; } /* (.7 read 4.8 : 1 on frosted glass over Lava: kept further from the edge) */
-.skin-glass .nudge { opacity: .9; }
-.skin-glass .skip { color: rgba(243,246,255,.86); }
+.skin-glass .status { color: var(--ink); }
+.skin-glass :is(#dur, .nudge) { opacity: 1; }
+.skin-glass .skip, .skin-glass :where(.bar .icon-btn) { color: var(--ink); } /* (its icons full white too, not 72 %: a pressed one keeps its own colour) */
 .skin-glass :is(.skip, .icon-btn):hover { background: rgba(255,255,255,.08); }
 .skin-glass .vol::-webkit-slider-thumb { background: #fff; box-shadow: 0 0 8px rgba(190,210,255,.8); }
 .skin-glass .vol::-webkit-slider-runnable-track { background: linear-gradient(90deg, transparent calc(50% - .5px), rgba(243,246,255,.6) 0 calc(50% + .5px), transparent 0) 0 0 / 100% 7px no-repeat,
@@ -1927,7 +1957,10 @@ body.skin-glass.sing:not(.home) .ab-bar { bottom: calc(100% + 66px); }
 .skin-glass.gl-frost :is(.top-l, .mood, .files, .bar) { -webkit-backdrop-filter: blur(14px) saturate(1.5) brightness(.82); backdrop-filter: blur(14px) saturate(1.5) brightness(.82); }
 .skin-glass.gl-frost .bar { background: rgba(4,5,11,.3); }
 .skin-glass:is(.gl-tint, .gl-solid) :is(.top-l, .mood, .files, .bar) { -webkit-backdrop-filter: none; backdrop-filter: none; background: color-mix(in srgb, var(--bg) 80%, transparent); }
-.skin-glass:is(.gl-frost, .gl-tint) :is(.top-l, .mood, .files, .bar) { background-image: var(--g-fringe); background-size: 46% 1px; background-position: 22% 0; background-repeat: no-repeat; } /* (no real refraction: the spectrum painted where the light meets the top) */
+.skin-glass:is(.gl-frost, .gl-tint) :is(.top-l, .mood, .files, .bar) { /* (no real refraction: the spectrum painted where the light meets the top; a press's light a soft round under the finger, --pl; the grain) */
+  background-image: radial-gradient(circle 78px at var(--px, 50%) var(--py, 50%), rgba(255,255,255,calc(.15 * var(--pl, 0))), rgba(196,214,255,calc(.06 * var(--pl, 0))) 46%, transparent 76%), var(--g-fringe), var(--g-grain, none);
+  background-size: auto, 46% 1px, var(--g-gs, 64px); background-position: 0 0, 22% 0, 0 0; background-repeat: no-repeat, no-repeat, repeat; }
+.skin-glass.gl-frost .ink-dark { -webkit-backdrop-filter: blur(14px) saturate(1.5) brightness(1.06); backdrop-filter: blur(14px) saturate(1.5) brightness(1.06); background-color: rgba(250,251,255,.22); } /* (dark ink on frost: the frost lightened, not darkened — darkened, a half-dimmed picture under it read 1.8 : 1) */
 .skin-glass:is(.gl-tint, .gl-solid) :is(.singbar, .ab-bar) { -webkit-backdrop-filter: none; backdrop-filter: none; background: var(--g-fringe) 50% 0 / 58% 1px no-repeat, color-mix(in srgb, var(--bg) 88%, transparent); }
 /* the panels: frosted glass, the same edge, a thin spectrum where the light meets their top. Each grows out of the
    button that opened it, its shape the button's at first, and goes back into it (the script's glassMorph); opened any
@@ -2017,8 +2050,9 @@ body.skin-glass.sing:not(.home) .ab-bar { bottom: calc(100% + 66px); }
 .skin-glass.idle :is(.top, .bottom) { opacity: 1; }
 /* (the timeline's row holds Repeat a part's glass: its parts fade, not it; and the lenses keep their press, the glass
    growing on its spring) */
-.skin-glass :is(.top > *, .bottom > :not(.scrub), .scrub > *) { transition: opacity .7s, visibility 0s, scale .44s var(--g-press), box-shadow .3s; }
-.skin-glass.idle :is(.top > *, .bottom > :not(.scrub), .scrub > *) { opacity: 0; visibility: hidden; transition: opacity .7s, visibility 0s .7s, scale .44s var(--g-press), box-shadow .3s; } /* (hidden once faded: unseen glass still costs a frame its time) */
+.skin-glass :is(.top > *, .bottom > :not(.scrub), .scrub > *) { transition: opacity .7s, visibility 0s; }
+.skin-glass :is(.top > *, .bottom > .bar) { transition: opacity .15s, visibility 0s; } /* (the lenses back: grown in by the script, not faded in — a quick crossfade on Solid or with less motion) */
+.skin-glass.idle :is(.top > *, .bottom > :not(.scrub), .scrub > *) { opacity: 0; visibility: hidden; transition: opacity .7s, visibility 0s .7s; } /* (hidden once faded: unseen glass still costs a frame its time) */
 .skin-glass.lib-open .frame { opacity: 1 !important; }
 .skin-glass .mid { transition: opacity .4s; } /* (the header's and player's rows keep their own: they slide on idle) */
 .skin-glass.lib-open :is(.top > *, .mid, .bottom > :not(.scrub), .scrub > *) { opacity: 0; visibility: hidden; transition: opacity .4s, visibility 0s .4s; }
@@ -2038,7 +2072,6 @@ body.skin-glass.sing:not(.home) .ab-bar { bottom: calc(100% + 66px); }
 @media (prefers-reduced-transparency: reduce) and (min-width: 901px), (prefers-contrast: more) and (min-width: 901px) {
   .skin-glass .top-l { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; background: color-mix(in srgb, var(--bg) 95%, transparent) !important; box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.55), var(--g-drop) !important; }
 }
-@media (prefers-reduced-motion: reduce) { .skin-glass :is(.top-l, .mood, .files, .bar).lit { scale: none; } } /* (a press: the light alone) */
 @media (forced-colors: active) {
   .skin-glass :is(.mood, .files, .bar, .singbar, .ab-bar, .moods, .eq, .smenu, .voice-ui, .toast, .search, .about) { -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
     background: Canvas !important; color: CanvasText; border: 1px solid CanvasText; }
@@ -2054,7 +2087,13 @@ body.skin-glass.sing:not(.home) .ab-bar { bottom: calc(100% + 66px); }
   .skin-glass .mood { height: 42px; padding: 0 16px 0 13px; }
 }
 @media (max-width: 900px) and (forced-colors: none) { /* (and a soft shade of its own behind the bare name: the light along the top never washes it out) */
-  .skin-glass .top .top-l::after { display: block; inset: -12px -22px; z-index: 0; opacity: 1; border-radius: 32px; transition: none; background: radial-gradient(closest-side, rgba(3,4,10,.58), rgba(3,4,10,.32) 72%, transparent); }
+  .skin-glass .top .top-l::after { content: ''; position: absolute; pointer-events: none; display: block; inset: -12px -22px; z-index: 0; opacity: 1; border-radius: 32px; transition: none; background: radial-gradient(closest-side, rgba(3,4,10,.58), rgba(3,4,10,.32) 72%, transparent); -webkit-mask: none; mask: none; }
+  .skin-glass .top .top-l.ink-dark::after { background: radial-gradient(closest-side, rgba(250,251,255,.62), rgba(250,251,255,.36) 72%, transparent); } /* (dark ink, over something bright: a light shade) */
+  .skin-glass .top .top-l .brand { text-shadow: 0 0 2px rgba(3,4,10,.9), 0 0 7px rgba(3,4,10,.85); } /* (no glass under the bare name to hold what's bright: its own wide halo kept) */
+  .skin-glass .top .top-l .to-home svg { filter: drop-shadow(0 0 2.5px rgba(3,4,10,.75)); }
+  .skin-glass .top .top-l.ink-dark .brand { text-shadow: 0 0 2px rgba(255,255,255,.9), 0 0 7px rgba(255,255,255,.8); }
+  .skin-glass .top .top-l.ink-dark .to-home svg { filter: drop-shadow(0 0 2.5px rgba(255,255,255,.8)); }
+  .skin-glass .bar::after { display: none; } /* (the dock not a capsule here: no glint for its round ends) */
 }
 @media (max-width: 900px) and (min-height: 521px) {
   .skin-glass .bar { padding: 10px 14px 10px; border-radius: 30px; gap: 2px 12px; background: radial-gradient(120% 120% at 50% 50%, rgba(4,5,11,.46) 50%, rgba(4,5,11,.12) 82%, transparent), var(--g-clear); }
@@ -2077,7 +2116,7 @@ body.skin-glass.sing:not(.home) .ab-bar { bottom: calc(100% + 66px); }
   .skin-glass .bar { border-radius: 28px; padding: 6px 14px; gap: 0 14px; } .skin-glass .play { width: 60px; height: 60px; } .skin-glass .core { width: 44px; height: 44px; }
   .skin-glass .home-stage .hint { display: none; }
 }
-@media (max-height: 520px) { .skin-glass .toast { top: 8px; } } /* (a short screen: a toast over the header, for its few seconds — under it, it covered Repeat a part's Start and End, raised over Sing's bar) */
+@media (max-height: 520px) { .skin-glass .toast { top: 8px; } .skin-glass .files { padding: 0 5px; } } /* (a short screen: a toast over the header, for its few seconds — under it, it covered Repeat a part's Start and End, raised over Sing's bar; and the header's icons as near its ends as before, where its row is tight) */
 @media (max-height: 400px) { .skin-glass :is(.top-l, .mood, .files) { height: 40px; } .skin-glass .play { width: 54px; height: 54px; } .skin-glass .core { width: 40px; height: 40px; }
   .skin-glass .brand { font-size: 22px; } .skin-glass .mood { padding: 0 14px 0 12px; } .skin-glass .files { min-width: 0; } .skin-glass .files > .link { flex: 0 1 36px; min-width: 28px; } } /* (the header in one row: its icons narrower rather than run off the screen) */
 /* the opening splash: the wordmark, painted at once from the page's own markup, while the app's script loads and the
@@ -3264,7 +3303,7 @@ const SKINS = {
     font: { poster: "'Unbounded'", serif: "'Chakra Petch'", lh: 1.08, sc: ['Wide', 'Tech'] }, bar: 'Lap',
     looks: ['speed', 'velocity', 'slam', 'split', 'track', 'extrude', 'slice'], badge: 'FULL THROTTLE ✦ REDLINE ✦',
     msg: ['Floor it', 'into the song'] },
-  Glass: { note: 'Clear glass over a dark room of light: on a computer the floating controls are lenses that bend what passes under them (magnified, folded back along the rim, the edge splitting the light into a thin spectrum), on a phone frosted; the panels frosted glass that grows out of the button you press; light through rippled glass in caustics behind, moving with the music',
+  Glass: { note: 'Clear glass over a dark room of light: on a computer the floating controls are lenses that bend what passes under them (each a clear drop: magnified, packed tighter toward the rim, the edge splitting the light into a thin spectrum, its words turning dark over something bright), on a phone frosted; the panels frosted glass that grows out of the button you press; light through rippled glass in caustics behind, moving with the music',
     pal: { name: 'Glass', bg: '#05060b', a: '#e8efff', b: '#8fb4ff', ink: '#f3f6ff', fx: [1, 1, 1, 1] },
     font: { poster: "'Libre Bodoni'", serif: "'Cormorant Garamond'", lh: 1.06, sc: ['Didone', 'Serif'] }, bar: 'Beam',
     looks: ['prism', 'frost', 'chrome', 'holo', 'focus', 'dreamy', 'outline'], badge: 'SPLIT THE LIGHT ✦ GLASS ✦ SPLIT THE LIGHT ✦ GLASS ✦',
@@ -3459,27 +3498,29 @@ const pixTex = (cols, s) => {
 };
 // ---------- the Glass theme's glass (see "Glass" in the stylesheet). Its tier (body.gl-*), from the device, the quality
 // and Settings › Glass: lens (a computer: the header's capsules and the player's dock bend what's under them — an SVG
-// filter as each one's backdrop filter, its displacement map drawn here, red, green and blue moved a little differently,
-// so the rim splits the light), frost (a phone: blur), tint (no blur: Low, a TV, no WebGL or a software one), solid (less
-// transparency or more contrast asked for, forced colours, or Solid picked). Short of frames, it gives up a level of
-// glass before any of the backdrop (stepDown), remembered till a quality or a glass is picked. A computer whose graphics
-// chip is part of its processor gets frost on a screen faster than 150 Hz: the lenses are drawn again at the screen's own
-// rate, and at 240 Hz that was more than such a chip could do (measured: 10 frames a second shown).
+// filter as each one's backdrop filter, its displacement map drawn here: each a clear drop, red and blue bent a little
+// less and more than green, so the rim splits the light), frost (a phone: blur), tint (no blur: Low, a TV, no WebGL or a
+// software one), solid (less transparency or more contrast asked for, forced colours, or Solid picked). Short of frames,
+// it gives up a level of glass before any of the backdrop (stepDown), remembered till a quality or a glass is picked. A
+// computer whose graphics chip is part of its processor gets frost on a screen faster than 150 Hz: the lenses are drawn
+// again at the screen's own rate, and at 240 Hz that was more than such a chip could do (measured: 10 frames a second shown).
 const GLASS_LENS = [['.top-l', 'cap'], ['#mood', 'cap'], ['.files', 'cap'], ['.bar', 'dock']];
-// Each kind of lens. cap (the header's capsules): a dome over its whole height (dome: what's under it magnified 1 / (1 −
-// dome)) and a rim that bends hard where it rounds (rim: how wide, mr: how far back it reaches, both shares of its height:
-// the mirror along its top and bottom); the picture frosted a hair first (the filter moves pixels whole: stair-steps on
-// sharp lines otherwise); where its icons and words are, whatever's bright behind them dimmed (by its own blurred light)
-// and its highlights held down, so they read over anything — clear there, not frosted — and the rim left as bright as
-// what it bends (edge: where in the rim the one gives way to the other, as shares of it). dock (the player): its rim
-// (band: how far in it bends, a share of its height, at most 30 px; amp: the bend at the very edge, a share of the band),
-// its middle frosted and darkened where its words are (frost: the blur, px; dim: the light kept there; edge: where in the
-// band the bent picture gives way to the frosted one). disp: blue moved that much more than green, red that much less.
-// css: what's done to all of it after.
-const GLASS_KIND = { cap: { dome: .3, rim: .3, mr: .77, disp: .14, edge: [.3, .62], css: 'saturate(1.3) brightness(.96)' },
-  dock: { band: .3, amp: 1.45, disp: .11, frost: 7, dim: .5, edge: [.38, .66], css: 'saturate(1.35)' } };
+// Each kind of lens. drop (the header's capsules): the whole body one magnifier — a point t of the way out from its middle
+// line looks at s(t) = t/M + (1 − 1/M)·t^q of the way: what's under the middle M times bigger, packed tighter toward the
+// rim, never folded (s always rises: no mirrored band, no smear). bezel (the dock): flat inside and frosted (frost: the
+// blur; fz: px in from the edge where it's gone and where it's whole: a tall dock's words kept off its rim), then a rim (1 − tb of its radius wide) that
+// magnifies and packs to the edge (D: how far it pulls). e: red and blue bent from the same picture that share less and
+// more than green. Its light, in the filter, in the colour of what's behind (w + g·saturate(sat) of it): edge (the rim's
+// fine line), sheen (Fresnel; band: how deep), cau (light gathered inside its bottom edge). Under its icons and words
+// what's bright behind held down, a (white ink) or ad (dark ink); base outside them, none in the rim. soft: the picture
+// blurred a hair first (the filter moves whole pixels: stair-steps on sharp lines otherwise). css: done to what's behind first.
+const GLASS_KIND = {
+  cap: { prof: 'drop', M: 2.75, q: 4.6, e: .06, soft: .5, base: .15, a: .56, ad: .45, edge: .42, sheen: .2, band: .34, cau: .16, w: .08, g: 1.05, sat: 1.3, css: 'saturate(1.18)' },
+  dock: { prof: 'bezel', tb: .6, D: .3, e: .05, soft: .5, frost: 12, fz: [6.4, 14], a: .64, ad: .4, edge: .4, sheen: .2, band: .3, cau: .16, w: .08, g: 1.05, sat: 1.3, css: 'saturate(1.3)' } };
+// (the band each capsule's icons and words take, px from its middle line: half their height and 3 px)
+const GLASS_TL = { '.top-l': 12.9, '#mood': 7.8, '.files': 11.5 };
 const GLASS_TIERS = ['lens', 'frost', 'tint']; // (and SVGNS, further down: all of this runs once the script's all there)
-const glass = { tier: '', defs: null, ro: null, bounds: null, maps: new Map(), n: 0, grow: 1, raf: 0, gpu: null, fast: false, aim: 0, px: 0, py: 0, from: null, src: new WeakMap(), idle: false };
+const glass = { tier: '', defs: null, ro: null, bounds: null, maps: new Map(), decoding: [], redo: null, n: 0, grow: 1, gi: 1, raf: 0, gpu: null, fast: false, aim: 0, px: 0, py: 0, from: null, src: new WeakMap(), hid: false, hidAt: 0, glow: '', spec: false, ink: null };
 const glassQuiet = matchMedia('(prefers-reduced-transparency: reduce), (prefers-contrast: more), (forced-colors: active)');
 let glassPick = ['Frosted', 'Tinted', 'Solid'].includes(store.get('netherflow.glass')) ? store.get('netherflow.glass') : 'Auto', glassDrop = Math.min(2, +store.get('netherflow.glassdrop') || 0);
 // (the graphics chip, asked once: a software one — no real chip at all — or one that's part of the processor)
@@ -3521,132 +3562,253 @@ function applyGlass() {
   });
   if (t) for (const q of ['.bottom', '.top', '.frame']) glass.bounds.observe(document.querySelector(q));
   else { glass.bounds.disconnect(); root.style.removeProperty('--g-slab'); root.style.removeProperty('--g-head'); }
-  const els = GLASS_LENS.map(([q]) => document.querySelector(q));
-  if (t !== 'lens') {
-    cancelAnimationFrame(glass.raf); glass.grow = 1;
-    glass.ro?.disconnect();
-    for (const e of els) glassOff(e);
-    glass.defs?.replaceChildren();
-    if (!t) for (const e of [...els, $('singBar'), $('abBar')]) { for (const k of ['--la', '--px', '--py', '--g-sc']) e.style.removeProperty(k); e.glassLa = undefined; } // (the theme gone: nothing of it left behind)
-    return;
+  const els = GLASS_LENS.map(([q]) => document.querySelector(q)), all = [...els, $('singBar'), $('abBar')];
+  // (each one's radius, for its light's round ends, on every tier; on a computer its lens made again for its size)
+  glass.ro ||= new ResizeObserver(es => {
+    for (const { target: e } of es) {
+      if (e.offsetHeight) e.style.setProperty('--g-r', Math.min(parseFloat(getComputedStyle(e).borderTopLeftRadius) || 0, e.offsetHeight / 2) + 'px');
+      if (els.includes(e)) glassFit(e, !!e.glassLens?.glowI);
+    }
+    glassInkSoon();
+  });
+  cancelAnimationFrame(glass.raf); glass.grow = glass.gi = 1;
+  for (const e of els) { cancelAnimationFrame(e.glassRaf); e.glassP = null; e.style.removeProperty('--pl'); e.style.removeProperty('transform-origin'); glassOff(e); } // (a press cut short by the change: its light gone with it — it stayed lit)
+  glass.defs?.replaceChildren();
+  if (t !== 'lens' && t !== 'frost') for (const e of els) e.classList.remove('ink-dark'); // (dark ink: over a lens or frost alone — a tint's own colour is dark)
+  if (!t || t === 'solid') for (const e of all) { for (const k of ['--la', '--px', '--py', '--pl', '--g', 'scale', 'transform-origin']) e.style.removeProperty(k); e.glassLa = undefined; e.classList.remove('gl-grow'); } // (its light at rest)
+  if (!t) { glass.ro.disconnect(); for (const e of all) e.style.removeProperty('--g-r'); return; } // (the theme gone: nothing of it left behind)
+  glassSpecs();
+  for (const e of all) glass.ro.observe(e);
+  if (t === 'lens') {
+    if (!glass.defs) {
+      const s = document.createElementNS(SVGNS, 'svg');
+      s.setAttribute('aria-hidden', 'true'); s.style.cssText = 'position:fixed;left:0;top:0;width:0;height:0;pointer-events:none';
+      glass.defs = document.createElementNS(SVGNS, 'defs'); s.append(glass.defs); body.append(s);
+    }
+    glassGlow(); // (the press's light: decoded before a press uses it)
+    for (const e of els) glassFit(e);
   }
-  if (!glass.defs) {
-    const s = document.createElementNS(SVGNS, 'svg');
-    s.setAttribute('aria-hidden', 'true'); s.style.cssText = 'position:fixed;left:0;top:0;width:0;height:0;pointer-events:none';
-    glass.defs = document.createElementNS(SVGNS, 'defs'); s.append(glass.defs); body.append(s);
-  }
-  glass.ro ||= new ResizeObserver(es => { for (const e of es) glassFit(e.target); });
-  glass.grow = motion ? 0 : 1; // (the lenses made with no bending yet: they grow in — glassGrow)
-  for (const e of els) { glass.ro.observe(e); glassFit(e); }
-  if (was !== 'lens') glassGrow();
+  glassGrow(); // (and they grow in)
+  glassInkSoon();
 }
 function glassOff(e) {
   if (!e.glassKey) return;
   e.style.removeProperty('backdrop-filter'); e.style.removeProperty('-webkit-backdrop-filter');
   e.glassFilter?.remove(); e.glassKey = ''; e.glassFilter = e.glassLens = null;
 }
-// A capsule's map, h tall: made once as the narrowest one (its two round ends, a texel between), the ends and the middle
-// cut from it, so it takes three pieces whatever its width. R (across) and G (down): where each point looks, round 128
-// (no move) — inward along the edge's normal, through the dome everywhere, and hard at the rim (a circle's profile: right
-// at the edge it reaches past the middle, so what's there shows mirrored); B: 255 in the rim (left bright), 0 inside.
-function glassCap(h, o) {
-  const key = ['cap', h, o.dome, o.rim, o.mr, o.edge].join();
-  if (glass.maps.has(key)) return glass.maps.get(key);
-  const r = h / 2, c = Math.ceil(r), S = 2 * c + 1, rim = Math.max(3, h * o.rim), Mr = Math.min(46, h * o.mr), off = new Float32Array(S * h * 3), [e0, e1] = o.edge;
-  let M = 1e-3;
-  for (let j = 0; j < h; j++) for (let i = 0; i < S; i++) {
-    const x = i + .5 - S / 2, y = j + .5 - h / 2, qx = Math.max(Math.abs(x) - (S / 2 - r), 0), qy = Math.abs(y), dist = Math.hypot(qx, qy), d = r - dist;
-    if (d <= 0) continue;
-    const nx = dist > 1e-6 ? Math.sign(x) * qx / dist : 0, ny = dist > 1e-6 ? Math.sign(y) * qy / dist : 1, u = d / rim;
-    const m = o.dome * dist + (u < 1 ? Mr * (1 - Math.sqrt(Math.max(0, 1 - (1 - u) ** 2))) : 0), k = (j * S + i) * 3;
-    off[k] = -nx * m; off[k + 1] = -ny * m; off[k + 2] = Math.min(1, Math.max(0, (rim * e1 - d) / (rim * (e1 - e0)))); M = Math.max(M, m);
-  }
-  const cv = document.createElement('canvas'); cv.width = S; cv.height = h;
-  const g = cv.getContext('2d'), im = g.createImageData(S, h), D = im.data;
-  for (let p = 0; p < S * h; p++) { D[p * 4] = 128 + Math.round(off[p * 3] / M * 127); D[p * 4 + 1] = 128 + Math.round(off[p * 3 + 1] / M * 127); D[p * 4 + 2] = Math.round(255 * off[p * 3 + 2]); D[p * 4 + 3] = 255; }
+// (made once: the edge's light as stops round each round end — .06 + .94·lobe(12) + .14·lobe(1.6), lobe(p) = max(n·L, 0)^p
+// + .55·max(−n·L, 0)^p: gathered where the edge faces the light and, fainter, opposite — and the glass's grain, 1.6 %, a
+// device pixel a texel, its own background: nothing blended under it)
+function glassSpecs() {
+  if (glass.spec) return;
+  glass.spec = true;
+  const lobe = (c, p) => Math.max(c, 0) ** p + .55 * Math.max(-c, 0) ** p, st = [];
+  for (let a = 0; a <= 360; a += 6) { const c = Math.cos(a * Math.PI / 180); st.push(`rgba(255,255,255,${Math.min(1, .06 + .94 * lobe(c, 12) + .14 * lobe(c, 1.6)).toFixed(3)}) ${a}deg`); }
+  root.style.setProperty('--g-spec', st.join(', '));
+  const n = 128, cv = document.createElement('canvas'), g = (cv.width = cv.height = n, cv.getContext('2d')), im = g.createImageData(n, n);
+  let s = 7;
+  for (let i = 0; i < n * n; i++) { const v = (s = s * 16807 % 2147483647) / 1073741823.5 - 1; im.data.set([v > 0 ? 255 : 0, v > 0 ? 255 : 0, v > 0 ? 255 : 0, Math.round(Math.abs(v) * .032 * 255)], i * 4); }
   g.putImageData(im, 0, 0);
-  const cut = (x, w) => { const t = document.createElement('canvas'); t.width = w; t.height = h; t.getContext('2d').drawImage(cv, x, 0, w, h, 0, 0, w, h); return t.toDataURL('image/png'); };
-  const T = { c, M, l: cut(0, c), m: cut(c, 1), r: cut(S - c, c) };
+  root.style.setProperty('--g-grain', `url(${cv.toDataURL()})`); glassGrainSize();
+}
+const glassGrainSize = () => root.style.setProperty('--g-gs', 128 / (devicePixelRatio || 1) + 'px'); // (a device pixel a texel: again when the window's moved to a screen of another scale)
+const glassSmooth = (a, b, x) => { const u = Math.min(1, Math.max(0, (x - a) / (b - a))); return u * u * (3 - 2 * u); };
+// How far in (px, along the inward normal) a point d px inside the edge looks, r its radius (see GLASS_KIND)
+function glassPull(d, r, o) {
+  if (d <= 0) return 0;
+  if (o.prof === 'drop') { const t = Math.max(0, 1 - d / r); return (t - (t / o.M + (1 - 1 / o.M) * t ** o.q)) * r; }
+  const b = (1 - o.tb) * r, u = 1 - d / b;
+  return u <= 0 ? 0 : o.D * b * 6.75 * u * u * (1 - u);
+}
+// One texel of a map, at (x, y) in a w×h shape with corners of radius r (a capsule: r = h/2): [pull, nx, ny, net] — net,
+// for blue: above 0 light to add (the same all round, no angle in it: the edge's light, which follows the pointer, is
+// never contradicted), below 0 what to hold down (a drop: in the band of its icons and words, tl its half-height as a
+// share of r; .15 elsewhere, none in the rim) or how frosted (a bezel)
+function glassTexel(x, y, w, h, r, o, tl) {
+  const cx = Math.min(Math.max(x, r), w - r), cy = Math.min(Math.max(y, r), h - r);
+  let nx = x - cx, ny = y - cy, d;
+  const dist = Math.hypot(nx, ny);
+  if (dist > 1e-6) { nx /= dist; ny /= dist; d = r - dist; }
+  else { const m = Math.min(x, w - x, y, h - y); d = r + Math.min(x - r, w - r - x, y - r, h - r - y); [nx, ny] = m === x ? [-1, 0] : m === w - x ? [1, 0] : m === y ? [0, -1] : [0, 1]; }
+  if (d <= 0) return [0, 0, 0, 0];
+  const t = Math.min(1, Math.max(0, 1 - d / r)), band = o.band * r;
+  const light = o.edge * Math.exp(-(((d - .5) / .7) ** 2)) + (d < band ? o.sheen * (1 - d / band) ** 3 : 0) + o.cau * Math.max(ny, 0) ** 2 * Math.exp(-(((d - .2 * r) / (.09 * r)) ** 2));
+  const hold = o.prof === 'drop' ? (1 - (1 - o.base) * glassSmooth(tl, tl + .3, t)) * (1 - glassSmooth(.76, .9, t)) : glassSmooth(o.fz[0], o.fz[1], d);
+  return [glassPull(d, r, o), nx, ny, light - hold];
+}
+// (R and G: where it looks, round the middle — no move; B: the light and the hold)
+const glassEnc = (D, k, [p, nx, ny, net], S) => {
+  D[k] = Math.round(255 * (.5 - nx * p / S)); D[k + 1] = Math.round(255 * (.5 - ny * p / S));
+  D[k + 2] = Math.round(255 * (.5 + .5 * Math.max(-1, Math.min(1, net)))); D[k + 3] = 255;
+};
+const glassScaleOf = (r, o) => { let P = 1e-3; for (let k = 0; k <= 2000; k++) P = Math.max(P, glassPull(r * k / 2000, r, o)); return 2 * P * 1.02; };
+// every new piece decoded before a filter uses it: a filter made while its image was still loading never took it up (on
+// the first page drawn of a fresh start, one end of each capsule bent wrongly, through waits and changes, till its filter
+// was made again) — so each new piece is decoded, and the lenses made again once all are (glassFit)
+const glassDecoded = url => { const i = new Image(); i.src = url; glass.decoding.push(i.decode().catch(() => {})); return url; };
+// A capsule's map, h tall: made once as the narrowest one (its two round ends, a texel between), the ends and the middle
+// cut from it, so it takes three pieces whatever its width (a circle, two)
+function glassCap(h, o, tl) {
+  const key = ['cap', h, tl, o.prof].join();
+  if (glass.maps.has(key)) return glass.maps.get(key);
+  const r = h / 2, c = Math.ceil(r), S = 2 * c + 1, Sc = glassScaleOf(r, o);
+  const cv = document.createElement('canvas'); cv.width = S; cv.height = h;
+  const g = cv.getContext('2d'), im = g.createImageData(S, h);
+  for (let j = 0; j < h; j++) for (let i = 0; i < S; i++) glassEnc(im.data, (j * S + i) * 4, glassTexel(i + .5, j + .5, S, h, r, o, tl), Sc);
+  g.putImageData(im, 0, 0);
+  const cut = (x, w) => { const t = document.createElement('canvas'); t.width = w; t.height = h; t.getContext('2d').drawImage(cv, x, 0, w, h, 0, 0, w, h); return glassDecoded(t.toDataURL('image/png')); };
+  const T = { c, Sc, l: cut(0, c), m: cut(c, 1), r: cut(S - c, c) };
   glass.maps.set(key, T);
   return T;
 }
-// The dock's map: R, G as a capsule's, and B: 255 at the rim (the sharp, bent picture), 0 inside (the frosted one).
-// The bend: inward, largest at the very edge, nothing past the band. Drawn in nine pieces (four corners, four edges a
-// texel across stretched along them, the middle flat), so a wide bar's map is a few thousand texels whatever its size:
-// the filter's images go with every frame drawn.
-function glassPiece(type, w, h, r, b, M, k, x0, y0, pw, ph, [e0, e1]) {
-  const key = [type, r, b, M, k, e0, e1, type === 'T' || type === 'B' ? 0 : pw, type === 'L' || type === 'R' ? 0 : ph].join();
-  let url = glass.maps.get(key);
-  if (url) return url;
-  const tw = Math.max(1, Math.round(pw * k)), th = Math.max(1, Math.round(ph * k)), cv = document.createElement('canvas');
-  cv.width = tw; cv.height = th;
-  const g = cv.getContext('2d'), im = g.createImageData(tw, th), D = im.data;
-  for (let j = 0; j < th; j++) for (let i = 0; i < tw; i++) {
-    const x = x0 + (i + .5) * pw / tw, y = y0 + (j + .5) * ph / th;
-    const cx = Math.min(Math.max(x, r), w - r), cy = Math.min(Math.max(y, r), h - r);
-    let nx = x - cx, ny = y - cy, depth;
-    const dist = Math.hypot(nx, ny);
-    if (dist > 1e-6) { depth = r - dist; nx /= dist; ny /= dist; }
-    else { depth = r + Math.min(x - r, w - r - x, y - r, h - r - y); const m = Math.min(x, w - x, y, h - y); [nx, ny] = m === x ? [-1, 0] : m === w - x ? [1, 0] : m === y ? [0, -1] : [0, 1]; }
-    const u = depth / b, m = depth > 0 && u < 1 ? M * (1 - Math.sqrt(1 - (1 - u) ** 2)) : 0, o = (j * tw + i) * 4;
-    D[o] = Math.round(128 - 127 * nx * m / M); D[o + 1] = Math.round(128 - 127 * ny * m / M);
-    D[o + 2] = Math.round(255 * Math.min(1, Math.max(0, (b * e1 - depth) / (b * (e1 - e0))))); D[o + 3] = 255;
-  }
-  g.putImageData(im, 0, 0);
-  glass.maps.set(key, url = cv.toDataURL('image/png'));
-  return url;
+// A rounded rectangle's map (the dock in a narrow window): four corners c×c, the four edges a texel across (stretched along
+// them), the middle left to the flood under them (no move, frosted) — a few thousand texels whatever its size. k: texels
+// per px (big corners need fewer). Each [href, x, y, w, h, how it follows the width].
+function glassRect(w, h, r, o, k) {
+  const c = Math.ceil(r), Sc = glassScaleOf(r, o), out = [];
+  const piece = (x0, y0, pw, ph, ix, iy, iw, ih, a = '') => {
+    if (iw < .5 || ih < .5) return;
+    const key = ['rect', h, r, x0 < c ? 'l' : x0 > w - c - 1 ? 'r' : 'm', y0 < c ? 't' : y0 > h - c - 1 ? 'b' : 'm', pw, ph, k, o.prof].join();
+    let href = glass.maps.get(key);
+    if (!href) {
+      const tw = Math.max(1, Math.round(pw * k)), th = Math.max(1, Math.round(ph * k)), cv = document.createElement('canvas'); cv.width = tw; cv.height = th;
+      const g = cv.getContext('2d'), im = g.createImageData(tw, th);
+      for (let j = 0; j < th; j++) for (let i = 0; i < tw; i++) glassEnc(im.data, (j * tw + i) * 4, glassTexel(x0 + (i + .5) * pw / tw, y0 + (j + .5) * ph / th, w, h, r, o, .4), Sc);
+      g.putImageData(im, 0, 0); glass.maps.set(key, href = glassDecoded(cv.toDataURL('image/png')));
+    }
+    out.push([href, ix, iy, iw, ih, a]);
+  };
+  piece(0, 0, c, c, 0, 0, c, c); piece(w - c, 0, c, c, w - c, 0, c, c, 'r'); piece(0, h - c, c, c, 0, h - c, c, c); piece(w - c, h - c, c, c, w - c, h - c, c, c, 'r');
+  piece(w / 2 - .5, 0, 1, c, c, 0, w - 2 * c, c, 's'); piece(w / 2 - .5, h - c, 1, c, c, h - c, w - 2 * c, c, 's');
+  piece(0, h / 2 - .5, c, 1, 0, c, c, h - 2 * c); piece(w - c, h / 2 - .5, c, 1, w - c, c, c, h - 2 * c, 'r');
+  return { Sc, pieces: out };
 }
-// a lens for each, made for its size as it is now (again when that changes)
-function glassFit(e) {
+// (the filter's matrices: the light's colour — w + g·saturate(s) of what's behind; what holds down under the words —
+// white ink 1 − a·luma, dark ink (1 − a) + a·luma, used as 1 − (1 − what's behind)·keep; how much of the map's light shows
+// (l), how much its band holds (h), how frosted the dock (f))
+const GLM = { Z: '0 0 0 0 0', A: '0 0 0 1 0', L: [.2126, .7152, .0722] };
+const glassSat = (s, k, w) => [0, 1, 2].map(i => GLM.L.map((v, j) => (((1 - s) * v + (i === j ? s : 0)) * k).toFixed(4)).join(' ') + ` 0 ${w}`).join(' ') + ' ' + GLM.A;
+const glassKeepV = (a, dark) => { const r = GLM.L.map(v => ((dark ? a : -a) * v).toFixed(4)).join(' ') + ` 0 ${dark ? (1 - a).toFixed(4) : 1}`; return `${r} ${r} ${r} ${GLM.A}`; };
+const glassHoldV = h => { const r = `0 0 ${(-2 * h).toFixed(3)} 0 ${h.toFixed(3)}`; return `${r} ${r} ${r} 0 0 0 0 1`; };
+const glassLightV = l => `${GLM.Z} ${GLM.Z} ${GLM.Z} 0 0 ${(2 * l).toFixed(3)} 0 ${(-l).toFixed(3)}`;
+const glassZoneV = f => `${GLM.Z} ${GLM.Z} ${GLM.Z} 0 0 ${(2 * f).toFixed(3)} 0 ${(1 - f).toFixed(3)}`;
+// the light under a finger: a soft round of it with a bright core (made once; placed and sized at the finger by the press)
+const glassGlow = () => glass.glow ||= (() => {
+  const n = 64, cv = document.createElement('canvas'), g = (cv.width = cv.height = n, cv.getContext('2d')), im = g.createImageData(n, n);
+  for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
+    const p = Math.hypot(i + .5 - n / 2, j + .5 - n / 2) / (n / 2);
+    im.data.set([255, 255, 255, Math.round(255 * Math.min(1, p >= 1 ? 0 : .55 * Math.exp(-((p / .2) ** 2)) + .45 * (1 - glassSmooth(0, .92, p))))], (j * n + i) * 4);
+  }
+  g.putImageData(im, 0, 0); return glassDecoded(cv.toDataURL('image/png'));
+})();
+// a lens for each, made for its size and its ink as they are now — again when they change, and with a press's light
+// while it's pressed: never per frame
+function glassFit(e, glow = false) {
   if (glass.tier !== 'lens') return;
-  const w = e.offsetWidth, h = e.offsetHeight, cs = getComputedStyle(e), kind = GLASS_LENS.find(([q]) => e.matches(q))[1], o = GLASS_KIND[kind]; // (the laid-out size: a scale in an animation doesn't change it)
+  const w = e.offsetWidth, h = e.offsetHeight, cs = getComputedStyle(e), [q, kind] = GLASS_LENS.find(([q]) => e.matches(q)), o = GLASS_KIND[kind]; // (the laid-out size: a scale in an animation doesn't change it)
   if (!w || !h || cs.getPropertyValue('--g-lens').trim() === '0') return glassOff(e); // (none here: the name bare on a narrow screen)
-  const r = Math.min(parseFloat(cs.borderTopLeftRadius) || 0, h / 2, w / 2), key = [w, h, r].join();
+  const r = Math.min(parseFloat(cs.borderTopLeftRadius) || 0, h / 2, w / 2), dark = e.classList.contains('ink-dark'), key = [w, h, r, dark, glow].join();
   if (e.glassKey === key) return;
   // (its width alone changed — the back arrow growing in or out, going home and back, full screen: every frame of it —
   // the same pieces moved along, not a new filter each frame: a new one's images aren't there for its first frames)
   const f0 = e.glassFilter, c0 = e.glassC;
   if (f0 && e.glassKey.slice(e.glassKey.indexOf(',')) === key.slice(key.indexOf(',')) && 2 * c0 + 1 < w && 2 * c0 + 1 < +f0.getAttribute('width')) {
     e.glassKey = key; f0.setAttribute('width', w);
-    for (const im of f0.querySelectorAll('feImage')) { if (im.dataset.a === 'r') im.setAttribute('x', w - c0); else if (im.dataset.a === 's') im.setAttribute('width', w - 2 * c0); }
+    for (const im of f0.querySelectorAll('feImage[data-a]')) { if (im.dataset.a === 'r') im.setAttribute('x', w - c0); else if (im.dataset.a === 's') im.setAttribute('width', w - 2 * c0); }
     return;
   }
   e.glassKey = key;
-  const f = document.createElementNS(SVGNS, 'filter'), id = 'glf' + (++glass.n), img = [];
+  const f = document.createElementNS(SVGNS, 'filter'), id = 'glf' + (++glass.n), img = [], drop = o.prof === 'drop', L = glow ? 'light2' : 'light';
   for (const [a, v] of [['id', id], ['x', 0], ['y', 0], ['width', w], ['height', h], ['filterUnits', 'userSpaceOnUse'], ['primitiveUnits', 'userSpaceOnUse'], ['color-interpolation-filters', 'sRGB']]) f.setAttribute(a, v);
   // (a: how a piece follows the width — fixed at the left, 'r' kept at the right, 's' stretched between)
   const put = (href, x, y, iw, ih, a = '') => { if (iw > .5 && ih > .5) img.push(`<feImage href="${href}" x="${x}" y="${y}" width="${iw}" height="${ih}" preserveAspectRatio="none" data-a="${a}" result="m${img.length}"/>`); };
-  const dm = (S, s, n, m, src) => `<feDisplacementMap in="${src}" in2="map" scale="${(S * s).toFixed(2)}" data-s="${(S * s).toFixed(3)}" xChannelSelector="R" yChannelSelector="G" result="d${n}"/><feColorMatrix in="d${n}" type="matrix" values="${m} 0 0 0 1 0" result="c${n}"/>`;
-  const split = (S, src) => dm(S, 1 - o.disp, 0, '1 0 0 0 0  0 0 0 0 0  0 0 0 0 0 ', src) + dm(S, 1, 1, '0 0 0 0 0  0 1 0 0 0  0 0 0 0 0 ', src) + dm(S, 1 + o.disp, 2, '0 0 0 0 0  0 0 0 0 0  0 0 1 0 0 ', src)
-    + `<feComposite in="c0" in2="c1" operator="arithmetic" k2="1" k3="1" result="c01"/><feComposite in="c01" in2="c2" operator="arithmetic" k2="1" k3="1" result="sharp"/>`;
-  if (kind === 'cap') {
-    const T = glassCap(h, o), c = Math.min(T.c, w / 2);
-    put(T.l, 0, 0, c, h); put(T.m, c, 0, w - 2 * c, h, 's'); put(T.r, w - c, 0, c, h, 'r'); e.glassC = c;
-    f.innerHTML = `<feFlood flood-color="rgb(128,128,0)" result="f0"/>${img.join('')}<feMerge result="map"><feMergeNode in="f0"/>${img.map((p, i) => `<feMergeNode in="m${i}"/>`).join('')}</feMerge>`
-      + `<feGaussianBlur in="SourceGraphic" stdDeviation=".6" result="src"/>` + split(T.M / .498, 'src')
-      + `<feGaussianBlur in="SourceGraphic" stdDeviation="9" result="soft"/><feColorMatrix in="soft" type="matrix" values="${'-.085 -.29 -.03 0 1  '.repeat(3)}0 0 0 0 1" result="keep"/>` // (what to keep: less where it's bright behind)
-      + `<feBlend in="sharp" in2="keep" mode="multiply" result="dim"/><feComponentTransfer in="dim" result="mid">${['R', 'G', 'B'].map(ch => `<feFunc${ch} type="table" tableValues="0 .2 .32 .39 .43 .45"/>`).join('')}</feComponentTransfer>` // (the darks as they are, the brightest no brighter than its words read over)
-      + `<feColorMatrix in="map" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 1 0 0" result="mask"/><feComposite in="sharp" in2="mask" operator="in" result="rim"/><feMerge><feMergeNode in="mid"/><feMergeNode in="rim"/></feMerge>`; // (and the rim, as bright as what it bends)
-  } else {
-    const b = Math.round(Math.max(6, Math.min(30, h * o.band, r || h / 2))), M = Math.round(b * o.amp), c = Math.ceil(Math.max(r, b)), k = c > 30 ? .6 : 1;
-    const pc = (type, x, y, pw, ph, ix, iy, iw, ih, a) => put(glassPiece(type, w, h, r, b, M, k, x, y, pw, ph, o.edge), ix, iy, iw, ih, a);
-    pc('TL', 0, 0, c, c, 0, 0, c, c); pc('TR', w - c, 0, c, c, w - c, 0, c, c, 'r'); pc('BL', 0, h - c, c, c, 0, h - c, c, c); pc('BR', w - c, h - c, c, c, w - c, h - c, c, c, 'r');
-    pc('T', w / 2 - .5, 0, 1, c, c, 0, w - 2 * c, c, 's'); pc('B', w / 2 - .5, h - c, 1, c, c, h - c, w - 2 * c, c, 's');
-    pc('L', 0, h / 2 - .5, c, 1, 0, c, c, h - 2 * c); pc('R', w - c, h / 2 - .5, c, 1, w - c, c, c, h - 2 * c, 'r'); e.glassC = c;
-    f.innerHTML = `<feFlood flood-color="rgb(128,128,0)" result="f0"/>${img.join('')}<feMerge result="map"><feMergeNode in="f0"/>${img.map((p, i) => `<feMergeNode in="m${i}"/>`).join('')}</feMerge>`
-      + `<feGaussianBlur in="SourceGraphic" stdDeviation=".6" result="src"/>` + split(M / .498, 'src')
-      + `<feGaussianBlur in="SourceGraphic" stdDeviation="${o.frost}" result="fr"/><feColorMatrix in="fr" type="matrix" values="${o.dim} 0 0 0 0  0 ${o.dim} 0 0 0  0 0 ${o.dim} 0 0  0 0 0 1 0" result="frost"/><feColorMatrix in="map" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 1 0 0" result="mask"/>`
-      + `<feComposite in="sharp" in2="mask" operator="in" result="rim"/><feMerge><feMergeNode in="frost"/><feMergeNode in="rim"/></feMerge>`;
-  }
+  let S, flood = '';
+  if (r >= h / 2 - .5) { const T = glassCap(h, o, drop ? Math.min(.9, GLASS_TL[q] / r) : 0), c = Math.min(T.c, w / 2); S = T.Sc; put(T.l, 0, 0, c, h); put(T.m, c, 0, w - 2 * c, h, 's'); put(T.r, w - c, 0, c, h, 'r'); e.glassC = c; }
+  else { const R = glassRect(w, h, r, o, r > 30 ? .6 : 1); S = R.Sc; for (const p of R.pieces) put(...p); flood = '<feFlood flood-color="rgb(128,128,0)" result="f0"/>'; e.glassC = Math.ceil(r); }
+  const dm = (s, n) => `<feDisplacementMap in="src" in2="map" scale="0" data-s="${s.toFixed(3)}" xChannelSelector="R" yChannelSelector="G" result="d${n}"/>`;
+  f.innerHTML = flood + img.join('') + `<feMerge result="map">${flood && '<feMergeNode in="f0"/>'}${img.map((p, i) => `<feMergeNode in="m${i}"/>`).join('')}</feMerge>`
+    // the lens: each colour bent from the same picture by a little less, the same, a little more (each bent picture with
+    // one use: one used twice is drawn twice)
+    + `<feGaussianBlur in="SourceGraphic" stdDeviation="${o.soft}" result="src"/>${dm(S * (1 - o.e), 'r')}${dm(S, 'g')}${dm(S * (1 + o.e), 'b')}`
+    + `<feColorMatrix in="dr" type="matrix" values="1 0 0 0 0 ${GLM.Z} ${GLM.Z} ${GLM.A}" result="cr"/><feColorMatrix in="dg" type="matrix" values="${GLM.Z} 0 1 0 0 0 ${GLM.Z} ${GLM.A}" result="cg"/>`
+    + `<feColorMatrix in="db" type="matrix" values="${GLM.Z} ${GLM.Z} 0 0 1 0 0 ${GLM.A}" result="cb"/>`
+    + `<feComposite in="cr" in2="cg" operator="arithmetic" k2="1" k3="1" result="crg"/><feComposite in="crg" in2="cb" operator="arithmetic" k2="1" k3="1" result="bent"/>`
+    // its light, in the colour of what's behind, where the map says — and, pressed, the light under the finger (white at its
+    // core, so it shows over a dark room): both before what holds the words, so a press never washes them out
+    + `<feColorMatrix in="src" type="matrix" values="${glassSat(o.sat, o.g, o.w)}" result="lit"/>`
+    + `<feColorMatrix in="map" type="matrix" values="${glassLightV(1)}" result="lightA" data-r="lightA"/><feComposite in="lit" in2="lightA" operator="in" result="light"/>`
+    + (drop ? '' : `<feGaussianBlur in="SourceGraphic" stdDeviation="${o.frost}" result="fr"/>`) // (the dock's frost, its middle)
+    // (the finger's light the colour of what it lights: a drop's clear picture, the dock's frost — from the clear one the
+    // frosted middle went sharp under it — and what holds the words knows of it, the dock's as a drop's: without it, a
+    // press on the dock lit its words away, 1.5 : 1 by the finger)
+    + (glow ? `<feImage href="${glassGlow()}" x="0" y="0" width="1" height="1" preserveAspectRatio="none" result="glowI" data-r="glowI"/>`
+      + `<feColorMatrix in="${drop ? 'src' : 'fr'}" type="matrix" values="${glassSat(1.25, 1, .42)}" result="glowL"/><feComposite in="glowL" in2="glowI" operator="in" result="glowC"/>`
+      + `<feComposite in="light" in2="glowC" operator="arithmetic" k2="1" k3="0" result="light2" data-r="glowK"/>`
+      + `<feComposite in="${drop ? 'dg' : 'fr'}" in2="glowC" operator="arithmetic" k2="1" k3="0" result="kin" data-r="glowK2"/>` : '')
+    // under its icons and words, what's bright behind held down (dark ink: what's dark lifted) by the map's band — a drop by
+    // its own bent picture; the dock frosted in the middle (from the picture as it is), giving way to the bent rim, held by
+    // the frost's own light
+    + (drop ? `<feComposite in="bent" in2="${L}" operator="arithmetic" k2="1" k3="1" result="bl"/><feColorMatrix in="${glow ? 'kin' : 'dg'}" type="matrix" values="${glassKeepV(dark ? o.ad : o.a, dark)}" result="keep"/>`
+      : `<feColorMatrix in="map" type="matrix" values="${glassZoneV(1)}" result="zone" data-r="zone"/>`
+        + `<feComposite in="bent" in2="zone" operator="in" result="rim"/><feMerge result="body"><feMergeNode in="fr"/><feMergeNode in="rim"/></feMerge>`
+        + `<feComposite in="body" in2="${L}" operator="arithmetic" k2="1" k3="1" result="bl"/><feColorMatrix in="${glow ? 'kin' : 'fr'}" type="matrix" values="${glassKeepV(dark ? o.ad : o.a, dark)}" result="keep"/>`)
+    + `<feColorMatrix in="map" type="matrix" values="${glassHoldV(1)}" result="hold" data-r="hold"/><feComposite in="keep" in2="hold" operator="arithmetic" k1="1" k3="-1" k4="1" result="keepm"/>`
+    + `<feComposite in="bl" in2="keepm" operator="arithmetic" k1="1"${dark ? ' k3="-1" k4="1"' : ''}/>`;
   glass.defs.append(f);
-  const was = e.glassFilter; e.glassFilter = f;
-  e.glassLens = { k: 1, dms: [...f.querySelectorAll('feDisplacementMap')].map(x => [x, +x.dataset.s]) };
-  glassScale(e.glassLens);
-  e.style.webkitBackdropFilter = e.style.backdropFilter = `url(#${id}) ${o.css}`;
+  const was = e.glassFilter, by = n => f.querySelector(`[data-r=${n}]`); e.glassFilter = f;
+  e.glassLens = { dms: [...f.querySelectorAll('feDisplacementMap')].map(x => [x, +x.dataset.s]), lightA: by('lightA'), hold: by('hold'), zone: by('zone'), glowI: by('glowI'), glowK: by('glowK'), glowK2: by('glowK2') };
+  glassSet(e);
+  e.style.webkitBackdropFilter = e.style.backdropFilter = `${o.css} url(#${id})`; // (saturated first: what holds the words down is the last thing done — after it, a saturate lifted vivid colours back past it)
   if (was) setTimeout(() => was.remove(), 200); // (the old one once the new is drawn: a filter pointing at nothing drops the whole backdrop filter)
+  if (glass.decoding.length && !glass.redo) glass.redo = Promise.resolve().then(() => { const d = glass.decoding; glass.decoding = []; return Promise.all(d); }).then(() => {
+    glass.redo = null;
+    for (const [q] of GLASS_LENS) { const x = document.querySelector(q); if (x.glassFilter) { x.glassKey = ''; glassFit(x, !!x.glassLens?.glowI); } }
+  });
 }
-// how much a lens bends right now: its growing in (glassGrow) times its own swell (a press)
-function glassScale(l) { const g = glass.grow * l.k; for (const [x, s] of l.dms) x.setAttribute('scale', (s * g).toFixed(2)); }
+const GLASS_REST = { sx: 1, sy: 1, k: 1, l: 1 };
+// how a lens is right now — its growing in (glass.grow; its words' share, glass.gi) and its own press (glassP: its scale,
+// how much more it bends, how much brighter its light): its scale set, and its filter's own numbers (nothing made again)
+function glassSet(e) {
+  const p = e.glassP || GLASS_REST, g = glass.grow, s = .96 + .04 * g, L = e.glassLens;
+  e.style.scale = s === 1 && p.sx === 1 && p.sy === 1 ? '' : `${(s * p.sx).toFixed(4)} ${(s * p.sy).toFixed(4)}`;
+  if (!L) return;
+  for (const [x, v] of L.dms) x.setAttribute('scale', (v * g * p.k).toFixed(2));
+  L.lightA.setAttribute('values', glassLightV(g * p.l));
+  L.hold.setAttribute('values', glassHoldV(glass.gi)); L.zone?.setAttribute('values', glassZoneV(glass.gi));
+}
+// Dark ink over something bright: the median luminance behind each lens (a white word passing over a dark room doesn't
+// count), from what's really drawn there — your own picture (Background › Pictures, its dim over it) or the cover (the
+// Cover background: the same decode as its colours, drawn at 30 % brightness); otherwise the backdrop's own colour (the
+// scenes, the visualiser: dark). Once a song, a picture, a background, a view or a size — never per frame — dark above
+// .28, light again below .2 (never flickering between). On a lens or frost: a tint's own colour is dark.
+let glassInkT = 0;
+const glassInkSoon = () => { clearTimeout(glassInkT); glassInkT = setTimeout(() => glassInk().catch(() => {}), 150); };
+async function glassInk() {
+  const on = glass.tier === 'lens' || glass.tier === 'frost', bc = body.classList, seen = !(bc.contains('view-vis') && bc.contains('has-song') && !bc.contains('home'));
+  let src = null, dim = 0, over = [0, 0, 0];
+  if (on && seen && theme === 'Pictures') { src = picBox().querySelector('img:not(.gone)'); dim = PIC_DIM[picDim]; over = rgb(pal.bg); }
+  else if (on && seen && theme === 'Cover' && curArt) { src = await artImage(curArt).catch(() => null); dim = .7; }
+  const W = 64, H = Math.max(1, Math.round(W * innerHeight / innerWidth)), key = [src?.src, dim, over, W, H].join();
+  if (glass.ink?.key !== key) {
+    const Ls = new Float32Array(W * H).fill(GLM.L.reduce((a, v, k) => a + v * lin(rgb(pal.bg)[k]), 0));
+    if (src?.naturalWidth) try {
+      const c = document.createElement('canvas'); c.width = W; c.height = H;
+      const g = c.getContext('2d', { willReadFrequently: true }), s = Math.max(W / src.naturalWidth, H / src.naturalHeight);
+      g.drawImage(src, (W - src.naturalWidth * s) / 2, (H - src.naturalHeight * s) / 2, src.naturalWidth * s, src.naturalHeight * s); // (as it's drawn: filling the window)
+      const D = g.getImageData(0, 0, W, H).data;
+      for (let i = 0; i < W * H; i++) Ls[i] = GLM.L.reduce((a, v, k) => a + v * lin(D[i * 4 + k] / 255 * (1 - dim) + over[k] * dim), 0);
+    } catch { Ls.fill(0); } // (a picture it may not read: light ink, as before)
+    glass.ink = { key, Ls };
+  }
+  for (const [q] of GLASS_LENS) {
+    const e = document.querySelector(q), r = e.getBoundingClientRect(), L = [];
+    if (on) for (let y = Math.max(0, Math.floor(r.top / innerHeight * H)); y <= Math.min(H - 1, r.bottom / innerHeight * H); y++) // (the name bare on a narrow screen too: its shade turns light)
+      for (let x = Math.max(0, Math.floor(r.left / innerWidth * W)); x <= Math.min(W - 1, r.right / innerWidth * W); x++) L.push(glass.ink.Ls[y * W + x]);
+    const dark = e.classList.contains('ink-dark');
+    if (glassInkFlip(L.sort((a, b) => a - b)[L.length >> 1] ?? 0, dark) !== dark) { e.classList.toggle('ink-dark'); glassFit(e, !!e.glassLens?.glowI); }
+  }
+}
+const glassInkFlip = (m, dark) => dark ? m > .2 : m > .28;
 // a spring, 0 → 1 over t seconds: its period and its bounce (0, none; its stiffness (2π / period)², its damping from the bounce)
 function glassSpring(t, period, bounce) {
   const w = 2 * Math.PI / period, z = 1 - bounce;
@@ -3654,34 +3816,69 @@ function glassSpring(t, period, bounce) {
   const wd = w * Math.sqrt(1 - z * z);
   return 1 - Math.exp(-z * w * t) * (Math.cos(wd * t) + z * w / wd * Math.sin(wd * t));
 }
-// the lenses grow in — their bending rising from none on a spring — when the theme comes on, and when the controls come
-// back after hiding (full screen, the visualiser): never just faded in
+/// the lenses grow in — when the theme comes on, and when the controls come back after hiding (full screen, the
+// visualiser, Settings › Hide controls, the library): their bending rising first, on a spring (0.42 s, a little bounce),
+// their light, edge, glints and shadow with it (--g), the glass from 96 %; their icons and words, and what holds them
+// down, come in last (gi: as the spring passes .55 → .9). The glass itself never fades in. Solid, or less motion: at once.
 function glassGrow() {
   cancelAnimationFrame(glass.raf);
-  const set = v => { glass.grow = v; for (const [q] of GLASS_LENS) { const l = document.querySelector(q).glassLens; if (l) glassScale(l); } };
-  if (!motion || glass.tier !== 'lens') return set(1);
-  const t0 = performance.now(), step = now => { const t = (now - t0) / 1000; if (t < .6) { set(glassSpring(t, .42, .18)); glass.raf = requestAnimationFrame(step); } else set(1); };
+  const els = GLASS_LENS.map(([q]) => document.querySelector(q));
+  const set = g => { glass.grow = g; glass.gi = glassSmooth(.55, .9, g); for (const e of els) { e.style.setProperty('--g', Math.min(1, g).toFixed(3)); glassSet(e); } };
+  const done = () => { set(1); for (const e of els) { e.style.removeProperty('--g'); e.classList.remove('gl-grow'); } };
+  if (!motion || !glass.tier || glass.tier === 'solid') return done();
+  for (const e of els) e.classList.add('gl-grow'); // (their icons and words, faded in on the same clock: see .gl-grow)
+  const t0 = performance.now(), step = now => { const t = (now - t0) / 1000; if (t < .6) { set(glassSpring(t, .42, .18)); glass.raf = requestAnimationFrame(step); } else done(); };
   set(0); glass.raf = requestAnimationFrame(step);
 }
-new MutationObserver(() => { const idle = body.classList.contains('idle'); if (glass.idle && !idle && glass.tier === 'lens') glassGrow(); glass.idle = idle; })
-  .observe(body, { attributes: true, attributeFilter: ['class'] });
-// a press: light under the finger, spreading through that piece of glass, its rim brighter, the glass a little bigger
-// (6 px across) — and its lens swelling a third more, settling back on a spring
+// (the controls back once they'd faded right out — a passing idle grows nothing — and, the backdrop or the view changed
+// behind them, the ink looked at again)
+new MutationObserver(() => {
+  const hid = body.classList.contains('idle') || body.classList.contains('lib-open');
+  if (glass.hid && !hid && glass.tier && performance.now() - glass.hidAt > 700) glassGrow();
+  if (hid && !glass.hid) glass.hidAt = performance.now();
+  glass.hid = hid;
+  if (glass.tier) glassInkSoon();
+}).observe(body, { attributes: true, attributeFilter: ['class'] });
+addEventListener('resize', () => { if (!glass.tier) return; glassInkSoon(); if (glass.spec) glassGrainSize(); }, { passive: true });
+// A press: the glass gives under the finger like a gel — wider than tall, about the finger, X springing back with a
+// little more bounce than Y, 0.30 s — its lens swelling a third and its light a third brighter, light spreading from the
+// finger (in the filter on a computer, so the words it's held under stay clear; a soft round of it elsewhere), its edge
+// brighter; let go, all of it settles back. Each frame worked out from the time alone (t since the finger went down, tr
+// when it lifted). Less motion: its light alone.
+function glassPressAt(e, t, tr, fx, fy) {
+  const w = e.offsetWidth, h = e.offsetHeight, ax = Math.min(12 / w, .08), ay = Math.min(4 / h, .07), down = t < tr, u = t - tr, S = glassSpring;
+  const px = down ? S(t, .3, .3) : S(tr, .3, .3) * (1 - S(u, .3, .2)); // (the lens and its light)
+  const py = down ? S(t, .3, .22) : S(tr, .3, .22) * (1 - S(u, .3, .1)); // (Y: less bounce than X)
+  const sx = down ? S(t, .3, .35) : S(tr, .3, .35) * (1 - S(u, .3, .2)); // (X)
+  const lit = down ? glassSmooth(0, .07, t) : glassSmooth(0, .07, tr) * (1 - glassSmooth(0, .42, u)), reach = .38 + .62 * (1 - Math.exp(-t / .1));
+  e.glassP = motion ? { sx: 1 + ax * sx, sy: 1 + ay * py, k: 1 + .33 * px, l: 1 + .35 * Math.max(0, px) } : GLASS_REST;
+  e.style.transformOrigin = `${fx.toFixed(1)}px ${fy.toFixed(1)}px`; e.style.setProperty('--pl', lit.toFixed(3));
+  glassSet(e);
+  const L = e.glassLens, R = Math.max(w * .55, h * 1.35) * reach;
+  if (!L?.glowI) return;
+  for (const [a, v] of [['x', fx - R], ['y', fy - R], ['width', 2 * R], ['height', 2 * R]]) L.glowI.setAttribute(a, v.toFixed(1));
+  L.glowK.setAttribute('k3', lit.toFixed(3)); L.glowK2?.setAttribute('k3', lit.toFixed(3));
+}
 addEventListener('pointerdown', e => {
   if (!glass.tier || glass.tier === 'solid') return;
   const cap = e.target.closest?.('.top-l, .mood, .files, .bar');
   if (!cap || getComputedStyle(cap).getPropertyValue('--g-lens').trim() === '0') return;
-  const r = cap.getBoundingClientRect();
-  cap.style.setProperty('--px', Math.round(e.clientX - r.left) + 'px'); cap.style.setProperty('--py', Math.round(e.clientY - r.top) + 'px');
-  cap.style.setProperty('--g-sc', ((r.width + 6) / Math.max(1, r.width)).toFixed(4));
-  cap.classList.add('lit');
-  const off = () => { cap.classList.remove('lit'); removeEventListener('pointerup', off, true); removeEventListener('pointercancel', off, true); };
-  addEventListener('pointerup', off, true); addEventListener('pointercancel', off, true);
-  const l = cap.glassLens;
-  if (!l || !motion) return;
-  const t0 = performance.now(), step = now => { const t = (now - t0) / 1000; l.k = t < .5 ? 1 + .3 * Math.exp(-7 * t) * Math.cos(18 * t) : 1; glassScale(l); if (t < .5) requestAnimationFrame(step); };
-  requestAnimationFrame(step);
+  const r = cap.getBoundingClientRect(), k = cap.offsetWidth / Math.max(1, r.width), fx = (e.clientX - r.left) * k, fy = (e.clientY - r.top) * k;
+  cap.style.setProperty('--px', Math.round(fx) + 'px'); cap.style.setProperty('--py', Math.round(fy) + 'px'); // (its light, with no lens: where the finger is)
+  cancelAnimationFrame(cap.glassRaf);
+  glassFit(cap, true); // (its filter with the press's light in it, till the press has settled)
+  const t0 = performance.now();
+  let tr = Infinity;
+  const up = () => { tr = (performance.now() - t0) / 1000; removeEventListener('pointerup', up, true); removeEventListener('pointercancel', up, true); };
+  addEventListener('pointerup', up, true); addEventListener('pointercancel', up, true);
+  const step = now => {
+    const t = (now - t0) / 1000;
+    if (t < tr + .8) { glassPressAt(cap, motion ? t : 1, motion || tr === Infinity ? tr : 0, fx, fy); cap.glassRaf = requestAnimationFrame(step); return; }
+    cap.glassP = null; cap.style.removeProperty('--pl'); cap.style.removeProperty('transform-origin'); glassSet(cap); glassFit(cap);
+  };
+  cap.glassRaf = requestAnimationFrame(step);
 }, true);
+
 // the light, on a computer: where the pointer is (the edges facing it catch it) — its angle on each piece of glass with a
 // rim, kept unwrapped (a turn past north eases a few degrees, not the long way round)
 addEventListener('pointermove', e => {
@@ -3692,7 +3889,7 @@ addEventListener('pointermove', e => {
     const els = [...GLASS_LENS.map(([q]) => document.querySelector(q)), $('singBar'), $('abBar')].filter(x => x.offsetWidth);
     const rs = els.map(x => x.getBoundingClientRect()); // (all read, then all written: one layout)
     els.forEach((x, i) => {
-      const r = rs[i], a = Math.atan2(glass.px - r.left - r.width / 2, r.top + r.height / 2 - glass.py) * 180 / Math.PI, was = x.glassLa ?? 340, d = ((a - was) % 360 + 540) % 360 - 180;
+      const r = rs[i], a = Math.atan2(glass.px - r.left - r.width / 2, r.top + r.height / 2 - glass.py) * 180 / Math.PI, was = x.glassLa ?? 322, d = ((a - was) % 360 + 540) % 360 - 180;
       if (Math.abs(d) < 2) return;
       x.glassLa = was + d; x.style.setProperty('--la', x.glassLa.toFixed(1) + 'deg');
     });
@@ -3710,7 +3907,7 @@ document.addEventListener('beforetoggle', e => {
   if (e.newState === 'open') {
     const f = glass.from; glass.from = null;
     glass.src.set(p, f && performance.now() - f.t < 1000 && !p.contains(f.el) ? f.el : null);
-    queueMicrotask(() => glassMorph(p, true)); // (once it's shown, before it's drawn)
+    requestAnimationFrame(() => glassMorph(p, true)); // (once it's shown, before it's drawn — a microtask ran before it was shown when a button opened it, popovertarget: no script under it, so the panel never grew out of its button)
   } else glassMorph(p, false);
 }, true);
 function glassMorph(p, open) {
@@ -4801,6 +4998,7 @@ function picLook() { // (Picture dim and blur, on the background itself: see .pi
   const b = picBox();
   b.style.setProperty('--pic-dim', PIC_DIM[picDim]); b.style.setProperty('--pic-blur', PIC_BLUR[picBlur] + 'px');
   b.classList.toggle('blur', PIC_BLUR[picBlur] > 0);
+  if (glass.tier) glassInkSoon(); // (the Glass theme's ink: the picture dimmed more or less behind its lenses)
 }
 async function picShow(i) { // (picture i fades in over the one showing once it's decoded; that one then goes, its memory with it)
   if (!pics?.length) return picDrop();
@@ -4812,6 +5010,7 @@ async function picShow(i) { // (picture i fades in over the one showing once it'
   if (tok !== picTok || !img.naturalWidth) return URL.revokeObjectURL(img.src); // (another asked for meanwhile, the background left, or unreadable)
   for (const old of picBox().querySelectorAll('img:not(.gone)')) { old.classList.add('gone'); setTimeout(() => { old.remove(); URL.revokeObjectURL(old.src); }, 1800); }
   picBox().append(img);
+  if (glass.tier) glassInkSoon(); // (the Glass theme's ink, for the picture now behind its lenses)
 }
 function picPlan() { // (Picture change: the next one every so often, not while the app's out of sight)
   clearInterval(picTimer); picTimer = 0;
@@ -4936,11 +5135,11 @@ function renderMoodMenu() {
     settingRow('Background beat', ['Off', 'On'], bgBeat ? 'On' : 'Off', setBgBeat, 'The background swells and brightens with the bass of the music.'));
 }
 
+// the cover, loaded once a song for whatever reads it — its colours (Auto), the Glass theme's ink over the Cover
+// background — readable (asked for as CORS: a host that won't allow it fails the load, and the reader keeps its default)
+const artImage = url => artImage.url === url ? artImage.p : (artImage.url = url, artImage.p = (async () => { const img = new Image(); img.crossOrigin = 'anonymous'; img.src = url; await img.decode(); return img; })());
 async function paletteFromArt(url) {
-  const img = new Image();
-  img.crossOrigin = 'anonymous';
-  img.src = url;
-  await img.decode();
+  const img = await artImage(url);
   const c = document.createElement('canvas'); c.width = c.height = 20;
   const g = c.getContext('2d', { willReadFrequently: true });
   g.drawImage(img, 0, 0, 20, 20);
@@ -4985,6 +5184,7 @@ function showArt(art) {
   $('dvArt').style.backgroundImage = u;
   if (body.classList.contains('home')) $('homeNow').querySelector('i').style.backgroundImage = u;
   curArt = art;
+  if (glass.tier) glassInkSoon(); // (the Cover background behind the Glass theme's lenses)
 }
 // The cover, watched as it loads: one an image server turned away (YouTube's, now and then, when the app asks for many at
 // once, as a mix does) asked again another way, as the lists' covers are (see coverAgain), then its own full-size one,
@@ -17888,6 +18088,10 @@ console.assert(glassChip('ANGLE (AMD, AMD Radeon(TM) Graphics Direct3D11 vs_5_0 
   && !glassChip('ANGLE (NVIDIA, NVIDIA GeForce RTX 4070 SUPER Direct3D11)').igpu && !glassChip('ANGLE (Intel, Intel(R) Arc(TM) A770 Graphics Direct3D11)').igpu && !glassChip('ANGLE (AMD, AMD Radeon RX 7900 XTX Direct3D11)').igpu
   && glassChip('ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero)), SwiftShader driver)').soft && glassChip('ANGLE (Microsoft, Microsoft Basic Render Driver Direct3D11)').soft && !glassChip('ANGLE (NVIDIA, NVIDIA GeForce RTX 4070 SUPER)').soft
   && glassSpring(0, .42, .18) === 0 && Math.abs(glassSpring(3, .42, .18) - 1) < 1e-4 && Math.abs(glassSpring(3, .3, 0) - 1) < 1e-4 && glassSpring(.42, .42, .18) > 1, 'glass broken');
+// (and its lenses never fold — further in always looks further in — their map's scale holds the largest pull, and dark
+// ink comes on above .28 and goes below .2, not between)
+console.assert(Object.values(GLASS_KIND).every(o => { let was = -1; for (let i = 0; i <= 460; i++) { const d = 23 * i / 460, at = d + glassPull(d, 23, o); if (at <= was) return false; was = at; } return glassScaleOf(23, o) / 2 > glassPull(23 * .35, 23, o); })
+  && glassInkFlip(.3, false) && !glassInkFlip(.25, false) && glassInkFlip(.25, true) && !glassInkFlip(.15, true), 'glass lens broken');
 // Self-checks for the parsing helpers.
 console.assert(JSON.stringify(parseLyrics('[00:01.50]hi\n[01:00]yo\nplain')) ===
   JSON.stringify([{t:null,text:'plain'},{t:1.5,text:'hi'},{t:60,text:'yo'}]), 'parseLyrics broken');
