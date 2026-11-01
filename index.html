@@ -32,7 +32,7 @@ body { background: var(--bg); color: var(--ink); overflow: hidden; transition: b
 input, textarea { user-select: text; -webkit-user-select: text; }
 ::selection { background: var(--a); color: var(--bg); }
 :focus { outline: none; }
-.kb :focus-visible:not(input:not([type=range]), textarea, [tabindex="-1"]) { outline: 2px solid var(--a); outline-offset: 3px; } /* (going round by Tab: see tabbing; text fields have their own line and caret) */
+.kb :focus-visible:not(input:not([type=range], [type=checkbox]), textarea, [tabindex="-1"]) { outline: 2px solid var(--a); outline-offset: 3px; } /* (going round by Tab: see tabbing; text fields have their own line and caret, a box hasn't) */
 button { font: inherit; color: inherit; background: none; border: 0; padding: 0; letter-spacing: inherit; cursor: var(--cur-hand, pointer); }
 /* scrollbars: a thin rounded thumb in the mood's color, no track, no arrow buttons (not Windows' grey ones) */
 /* scrollbars: a thin bar, inset from the edge and clear of rounded corners, so it never runs over a box's border */
@@ -12313,13 +12313,16 @@ function tvMove(dir) {
     && (!e.checkVisibility || e.checkVisibility({ checkVisibilityCSS: true })));
   if (!all.length) return;
   let to = null;
+  // (a box is where its words are: its label is the control, as a finger has it — the box alone, small at the row's
+  // far end, was never the nearest one up or down, so Count me once couldn't be reached)
+  const at = e => (e.type === 'checkbox' && e.closest('label') || e).getBoundingClientRect();
   if (!from) to = all.find(e => e.id === 'cta' || e.id === 'play') || all.find(e => { const r = e.getBoundingClientRect(); return r.bottom > 0 && r.top < innerHeight && r.right > 0 && r.left < innerWidth; }) || all[0]; // (nothing yet: Search on the welcome, else play, else the first in sight)
   else {
-    const f = from.getBoundingClientRect(), fx = f.left + f.width / 2, fy = f.top + f.height / 2, h = dir === 'left' || dir === 'right', s = dir === 'right' || dir === 'down' ? 1 : -1;
+    const f = at(from), fx = f.left + f.width / 2, fy = f.top + f.height / 2, h = dir === 'left' || dir === 'right', s = dir === 'right' || dir === 'down' ? 1 : -1;
     let best = Infinity;
     for (const e of all) {
       if (e === from || from.contains(e) || e.contains(from)) continue;
-      const r = e.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+      const r = at(e), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
       if ((h ? (cx - fx) * s : (cy - fy) * s) <= 1) continue; // (not that way)
       const ahead = h ? (s > 0 ? r.left - f.right : f.left - r.right) : (s > 0 ? r.top - f.bottom : f.top - r.bottom); // the gap that way (negative: over it, like a row's ••• on the row)
       const side = h ? Math.max(0, r.top - f.bottom, f.top - r.bottom) : Math.max(0, r.left - f.right, f.left - r.right); // off to the side (0: in line)
