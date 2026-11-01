@@ -12348,9 +12348,11 @@ addEventListener('keydown', e => {
 // (its keyboard kept away again once the field's left: brought up only when it's chosen)
 addEventListener('focusout', e => { if (e.target.dataset?.tvIm != null) tvKeyboard(e.target); e.target.classList?.remove('tv-edit'); }, true);
 function tvKeyboard(t) { if (t.dataset.tvIm) t.inputMode = t.dataset.tvIm; else t.removeAttribute('inputmode'); delete t.dataset.tvIm; } // (its own keyboard back)
-// What's focused, said the same way after a page is drawn again (its id, its download, its words), so the focus can come
-// back to it: a list redrawn under it (a download finished, a page refreshed) took it away, to nowhere.
-const tvKey = e => e.id ? '#' + e.id : e.dataset?.dl ? 'dl:' + e.dataset.dl : e.className + '|' + (e.getAttribute('aria-label') || e.textContent.trim().slice(0, 80));
+// What's focused, said the same way after a page is drawn again (its id, its download, its row and words), so the focus
+// can come back to it: a list redrawn under it (a download finished, a page refreshed, a setting picked) took it away, to
+// nowhere. (Its row too: many of Settings' rows have an Off and an On, and the ring went to the first row's — Autoplay's
+// Off picked, it landed on Hide controls' just above, and the next press changed that.)
+const tvKey = e => e.id ? '#' + e.id : e.dataset?.dl ? 'dl:' + e.dataset.dl : (e.closest('[data-set]')?.dataset.set || '') + '|' + e.className + '|' + (e.getAttribute('aria-label') || e.textContent.trim().slice(0, 80));
 let tvLast = '';
 addEventListener('focusin', e => { if (tv && e.target !== body) tvLast = tvKey(e.target); }, true);
 function tvLand() {
