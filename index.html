@@ -14059,7 +14059,7 @@ function tvMove(dir) {
       if ((h ? (cx - fx) * s : (cy - fy) * s) <= 1) continue; // (not that way)
       const ahead = h ? (s > 0 ? r.left - f.right : f.left - r.right) : (s > 0 ? r.top - f.bottom : f.top - r.bottom); // the gap that way (negative: over it, like a row's ••• on the row)
       const side = h ? Math.max(0, r.top - f.bottom, f.top - r.bottom) : Math.max(0, r.left - f.right, f.left - r.right); // off to the side (0: in line)
-      if (h && side > 0) continue; // (left and right stay in the row: at its end, nowhere, as on a TV's own apps)
+      if (h && side > 0 && !(gsOn() && e.closest('.gs-row') && e.closest('.gs-row') === from.closest('.gs-row'))) continue; // (left and right stay in the row: at its end, nowhere, as on a TV's own apps. Glass: a row's switch and its folded note's line under its name are one row — down went to the switches on the right, so a note under one could never be reached, nor Island position's buttons)
       const d = Math.max(0, ahead) + side * 3 + (h ? Math.abs(cy - fy) : Math.abs(cx - fx)) / 4;
       if (d < best) { best = d; to = e; }
     }
