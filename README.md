@@ -113,9 +113,9 @@ The full notes for this release and every earlier one are in the [changelog](CHA
   straight through, in one colour grade for the song.
   </details>
 - **Sing**: karaoke mode, with the voice turned down as far as you like and the lyrics large
-- **28 font pairs** for the lyrics (Poster, Vogue, Neon, Arcade, Vinyl, Glitch, Graffiti, Cyber, Wide, Stencil, Bubble,
-  Melt, Gothic, Voxel, Hype, Glaze, Foil, Groove, Epic, Rodeo, Waltz, Bounce, Varsity, Marquee, Gummy, Boom, Letter and
-  Laser)
+- **32 font pairs** for the lyrics (Poster, Vogue, Neon, Arcade, Vinyl, Glitch, Graffiti, Cyber, Wide, Stencil, Bubble,
+  Melt, Gothic, Voxel, Hype, Glaze, Foil, Groove, Epic, Disco, Deco, Haunt, Rodeo, Waltz, Brush, Bounce, Varsity,
+  Marquee, Gummy, Boom, Letter and Laser)
 - **Story clips**: a short video of the song with its lyrics, sized for an Instagram story
 
 ### With your people
@@ -257,7 +257,7 @@ NetherFlow is **first, or tied for first, in seven categories**. The others beat
 | Synced lyrics | ✓ word by word | ✓ line by line | ✓ word by word | ~ line by line, on many songs |
 | Lyrics animations | ✓ 27, plus 58 Extreme looks | ✗ | ~ one style (a very good one) | ✗ |
 | Karaoke | ✓ Sing | ✗ | ✓ Apple Music Sing | ✗ |
-| Lyrics fonts | ✓ 28 | ✗ | ✗ | ✗ |
+| Lyrics fonts | ✓ 32 | ✗ | ✗ | ✗ |
 | **Score** | **10** | 7 | 9 | 5 |
 
 ### Look and feel
@@ -471,7 +471,7 @@ terms in [NOTICE](NOTICE):
 
 NetherFlow 1.3.1 and earlier came out under the MIT License, and copies of those keep it.
 
-Third-party code in this repository keeps its own license: the 109 typefaces in `fonts/` (SIL Open Font License 1.1; Permanent Marker, Special
+Third-party code in this repository keeps its own license: the 114 typefaces in `fonts/` (SIL Open Font License 1.1; Permanent Marker, Special
 Elite and Yellowtail under the Apache License 2.0), Microsoft's Fluent Emoji in `emoji/` (MIT), jsQR in `jsqr.js` (Apache 2.0), and three.js in
 `race/three/` (MIT). The three songs on the website in `docs/media/music/` are by HoliznaCC0, in the public domain
 (CC0 1.0). The builds also include Electron (with Chromium, Node.js and FFmpeg), Capacitor and electron-updater, each under its own license. All
