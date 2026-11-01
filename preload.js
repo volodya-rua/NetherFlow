@@ -4,6 +4,7 @@ const { contextBridge, ipcRenderer, webFrame } = require('electron');
 contextBridge.exposeInMainWorld('netherflowApp', {
   lite: process.argv.includes('--nf-lite'), // NetherFlow Lite: no Extreme+ (see main.js)
   portMoved: process.argv.includes('--nf-port-moved'), // its usual port was taken: the library and settings kept there aren't here (see main.js)
+  release: process.argv.includes('--nf-release'), // NetherFlow as installed: packaged, not run from the source, a test harness or a CI machine (the page's Count me once counts only there)
   country: (process.argv.find(a => a.startsWith('--nf-country=')) || '').slice(13), // Windows' own region (its language often has none, or another country's)
   version: (process.argv.find(a => a.startsWith('--nf-version=')) || '').slice(13), // the app's version (Settings › Update says it)
   win: action => ipcRenderer.send('win', action), // 'min' | 'max' | 'close'

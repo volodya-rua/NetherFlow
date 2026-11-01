@@ -657,6 +657,12 @@ body.sing:not(.home) .ab-bar { bottom: calc(100% + 44px); }
   color: color-mix(in srgb, var(--ink) 76%, transparent); }
 .consent .kicker { color: var(--a); }
 .consent .acts { display: flex; justify-content: flex-end; align-items: center; gap: 24px; margin-top: 22px; }
+/* Count me once: the box beside its words, the whole of it to tap */
+.consent .count-me { display: flex; align-items: flex-start; gap: 11px; margin-top: 4px; font: 400 13px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  letter-spacing: 0; color: color-mix(in srgb, var(--ink) 76%, transparent); }
+.consent .count-me[hidden] { display: none; }
+.consent .count-me input { flex: none; width: 17px; height: 17px; margin: 2px 0 0; accent-color: var(--a); }
+.consent .count-me b { display: block; color: var(--ink); font-weight: 600; }
 .story { width: min(400px, calc(100vw - 32px)); padding: 18px; }
 .story-note { min-height: 1.6em; margin: 10px 0 0; text-align: center; opacity: .7; text-transform: none; letter-spacing: .02em; }
 .story .acts { flex-wrap: wrap; gap: 14px 22px; }
@@ -1886,6 +1892,7 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
   <p>NetherFlow is a free, open-source player for personal use. It plays songs from YouTube, podcasts from their own hosts and free audiobooks from the Internet Archive, and shows lyrics from third-party services. It doesn't host any music, podcasts or lyrics, and it isn't affiliated with any of those services. It shows no ads of its own and doesn't block or skip anything. It can also save songs on your device for offline listening by downloading them from YouTube, which YouTube's terms don't allow (and the rights holders or the law where you live may not either), and make short story clips of a song to share: those choices are yours. A playlist you choose to edit together is kept, encrypted, on NetherFlow's own relay (with public relays as a backup), and anyone with its link can see and change it. There are no accounts and no tracking of its own.</p>
   <p>By continuing you agree to the <button class="inline-link" data-legal="terms">Terms of Use</button> and the <button class="inline-link" data-legal="privacy">Privacy Policy</button>.</p>
   <p id="declined" hidden>You need to accept the terms to use NetherFlow.</p>
+  <label class="count-me"><input type="checkbox" id="countMe"><span><b>Count me once</b></span></label>
   <div class="acts lbl"><button id="decline" class="link">Decline</button><button id="agree" class="pill">Agree &amp; continue</button></div>
 </dialog>
 
@@ -3691,6 +3698,44 @@ $('textPanel').addEventListener('toggle', e => { if (e.newState === 'open' && (!
 let setMode = store.get('netherflow.setmode') === 'Advanced' ? 'Advanced' : 'Classic';
 const CLASSIC = new Set(['Theme', 'Updates', 'Interface size', 'Show', 'Visualiser', 'Lyrics animation', 'Lyrics size', 'Autoplay', 'Smooth mix', 'Liked songs offline', 'Sync with phone', 'Sync with computer', 'Island']);
 function setSetMode(v) { setMode = v; store.set('netherflow.setmode', v === 'Advanced' ? v : ''); renderTextPanel(); }
+// ---------- the install count (Count me once: in "Before you press play", and Settings › Privacy) ----------
+// Roughly how many installs NetherFlow has, for the README's badge: with Count me once ticked when the terms are agreed
+// to, this install adds 1 to a single number on NetherFlow's relay (relay/worker.js: POST /c), once. The request is
+// empty: no version, platform, language, time or identifier, and no headers or credentials of its own; nothing's kept
+// here but how it went. Ticked to start with, except in a build signed by someone else (an app store's, F-Droid's:
+// UpdatePlugin.ours), where nothing's sent till it's ticked; unticked once, it stays unticked. Only NetherFlow as people
+// install it counts: the desktop app packaged (not run from the source, a test harness or a CI machine, nor on a moved
+// port, whose storage isn't its own: it'd count again — main.js), and an APK that isn't a debug build. Anywhere else the
+// box and the row are there to try, and nothing is sent. The relay not reached: tried once more the next time NetherFlow
+// starts, then left (Settings' button tries again).
+const COUNT_URL = 'https://netherflow-relay.netherflow.workers.dev/c', COUNTED = 'netherflow.counted'; // ('1' counted · 'no' unticked · 'retry' once more)
+const countGoes = window.netherflowApp ? !!netherflowApp.release && !netherflowApp.portMoved : native && !Capacitor.DEBUG;
+let counting = null; // (the request on its way: never two)
+function countOnce(last) { // → whether it's counted
+  if (!countGoes || store.get(COUNTED) === '1') return Promise.resolve(store.get(COUNTED) === '1');
+  return counting ||= fetch(COUNT_URL, { method: 'POST', signal: AbortSignal.timeout(15000) }).then(r => r.ok, () => false).then(ok => {
+    store.set(COUNTED, ok ? '1' : last ? '' : 'retry'); counting = null; renderTextPanel(); return ok;
+  });
+}
+// the box as it starts — a phone's once its app says whose signature it has (till then, unticked) — never changed after
+// a finger's been on it
+const countBox = fdroid => { if (!$('countMe').dataset.touched) $('countMe').checked = !fdroid && store.get(COUNTED) !== 'no'; };
+$('countMe').closest('label').hidden = store.get(COUNTED) === '1'; // (counted: nothing to choose)
+$('countMe').onchange = () => { $('countMe').dataset.touched = 1; };
+$('countMe').onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); $('countMe').click(); } }; // (a TV remote's middle button, which a box doesn't take)
+countBox(native);
+Upd?.info().then(i => countBox(!i.ours), () => {});
+function countAgreed() { if ($('countMe').checked) countOnce(); else if (store.get(COUNTED) !== '1') store.set(COUNTED, 'no'); } // (Agree: counted only if it's still ticked)
+// the try that didn't get through: once more, a little after this start (offline: at the next start that isn't)
+if (store.get(COUNTED) === 'retry') setTimeout(() => { if (navigator.onLine && store.get(TERMS) === TERMS_VERSION) countOnce(true); }, 15000);
+function countRow() { // Settings › Privacy (in Classic too: it's where Count me once is found again)
+  const counted = store.get(COUNTED) === '1';
+  return settingRow('Privacy', [counted ? 'Counted once' : 'Count me once'], counted ? 'Counted once' : '', counted ? () => {} : async () => {
+    if (!countGoes) toast('Not counted');
+    else if (!await countOnce()) toast('Not counted');
+  }, counted ? 'Counted once' : 'Not counted');
+}
+CLASSIC.add('Privacy');
 function renderTextPanel() {
   const rows = [
     settingRow('Theme', ['NetherFlow', ...SKIN_LIST], skin || 'NetherFlow', v => setSkin(v === 'NetherFlow' ? '' : v),
@@ -3702,6 +3747,7 @@ function renderTextPanel() {
     updRow(),
     ...(window.netherflowApp?.notify || upd.ours ? [settingRow('Update notifications', ['On', 'Off'], updNotify ? 'On' : 'Off', setUpdNotify,
       native ? 'A notification when a newer NetherFlow is out, even with the app closed (Android looks once a day).' : 'A notification when a newer NetherFlow is out, while NetherFlow is open but not in front (it looks once a day).')] : []),
+    countRow(),
     settingRow('Interface size', UI_SIZES, uiSize, setUiSize, 'Everything larger or smaller: the buttons, the text, the panels.'),
     settingRow('Show', VIEWS, view, setView, 'Cover: the record spinning, with a ring that moves to the beat. Visualiser: the whole screen moving with the music. Tap the cover in the player (or press V) to go round them. A song with no timed lyrics shows its cover by itself: tap it for the words.'),
     ...(view === 'Visualiser' ? [settingRow('Visualiser', ['Auto', ...VIS], visPick, setVis, `How the visualiser looks. Auto: a new one with each song. Tap the visualiser for the next. ${VIS_NOTE}`)] : []),
@@ -11895,7 +11941,7 @@ if (store.get(TERMS) !== TERMS_VERSION) { $('consent').showModal(); placeWinctl(
 // its usual port taken (see main.js): the library and settings are kept under that one, so here all looks new; said so
 if (window.netherflowApp?.portMoved) setTimeout(() => { toast('Something else is using NetherFlow\'s port, so your library and settings aren\'t shown. Close it (or another NetherFlow) and open NetherFlow again.'); clearTimeout(toastTimer); toastTimer = setTimeout(() => $('toast').hidePopover(), 15000); }, 1500);
 $('consent').addEventListener('cancel', e => e.preventDefault()); // Esc doesn't count as agreeing
-$('agree').onclick = () => { store.set(TERMS, TERMS_VERSION); $('consent').close(); resumeDownloads(); castInListen(); };
+$('agree').onclick = () => { store.set(TERMS, TERMS_VERSION); $('consent').close(); countAgreed(); resumeDownloads(); castInListen(); };
 $('decline').onclick = () => {
   if (window.netherflowApp) netherflowApp.win('close');
   else if (native) Capacitor.Plugins.App.exitApp();
