@@ -2109,7 +2109,7 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
   .app.skin-glass:not(.fs) .files { margin-right: 150px; }
   .app.skin-glass:not(.fs) :is(.textp, .qpanel, .eq) { right: calc(var(--pad) + 150px); }
 }
-.skin-glass :is(.moods, .textp, .qpanel, .eq) { top: calc(var(--g-head, 62px) + 12px); max-height: max(calc(100dvh - var(--g-head, 62px) - var(--g-slab, 158px) - 24px), min(300px, calc(100dvh - var(--g-head, 62px) - 24px))); } /* (a short screen — a phone sideways, a small window — over the dock rather than a sliver) */
+.skin-glass :is(.moods, .textp, .qpanel, .eq) { top: calc(var(--g-head, 62px) + 12px); max-height: min(600px, max(calc(100dvh - var(--g-head, 62px) - var(--g-slab, 158px) - 24px), min(300px, calc(100dvh - var(--g-head, 62px) - 24px)))); } /* (a short screen — a phone sideways, a small window — over the dock rather than a sliver; a tall one 600 at most: a lens costs by its area) */
 @media (pointer: coarse) {
   .skin-glass :is(.textp, .qpanel, .eq) { left: 16px; right: 16px; width: auto; max-height: calc(100dvh - var(--g-head, 62px) - 24px); }
   body.skin-glass:has(:is(.textp, .qpanel, .eq):popover-open) .bar { visibility: hidden; }
@@ -3939,10 +3939,14 @@ const GLASS_KIND = {
   dock: { prof: 'bezel', tb: .6, D: .3, e: .05, soft: .5, frost: 12, fz: [6.4, 14], a: .64, ad: .4, edge: .4, sheen: .2, band: .3, cau: .16, w: .08, g: 1.05, sat: 1.3, css: 'saturate(1.3)' },
   // a panel's own (the panels, the menu, a toast, the bars, the dialogs): the dock's bezel (its rim pulling as far as it
   // can and never fold: D under 4/9 — the slope of where each point looks stays above 0), its frost held calmer under
-  // small words (frost 16, a .82: grey words 4.5 : 1 over the lyrics' brightest white), its colour carried through (fsat: the
+  // small words (frost 12 — the dock's: at 16 the blur alone cost a 1080p frame .28 ms, measured — a .86: grey words 4.5 : 1
+  // over the lyrics' brightest white), its colour carried through (fsat: the
   // frost saturated after the blur, so the scene's thin lights come through as soft glows; 1.6 over a picture or the
-  // music video, the script's glassPanelTint), its rim lit by the scene's own colour and nothing else (w 0: no ring over a dark scene)
-  panel: { id: 'panel', prof: 'bezel', tb: .5, D: .42, e: 0, soft: 1.2, frost: 16, fz: [5, 12], a: .82, ad: .4, fsat: 3, edge: .35, sheen: .22, band: .5, cau: .06, w: 0, g: 1.1, sat: 1.4, css: 'saturate(1.6)' } };
+  // music video, the script's glassPanelTint). Lean, a panel being large (at 1080p one is 836 px tall): its picture bent
+  // once (e 0: a split of a 5 px pull is a third of a pixel), neither softened nor saturated first, no light of its own (its
+  // edge lit by the stylesheet, where the light falls; the bent rim shows the scene's own colours) — six passes of its
+  // whole size fewer than the dock's recipe
+  panel: { id: 'panel', prof: 'bezel', tb: .5, D: .42, e: 0, soft: 0, frost: 12, fz: [5, 12], a: .86, ad: .4, fsat: 3, edge: 0, sheen: 0, band: .5, cau: 0, w: 0, g: 1, sat: 1, css: '' } };
 const GLASS_PANEL = '.moods, .eq, .smenu, .voice-ui, .toast, .singbar, .ab-bar, dialog.consent';
 // (the band each capsule's icons and words take, px from its middle line: half their height and 3 px)
 const GLASS_TL = { '.top-l': 12.9, '#mood': 10.5, '.files': 12 }; // (#mood: its words 15 px since the chip says "Theme · Glass"; .files: its icons 20 px, were 19)
@@ -4159,19 +4163,20 @@ function glassFit(e, glow = false) {
   let S, flood = '';
   if (r >= h / 2 - .5) { const T = glassCap(h, o, drop ? Math.min(.9, GLASS_TL[q] / r) : 0), c = Math.min(T.c, w / 2); S = T.Sc; put(T.l, 0, 0, c, h); put(T.m, c, 0, w - 2 * c, h, 's'); put(T.r, w - c, 0, c, h, 'r'); e.glassC = c; }
   else { const R = glassRect(w, h, r, o, r > 30 ? .6 : 1); S = R.Sc; for (const p of R.pieces) put(...p); flood = '<feFlood flood-color="rgb(128,128,0)" result="f0"/>'; e.glassC = Math.ceil(r); }
-  const dm = (s, n, res = 'd' + n) => `<feDisplacementMap in="src" in2="map" scale="0" data-s="${s.toFixed(3)}" xChannelSelector="R" yChannelSelector="G" result="${res}"/>`;
+  const SRC = o.soft ? 'src' : 'SourceGraphic', lit = o.sat === 1 && o.g === 1 && !o.w ? SRC : 'lit', dim = !drop && !glow && !o.edge && !o.sheen && !o.cau; // (dim: no light of its own — a panel's: its edge lit by the stylesheet — three passes fewer) // (no softening — a panel's: its rim's pull too small for steps to show; its light the scene's own colour as it is: a pass each fewer)
+  const dm = (s, n, res = 'd' + n) => `<feDisplacementMap in="${SRC}" in2="map" scale="0" data-s="${s.toFixed(3)}" xChannelSelector="R" yChannelSelector="G" result="${res}"/>`;
   f.innerHTML = flood + img.join('') + `<feMerge result="map">${flood && '<feMergeNode in="f0"/>'}${img.map((p, i) => `<feMergeNode in="m${i}"/>`).join('')}</feMerge>`
     // the lens: each colour bent from the same picture by a little less, the same, a little more (each bent picture with
     // one use: one used twice is drawn twice)
-    + `<feGaussianBlur in="SourceGraphic" stdDeviation="${o.soft}" result="src"/>` + (o.e ? `${dm(S * (1 - o.e), 'r')}${dm(S, 'g')}${dm(S * (1 + o.e), 'b')}`
+    + (o.soft ? `<feGaussianBlur in="SourceGraphic" stdDeviation="${o.soft}" result="src"/>` : '') + (o.e ? `${dm(S * (1 - o.e), 'r')}${dm(S, 'g')}${dm(S * (1 + o.e), 'b')}`
     + `<feColorMatrix in="dr" type="matrix" values="1 0 0 0 0 ${GLM.Z} ${GLM.Z} ${GLM.A}" result="cr"/><feColorMatrix in="dg" type="matrix" values="${GLM.Z} 0 1 0 0 0 ${GLM.Z} ${GLM.A}" result="cg"/>`
     + `<feColorMatrix in="db" type="matrix" values="${GLM.Z} ${GLM.Z} 0 0 1 0 0 ${GLM.A}" result="cb"/>`
     + `<feComposite in="cr" in2="cg" operator="arithmetic" k2="1" k3="1" result="crg"/><feComposite in="crg" in2="cb" operator="arithmetic" k2="1" k3="1" result="bent"/>`
       : dm(S, 'g', 'bent')) // (no split — a panel's: its rim pulls 5 px at most, a split of it a third of a pixel, unseen — one picture bent, seven steps fewer)
     // its light, in the colour of what's behind, where the map says — and, pressed, the light under the finger (white at its
     // core, so it shows over a dark room): both before what holds the words, so a press never washes them out
-    + `<feColorMatrix in="src" type="matrix" values="${glassSat(o.sat, o.g, o.w)}" result="lit"/>`
-    + `<feColorMatrix in="map" type="matrix" values="${glassLightV(1)}" result="lightA" data-r="lightA"/><feComposite in="lit" in2="lightA" operator="in" result="light"/>`
+    + (dim ? '' : (lit === 'lit' ? `<feColorMatrix in="${SRC}" type="matrix" values="${glassSat(o.sat, o.g, o.w)}" result="lit"/>` : '')
+      + `<feColorMatrix in="map" type="matrix" values="${glassLightV(1)}" result="lightA" data-r="lightA"/><feComposite in="${lit}" in2="lightA" operator="in" result="light"/>`)
     + (drop ? '' : `<feGaussianBlur in="SourceGraphic" stdDeviation="${o.frost}" result="${o.fsat ? 'fr0' : 'fr'}"/>` // (the dock's frost, its middle; a panel's saturated after it)
       + (o.fsat ? `<feColorMatrix in="fr0" type="saturate" values="${e.gpSat || o.fsat}" result="fr" data-r="fsat"/>` : ''))
     // (the finger's light the colour of what it lights: a drop's clear picture, the dock's frost — from the clear one the
@@ -4187,9 +4192,9 @@ function glassFit(e, glow = false) {
     + (drop ? `<feComposite in="bent" in2="${L}" operator="arithmetic" k2="1" k3="1" result="bl"/><feColorMatrix in="${glow ? 'kin' : 'dg'}" type="matrix" values="${glassKeepV(dark ? o.ad : o.a, dark)}" result="keep"/>`
       : `<feColorMatrix in="map" type="matrix" values="${glassZoneV(1)}" result="zone" data-r="zone"/>`
         + `<feComposite in="bent" in2="zone" operator="in" result="rim"/><feMerge result="body"><feMergeNode in="fr"/><feMergeNode in="rim"/></feMerge>`
-        + `<feComposite in="body" in2="${L}" operator="arithmetic" k2="1" k3="1" result="bl"/><feColorMatrix in="${glow ? 'kin' : 'fr'}" type="matrix" values="${glassKeepV(dark ? o.ad : o.a, dark)}" result="keep"/>`)
+        + (dim ? '' : `<feComposite in="body" in2="${L}" operator="arithmetic" k2="1" k3="1" result="bl"/>`) + `<feColorMatrix in="${glow ? 'kin' : 'fr'}" type="matrix" values="${glassKeepV(dark ? o.ad : o.a, dark)}" result="keep"/>`)
     + `<feColorMatrix in="map" type="matrix" values="${glassHoldV(1)}" result="hold" data-r="hold"/><feComposite in="keep" in2="hold" operator="arithmetic" k1="1" k3="-1" k4="1" result="keepm"/>`
-    + `<feComposite in="bl" in2="keepm" operator="arithmetic" k1="1"${dark ? ' k3="-1" k4="1"' : ''}/>`;
+    + `<feComposite in="${dim ? 'body' : 'bl'}" in2="keepm" operator="arithmetic" k1="1"${dark ? ' k3="-1" k4="1"' : ''}/>`;
   glass.defs.append(f);
   const was = e.glassFilter, by = n => f.querySelector(`[data-r=${n}]`); e.glassFilter = f;
   e.glassLens = { dms: [...f.querySelectorAll('feDisplacementMap')].map(x => [x, +x.dataset.s]), lightA: by('lightA'), hold: by('hold'), zone: by('zone'), glowI: by('glowI'), glowK: by('glowK'), glowK2: by('glowK2'), fsat: by('fsat') };
