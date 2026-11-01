@@ -257,8 +257,13 @@ body.home .singbar { display: none; } /* (its voice slider is for the lyrics: no
 .fp-colr .cur .w > span { color: var(--ink); background-image: none !important; -webkit-background-clip: border-box; background-clip: border-box; }
 .fp-colr .cur .w.em > span, .fp-colr .cur.rest .w > span { color: var(--a); }
 .fp-colr :is(.cur, .next, .cs-line, .dv-title) { font-palette: --nf-mood; }
-.la-letters .fp-colr .cur .ch { color: inherit; opacity: .3; transition: opacity .15s; }
-.la-letters .fp-colr .cur .ch.lit { opacity: 1; }
+/* (the letter styles light a letter by its colour: a colour letter by its opacity instead, and the letters in other
+   faces too, at full colour, or they'd be dimmed twice. Shatter's letters dim by opacity already (one rule for all
+   took the flight of its shards away: its transition). The self-laid styles set each letter's opacity every frame,
+   so theirs is dimmed there: see fade) */
+.la-wave .fp-colr .cur .ch { color: inherit; opacity: .3; transition: opacity .15s; }
+.la-wave .fp-colr .cur .ch.lit { opacity: 1; }
+.la-self:not(.la-knot, .la-möbius, .la-ribbon) .fp-colr .cur .ch:not(.lit) { color: inherit; }
 /* (the poster styles' sung word, dark on its block as theirs is: peach on orange it couldn't be read. Its colour can't
    follow Emoji Stack's block letter by letter, so that block is there at once, as Wall's is) */
 :is(.la-tower, .la-lens, .la-pop, .la-drift, .la-wall, .la-emoji-stack) .fp-colr .cur:not(.rest) .w.now > span,
@@ -7587,7 +7592,11 @@ const reach = (c, fs, k) => Math.max(c.half, fs / 2) * Math.abs(k); // (a letter
 // a letter's place in the stacking (by how near it is), in a few steps and set only when it changes: each change re-sorts
 // the layers, and done by every letter every frame that cost more than moving them
 const setZ = (c, z) => { if (c.z !== z) { c.z = z; c.style.zIndex = z; } };
-const fade = (c, op) => { const v = op <= 0 ? '0' : Math.min(1, op).toFixed(2); if (c.style.opacity !== v) c.style.opacity = v; return op > 0; };
+// (a colour font's letter takes no colour, so one still to come is dimmed here, as far as the style's unlit colour has
+// it (see the CSS), by the opacity the graphics chip applies alone — a filter would have each letter drawn apart, every
+// frame. own: the style dims it itself, curvePlace)
+const COLR_DIM = { Swarm: .75, Orbit: .5, Atom: .5 };
+const fade = (c, op, own) => { const v = op <= 0 ? '0' : (Math.min(1, op) * (colrPair && !own && !c.classList.contains('lit') ? COLR_DIM[lanim] || .3 : 1)).toFixed(2); if (c.style.opacity !== v) c.style.opacity = v; return op > 0; };
 const backOut = x => 1 + 2.7 * (x - 1) ** 3 + 1.7 * (x - 1) ** 2; // (eases in past the end and settles back)
 // Helix, DNA: a point on a column (leaning by tilt) that a line winds down, u px along it, shift round from it
 const helixAt = (s, R, tilt, eye = 1100) => {
@@ -7725,7 +7734,7 @@ function curvePlace(s, lp) {
     if (c.classList.contains('lit')) c.litT ||= ms; else c.litT = 0;
     const lit = c.litT ? 1 - (1 - Math.min(1, (ms - c.litT) / 150)) ** 2 : 0;
     const op = (face > 0 ? .3 + .7 * Math.min(1, face) : .04 + .12 * Math.min(1, -face)) * depthOf(Z) * (1 - lp) * (.22 + .78 * lit);
-    if (!fade(c, op * edge(s, X, Y, reach(c, s.fs, k)))) continue;
+    if (!fade(c, op * edge(s, X, Y, reach(c, s.fs, k)), true)) continue;
     setZ(c, 200 + Math.round(Math.max(-1, Math.min(1, Z / (C.whole ? s.tab.R : s.fs * 25))) * 10));
     c.style.transform = 'matrix(' + (tx * k).toFixed(3) + ', ' + (-ty * k).toFixed(3) + ', ' + (-ux * k).toFixed(3) + ', ' + (uy * k).toFixed(3) + ', ' + X.toFixed(1) + ', ' + Y.toFixed(1)
       + ') translate(' + px(-c.half) + ', ' + px(-s.fs / 2) + ')';
