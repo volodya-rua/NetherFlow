@@ -12474,6 +12474,7 @@ document.querySelector('.stage-wrap').addEventListener('click', e => {
   toast(`Visualiser: ${VIS[visNow]}`);
 });
 addEventListener('pointermove', e => {
+  if (!e.buttons) held = false; // (no button down: nothing held, whatever was missed — a release can go unseen, the window losing the mouse mid-press, and the controls then never went)
   wake();
   if (!motion || e.pointerType !== 'mouse' || place < 2) return;
   stage.style.setProperty('--mx', (e.clientX / innerWidth - 0.5).toFixed(3)); // (on the stage, not the page: only the lyrics
