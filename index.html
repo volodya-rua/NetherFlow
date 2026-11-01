@@ -1903,6 +1903,12 @@ body.skin-glass.sing:not(.home) .ab-bar { bottom: calc(100% + 66px); }
 .skin-glass .consent[open] > *, .skin-glass .consent[open]::before { animation: show .4s both; }
 .skin-glass .consent::backdrop { background: rgba(2,3,8,.55); }
 .skin-glass.gl-tint .consent::before { -webkit-backdrop-filter: none; backdrop-filter: none; background: var(--g-fringe) 50% 0 / 60% 1px no-repeat, color-mix(in srgb, var(--bg) 94%, transparent); }
+/* (a card taller than the window scrolls, and its glass — a layer the card's size — scrolled away with the first
+   screenful, the words after it left over the bare page: such a card is tinted glass as a whole instead, its edge kept;
+   the script's glassOver) */
+.skin-glass .consent.gl-over { background: var(--g-fringe) 50% 0 / 60% 1px no-repeat, color-mix(in srgb, var(--bg) 94%, transparent);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.12), inset 0 1px 0 rgba(255,255,255,.42), 0 40px 100px -20px rgba(0,0,0,.9); }
+.skin-glass .consent.gl-over::before { display: none; }
 /* the full pages (search, an artist, About): on a computer frosted glass over the backdrop, held still behind them (the
    player hidden behind them); elsewhere deep glass, near-opaque */
 .skin-glass :is(.search, .about) { background: var(--g-fringe) 30% 0 / 50% 1px no-repeat, radial-gradient(120% 70% at 10% -10%, rgba(150,180,255,.1), transparent 60%), linear-gradient(170deg, #0a0d18, #05060b 62%); }
@@ -1921,20 +1927,33 @@ body.skin-glass.sing:not(.home) .ab-bar { bottom: calc(100% + 66px); }
 .skin-glass .msg { font-size: clamp(38px, 9vw, 150px); line-height: .94; letter-spacing: .01em; }
 .skin-glass .msg em { color: #dfe8ff; text-shadow: -.02em 0 0 rgba(255,70,112,.45), .02em 0 0 rgba(70,160,255,.45); }
 .skin-glass :is(.cta span, .hint b, .home-now em) { color: #fff; }
+/* (the welcome's small words — the keys' hint, the terms' links — over the scene's bright lines: at half strength they
+   read 1.4 : 1 where the light crossed them; lighter here, on a soft shade of their own, as the dock's words are) */
+.skin-glass .home-stage :is(.hint, .legal-line) { position: relative; isolation: isolate; width: fit-content; opacity: 1; color: rgba(232,238,255,.74); text-shadow: 0 0 2px rgba(3,4,10,.95), 0 0 6px rgba(3,4,10,.9); }
+.skin-glass .home-stage :is(.hint, .legal-line)::before { content: ''; position: absolute; inset: -6px -16px; z-index: -1; border-radius: 24px; pointer-events: none; background: rgba(3,4,10,.55); filter: blur(7px); }
+.skin-glass .spot-move .sm-note { opacity: .75; } /* (.6 read 4.3 : 1 on the frosted card) */
 .skin-glass .cs-line { color: #fff; text-shadow: 0 0 24px rgba(170,200,255,.45); }
 /* the fades: never on what holds the glass (see above) — the header's and player's contents fade, not their rows; on
    the way back the lenses grow in (the script's glassGrow) */
 .skin-glass:is(.fs, .view-vis).idle :is(.top, .bottom) { opacity: 1; }
-.skin-glass :is(.top, .bottom) > * { transition: opacity .7s, visibility 0s; }
-.skin-glass:is(.fs, .view-vis).idle :is(.top, .bottom) > * { opacity: 0; visibility: hidden; transition: opacity .7s, visibility 0s .7s; } /* (hidden once faded: unseen glass still costs a frame its time) */
+/* (the timeline's row holds Repeat a part's glass: its parts fade, not it; and the lenses keep their press, the glass
+   growing on its spring) */
+.skin-glass :is(.top > *, .bottom > :not(.scrub), .scrub > *) { transition: opacity .7s, visibility 0s, scale .44s var(--g-press), box-shadow .3s; }
+.skin-glass:is(.fs, .view-vis).idle :is(.top > *, .bottom > :not(.scrub), .scrub > *) { opacity: 0; visibility: hidden; transition: opacity .7s, visibility 0s .7s, scale .44s var(--g-press), box-shadow .3s; } /* (hidden once faded: unseen glass still costs a frame its time) */
 .skin-glass.lib-open .frame { opacity: 1 !important; }
 .skin-glass .mid { transition: opacity .4s; } /* (the header's and player's rows keep their own: they slide on idle) */
-.skin-glass.lib-open :is(.top > *, .mid, .bottom > *) { opacity: 0; visibility: hidden; transition: opacity .4s, visibility 0s .4s; }
+.skin-glass.lib-open :is(.top > *, .mid, .bottom > :not(.scrub), .scrub > *) { opacity: 0; visibility: hidden; transition: opacity .4s, visibility 0s .4s; }
+/* Solid picked in Settings › Glass: as less transparency asked for, below — nothing shows through (the controls were
+   left tinted, the panels, toasts and dialogs frosted) */
+.skin-glass.gl-solid :is(.top-l, .mood, .files, .bar, .singbar, .ab-bar, .moods, .eq, .smenu, .voice-ui, .toast) { -webkit-backdrop-filter: none; backdrop-filter: none;
+  background: color-mix(in srgb, var(--bg) 95%, transparent); box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.55), var(--g-drop); }
+.skin-glass.gl-solid .consent::before { -webkit-backdrop-filter: none; backdrop-filter: none; background: color-mix(in srgb, var(--bg) 96%, transparent); box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.55); }
+.skin-glass.gl-solid :is(.top-l, .mood, .files, .bar)::after { display: none; }
 /* less transparency or more contrast asked for: solid, with a clear edge; forced colours: the system's */
 @media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
   .skin-glass :is(.mood, .files, .bar, .singbar, .ab-bar, .moods, .eq, .smenu, .voice-ui, .toast, .search, .about) { -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
     background: color-mix(in srgb, var(--bg) 95%, transparent) !important; box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.55), var(--g-drop) !important; }
-  .skin-glass .consent::before { -webkit-backdrop-filter: none; backdrop-filter: none; background: color-mix(in srgb, var(--bg) 96%, transparent); box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.55); }
+  .skin-glass .consent::before, .skin-glass .consent.gl-over { -webkit-backdrop-filter: none; backdrop-filter: none; background: color-mix(in srgb, var(--bg) 96%, transparent); box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.55); }
   .skin-glass :is(.top-l, .mood, .files, .bar)::after { display: none; }
 }
 @media (prefers-reduced-transparency: reduce) and (min-width: 901px), (prefers-contrast: more) and (min-width: 901px) {
@@ -1945,7 +1964,7 @@ body.skin-glass.sing:not(.home) .ab-bar { bottom: calc(100% + 66px); }
   .skin-glass :is(.mood, .files, .bar, .singbar, .ab-bar, .moods, .eq, .smenu, .voice-ui, .toast, .search, .about) { -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
     background: Canvas !important; color: CanvasText; border: 1px solid CanvasText; }
   .skin-glass .top-l { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; background: Canvas !important; color: CanvasText; }
-  .skin-glass .consent::before { backdrop-filter: none; background: Canvas; border: 1px solid CanvasText; }
+  .skin-glass .consent::before, .skin-glass .consent.gl-over { backdrop-filter: none; background: Canvas; border: 1px solid CanvasText; }
   .skin-glass :is(.top-l, .mood, .files, .bar, .singbar, .ab-bar)::before, .skin-glass :is(.top-l, .mood, .files, .bar)::after { display: none; }
 }
 /* a narrow window, a phone: the name bare, as NetherFlow's own has it, so the mood fits beside it (two rows, not three);
@@ -1963,7 +1982,7 @@ body.skin-glass.sing:not(.home) .ab-bar { bottom: calc(100% + 66px); }
   .skin-glass .play { width: 68px; height: 68px; }
   .skin-glass .core { width: 52px; height: 52px; }
   .skin-glass .files { width: 100%; justify-content: space-between; padding: 0 6px; }
-  .skin-glass .files > .link { width: 40px; height: 38px; }
+  .skin-glass .files > .link { width: 40px; height: 38px; flex: 0 1 40px; min-width: 30px; } /* (a phone 360 wide: a little narrower, inside the glass — they ran out over its rim) */
   .app.skin-glass:not(.fs) .files { margin-right: -150px; width: calc(100% + 150px); } /* (a narrow window: the icons' row is under the window's buttons, not beside them — the room they keep is the first row's) */
 }
 @media (max-width: 900px) and (min-height: 521px) and (max-height: 700px) { /* (a small screen: the header's capsules slimmer, so the welcome and the lyrics keep their room) */
@@ -1974,8 +1993,14 @@ body.skin-glass.sing:not(.home) .ab-bar { bottom: calc(100% + 66px); }
   .skin-glass .files > .link { height: 34px; }
   .app.skin-glass:not(.fs) .home-stage .hint { display: none; } /* (a narrow window's header takes three rows — the window's buttons keep the first one short: the keys' hint goes, so the welcome fits between it and the player) */
 }
-@media (max-width: 900px) and (max-height: 520px) { .skin-glass .bar { border-radius: 28px; padding: 6px 14px; } .skin-glass .play { width: 60px; height: 60px; } .skin-glass .core { width: 44px; height: 44px; } }
-@media (max-height: 400px) { .skin-glass :is(.top-l, .mood, .files) { height: 40px; } .skin-glass .play { width: 54px; height: 54px; } .skin-glass .core { width: 40px; height: 40px; } }
+@media (max-width: 900px) and (max-height: 520px) { /* (a phone sideways: the player's two rows close together, as NetherFlow's own has them — 20 px
+  apart, the welcome ran up over the header — and the keys' hint left out) */
+  .skin-glass .bar { border-radius: 28px; padding: 6px 14px; gap: 0 14px; } .skin-glass .play { width: 60px; height: 60px; } .skin-glass .core { width: 44px; height: 44px; }
+  .skin-glass .home-stage .hint { display: none; }
+}
+@media (max-height: 520px) { .skin-glass .toast { top: 8px; } } /* (a short screen: a toast over the header, for its few seconds — under it, it covered Repeat a part's Start and End, raised over Sing's bar) */
+@media (max-height: 400px) { .skin-glass :is(.top-l, .mood, .files) { height: 40px; } .skin-glass .play { width: 54px; height: 54px; } .skin-glass .core { width: 40px; height: 40px; }
+  .skin-glass .brand { font-size: 22px; } .skin-glass .mood { padding: 0 14px 0 12px; } .skin-glass .files { min-width: 0; } .skin-glass .files > .link { flex: 0 1 36px; min-width: 28px; } } /* (the header in one row: its icons narrower rather than run off the screen) */
 /* the opening splash: the wordmark, painted at once from the page's own markup, while the app's script loads and the
    home screen is built behind it; faded away the moment the app is ready (see the end of the script). It makes the
    start feel instant on a phone, where parsing the app takes a moment. */
@@ -3158,7 +3183,7 @@ const SKINS = {
     font: { poster: "'Unbounded'", serif: "'Chakra Petch'", lh: 1.08 }, bar: 'Lap',
     looks: ['speed', 'velocity', 'slam', 'split', 'track', 'extrude', 'slice'], badge: 'FULL THROTTLE ✦ REDLINE ✦',
     msg: ['Floor it', 'into the song'] },
-  Glass: { note: 'Clear glass over a dark room of light: the floating controls are lenses that bend what passes under them (magnified, folded back along the rim, the edge splitting the light into a thin spectrum), the panels frosted glass that grows out of the button you press; light through rippled glass in caustics behind, moving with the music',
+  Glass: { note: 'Clear glass over a dark room of light: on a computer the floating controls are lenses that bend what passes under them (magnified, folded back along the rim, the edge splitting the light into a thin spectrum), on a phone frosted; the panels frosted glass that grows out of the button you press; light through rippled glass in caustics behind, moving with the music',
     pal: { name: 'Glass', bg: '#05060b', a: '#e8efff', b: '#8fb4ff', ink: '#f3f6ff', fx: [1, 1, 1, 1] },
     font: { poster: "'Libre Bodoni'", serif: "'Cormorant Garamond'", lh: 1.06 }, bar: 'Beam',
     looks: ['prism', 'frost', 'chrome', 'holo', 'focus', 'dreamy', 'outline'], badge: 'SPLIT THE LIGHT ✦ GLASS ✦ SPLIT THE LIGHT ✦ GLASS ✦',
@@ -3391,7 +3416,7 @@ function glassTier() {
   if (skin !== 'Glass') return '';
   if (glassQuiet.matches || glassPick === 'Solid') return 'solid';
   if (glassPick !== 'Auto') return glassPick === 'Frosted' ? 'frost' : 'tint';
-  glass.gpu ||= glassGpu();
+  glass.gpu ||= pcOnly ? glassGpu() : { soft: false, igpu: false }; // (a computer's alone: on a phone the WebGL context it makes held the page 50–230 ms at every start, measured, and a phone has no software WebGL — a blocked chip gets none, fxOn false)
   if (!fxOn || glass.gpu.soft || bgq === 'Low' || tv) return 'tint';
   return GLASS_TIERS[Math.min(2, (pcOnly && !(glass.gpu.igpu && glass.fast) ? 0 : 1) + glassDrop)];
 }
@@ -3404,6 +3429,7 @@ function applyGlass() {
   const t = glassTier();
   for (const k of ['lens', 'frost', 'tint', 'solid']) body.classList.toggle('gl-' + k, t === k);
   body.classList.toggle('gl-sheets', t === 'lens'); // (the full pages frosted over the backdrop, held still behind them)
+  glass.lib = !!t && t !== 'lens'; // (the library deep glass, near-opaque, as the other full pages: nothing drawn behind it — see frame)
   if (t === glass.tier) return;
   const was = glass.tier; glass.tier = t;
   // (where the player starts and the header ends: Sing's bar and the voice sit over the one, a toast drops in under the other)
@@ -3496,16 +3522,25 @@ function glassFit(e) {
   if (!w || !h || cs.getPropertyValue('--g-lens').trim() === '0') return glassOff(e); // (none here: the name bare on a narrow screen)
   const r = Math.min(parseFloat(cs.borderTopLeftRadius) || 0, h / 2, w / 2), key = [w, h, r].join();
   if (e.glassKey === key) return;
+  // (its width alone changed — the back arrow growing in or out, going home and back, full screen: every frame of it —
+  // the same pieces moved along, not a new filter each frame: a new one's images aren't there for its first frames)
+  const f0 = e.glassFilter, c0 = e.glassC;
+  if (f0 && e.glassKey.slice(e.glassKey.indexOf(',')) === key.slice(key.indexOf(',')) && 2 * c0 + 1 < w && 2 * c0 + 1 < +f0.getAttribute('width')) {
+    e.glassKey = key; f0.setAttribute('width', w);
+    for (const im of f0.querySelectorAll('feImage')) { if (im.dataset.a === 'r') im.setAttribute('x', w - c0); else if (im.dataset.a === 's') im.setAttribute('width', w - 2 * c0); }
+    return;
+  }
   e.glassKey = key;
   const f = document.createElementNS(SVGNS, 'filter'), id = 'glf' + (++glass.n), img = [];
   for (const [a, v] of [['id', id], ['x', 0], ['y', 0], ['width', w], ['height', h], ['filterUnits', 'userSpaceOnUse'], ['primitiveUnits', 'userSpaceOnUse'], ['color-interpolation-filters', 'sRGB']]) f.setAttribute(a, v);
-  const put = (href, x, y, iw, ih) => { if (iw > .5 && ih > .5) img.push(`<feImage href="${href}" x="${x}" y="${y}" width="${iw}" height="${ih}" preserveAspectRatio="none" result="m${img.length}"/>`); };
+  // (a: how a piece follows the width — fixed at the left, 'r' kept at the right, 's' stretched between)
+  const put = (href, x, y, iw, ih, a = '') => { if (iw > .5 && ih > .5) img.push(`<feImage href="${href}" x="${x}" y="${y}" width="${iw}" height="${ih}" preserveAspectRatio="none" data-a="${a}" result="m${img.length}"/>`); };
   const dm = (S, s, n, m, src) => `<feDisplacementMap in="${src}" in2="map" scale="${(S * s).toFixed(2)}" data-s="${(S * s).toFixed(3)}" xChannelSelector="R" yChannelSelector="G" result="d${n}"/><feColorMatrix in="d${n}" type="matrix" values="${m} 0 0 0 1 0" result="c${n}"/>`;
   const split = (S, src) => dm(S, 1 - o.disp, 0, '1 0 0 0 0  0 0 0 0 0  0 0 0 0 0 ', src) + dm(S, 1, 1, '0 0 0 0 0  0 1 0 0 0  0 0 0 0 0 ', src) + dm(S, 1 + o.disp, 2, '0 0 0 0 0  0 0 0 0 0  0 0 1 0 0 ', src)
     + `<feComposite in="c0" in2="c1" operator="arithmetic" k2="1" k3="1" result="c01"/><feComposite in="c01" in2="c2" operator="arithmetic" k2="1" k3="1" result="sharp"/>`;
   if (kind === 'cap') {
     const T = glassCap(h, o), c = Math.min(T.c, w / 2);
-    put(T.l, 0, 0, c, h); put(T.m, c, 0, w - 2 * c, h); put(T.r, w - c, 0, c, h);
+    put(T.l, 0, 0, c, h); put(T.m, c, 0, w - 2 * c, h, 's'); put(T.r, w - c, 0, c, h, 'r'); e.glassC = c;
     f.innerHTML = `<feFlood flood-color="rgb(128,128,0)" result="f0"/>${img.join('')}<feMerge result="map"><feMergeNode in="f0"/>${img.map((p, i) => `<feMergeNode in="m${i}"/>`).join('')}</feMerge>`
       + `<feGaussianBlur in="SourceGraphic" stdDeviation=".6" result="src"/>` + split(T.M / .498, 'src')
       + `<feGaussianBlur in="SourceGraphic" stdDeviation="9" result="soft"/><feColorMatrix in="soft" type="matrix" values="${'-.085 -.29 -.03 0 1  '.repeat(3)}0 0 0 0 1" result="keep"/>` // (what to keep: less where it's bright behind)
@@ -3513,10 +3548,10 @@ function glassFit(e) {
       + `<feColorMatrix in="map" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 1 0 0" result="mask"/><feComposite in="sharp" in2="mask" operator="in" result="rim"/><feMerge><feMergeNode in="mid"/><feMergeNode in="rim"/></feMerge>`; // (and the rim, as bright as what it bends)
   } else {
     const b = Math.round(Math.max(6, Math.min(30, h * o.band, r || h / 2))), M = Math.round(b * o.amp), c = Math.ceil(Math.max(r, b)), k = c > 30 ? .6 : 1;
-    const pc = (type, x, y, pw, ph, ix, iy, iw, ih) => put(glassPiece(type, w, h, r, b, M, k, x, y, pw, ph, o.edge), ix, iy, iw, ih);
-    pc('TL', 0, 0, c, c, 0, 0, c, c); pc('TR', w - c, 0, c, c, w - c, 0, c, c); pc('BL', 0, h - c, c, c, 0, h - c, c, c); pc('BR', w - c, h - c, c, c, w - c, h - c, c, c);
-    pc('T', w / 2 - .5, 0, 1, c, c, 0, w - 2 * c, c); pc('B', w / 2 - .5, h - c, 1, c, c, h - c, w - 2 * c, c);
-    pc('L', 0, h / 2 - .5, c, 1, 0, c, c, h - 2 * c); pc('R', w - c, h / 2 - .5, c, 1, w - c, c, c, h - 2 * c);
+    const pc = (type, x, y, pw, ph, ix, iy, iw, ih, a) => put(glassPiece(type, w, h, r, b, M, k, x, y, pw, ph, o.edge), ix, iy, iw, ih, a);
+    pc('TL', 0, 0, c, c, 0, 0, c, c); pc('TR', w - c, 0, c, c, w - c, 0, c, c, 'r'); pc('BL', 0, h - c, c, c, 0, h - c, c, c); pc('BR', w - c, h - c, c, c, w - c, h - c, c, c, 'r');
+    pc('T', w / 2 - .5, 0, 1, c, c, 0, w - 2 * c, c, 's'); pc('B', w / 2 - .5, h - c, 1, c, c, h - c, w - 2 * c, c, 's');
+    pc('L', 0, h / 2 - .5, c, 1, 0, c, c, h - 2 * c); pc('R', w - c, h / 2 - .5, c, 1, w - c, c, c, h - 2 * c, 'r'); e.glassC = c;
     f.innerHTML = `<feFlood flood-color="rgb(128,128,0)" result="f0"/>${img.join('')}<feMerge result="map"><feMergeNode in="f0"/>${img.map((p, i) => `<feMergeNode in="m${i}"/>`).join('')}</feMerge>`
       + `<feGaussianBlur in="SourceGraphic" stdDeviation=".6" result="src"/>` + split(M / .498, 'src')
       + `<feGaussianBlur in="SourceGraphic" stdDeviation="${o.frost}" result="fr"/><feColorMatrix in="fr" type="matrix" values="${o.dim} 0 0 0 0  0 ${o.dim} 0 0 0  0 0 ${o.dim} 0 0  0 0 0 1 0" result="frost"/><feColorMatrix in="map" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 1 0 0" result="mask"/>`
@@ -3626,6 +3661,11 @@ function glassLegal() {
   if (!st) { st = d.ownerDocument.createElement('style'); st.id = 'glassLegal'; st.textContent = '::-webkit-scrollbar-thumb { background: rgba(232,239,255,.28); } ::-webkit-scrollbar-thumb:hover { background: rgba(232,239,255,.55); }'; d.querySelector('head')?.append(st); }
 }
 $('legalFrame').addEventListener('load', glassLegal);
+// A card taller than the window scrolls, and its glass (a layer the card's size) would go with it: such a card is tinted
+// glass as a whole instead (.gl-over) — looked at as it opens or changes size, and when it's scrolled (words added since)
+const glassOver = d => d.classList.toggle('gl-over', skin === 'Glass' && d.scrollHeight > d.clientHeight + 1);
+{ const ro = new ResizeObserver(es => { for (const x of es) glassOver(x.target); });
+  for (const d of document.querySelectorAll('dialog.consent')) { ro.observe(d); d.addEventListener('scroll', () => glassOver(d), { passive: true }); } }
 function applySkin() {
   const S = SKINS[skin], bg = store.get('netherflow.skinbg');
   if (skin === 'Blocks' && !root.style.getPropertyValue('--dirt')) {
@@ -17455,7 +17495,7 @@ function frame(now) {
     owed -= 1000 / 60;
   }
   const gap = (now - lastRun) / 1000, dt = Math.min(0.05, gap); lastRun = now;
-  const covered = fullPages.some(d => d.open); // (a full-screen page over everything: the backdrop and player can't be seen)
+  const covered = fullPages.some(d => d.open) || glass.lib && $('library').open; // (a full-screen page over everything: the backdrop and player can't be seen — Glass's library too, but on a computer's lens tier)
   // (the Glass theme on a computer: its pages are frosted glass over the backdrop — held still behind them, drawn again only
   // when a resize has cleared it)
   const held = covered && body.classList.contains('gl-sheets') && !$('drive').open;
