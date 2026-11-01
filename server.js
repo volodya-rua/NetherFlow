@@ -36,7 +36,7 @@ for (const f of fs.readdirSync(path.join(__dirname, 'licenses'))) FILES['/licens
 if (fs.existsSync(path.join(__dirname, 'ai'))) for (const f of fs.readdirSync(path.join(__dirname, 'ai'))) FILES['/ai/' + f] = ['ai/' + f, { js: 'text/javascript', mjs: 'text/javascript', wasm: 'application/wasm' }[f.split('.').pop()] || 'application/octet-stream'];
 // (voice control's recognizer: ONNX Runtime Web and Whisper's model, voice/ — a computer's own copy, not in the repository)
 if (fs.existsSync(path.join(__dirname, 'voice'))) for (const f of fs.readdirSync(path.join(__dirname, 'voice'))) FILES['/voice/' + f] = ['voice/' + f, { js: 'text/javascript', mjs: 'text/javascript', wasm: 'application/wasm', json: 'application/json' }[f.split('.').pop()] || 'application/octet-stream'];
-for (const f of fs.readdirSync(path.join(__dirname, 'fonts'))) FILES['/fonts/' + f] = ['fonts/' + f, f.endsWith('.css') ? 'text/css' : 'font/woff2'];
+for (const f of fs.readdirSync(path.join(__dirname, 'fonts'))) FILES['/fonts/' + f] = ['fonts/' + f, f.endsWith('.css') ? 'text/css' : f.endsWith('.ttf') ? 'font/ttf' : 'font/woff2']; // (.ttf: the fonts whose licence reserves their name, shipped as published)
 for (const f of fs.readdirSync(path.join(__dirname, 'emoji'))) FILES['/emoji/' + f] = ['emoji/' + f, f.endsWith('.webp') ? 'image/webp' : 'text/plain; charset=utf-8']; // (Extreme lyrics' emoji)
 // Redline's 3D races (race/: the renderer, three.js, the circuits, the cars; not in NetherFlow Lite)
 if (fs.existsSync(path.join(__dirname, 'race'))) (function race(dir) {

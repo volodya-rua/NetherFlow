@@ -230,7 +230,7 @@ body.home .singbar { display: none; } /* (its voice slider is for the lyrics: no
 .scrubbing .stage *, .scrubbing .cs-line { animation: none !important; } /* (dragging the timeline: no entrance at every step) */ /* one row each: the sung line gets the room */
 .prev { font: italic 400 calc(clamp(18px, 2.4vw, 32px) * var(--ls, 1))/1.1 var(--serif); letter-spacing: 0; margin: 0 0 1.8vh; opacity: .45;
   animation: lift .45s cubic-bezier(.16,1,.3,1) both; }
-.cur { margin: 0; font-family: var(--poster); text-transform: uppercase; line-height: var(--cur-lh, 1.02); letter-spacing: .012em; word-spacing: .04em;
+.cur { margin: 0; font-family: var(--poster); text-transform: uppercase; line-height: var(--cur-lh, 1.02); letter-spacing: .012em; word-spacing: calc(.04em + var(--ws, 0em));
   font-size: calc(clamp(34px, min(calc(400cqi / (var(--n) + 4)), 15vh), 150px) * var(--ls, 1));
   transform-origin: left center; }
 .cur .w { display: inline-block; animation: pop .4s cubic-bezier(.2,.9,.3,1) both; animation-delay: calc(var(--i) * 18ms); }
@@ -264,6 +264,8 @@ body.home .singbar { display: none; } /* (its voice slider is for the lyrics: no
 :is(.la-tower, .la-lens, .la-pop, .la-drift, .la-wall, .la-emoji-stack) .fp-colr .cur:not(.rest) .w.now > span,
 :is(.la-fisheye, .la-fisheye-emoji) .fp-colr .cur:not(.rest) .w.fish-k.on > span { filter: brightness(0); -webkit-mask-image: none !important; }
 .la-emoji-stack .fp-colr .cur .w.now > .es-blk { transform: skewX(-8deg) !important; }
+/* (a face whose own space is narrow, given more room between words: FONT_PAIRS' ws) */
+:is(.next, .cs-line, .dv-title) { word-spacing: var(--ws, 0em); }
 /* a script face (Waltz): in its own case (in capitals it can't be read), with room for its swashes */
 .fp-script :is(.cur, .next, .cs-line, .dv-title) { text-transform: none; }
 .fp-script .cur .w > span { padding-inline: .32em; margin-inline: -.32em; }
@@ -3541,11 +3543,12 @@ function useLanim(name) {
 }
 // ---------- the lyrics' typefaces (Settings › Lyrics font): a display face for the line, and a second for its accent
 // word, the line before and the Cover view's title. Bundled (fonts/pairs.css) and loaded only once picked. lh: the
-// line's line height (some faces stand taller); glow: lit tubes; script: a script face, never in capitals; colr: a colour
-// font (COLRv1), its colours following the mood (moodPalette) — its palette 0 turned to the mood's hue, 'ab' the mood's
-// two colours, true its own. sc: the two faces' moods for the other scripts (fonts/scripts.css), so a Hindi or Tamil line
-// keeps the pair's character: Tall bold and condensed, Wide bold and wide, Didone a high-contrast serif, Round, Fat, Soft
-// (round and lighter), Script, Hand, Tech, Pixel, Antique (old print), Serif (with true italics). ----------
+// line's line height (some faces stand taller); ws: more room between words (em), for a face whose own space is narrow;
+// glow: lit tubes; script: a script face, never in capitals; colr: a colour font (COLRv1), its colours following the
+// mood (moodPalette) — its palette 0 turned to the mood's hue, 'ab' the mood's two colours, true its own. sc: the two
+// faces' moods for the other scripts (fonts/scripts.css), so a Hindi or Tamil line keeps the pair's character: Tall
+// bold and condensed, Wide bold and wide, Didone a high-contrast serif, Round, Fat, Soft (round and lighter), Script,
+// Hand, Tech, Pixel, Antique (old print), Serif (with true italics). ----------
 const FONT_PAIRS = [
   { name: 'Poster', poster: "'Anton'", serif: "'Instrument Serif'", sc: ['Tall', 'Serif'] },
   { name: 'Vogue', poster: "'Abril Fatface'", serif: "'Playfair Display'", lh: 1.08, sc: ['Didone', 'Serif'] },
@@ -3566,8 +3569,12 @@ const FONT_PAIRS = [
   { name: 'Foil', poster: "'Foldit'", serif: "'Chakra Petch'", lh: 1.04, colr: true, sc: ['Tech', 'Tech'] },
   { name: 'Groove', poster: "'Fraunces'", serif: "'Fraunces'", lh: 1.04, sc: ['Fat', 'Serif'] },
   { name: 'Epic', poster: "'Cinzel'", serif: "'Cormorant Garamond'", lh: 1.04, sc: ['Didone', 'Serif'] },
+  { name: 'Disco', poster: "'Monoton'", serif: "'Pacifico'", lh: 1.06, glow: true, ws: .12, sc: ['Wide', 'Script'] }, // (Monoton's own space is half a usual one: a Hindi or Telugu line's words ran together)
+  { name: 'Deco', poster: "'Limelight'", serif: "'Poiret One'", lh: 1.06, sc: ['Didone', 'Soft'] },
+  { name: 'Haunt', poster: "'Nosifer'", serif: "'IM Fell English'", lh: 1.16, sc: ['Antique', 'Serif'] },
   { name: 'Rodeo', poster: "'Sancreek'", serif: "'Yellowtail'", lh: 1.06, sc: ['Didone', 'Script'] },
   { name: 'Waltz', poster: "'Corinthia'", serif: "'Cormorant Garamond'", lh: 1.16, script: true, sc: ['Script', 'Serif'] },
+  { name: 'Brush', poster: "'Kaushan Script'", serif: "'Kaushan Script'", lh: 1.1, sc: ['Script', 'Script'] },
   { name: 'Bounce', poster: "'Shantell Sans'", serif: "'Shantell Sans'", lh: 1.1, sc: ['Hand', 'Hand'] },
   { name: 'Varsity', poster: "'Anybody'", serif: "'Anybody'", lh: 1.02, sc: ['Tall', 'Tall'] },
   { name: 'Marquee', poster: "'Doto'", serif: "'Space Mono'", lh: 1.1, glow: true, sc: ['Pixel', 'Tech'] },
@@ -3589,6 +3596,7 @@ function applyFontPair() {
     e.style.setProperty('--poster', f.poster + ', ' + scStack(f.sc[0]) + 'Impact, sans-serif');
     e.style.setProperty('--serif', f.serif + ', ' + scStack(f.sc[1]) + 'Georgia, serif');
     e.style.setProperty('--cur-lh', f.lh || 1.02);
+    e.style.setProperty('--ws', (f.ws || 0) + 'em'); // (more room between words, em)
     e.classList.toggle('fp-glow', !!f.glow); // (Neon: lit tubes)
     e.classList.toggle('fp-colr', colrPair);
     e.classList.toggle('fp-script', !!f.script);
