@@ -44,7 +44,7 @@ need a powerful graphics card anyway), about 18 MB smaller, and it updates to Li
 
 <table>
   <tr>
-    <td width="50%" valign="top"><a href="#privacy"><img alt="Counted installs" src="https://img.shields.io/endpoint?url=https://netherflow-relay.netherflow.workers.dev/c&style=flat-square&color=ff4a1c&labelColor=1a1210"></a><br><sub>Counted once per install when NetherFlow's terms are accepted, unless Count me once is unticked (F-Droid's version asks first). Reinstalls and each device count again, and anyone can send a count, so it's a rough figure.</sub></td>
+    <td width="50%" valign="top"><a href="#privacy"><img alt="Counted installs" src="https://img.shields.io/endpoint?url=https://netherflow-relay.netherflow.workers.dev/c&style=flat-square&color=ff4a1c&labelColor=1a1210"></a><br><sub>Counted once per install when NetherFlow's terms are accepted, unless Count me once is unticked. Reinstalls and each device count again, and anyone can send a count, so it's a rough figure.</sub></td>
     <td width="50%" valign="top"><a href="https://github.com/volodya-rua/NetherFlow/releases"><img alt="Downloads" src="https://img.shields.io/endpoint?url=https://netherflow-relay.netherflow.workers.dev/dl&style=flat-square&color=ff4a1c&labelColor=1a1210"></a><br><sub>Downloads of NetherFlow's installers and app from GitHub Releases, updates included.</sub></td>
   </tr>
 </table>

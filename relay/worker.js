@@ -17,7 +17,7 @@
 // sends POST /c once, when its terms are agreed to with Count me once ticked: an empty request, which adds 1 to it; GET /c
 // gives the number to shields.io for the badge. Kept: that number. Never kept: an address, a device, a time, or anything
 // sent with a request (an address is held in this Worker's memory only, to stop one sending many: 3 counts an hour,
-// forgotten after an hour unused). And GET /dl, the downloads badge: how many times NetherFlow's installers and APKs were
+// forgotten after an hour unused, or when the Worker is evicted; never stored). And GET /dl, the downloads badge: how many times NetherFlow's installers and APKs were
 // downloaded from its GitHub releases, added up from GitHub's own counts at most once an hour.
 // Nothing is logged: no console output, and the Worker's observability off (wrangler.toml). Deploy: npx wrangler deploy
 const TOPIC = /^(nf2\/[0-9a-f]{32}|nf1\/l[0-9a-f]{32})$/;
@@ -29,8 +29,8 @@ const LIMITS = { // per topic: people at once, the biggest message, and messages
 
 const SHARE = /^\/s\/([A-Za-z0-9]{12})$/, SHARE_MAX = 256 * 1024; // (a short link's copy: the biggest — a 10,000-song playlist of any kind, with room; a bigger one gets the long link)
 const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, PUT, POST, DELETE, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type, X-Delete-Hash, X-Delete-Token, Authorization', 'Access-Control-Max-Age': '86400' };
-// (per address: so many at once, then so many an hour — held only in this Worker's memory, never kept or logged, and
-// forgotten after an hour unused, when its allowance is whole again anyway)
+// (per address: so many at once, then so many an hour — held only in this Worker's memory, never stored or logged, and
+// forgotten after an hour unused (its allowance whole again anyway) or when the Worker is evicted)
 const limit = (burst, hourly) => {
   const m = new Map(); // (in the order they were last used: the oldest first)
   return ip => {

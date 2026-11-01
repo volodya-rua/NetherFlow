@@ -1962,7 +1962,7 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
 <dialog id="consent" class="consent" aria-labelledby="consentTitle">
   <div class="kicker lbl">Welcome to NetherFlow · by Volodya.rua</div>
   <h2 id="consentTitle" tabindex="-1" autofocus>Before you press play</h2>
-  <p>NetherFlow is a free, open-source player for personal use. It plays songs from YouTube, podcasts from their own hosts and free audiobooks from the Internet Archive, and shows lyrics from third-party services. It doesn't host any music, podcasts or lyrics, and it isn't affiliated with any of those services. It shows no ads of its own and doesn't block or skip anything. It can also save songs on your device for offline listening by downloading them from YouTube, which YouTube's terms don't allow (and the rights holders or the law where you live may not either), and make short story clips of a song to share: those choices are yours. A playlist you choose to edit together is kept, encrypted, on NetherFlow's own relay (with public relays as a backup), and anyone with its link can see and change it. No account, no ads of its own, no tracking of what you do. <span id="countSay">Each install is counted once, with nothing about you (untick Count me once to skip it).</span></p>
+  <p>NetherFlow is a free, open-source player for personal use. It plays songs from YouTube, podcasts from their own hosts and free audiobooks from the Internet Archive, and shows lyrics from third-party services. It doesn't host any music, podcasts or lyrics, and it isn't affiliated with any of those services. It shows no ads of its own and doesn't block or skip anything. It can also save songs on your device for offline listening by downloading them from YouTube, which YouTube's terms don't allow (and the rights holders or the law where you live may not either), and make short story clips of a song to share: those choices are yours. A playlist you choose to edit together is kept, encrypted, on NetherFlow's own relay (with public relays as a backup), and anyone with its link can see and change it. There are no accounts and no tracking of what you do. <span id="countSay">Each install is counted once, with nothing about you (untick Count me once to skip it).</span></p>
   <p>By continuing you agree to the <button class="inline-link" data-legal="terms">Terms of Use</button> and the <button class="inline-link" data-legal="privacy">Privacy Policy</button>.</p>
   <p id="declined" hidden>You need to accept the terms to use NetherFlow.</p>
   <label class="count-me"><input type="checkbox" id="countMe" aria-describedby="countSay"><span><b>Count me once</b></span></label>
@@ -3834,11 +3834,14 @@ function countOnce(last) { // → whether it's counted
 // the box as it starts — a phone's once its app says whose signature it has (till then, unticked) — never changed after
 // a finger's been on it; and the words above it, which say how it starts
 const countSaid = $('countSay').textContent; // (NetherFlow's own builds')
+// (counted already: the box hidden and no word about unticking it — Legal)
+const COUNTED_SAY = "This install has already been counted once, with nothing about you. It isn't counted again.";
 const countBox = fdroid => {
-  $('countSay').textContent = fdroid ? 'Count me once, off unless you tick it, adds 1 to a public count.' : countSaid;
+  $('countSay').textContent = store.get(COUNTED) === '1' ? COUNTED_SAY : fdroid ? 'Count me once, off unless you tick it, adds 1 to a public count.' : countSaid;
   if (!$('countMe').dataset.touched) $('countMe').checked = !fdroid && store.get(COUNTED) !== 'no';
 };
 $('countMe').closest('label').hidden = store.get(COUNTED) === '1'; // (counted: nothing to choose)
+if (store.get(COUNTED) === '1') $('countSay').textContent = COUNTED_SAY;
 $('countMe').onchange = () => { $('countMe').dataset.touched = 1; };
 $('countMe').onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); $('countMe').click(); } }; // (a TV remote's middle button, which a box doesn't take)
 countBox(native);
@@ -16950,7 +16953,7 @@ applyKin();
 // (Settings › Agent), its codename in giant letters behind it, sliding in; in the header, a round timer (the time left
 // in the song) between the scores (the song's place in the list, and the list's length) with five agents' faces a
 // side. Ops: the same timer with the two teams' colours and five players a side. A chorus brings a round banner
-// (Tactical: ACE, CLUTCH…; Ops: a team's win, and near the end the bomb planted). Spider: comic sound effects popping
+// (Tactical: ACE, CLUTCH…; Ops: a team's win, and near the end the final seconds). Spider: comic sound effects popping
 // up round the edges on the big kicks.
 function setAgent(v) { agentPick = v === 'Each song' ? '' : v; store.set('netherflow.agent', agentPick); showAgent(); renderTextPanel(); }
 function showAgent() {
@@ -17018,10 +17021,10 @@ function skinTick(now, kick, t, dur) { // (every frame, a theme on)
       if (/chorus|hook|drop/i.test(sec.name || '') && motion) {
         const n = banner.n++;
         if (skin === 'Tactical') showBanner(['ACE', 'CLUTCH', 'FLAWLESS', 'TEAM ACE', 'THRIFTY'][n % 5], n % 5 ? '' : 'gold');
-        else showBanner(n % 2 ? 'TERRORISTS WIN' : 'COUNTER-TERRORISTS WIN', n % 2 ? 't' : 'ct');
+        else showBanner(n % 2 ? 'ORANGE TEAM WINS' : 'BLUE TEAM WINS', n % 2 ? 't' : 'ct'); // (generic words: no game's own lines — Legal, 1.6.3)
       }
     }
-    if (skin === 'Ops' && dur > 90 && dur - t < 40 && !P.paused && banner.bomb !== curTitle) { banner.bomb = curTitle; showBanner('BOMB HAS BEEN PLANTED', 'bomb'); }
+    if (skin === 'Ops' && dur > 90 && dur - t < 40 && !P.paused && banner.bomb !== curTitle) { banner.bomb = curTitle; showBanner('FINAL 40 SECONDS', 'bomb'); }
   }
   if (skin === 'Spider' && kick > .82 && now - sfxLast > 1800 && !P.paused && motion && !body.classList.contains('home')) {
     sfxLast = now;

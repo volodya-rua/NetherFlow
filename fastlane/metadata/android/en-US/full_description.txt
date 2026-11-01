@@ -2,16 +2,16 @@ NetherFlow is a free, open-source music player with a look of its own. Search an
 
 <b>Features</b>
 <ul>
-<li>Search songs, artists and albums, and play them in full, with typos fixed and suggestions as you type</li>
+<li>Search songs, artists and albums and play them in full, with suggestions as you type</li>
 <li>Synced lyrics, word by word where available, with 27 lyric animations, from Tower, Lens and Emoji Stack to Wave, Black Hole and DNA</li>
-<li>5 themes that change the whole look at once, each with its own backdrop, timeline and cursor: Stickman, Spider, Blocks, Tactical and Ops</li>
-<li>27 animated backgrounds that take their colors from the album cover</li>
+<li>6 themes that change the whole look, each with its own backdrop, timeline and cursor: Stickman, Spider, Blocks, Tactical, Ops and Glass</li>
+<li>36 animated backgrounds that take their colors from the album cover</li>
 <li>A beat ring and screen edges that move with the music</li>
 <li>Explore: your country's charts, new releases, trending, moods and genres with their playlists, and mixes made from what you play</li>
-<li>Podcasts: every show in Apple's podcast directory; follow shows, resume where you left off, 0.8× to 2×, save episodes for offline</li>
+<li>Podcasts from Apple's directory: follow shows, resume where you left off, 0.8× to 2×, save episodes for offline</li>
 <li>Audiobooks: free classics read by LibriVox's volunteers (public domain in the US), chapter by chapter</li>
-<li>Equalizer with presets, a volume booster, headphone correction for 6,000+ headphones (AutoEQ), and each song at its original loudness</li>
-<li>Autoplay: when the list ends, songs like the one playing carry on, in its language and era, learning from what you skip and like</li>
+<li>Equalizer with presets, a volume booster and headphone correction for 6,000+ headphones (AutoEQ)</li>
+<li>Autoplay: when the list ends, songs like the one playing carry on, learning from what you skip and like</li>
 <li>Smooth mix: songs blend into each other on the beat, like a DJ mix</li>
 <li>Sing: karaoke, with the voice turned down as far as you like and the lyrics big</li>
 <li>Import playlists of any length from Spotify, Apple Music or YouTube by pasting the link</li>
@@ -24,7 +24,7 @@ NetherFlow is a free, open-source music player with a look of its own. Search an
 <li>A home-screen widget, lyrics on the lock screen, and liked songs saved for offline on Wi-Fi by themselves</li>
 <li>Liked songs, playlists, queue and history</li>
 <li>Save songs for offline listening, one at a time or a whole playlist at once</li>
-<li>Make a short video clip of a song with its lyrics for your story</li>
+<li>Short video clips of a song with its lyrics, for your story</li>
 <li>No account, no ads of its own, no tracking of what you do. Count me once, off unless you tick it, adds 1 to a public count</li>
 </ul>
 
