@@ -7241,6 +7241,7 @@ function lensFocus(from) {
   lens.k = k; lens.p = curWords;
   const set = (ws, fit, rest = 1) => ws.forEach((w, i) => { w.style.setProperty('--d', Math.abs(i - k)); w.style.setProperty('--side', i < k ? -1 : 1); const f = i === k ? fit : rest; if (f < 1) w.style.setProperty('--fit', f.toFixed(3)); else w.style.removeProperty('--fit'); });
   const p = curWords[0].parentElement, ghost = p.cloneNode(true), dk = p.closest('.deck'), deck = dk?.clientWidth || stage.clientWidth;
+  const around = [p.previousElementSibling, p.nextElementSibling]; // (the lines before and after: the copy goes in between)
   ghost.classList.add('lens-ghost');
   p.after(ghost);
   const gws = [...ghost.querySelectorAll('.w')];
@@ -7252,8 +7253,7 @@ function lensFocus(from) {
   const put = ({ dy, W, to }) => {
     curWords.forEach((w, i) => { w.style.setProperty('--tx', to[i][0].toFixed(1) + 'px'); w.style.setProperty('--ty', to[i][1].toFixed(1) + 'px'); });
     p.style.perspectiveOrigin = (W / 2).toFixed(1) + 'px 50%';
-    p.previousElementSibling?.style.setProperty('translate', `0 ${dy.toFixed(1)}px`);
-    p.nextElementSibling?.style.setProperty('translate', `0 ${(-dy).toFixed(1)}px`);
+    around.forEach((q, i) => q?.style.setProperty('translate', `0 ${(i ? -dy : dy).toFixed(1)}px`));
   };
   if (fresh && from > 0 && isFinite(from) && Math.abs(from - 1) > .01) { // (every word still far off, at that size: put there at once, to glide from)
     for (const w of [...gws, ...curWords]) w.style.setProperty('--fit', from.toFixed(3));
