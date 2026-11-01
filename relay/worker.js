@@ -13,6 +13,12 @@
 //   curl -X DELETE -H "Authorization: Bearer $(cat ~/.netherflow-signing/relay-admin.key)" https://netherflow-relay.netherflow.workers.dev/s/<id>
 // (<id>: the 12 letters and numbers after #s. in the link reported. The key: a Worker secret, set once with
 //  npx wrangler secret put ADMIN_KEY — never in this repository.)
+// And NetherFlow's install count (the app's Count me once; the README's badge): one number, and nothing else. An install
+// sends POST /c once, when its terms are agreed to with Count me once ticked: an empty request, which adds 1 to it; GET /c
+// gives the number to shields.io for the badge. Kept: that number. Never kept: an address, a device, a time, or anything
+// sent with a request (an address is held in this Worker's memory only, to stop one sending many: 3 counts an hour,
+// forgotten after an hour unused). And GET /dl, the downloads badge: how many times NetherFlow's installers and APKs were
+// downloaded from its GitHub releases, added up from GitHub's own counts at most once an hour.
 // Nothing is logged: no console output, and the Worker's observability off (wrangler.toml). Deploy: npx wrangler deploy
 const TOPIC = /^(nf2\/[0-9a-f]{32}|nf1\/l[0-9a-f]{32})$/;
 const KEEP = 365 * 864e5; // a kept copy, after its last change
@@ -22,11 +28,47 @@ const LIMITS = { // per topic: people at once, the biggest message, and messages
 };
 
 const SHARE = /^\/s\/([A-Za-z0-9]{12})$/, SHARE_MAX = 256 * 1024; // (a short link's copy: the biggest — a 10,000-song playlist of any kind, with room; a bigger one gets the long link)
-const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, PUT, DELETE, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type, X-Delete-Hash, X-Delete-Token, Authorization', 'Access-Control-Max-Age': '86400' };
-// (short links made, per address: 20 at once, then 20 an hour — held only in this Worker's memory, never kept or logged)
-const puts = new Map();
-const putOk = ip => { const now = Date.now(), b = puts.get(ip) || { tokens: 20, at: now }; b.tokens = Math.min(20, b.tokens + (now - b.at) / 180000); b.at = now;
-  if (puts.size > 5000) puts.clear(); puts.set(ip, b); if (b.tokens < 1) return false; b.tokens -= 1; return true; };
+const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, PUT, POST, DELETE, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type, X-Delete-Hash, X-Delete-Token, Authorization', 'Access-Control-Max-Age': '86400' };
+// (per address: so many at once, then so many an hour — held only in this Worker's memory, never kept or logged, and
+// forgotten after an hour unused, when its allowance is whole again anyway)
+const limit = (burst, hourly) => {
+  const m = new Map(); // (in the order they were last used: the oldest first)
+  return ip => {
+    const now = Date.now();
+    for (const [k, v] of m) { if (now - v.at < 3600e3) break; m.delete(k); }
+    const b = m.get(ip) || { tokens: burst, at: now }; b.tokens = Math.min(burst, b.tokens + (now - b.at) * hourly / 3600e3); b.at = now;
+    m.delete(ip); if (m.size >= 5000) m.clear(); m.set(ip, b);
+    if (b.tokens < 1) return false; b.tokens -= 1; return true;
+  };
+};
+const putOk = limit(20, 20); // (short links made)
+const countOk = limit(3, 3); // (counts: loose — a school's or a phone network's people can share one address)
+// (an address as the count's limit takes it: IPv4 whole, IPv6 by its first half — a /64, one home's or one phone's, so
+// the countless addresses in it are one)
+const ipKey = ip => {
+  if (!ip.includes(':') || ip.includes('.')) return ip;
+  const [a, b] = ip.split('::'), h = a ? a.split(':') : [], t = b ? b.split(':') : [];
+  return (b === undefined ? h : [...h, ...Array(Math.max(0, 8 - h.length - t.length)).fill('0'), ...t]).slice(0, 4).join(':');
+};
+// a badge's number, as shields.io's endpoint badge takes it (the README's), kept an hour by whoever passes it on
+const badge = (label, n) => new Response(JSON.stringify({ schemaVersion: 1, label, message: String(n) }), { headers: { ...CORS, 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=3600' } });
+// NetherFlow's downloads from its GitHub releases: its installers and APKs only (not update.json, latest.yml, the block
+// maps and SHA256SUMS, which update checks fetch: most of GitHub's own total). GITHUB_TOKEN, if it's set (a Worker secret:
+// npx wrangler secret put GITHUB_TOKEN — never in this repository), lifts GitHub's limit for asking without one, which
+// the addresses Cloudflare shares with others can use up.
+const INSTALLERS = /\.(exe|apk|deb|AppImage)$/;
+const sumDownloads = async token => {
+  let n = 0;
+  for (let page = 1; page <= 10; page++) { // ponytail: 1,000 releases at most, each page read whole; GitHub's GraphQL (with the token) if it ever has that many
+    const r = await fetch(`https://api.github.com/repos/volodya-rua/NetherFlow/releases?per_page=100&page=${page}`,
+      { headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'netherflow-relay', ...(token ? { Authorization: 'Bearer ' + token } : {}) } });
+    if (!r.ok) throw new Error('GitHub ' + r.status);
+    const list = await r.json();
+    for (const rel of list) for (const a of rel.assets) if (INSTALLERS.test(a.name)) n += a.download_count;
+    if (list.length < 100) break;
+  }
+  return n;
+};
 
 export default {
   async fetch(req, env) {
@@ -36,6 +78,14 @@ export default {
       if (!['GET', 'PUT', 'DELETE'].includes(req.method)) return new Response('Not found', { status: 404, headers: CORS });
       if (req.method === 'PUT' && !putOk(req.headers.get('CF-Connecting-IP') || '')) return new Response('Slow down', { status: 429, headers: CORS });
       return env.TOPICS.get(env.TOPICS.idFromName('nf3/' + s[1])).fetch(req);
+    }
+    if (url.pathname === '/c' || url.pathname === '/dl') { // (the install count, POST adding 1; and the README's two badges)
+      if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
+      const add = req.method === 'POST' && url.pathname === '/c';
+      if (!add && req.method !== 'GET') return new Response('Not found', { status: 404, headers: CORS });
+      if (add && !countOk(ipKey(req.headers.get('CF-Connecting-IP') || ''))) return new Response('Slow down', { status: 429, headers: CORS });
+      // (handed on bare, the method alone: nothing the app or its connection sent reaches the object that keeps the number)
+      return env.TOPICS.get(env.TOPICS.idFromName('nf4' + url.pathname)).fetch(new Request(url.origin + url.pathname, { method: req.method }));
     }
     if (url.pathname !== '/mqtt' || !TOPIC.test(t) || req.headers.get('Upgrade') !== 'websocket') return new Response('Not found', { status: 404 });
     return env.TOPICS.get(env.TOPICS.idFromName(t)).fetch(req);
@@ -51,7 +101,10 @@ export class Topic {
   constructor(ctx, env) { this.ctx = ctx; this.env = env; }
 
   async fetch(req) {
-    if (new URL(req.url).pathname.startsWith('/s/')) return this.share(req);
+    const path = new URL(req.url).pathname;
+    if (path.startsWith('/s/')) return this.share(req);
+    if (path === '/c') return this.count(req.method === 'POST');
+    if (path === '/dl') return this.downloads();
     const t = new URL(req.url).searchParams.get('t'), L = LIMITS[t.slice(0, 3)];
     if (this.ctx.getWebSockets().length >= L.conns) return new Response('Full', { status: 429 });
     const [client, server] = Object.values(new WebSocketPair());
@@ -127,6 +180,25 @@ export class Topic {
     const del = (req.headers.get('X-Delete-Hash') || '').toLowerCase(); // (its maker's delete token's SHA-256: kept, the token never sent here until it's used)
     await this.ctx.storage.put({ copy, changed: now, ...(/^[0-9a-f]{64}$/.test(del) ? { del } : {}) }); await this.ctx.storage.setAlarm(now + KEEP);
     return new Response(null, { status: 201, headers: CORS });
+  }
+
+  // the install count (object nf4/c): one number, and 1 added to it (never an alarm set here: alarm() below would delete it)
+  async count(add) {
+    const n = await this.ctx.storage.get('n') || 0;
+    if (!add) return badge('counted installs', n);
+    await this.ctx.storage.put('n', n + 1);
+    return new Response(null, { status: 204, headers: CORS });
+  }
+
+  // the downloads (object nf4/dl): added up at most once an hour, the sum kept for the rest of it (and given while GitHub
+  // can't be reached)
+  async downloads() {
+    const kept = await this.ctx.storage.get('dl');
+    if (kept && Date.now() - kept.at < 3600e3) return badge('downloads', kept.n);
+    this.summing ||= sumDownloads(this.env.GITHUB_TOKEN).then(async n => { await this.ctx.storage.put('dl', { n, at: Date.now() }); return n; })
+      .finally(() => { this.summing = null; }); // (asked again meanwhile: the same look at GitHub)
+    const n = await this.summing.catch(() => kept?.n);
+    return n == null ? new Response('GitHub unreachable', { status: 502, headers: CORS }) : badge('downloads', n);
   }
 
   async alarm() { // a year without a change (a short link's: unopened): the kept copy deleted

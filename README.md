@@ -5,7 +5,7 @@
 <p align="center">
   A free, open-source music player for Windows, Linux, Android and Android TV.<br>
   Full songs, synced lyrics (word by word where the song has them), and backgrounds that move with the music. Podcasts and audiobooks too.<br>
-  No account, no ads of its own, no analytics.
+  No account, no ads of its own, no tracking of what you do. Each install is counted once, with nothing about you (untick Count me once to skip it).
 </p>
 
 <p align="center">
@@ -41,6 +41,13 @@ Every build is on the **[latest release](https://github.com/volodya-rua/NetherFl
 
 On Windows and not sure which one? **Choose Lite.** It's the same app without Extreme+ (so no Redline races or cars, which
 need a powerful graphics card anyway), about 18 MB smaller, and it updates to Lite.
+
+<table>
+  <tr>
+    <td width="50%" valign="top"><a href="#privacy"><img alt="Counted installs" src="https://img.shields.io/endpoint?url=https://netherflow-relay.netherflow.workers.dev/c&style=flat-square&color=ff4a1c&labelColor=1a1210"></a><br><sub>Counted once per install when NetherFlow's terms are accepted, unless Count me once is unticked (F-Droid's version asks first). Reinstalls and each device count again, and anyone can send a count, so it's a rough figure.</sub></td>
+    <td width="50%" valign="top"><a href="https://github.com/volodya-rua/NetherFlow/releases"><img alt="Downloads" src="https://img.shields.io/endpoint?url=https://netherflow-relay.netherflow.workers.dev/dl&style=flat-square&color=ff4a1c&labelColor=1a1210"></a><br><sub>Downloads of NetherFlow's installers and app from GitHub Releases, updates included.</sub></td>
+  </tr>
+</table>
 
 <a id="whats-new"></a>
 
@@ -282,7 +289,7 @@ NetherFlow is **first, or tied for first, in seven categories**. The others beat
 
 | | NetherFlow | Spotify | Apple Music | YouTube Music |
 |:--|:--|:--|:--|:--|
-| Tracking | ✓ no analytics, nothing we can read reaches us | ~ your listening shapes ads (free) and suggestions | ~ your listening shapes suggestions | ~ tied to your whole Google account |
+| Tracking | ✓ No account, no ads of its own, no tracking of what you do. Each install is counted once, with nothing about you (untick Count me once to skip it) | ~ your listening shapes ads (free) and suggestions | ~ your listening shapes suggestions | ~ tied to your whole Google account |
 | Open source | ✓ GPL v3 | ✗ | ✗ | ✗ |
 | **Score** | **10** | 4 | 7 | 3 |
 

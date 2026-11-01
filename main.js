@@ -341,7 +341,7 @@ app.whenReady().then(async () => {
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       backgroundThrottling: false, // keep timers at full speed when minimized (the next song readied, Smooth mix on time)
-      additionalArguments: [...(LITE ? ['--nf-lite'] : []), ...(port !== PORT ? ['--nf-port-moved'] : []), '--nf-country=' + ((await COUNTRY) || app.getLocaleCountryCode() || ''), '--nf-version=' + app.getVersion()], // (see preload.js: lite, portMoved, country)
+      additionalArguments: [...(LITE ? ['--nf-lite'] : []), ...(port !== PORT ? ['--nf-port-moved'] : []), ...(app.isPackaged && !process.env.CI ? ['--nf-release'] : []), '--nf-country=' + ((await COUNTRY) || app.getLocaleCountryCode() || ''), '--nf-version=' + app.getVersion()], // (see preload.js: lite, portMoved, release, country)
     },
   });
   win.removeMenu();
