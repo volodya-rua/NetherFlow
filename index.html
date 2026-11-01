@@ -765,7 +765,7 @@ body.sing:not(.home) .ab-bar { bottom: calc(100% + 44px); }
 
 /* ---------- previous / next ---------- */
 .transport { display: flex; align-items: center; gap: 2px; }
-.skip { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: color-mix(in srgb, var(--ink) 88%, transparent);
+.skip { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: color-mix(in srgb, var(--ink) 72%, transparent);
   transition: color .2s, background-color .2s, opacity .2s; }
 .skip:hover { color: var(--ink); background: var(--hair); }
 .skip:disabled { opacity: .22; pointer-events: none; }
@@ -998,7 +998,8 @@ body.sing:not(.home) .ab-bar { bottom: calc(100% + 44px); }
 .lyb.synced { color: var(--a); }
 .lyb.none { border-style: dashed; }
 .icon-btn { position: relative; width: 36px; height: 36px; flex: none; border-radius: 50%; display: grid; place-items: center;
-  color: color-mix(in srgb, var(--ink) 88%, transparent); transition: color .2s, background-color .2s, opacity .2s; }
+  color: color-mix(in srgb, var(--ink) 72%, transparent); transition: color .2s, background-color .2s, opacity .2s; }
+:where(.skin-glass) .icon-btn { color: color-mix(in srgb, var(--ink) 88%, transparent); } /* (Glass's grey icons: 4.5 : 1 over what's behind them) */
 .icon-btn:hover { color: var(--ink); background: var(--hair); }
 .icon-btn svg { width: 16px; height: 16px; fill: currentColor; }
 .icon-btn:disabled { opacity: .22; pointer-events: none; }
