@@ -4102,10 +4102,10 @@ function glassCap(h, o, tl) {
 }
 // A rounded rectangle's map (the dock in a narrow window): four corners c×c, the four edges a texel across (stretched along
 // them), the middle left to the flood under them (no move, frosted) — a few thousand texels whatever its size. k: texels
-// per px (big corners need fewer). Each [href, x, y, w, h, how it follows the width].
+// per px (big corners need fewer). Each [href, x, y, w, h, how it follows the width, how it follows the height].
 function glassRect(w, h, r, o, k) {
   const c = Math.ceil(r), Sc = glassScaleOf(r, o), out = [];
-  const piece = (x0, y0, pw, ph, ix, iy, iw, ih, a = '') => {
+  const piece = (x0, y0, pw, ph, ix, iy, iw, ih, a = '', b = '') => {
     if (iw < .5 || ih < .5) return;
     const key = ['rect', h, r, x0 < c ? 'l' : x0 > w - c - 1 ? 'r' : 'm', y0 < c ? 't' : y0 > h - c - 1 ? 'b' : 'm', pw, ph, k, o.id || o.prof].join();
     let href = glass.maps.get(key);
@@ -4115,11 +4115,11 @@ function glassRect(w, h, r, o, k) {
       for (let j = 0; j < th; j++) for (let i = 0; i < tw; i++) glassEnc(im.data, (j * tw + i) * 4, glassTexel(x0 + (i + .5) * pw / tw, y0 + (j + .5) * ph / th, w, h, r, o, .4), Sc);
       g.putImageData(im, 0, 0); glass.maps.set(key, href = glassDecoded(cv.toDataURL('image/png')));
     }
-    out.push([href, ix, iy, iw, ih, a]);
+    out.push([href, ix, iy, iw, ih, a, b]);
   };
-  piece(0, 0, c, c, 0, 0, c, c); piece(w - c, 0, c, c, w - c, 0, c, c, 'r'); piece(0, h - c, c, c, 0, h - c, c, c); piece(w - c, h - c, c, c, w - c, h - c, c, c, 'r');
-  piece(w / 2 - .5, 0, 1, c, c, 0, w - 2 * c, c, 's'); piece(w / 2 - .5, h - c, 1, c, c, h - c, w - 2 * c, c, 's');
-  piece(0, h / 2 - .5, c, 1, 0, c, c, h - 2 * c); piece(w - c, h / 2 - .5, c, 1, w - c, c, c, h - 2 * c, 'r');
+  piece(0, 0, c, c, 0, 0, c, c); piece(w - c, 0, c, c, w - c, 0, c, c, 'r'); piece(0, h - c, c, c, 0, h - c, c, c, '', 'b'); piece(w - c, h - c, c, c, w - c, h - c, c, c, 'r', 'b');
+  piece(w / 2 - .5, 0, 1, c, c, 0, w - 2 * c, c, 's'); piece(w / 2 - .5, h - c, 1, c, c, h - c, w - 2 * c, c, 's', 'b');
+  piece(0, h / 2 - .5, c, 1, 0, c, c, h - 2 * c, '', 's'); piece(w - c, h / 2 - .5, c, 1, w - c, c, c, h - 2 * c, 'r', 's');
   return { Sc, pieces: out };
 }
 // (the filter's matrices: the light's colour — w + g·saturate(s) of what's behind; what holds down under the words —
@@ -4156,11 +4156,20 @@ function glassFit(e, glow = false) {
     for (const im of f0.querySelectorAll('feImage[data-a]')) { if (im.dataset.a === 'r') im.setAttribute('x', w - c0); else if (im.dataset.a === 's') im.setAttribute('width', w - 2 * c0); }
     return;
   }
+  // (and its height alone, a rounded rectangle's — a panel's as a folded note opens in it: every frame of that, its bottom
+  // pieces moved down, its sides stretched; made anew each frame, 56 new pieces went into a note's .2 s)
+  const k0 = String(e.glassKey || '').split(','), k1 = key.split(',');
+  if (f0 && f0.querySelector('feFlood') && r < h / 2 - .5 && k0.length === k1.length && k0.every((v, i) => i === 1 || v === k1[i]) && 2 * c0 + 1 < h && 2 * c0 + 1 < +f0.getAttribute('height')) {
+    e.glassKey = key; f0.setAttribute('height', h);
+    for (const im of f0.querySelectorAll('feImage[data-b]')) { if (im.dataset.b === 'b') im.setAttribute('y', h - c0); else if (im.dataset.b === 's') im.setAttribute('height', h - 2 * c0); }
+    return;
+  }
   e.glassKey = key;
   const f = document.createElementNS(SVGNS, 'filter'), id = 'glf' + (++glass.n), img = [], drop = o.prof === 'drop', L = glow ? 'light2' : 'light';
   for (const [a, v] of [['id', id], ['x', 0], ['y', 0], ['width', w], ['height', h], ['filterUnits', 'userSpaceOnUse'], ['primitiveUnits', 'userSpaceOnUse'], ['color-interpolation-filters', 'sRGB']]) f.setAttribute(a, v);
-  // (a: how a piece follows the width — fixed at the left, 'r' kept at the right, 's' stretched between)
-  const put = (href, x, y, iw, ih, a = '') => { if (iw > .5 && ih > .5) img.push(`<feImage href="${href}" x="${x}" y="${y}" width="${iw}" height="${ih}" preserveAspectRatio="none" data-a="${a}" result="m${img.length}"/>`); };
+  // (a: how a piece follows the width — fixed at the left, 'r' kept at the right, 's' stretched between; b: the height —
+  // at the top, 'b' kept at the bottom, 's' stretched between)
+  const put = (href, x, y, iw, ih, a = '', b = '') => { if (iw > .5 && ih > .5) img.push(`<feImage href="${href}" x="${x}" y="${y}" width="${iw}" height="${ih}" preserveAspectRatio="none" data-a="${a}" data-b="${b}" result="m${img.length}"/>`); };
   let S, flood = '';
   if (r >= h / 2 - .5) { const T = glassCap(h, o, drop ? Math.min(.9, GLASS_TL[q] / r) : 0), c = Math.min(T.c, w / 2); S = T.Sc; put(T.l, 0, 0, c, h); put(T.m, c, 0, w - 2 * c, h, 's'); put(T.r, w - c, 0, c, h, 'r'); e.glassC = c; }
   else { const R = glassRect(w, h, r, o, r > 30 ? .6 : 1); S = R.Sc; for (const p of R.pieces) put(...p); flood = '<feFlood flood-color="rgb(128,128,0)" result="f0"/>'; e.glassC = Math.ceil(r); }
@@ -7546,7 +7555,7 @@ function castRender() {
   out.push(el('p', 'q-empty lbl', cast.note || (cast.looking ? 'Looking for TVs and speakers on your Wi-Fi…'
     : !cast.list.length ? `None found. A TV or a speaker shows here when it's on, and on the same Wi-Fi as this ${here}.`
     : cast.s ? `The song plays on ${cast.dev.name}. The lyrics, the queue and the controls stay here.` : 'Pick one: the song moves there, from where it is.')));
-  $('castPanel').replaceChildren(...out);
+  panelPut($('castPanel'), out);
 }
 // ---- this app as a TV the others cast to (Android on a TV — Fire TV, Android TV — while it's open: CastPlugin's
 // receiver, a DLNA media renderer): what a phone or a computer on the Wi-Fi sends played here — lyrics, visuals and all —
@@ -10161,7 +10170,7 @@ function renderQueue() {
   }
   if (!current) out.push(el('p', 'q-empty lbl', 'Nothing playing yet. On any song, ⋯ › Add to queue.'));
   else if (!upNext.length && !rest.length && !(shuffling() && shufflePick()) && (!autoOn || repeat !== 'off')) out.push(el('p', 'q-empty lbl', 'Nothing up next. On any song, ⋯ › Add to queue.'));
-  $('queuePanel').replaceChildren(...out);
+  panelPut($('queuePanel'), out);
 }
 $('queuePanel').addEventListener('beforetoggle', e => { if (e.newState === 'open') renderQueue(); });
 $('togetherPanel').addEventListener('toggle', e => { if (e.newState === 'open') tgRender(); });
@@ -10482,7 +10491,7 @@ $('storyCopy').onclick = async () => {
 // near the panel's top or bottom edge the panel scrolls along. Dropped, it moves to that spot in its list.
 function dragRow(e, row, list, from) {
   e.preventDefault();
-  const grip = e.currentTarget, panel = $('queuePanel'), box = panel.getBoundingClientRect();
+  const grip = e.currentTarget, q = $('queuePanel'), panel = q.gpBody?.parentNode === q ? q.gpBody : q, box = panel.getBoundingClientRect(); // (what scrolls: Glass's body, under its head)
   const rows = []; // its section: the rows next to it with the same list
   for (let r = row; r?.classList.contains('qrow') && r.list === list; r = r.previousElementSibling) rows.unshift(r);
   for (let r = row.nextElementSibling; r?.classList.contains('qrow') && r.list === list; r = r.nextElementSibling) rows.push(r);
@@ -11879,7 +11888,7 @@ function tgRender() {
     out.push(reacts, box('tg-row', leave));
   }
   if (tg.status) out.push(el('p', 'q-empty lbl tg-status', tg.status));
-  $('togetherPanel').replaceChildren(...out); fitCode($('togetherPanel'));
+  panelPut($('togetherPanel'), out); fitCode($('togetherPanel'));
 }
 // a code to read out stays on one line, in every theme's type: smaller when it wouldn't fit beside what's next to it
 function fitCode(panel) {
@@ -12222,7 +12231,7 @@ function syncRender() {
     out.push(box('tg-row', go));
   }
   if (syStatus) out.push(el('p', 'q-empty lbl tg-status', syStatus));
-  $('syncPanel').replaceChildren(...out); fitCode($('syncPanel'));
+  panelPut($('syncPanel'), out); fitCode($('syncPanel'));
 }
 // ---------- Android extras: the line being sung on the lock screen (and the widget, and a car's display); liked songs
 // saved for offline by themselves, on Wi-Fi ----------
@@ -14176,6 +14185,10 @@ $('toHome').onclick = () => goHome(true);
 const PANEL_TITLE = { moods: 'Theme', textPanel: 'Settings', queuePanel: 'Queue', togetherPanel: 'Listen together', castPanel: 'Play on', syncPanel: 'Sync', eqPanel: 'Equalizer' };
 const gpFades = b => { b.style.setProperty('--ft', b.scrollTop > 1 ? '20px' : '0px'); b.style.setProperty('--fb', b.scrollTop + b.clientHeight < b.scrollHeight - 1 ? '20px' : '0px'); };
 const gpRo = new ResizeObserver(es => { for (const x of es) gpFades(x.target); }), EQ_TOP = document.querySelector('#eqPanel .eq-top');
+// (a panel's own words drawn again — the queue, Play on, Listen together, Sync: in Glass straight into its body. Written
+// to the panel, they were moved into the body after, the body taken out and put back: the queue jumped to its top at
+// every change and a moved song's grip lost the keyboard's focus)
+function panelPut(p, kids) { const b = gsOn() && p.gpBody?.parentNode === p && p.gpBody; (b || p).replaceChildren(...kids); if (b) gpFades(b); }
 for (const id of ['moods', 'textPanel', 'queuePanel', 'togetherPanel', 'castPanel', 'syncPanel', 'eqPanel']) {
   const p = $(id), back = el('button', 'link panel-back lbl');
   back.append(ico('back'), 'Back'); back.setAttribute('aria-label', 'Back: close ' + (p.getAttribute('aria-label') || 'this panel'));
