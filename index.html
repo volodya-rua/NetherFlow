@@ -1862,6 +1862,7 @@ body.skin-glass.sing:not(.home) .ab-bar { bottom: calc(100% + 66px); }
 .skin-glass :is(.moods, .eq, .smenu):popover-open { animation: glIn .54s var(--g-spring) both; }
 @keyframes glIn { from { opacity: 0; transform: translateY(-14px) scale(.86, .8); } 30% { opacity: 1; } }
 .skin-glass :is(.moods, .eq, .smenu) { transform-origin: 50% 0; transition: display .32s allow-discrete, overlay .32s allow-discrete; }
+.skin-glass :is(.moods, .eq, .smenu):not(:popover-open) { pointer-events: none; } /* (going back into its button, it takes no clicks: they go to what's under it) */
 .skin-glass .moods { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 2px; }
 .skin-glass .textp { grid-template-columns: minmax(0, 1fr); }
 .skin-glass .eq { gap: 14px; }
@@ -1964,6 +1965,14 @@ body.skin-glass.sing:not(.home) .ab-bar { bottom: calc(100% + 66px); }
   .skin-glass .files { width: 100%; justify-content: space-between; padding: 0 6px; }
   .skin-glass .files > .link { width: 40px; height: 38px; }
   .app.skin-glass:not(.fs) .files { margin-right: -150px; width: calc(100% + 150px); } /* (a narrow window: the icons' row is under the window's buttons, not beside them — the room they keep is the first row's) */
+}
+@media (max-width: 900px) and (min-height: 521px) and (max-height: 700px) { /* (a small screen: the header's capsules slimmer, so the welcome and the lyrics keep their room) */
+  .skin-glass .frame { padding-top: 12px; }
+  .skin-glass .top { row-gap: 8px; }
+  .skin-glass .mood { height: 36px; }
+  .skin-glass .files { height: 40px; }
+  .skin-glass .files > .link { height: 34px; }
+  .app.skin-glass:not(.fs) .home-stage .hint { display: none; } /* (a narrow window's header takes three rows — the window's buttons keep the first one short: the keys' hint goes, so the welcome fits between it and the player) */
 }
 @media (max-width: 900px) and (max-height: 520px) { .skin-glass .bar { border-radius: 28px; padding: 6px 14px; } .skin-glass .play { width: 60px; height: 60px; } .skin-glass .core { width: 44px; height: 44px; } }
 @media (max-height: 400px) { .skin-glass :is(.top-l, .mood, .files) { height: 40px; } .skin-glass .play { width: 54px; height: 54px; } .skin-glass .core { width: 40px; height: 40px; } }
