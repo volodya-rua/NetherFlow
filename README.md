@@ -440,7 +440,7 @@ app better.
 
 ## Privacy
 
-NetherFlow has no accounts and no analytics, and nothing it sends reaches its developer in a form anyone there can read. Your settings, library and saved songs
+NetherFlow has no accounts and no tracking of what you do, and nothing it sends reaches its developer in a form anyone there can read, apart from one install count: each install adds 1 to a public number, once, with nothing about you, unless you untick Count me once. Your settings, library and saved songs
 stay on your device. When you use it, it talks directly to the services above (GitHub too: to look for a newer NetherFlow, on Android also once a day in the background to tell you one is out, and for word-by-word lyrics from the AMLL TTML DB; podcast hosts and the Internet Archive for podcasts, audiobooks and live concerts), which see your IP address. Play on a TV or speaker talks only to devices on your own Wi-Fi, and the TV or speaker fetches the song itself. A
 playlist you share travels inside its link or, as a short link, is kept on NetherFlow's relay, encrypted, with the key only in the link (the page it opens, on GitHub Pages, never gets the songs or the key); one you
 edit together is kept on NetherFlow's own relay (on Cloudflare; for now public relays too, as a backup), encrypted with a key from its link, so anyone with the link can read and change it. The full [Privacy Policy](https://volodya-rua.github.io/NetherFlow/legal.html#privacy) is in the app and on the website.
