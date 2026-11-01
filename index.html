@@ -1395,14 +1395,24 @@ a, label, summary, select, [role="button"], input[type="checkbox"], input[type="
 input:not([type]), input[type="text"], input[type="search"], input[type="email"], input[type="url"], input[type="number"], textarea { cursor: var(--cur-text, text); }
 .winctl button { cursor: var(--cur, default); } /* (the window's own buttons: an arrow, as on any window) */
 
-/* ---------- full screen: everything but the lyrics fades away until the mouse moves ---------- */
-.top, .bottom, .map { transition: opacity .7s, transform .7s; }
+/* ---------- the controls fade away until the mouse moves, the screen's touched or a key's pressed: in full screen, in
+   the Visualiser, and while a song plays with Settings › Hide controls on (see wake) ---------- */
+.top, .bottom, .map, .singbar, .winctl { transition: opacity .7s, transform .7s; }
 .fs .winctl { display: none; }
 .app.fs .top, .app.fs .s-top { padding-right: 0; }
-:is(.fs, .view-vis).idle .top { opacity: 0; transform: translateY(-14px); pointer-events: none; }
-:is(.fs, .view-vis).idle .bottom { opacity: 0; transform: translateY(14px); pointer-events: none; }
-:is(.fs, .view-vis).idle .map { opacity: 0; pointer-events: none; }
-:is(.fs, .view-vis).idle, :is(.fs, .view-vis).idle * { cursor: none !important; }
+.idle .top { opacity: 0; transform: translateY(-14px); }
+.idle :is(.bottom, .singbar) { opacity: 0; transform: translateY(14px); }
+.idle :is(.map, .winctl) { opacity: 0; }
+/* hidden, nothing in them can be pressed or hovered: a clear sheet over the page takes the pointer, and hides the mouse's
+   arrow — and stays till the tap that brings them back is over (a touch's click is aimed as the finger lifts, at what's
+   there then). (Not pointer-events on the controls: it's inherited, so hiding them re-styled every part of them. And not
+   draggable: the header's drag strip, unseen, would take the mouse's moves that bring them back.) */
+.shield { display: none; position: fixed; inset: 0; z-index: 65; cursor: none; -webkit-app-region: no-drag; }
+:is(.idle, .waking) .shield { display: block; }
+/* while they're away: a thin line for how far the song's got, in the mood's colours (its length set in showTime) */
+.trail { position: fixed; inset: auto 0 0; z-index: 3; height: 2px; pointer-events: none; opacity: 0; transition: opacity .7s;
+  background: linear-gradient(90deg, var(--b), var(--a)); box-shadow: 0 0 10px var(--a); transform: scaleX(0); transform-origin: left; }
+.idle.has-song:not(.home) .trail { opacity: .85; }
 .fs-btn svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.4; }
 .fs-btn .i-exit, .fs .fs-btn .i-enter { display: none; }
 .fs .fs-btn .i-exit { display: inline; }
@@ -1872,6 +1882,7 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
     </div>
   </footer>
 </div>
+<i id="trail" class="trail" aria-hidden="true"></i><div id="shield" class="shield" aria-hidden="true"></div><!-- the controls hidden: how far the song's got, and the sheet that takes the tap bringing them back -->
 <div id="rbanner" class="rbanner" aria-hidden="true"></div><div id="shift" class="shift" aria-hidden="true"></div><div id="sfx" class="sfxs" aria-hidden="true"></div><!-- the themes' round banners, and Spider's sound effects -->
 
 <dialog id="story" class="consent story" aria-label="Your story">
@@ -3687,9 +3698,17 @@ function updShow() { $('textPanel').querySelector('.upd')?.replaceWith(updRow())
 
 // (looked for again when Settings opens — only then: the panel's also drawn at start, unseen)
 $('textPanel').addEventListener('toggle', e => { if (e.newState === 'open' && (!upd.state || (upd.state === 'none' && Date.now() - (+store.get('netherflow.updchecked') || 0) > 3600e3))) setTimeout(() => updCheck(), 300); });
+// Settings › Hide controls: while a song plays on its page, the controls fade away after a few still seconds, leaving the
+// lyrics (see wake). Off till it's picked, but on a TV (watched from across the room, the remote put down) on: a TV's
+// known a moment after the start, so its class is asked, and the panel drawn again then (see tv). hidePick: 'On' or 'Off'
+// once picked, which always wins; idleTimer: the wait; held: a finger or a mouse button down; pauseWake: the moment's
+// wait after a pause; idleAt: when they went. (Here, early: the panel and setPlaying can run before wake's own part.)
+let hidePick = store.get('netherflow.autohide'), idleTimer = 0, held = false, pauseWake = 0, idleAt = 0;
+const autoHide = () => hidePick ? hidePick === 'On' : body.classList.contains('tv');
+function setAutoHide(v) { hidePick = v; store.set('netherflow.autohide', v); wake(); renderTextPanel(); }
 // Settings, Classic: the few most people change; Advanced: every one (the user's pick, kept on this device)
 let setMode = store.get('netherflow.setmode') === 'Advanced' ? 'Advanced' : 'Classic';
-const CLASSIC = new Set(['Theme', 'Updates', 'Interface size', 'Show', 'Visualiser', 'Lyrics animation', 'Lyrics size', 'Autoplay', 'Smooth mix', 'Liked songs offline', 'Sync with phone', 'Sync with computer', 'Island']);
+const CLASSIC = new Set(['Theme', 'Updates', 'Interface size', 'Show', 'Visualiser', 'Hide controls', 'Lyrics animation', 'Lyrics size', 'Autoplay', 'Smooth mix', 'Liked songs offline', 'Sync with phone', 'Sync with computer', 'Island']);
 function setSetMode(v) { setMode = v; store.set('netherflow.setmode', v === 'Advanced' ? v : ''); renderTextPanel(); }
 function renderTextPanel() {
   const rows = [
@@ -3705,6 +3724,7 @@ function renderTextPanel() {
     settingRow('Interface size', UI_SIZES, uiSize, setUiSize, 'Everything larger or smaller: the buttons, the text, the panels.'),
     settingRow('Show', VIEWS, view, setView, 'Cover: the record spinning, with a ring that moves to the beat. Visualiser: the whole screen moving with the music. Tap the cover in the player (or press V) to go round them. A song with no timed lyrics shows its cover by itself: tap it for the words.'),
     ...(view === 'Visualiser' ? [settingRow('Visualiser', ['Auto', ...VIS], visPick, setVis, `How the visualiser looks. Auto: a new one with each song. Tap the visualiser for the next. ${VIS_NOTE}`)] : []),
+    settingRow('Hide controls', ['Off', 'On'], autoHide() ? 'On' : 'Off', setAutoHide, 'While a song plays, the controls fade away after a few still seconds: just the lyrics, the cover or the visualiser, and a thin line for how far the song\'s got. Touch the screen, move the mouse, or press a key or the remote, and they\'re back (that first touch presses nothing). Paused, they stay. Full screen and the visualiser always do this.'),
     settingRow('Lyrics animation', LANIMS, lanimPick, setLanim, 'How the lyrics move. Easy to read, every word big and the one being sung on a block of colour: Tower (a word a row), Lens (the sung word nearest), Pop (words and their emoji popping in), Drift (a page turning in space), Wall (a word or two a row, built into a wall), Fisheye and Fisheye Emoji (a word a row under a lens, the sung one in the middle), Emoji Stack (a few big tilted rows, with emoji). 2D: Wave, Spiral, Shatter, Fireworks. 3D: Swarm, Black Hole, Cylinder, Globe, Helix, DNA, Tornado, Knot, Möbius, Ribbon, Orbit, Atom, Tunnel, Cube.' + (kin.on ? ' (Extreme lyrics are on, in the mood menu: this is for when they\x27re off.)' : '')),
     ...(skin ? [] : [fontRow()]), // (a theme brings its own font and timeline)
     settingRow('Beat style', BEATS, beatStyle, setBeat, 'The ring round the record, in the Cover view.'),
@@ -5105,6 +5125,9 @@ function setPlaying(on) {
   keepAwake();
   notifyNative(); // Android: the notification also keeps the app (and the song) alive in the background
   updateSkips();
+  // (the controls: paused, back — not in the moment between one song and the next; playing, their few seconds from now)
+  clearTimeout(pauseWake);
+  if (!on) pauseWake = setTimeout(wake, 800); else if (!body.classList.contains('idle')) wake();
 }
 function useEngine(kind) {
   if (cast.s) { cast.for = kind; kind = 'cast'; } // (casting: whatever plays next, the device plays)
@@ -12186,7 +12209,6 @@ if ('mediaSession' in navigator)
     try { navigator.mediaSession.setActionHandler(a, f); } catch {}
 
 addEventListener('keydown', e => {
-  wake();
   if (tabbing && (e.code === 'Space' || e.key === 'Enter') && e.target.closest?.('button, summary, a[href], [role=button], select')) return; // (by keyboard: it presses the control)
   if (topDialog() === $('drive')) { // Drive mode: space plays / pauses, the arrows change the song
     if (e.code === 'Space') { e.preventDefault(); toggle(); } else if (e.code === 'ArrowRight') nextTrack(); else if (e.code === 'ArrowLeft') prevTrack();
@@ -12230,6 +12252,7 @@ function toggleFull() {
 // Android back button: close what's open, leave full screen, leave the song for the home page (it keeps playing),
 // and from the home page, put the app in the background
 if (native) Capacitor.Plugins.App.addListener('backButton', () => {
+  wake(); // (a press, as any key's: the controls back, their wait counted from it — not gone a moment after a panel's closed)
   const pop = document.querySelector(':popover-open:not(.toast)');
   if (pop) pop.hidePopover();
   else if (topDialog()) { // the one on top
@@ -12251,6 +12274,7 @@ let tv = false;
 Immersive?.tv?.().then(r => {
   if (!r?.tv) return;
   tv = true; tabbing = true; body.classList.add('kb', 'tv'); tvWatch.observe(body, { childList: true, subtree: true });
+  renderTextPanel(); wake(); // (Settings › Hide controls: on here, unless it's been turned off)
   $('hint').textContent = 'Choose Search to find any song';
   document.querySelector('.eq-note').textContent = 'Choose a point, then up and down change it · choose it again to stop';
   if (!topDialog() && $('cta').checkVisibility?.()) $('cta').focus(); // (where to start: the ring seen from the first moment)
@@ -12295,6 +12319,17 @@ addEventListener('resize', () => { if (tv) setTimeout(() => document.activeEleme
 // (a screen closed — a song picked in Search, say — and the focus with it: on play, so it's always somewhere to be seen)
 document.addEventListener('close', () => { if (tv) setTimeout(() => { if (document.activeElement === body && !topDialog()) (body.classList.contains('home') || !body.classList.contains('has-song') ? $('cta') : $('play')).focus(); }, 50); }, true);
 const TEXT_FIELD = 'textarea, input:not([type=button], [type=checkbox], [type=radio], [type=range])';
+// Any key brings the controls back. Hidden, the control the keyboard's on (Tab's ring; on a TV, always the remote's) can't
+// be seen: that first key only brings them back, as a first tap does (not a media or volume key: those work unseen, as
+// ever). Focus come to one of them any other way (a screen reader's) brings them back too. (Before the TV's arrows, below:
+// first.)
+const CHROME = '.top, .bottom, .map, .singbar, .winctl';
+addEventListener('keydown', e => {
+  const hid = body.classList.contains('idle');
+  wake();
+  if (hid && (tabbing || tv) && !/^(Media|AudioVolume)/.test(e.key) && e.target.closest?.(CHROME)) { e.preventDefault(); e.stopImmediatePropagation(); }
+}, true);
+addEventListener('focusin', e => { if (e.target.closest?.(CHROME)) wake(); }, true);
 addEventListener('keydown', e => {
   if (!tv || e.altKey || e.ctrlKey) return;
   const t = e.target, across = e.key === 'ArrowLeft' || e.key === 'ArrowRight', text = t.matches?.(TEXT_FIELD);
@@ -12310,14 +12345,16 @@ addEventListener('keydown', e => {
   if (t.matches?.('input[type=range]') && across) return; // (a slider: its own left and right. A text field doesn't keep them: the TV's keyboard has its own)
   if (t.classList?.contains('tv-edit') && !across) return; // (a band being changed)
   e.preventDefault(); e.stopImmediatePropagation();
-  wake(); tvMove(e.key.slice(5).toLowerCase());
+  tvMove(e.key.slice(5).toLowerCase());
 }, true);
 // (its keyboard kept away again once the field's left: brought up only when it's chosen)
 addEventListener('focusout', e => { if (e.target.dataset?.tvIm != null) tvKeyboard(e.target); e.target.classList?.remove('tv-edit'); }, true);
 function tvKeyboard(t) { if (t.dataset.tvIm) t.inputMode = t.dataset.tvIm; else t.removeAttribute('inputmode'); delete t.dataset.tvIm; } // (its own keyboard back)
-// What's focused, said the same way after a page is drawn again (its id, its download, its words), so the focus can come
-// back to it: a list redrawn under it (a download finished, a page refreshed) took it away, to nowhere.
-const tvKey = e => e.id ? '#' + e.id : e.dataset?.dl ? 'dl:' + e.dataset.dl : e.className + '|' + (e.getAttribute('aria-label') || e.textContent.trim().slice(0, 80));
+// What's focused, said the same way after a page is drawn again (its id, its download, its row and words), so the focus
+// can come back to it: a list redrawn under it (a download finished, a page refreshed, a setting picked) took it away, to
+// nowhere. (Its row too: many of Settings' rows have an Off and an On, and the ring went to the first row's — Autoplay's
+// Off picked, it landed on Hide controls' just above, and the next press changed that.)
+const tvKey = e => e.id ? '#' + e.id : e.dataset?.dl ? 'dl:' + e.dataset.dl : (e.closest('[data-set]')?.dataset.set || '') + '|' + e.className + '|' + (e.getAttribute('aria-label') || e.textContent.trim().slice(0, 80));
 let tvLast = '';
 addEventListener('focusin', e => { if (tv && e.target !== body) tvLast = tvKey(e.target); }, true);
 function tvLand() {
@@ -12384,6 +12421,7 @@ $('dvFwd').onclick = () => skipBy(jump);
 }
 function goHome(on) {
   body.classList.toggle('home', on);
+  wake();
   if (!on) return;
   $('homeNow').querySelector('i').style.backgroundImage = curArt ? `url(${JSON.stringify(curArt)})` : '';
   $('homeNow').querySelector('b').textContent = `${curTitle} — ${$('artist').textContent}`;
@@ -12402,26 +12440,43 @@ for (const id of ['moods', 'textPanel', 'queuePanel', 'togetherPanel', 'castPane
 }
 $('fsBtn').onclick = toggleFull;
 document.addEventListener('fullscreenchange', () => { body.classList.toggle('fs', !!document.fullscreenElement); wake(); });
-// In full screen the controls fade out after a few still seconds, and come back on any mouse move or key.
-let idleTimer;
+// The controls fade out after a few still seconds — in full screen, in the Visualiser, and on the song's page while it
+// plays with Settings › Hide controls on — and come back on any mouse move, touch, wheel or key. Hidden, they can't be
+// pressed (the clear .shield over them), so a first tap only brings them back. Not over anything open (a panel, a menu,
+// the voice listening; a toast doesn't count), nor with a finger or the mouse button still down (the timeline held), and
+// only on the song's page: the home screen's own buttons stay pressable at the first tap. (State: see hidePick.)
+function idleOk() {
+  return (body.classList.contains('fs') || body.classList.contains('view-vis') || autoHide() && body.classList.contains('playing'))
+    && body.classList.contains('has-song') && !body.classList.contains('home');
+}
 function wake() {
   body.classList.remove('idle');
   clearTimeout(idleTimer);
-  if (body.classList.contains('fs') || body.classList.contains('view-vis')) idleTimer = setTimeout(() => {
-    if (!topDialog() && !document.querySelector(':popover-open')) body.classList.add('idle');
-  }, 2600);
+  if (idleOk()) idleTimer = setTimeout(rest, 2600);
 }
+function rest() { // (something open: looked at again after the same wait — it may close with no touch after: the phone's Back)
+  if (!idleOk()) return;
+  if (held || topDialog() || document.querySelector(':popover-open:not(.toast)')) idleTimer = setTimeout(rest, 2600);
+  else { body.classList.add('idle'); idleAt = performance.now(); }
+}
+const idleGone = () => body.classList.contains('idle') && performance.now() - idleAt > 800; // (faded out: nothing there to draw)
+// A press, the mouse's or a finger's: held till it's let go, the wait counted from then. The one that woke them: they can
+// be pressed once its click is past — or half a second on, for a touch that made none (a long press). A click with no
+// press (a screen reader's, on the control itself) brings them back too.
+addEventListener('pointerdown', () => { if (body.classList.contains('idle')) body.classList.add('waking'); held = true; wake(); }, true);
+for (const t of ['pointerup', 'pointercancel']) addEventListener(t, e => { held = false; wake(); if (body.classList.contains('waking')) setTimeout(() => body.classList.remove('waking'), e.type === 'pointerup' ? 500 : 0); }, true);
+addEventListener('click', () => { body.classList.remove('waking'); wake(); }, true);
+addEventListener('wheel', wake, { passive: true });
 
 // ---------- parallax: the lyrics tilt a little toward the mouse ----------
-// (a touch, too — and in the visualiser, a tap that only brought the controls back doesn't also change its look)
-let tapWoke = false;
-addEventListener('pointerdown', () => { tapWoke = body.classList.contains('idle'); wake(); }, true);
+// (and in the visualiser, a tap is the next look — not the one that only brought the controls back: the shield took it)
 document.querySelector('.stage-wrap').addEventListener('click', e => {
-  if (view !== 'Visualiser' || tapWoke || !body.classList.contains('has-song') || e.target.closest('.to-home')) return;
+  if (view !== 'Visualiser' || !body.classList.contains('has-song') || e.target.closest('.to-home')) return;
   visNow = (visNow + 1) % VIS.length; if (visPick !== 'Auto') setVis(VIS[visNow]);
   toast(`Visualiser: ${VIS[visNow]}`);
 });
 addEventListener('pointermove', e => {
+  if (!e.buttons) held = false; // (no button down: nothing held, whatever was missed — a release can go unseen, the window losing the mouse mid-press, and the controls then never went)
   wake();
   if (!motion || e.pointerType !== 'mouse' || place < 2) return;
   stage.style.setProperty('--mx', (e.clientX / innerWidth - 0.5).toFixed(3)); // (on the stage, not the page: only the lyrics
@@ -16766,7 +16821,7 @@ const avg =(a, b) => { let s = 0; for (let i = a; i < b; i++) s += freq[i]; retu
 let bassS = 0, bassAvg = 0, midS = 0, highS = 0, fxT = 0, last = 0, visWas = false;
 // (the things the beat moves: the play button, the record, the cover background — set on them alone, not on the whole
 // page, and only while they're seen)
-const bassEls = [['.core', () => true], ['.cs-disc', coverShown], ['.cover-bg', () => theme === 'Cover'], ['.pic-bg', () => theme === 'Pictures']].map(([q, seen]) => ({ el: document.querySelector(q), seen, v: '' }));
+const bassEls = [['.core', () => !idleGone()], ['.cs-disc', coverShown], ['.cover-bg', () => theme === 'Cover'], ['.pic-bg', () => theme === 'Pictures']].map(([q, seen]) => ({ el: document.querySelector(q), seen, v: '' }));
 const fullPages = [dlg, $('artistPage'), $('about'), $('drive')]; // (Drive mode too: nothing drawn behind it, in the car)
 let lastSeek = -1, lastCur = '', lastDur = '', looping = true, owed = 0, lastRun = 0, visN = 0, visDt = 0;
 let vsGap = [], vsTick = 0, vsN = 1; // (a computer: the gaps between the screen's frames, and every how many the work's done)
@@ -16833,7 +16888,7 @@ function frame(now) {
   visDt += dt;
   if (++visN % Q.every === 0) { // (the timeline and the beat ring: at the quality's pace — Low, every other frame)
     const gpuFree = fxStyle >= 0 || !fxOn || PLAIN.has(theme) || now > 8000; // (not before the backdrop's first shader's made — slower on a first start, with nothing compiled yet: a canvas's first drawing waited on it, ~0.25 s frozen)
-    if (!covered && gpuFree) drawSpec(now, p, kick);
+    if (!covered && gpuFree && !idleGone()) drawSpec(now, p, kick); // (not while the controls are away)
     if (!covered && gpuFree && (coverShown() || edges) && body.classList.contains('has-song') && !body.classList.contains('home')) drawRing(now, Math.min(.1, visDt), live, kick);
     visDt = 0;
   }
@@ -16855,7 +16910,7 @@ function showTime(t, dur) {
   if (body.classList.contains('has-hud')) hudTick(t, dur); // (the themes' round timer)
   if (!dur) return;
   const sv = Math.round(t / dur * 1000), ct = fmt(t), dd = fmt(dur);
-  if (sv !== lastSeek) { lastSeek = sv; $('seek').value = sv; }
+  if (sv !== lastSeek) { lastSeek = sv; $('seek').value = sv; $('trail').style.transform = `scaleX(${sv / 1000})`; }
   if (ct !== lastCur) { lastCur = ct; $('cur').textContent = ct; }
   if (dd !== lastDur) { lastDur = dd; $('dur').textContent = dd; }
 }
