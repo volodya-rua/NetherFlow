@@ -7,6 +7,7 @@
 <title>NetherFlow</title>
 <link rel="icon" href="logo.png">
 <link rel="stylesheet" href="fonts/pairs.css"> <!-- (the lyric font pairs: each loaded only once it's used) -->
+<link rel="stylesheet" href="fonts/scripts.css"> <!-- (and their faces for other scripts: each loaded only once its script is on screen) -->
 <link rel="stylesheet" href="fonts/fonts.css"> <!-- the typefaces, bundled: no request to Google, and they work offline -->
 <style>
 :root {
@@ -225,7 +226,7 @@ body.home .singbar { display: none; } /* (its voice slider is for the lyrics: no
 .it-bar i { display: block; height: 100%; transform-origin: left; transform: scaleX(0); will-change: transform; background: var(--a); box-shadow: 0 0 12px var(--a); } /* (scaled, as a layer: nothing painted again every frame) */
 /* lyric sizes are scaled by --ls (the Lyrics size setting); the sung line's size is then set by fitDeck(), so it
    always fits the stage and no letter is ever cut off */
-.prev, .next { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.prev, .next { white-space: nowrap; overflow: clip; overflow-clip-margin: .7em; text-overflow: ellipsis; } /* (cut short with an ellipsis, but marks may paint past the box: clipped to it, a capital's accent and Hindi's or Tamil's marks above and below were cut off) */
 .scrubbing .stage *, .scrubbing .cs-line { animation: none !important; } /* (dragging the timeline: no entrance at every step) */ /* one row each: the sung line gets the room */
 .prev { font: italic 400 calc(clamp(18px, 2.4vw, 32px) * var(--ls, 1))/1.1 var(--serif); letter-spacing: 0; margin: 0 0 1.8vh; opacity: .45;
   animation: lift .45s cubic-bezier(.16,1,.3,1) both; }
@@ -266,6 +267,29 @@ body.home .singbar { display: none; } /* (its voice slider is for the lyrics: no
 /* a script face (Waltz): in its own case (in capitals it can't be read), with room for its swashes */
 .fp-script :is(.cur, .next, .cs-line, .dv-title) { text-transform: none; }
 .fp-script .cur .w > span { padding-inline: .32em; margin-inline: -.32em; }
+/* lyrics in other scripts (data-sc: the line's script, from lyrTag; their faces: fonts/scripts.css). Room between rows for
+   the scripts that stand taller (the measured ink of a sung line and its stacked forms, in the script's tallest faces:
+   Arabic's Oi and Aref Ruqaa, Tamil's wide Anek; the pair's own when that's more) */
+body:not(.la-self) .cur[data-sc] { line-height: max(var(--cur-lh, 1.02), var(--sc-lh, 1.3)); }
+.cur:is([data-sc=mlym], [data-sc=beng], [data-sc=guru]) { --sc-lh: 1.25; }
+.cur[data-sc=arab] { --sc-lh: 1.45; }
+.cur[data-sc=knda] { --sc-lh: 1.4; }
+.cur[data-sc=telu] { --sc-lh: 1.45; }
+.cur[data-sc=urdu] { --sc-lh: 1.9; }
+/* the sweep paints only inside each word's box (background-clip: text): room for the marks far above and below */
+.cur[data-sc] .w > span { padding-block: .6em; margin-block: -.6em; }
+.cur:is([data-sc=telu], [data-sc=knda]) .w > span { padding-bottom: 1em; margin-bottom: -1em; } /* (stacked consonants go deepest) */
+/* no tracking: joined letters (Arabic, Urdu) and the headline (Devanagari, Bengali, Gurmukhi) would come apart */
+.deck :is(.cur, .prev, .next)[data-sc], .deck .cur[data-sc] .w.em > span { letter-spacing: 0; }
+/* Urdu: Nastaliq first (it shares its letters with Arabic, so unicode-range can't tell the two apart) */
+:is(.cur, .next)[data-sc=urdu] { font-family: 'NF Nastaliq', var(--poster); }
+:is(.prev[data-sc=urdu], .cur[data-sc=urdu] .w.em > span) { font-family: 'NF Nastaliq', var(--serif); }
+/* right to left (lyrTag's dir): Tower's stack stays where its sway is made for (on the right, the sway threw it off the
+   stage), a word a row, each still read right to left; the blocks come in from the word's start */
+.la-tower .cur[dir=rtl] { direction: ltr; }
+:is(.la-lens, .la-pop, .la-drift, .la-wall) .cur[dir=rtl]:not(.rest) .w.now::before { transform-origin: right center; }
+.la-wall .cur[dir=rtl]:not(.rest) .w::before { transform-origin: left center; }
+.la-emoji-stack .cur[dir=rtl] .es-blk { transform-origin: 100% 50%; }
 .fonts-row .seg button { display: inline-flex; align-items: baseline; gap: 7px; padding: 6px 13px 7px; letter-spacing: .02em; }
 .fonts-row .fp-a { font-size: 14px; font-weight: 400; text-transform: uppercase; }
 .fonts-row .fp-b { font-size: 16px; font-style: italic; text-transform: none; opacity: .7; }
@@ -1582,7 +1606,7 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
 .skin-tactical :is(.search, .about) { background: linear-gradient(115deg, transparent 62%, rgba(255,70,85,.08) 62% 70%, transparent 70%), var(--bg); }
 .skin-tactical .q { font-family: 'Anton', Impact, sans-serif; letter-spacing: .02em; }
 .skin-tactical .cur .w.now > span { filter: drop-shadow(0 0 .14em rgba(255,70,85,.55)); }
-.skin-tactical .cur .w.em > span { font-family: 'Anton', Impact, sans-serif; font-style: normal; text-transform: uppercase; }
+.skin-tactical .cur .w.em > span { font-family: var(--poster); font-style: normal; text-transform: uppercase; } /* (Anton, with its faces for other scripts) */
 .skin-tactical ::-webkit-scrollbar-thumb { border-radius: 0; }
 
 /* — Ops: a match's HUD at dusk; dark glass panels with an amber edge, square-ish buttons, a stencil face for the big
@@ -1613,7 +1637,7 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
 .skin-ops :is(.skip, .icon-btn, .files > .link, .nudge button) { border-radius: 4px; }
 .skin-ops :is(.search, .about) { background: linear-gradient(rgba(13,17,21,.94), rgba(13,17,21,.98)), linear-gradient(0deg, #4c3a2a, #1b2733); }
 .skin-ops .cur .w.now > span { filter: drop-shadow(0 0 .12em rgba(240,168,48,.6)); }
-.skin-ops .cur .w.em > span { font-family: 'Chakra Petch', sans-serif; font-style: normal; text-transform: uppercase; }
+.skin-ops .cur .w.em > span { font-family: var(--serif); font-style: normal; text-transform: uppercase; } /* (Chakra Petch, with its faces for other scripts) */
 .skin-ops ::-webkit-scrollbar-thumb { border-radius: 2px; }
 /* (the search's top result, in each) */
 .skin-stickman .top-hit { border: 2px solid var(--ink); background: color-mix(in srgb, var(--hl) 45%, transparent); box-shadow: 3px 4px 0 rgba(29,27,24,.15); }
@@ -1654,7 +1678,7 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
 .skin-redline :is(.search, .about) { background: var(--carbon); }
 .skin-redline .top-hit { border: 0; border-radius: 0; clip-path: polygon(14px 0, 100% 0, calc(100% - 14px) 100%, 0 100%); background: linear-gradient(100deg, rgba(255,30,45,.22), rgba(255,255,255,.04)); }
 .skin-redline .cur .w.now > span { filter: drop-shadow(0 0 .14em rgba(255,30,45,.7)); }
-.skin-redline .cur .w.em > span { font-family: 'Chakra Petch', sans-serif; text-transform: uppercase; }
+.skin-redline .cur .w.em > span { font-family: var(--serif); text-transform: uppercase; } /* (Chakra Petch, with its faces for other scripts) */
 .skin-redline ::-webkit-scrollbar-thumb { border-radius: 0; }
 /* the rev counter round the play button: its scale, the red zone, the needle on the bass (--rev, set every frame) */
 .tacho, .needle { display: none; }
@@ -1818,7 +1842,7 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
     <div class="stage-wrap">
     <div id="coverStage" class="cover-stage">
       <div class="cs-disc" aria-hidden="true"><div class="cs-spin"></div><i class="cs-art"></i></div>
-      <div class="cs-text"><p id="csTitle" class="cs-title"></p><p id="csSub" class="cs-sub lbl"></p><p id="csLine" class="cs-line" aria-live="off"></p></div>
+      <div class="cs-text"><p id="csTitle" class="cs-title"></p><p id="csSub" class="cs-sub lbl"></p><p id="csLine" class="cs-line" dir="auto" aria-live="off"></p></div>
     </div>
     <main id="stage" class="stage"></main>
     <div id="home" class="stage home-stage">
@@ -2023,7 +2047,7 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
 <dialog id="drive" class="drive" aria-label="Drive mode">
   <div class="dv-top"><span class="lbl"><i class="dv-dot"></i>Drive mode</span><b id="dvClock" class="dv-clock"></b><button id="driveExit" class="dv-exit lbl">Exit</button></div>
   <div class="dv-song"><i id="dvArt" class="dv-art"></i><div class="dv-text"><p id="dvTitle" class="dv-title"></p><p id="dvArtist" class="dv-artist lbl"></p><p id="dvUpNext" class="dv-upnext lbl"></p></div></div>
-  <p id="dvLine" class="dv-line" aria-live="off"></p>
+  <p id="dvLine" class="dv-line" dir="auto" aria-live="off"></p>
   <div class="dv-prog" aria-hidden="true"><span id="dvCur" class="lbl"></span><i><b id="dvBar"></b></i><span id="dvLeft" class="lbl"></span></div>
   <div class="dv-ctl">
     <button id="dvPrev" class="dv-btn" aria-label="Previous song"><svg viewBox="0 0 24 24"><path d="M6 5v14M19 5.5 9 12l10 6.5z"/></svg></button>
@@ -2160,7 +2184,7 @@ const api = {
     : (await fetch('/api/words?' + new URLSearchParams({ artist, title, dur }))).json(),
 };
 const FILE_NOTE = 'only 30-second previews · open the NetherFlow app for full songs';
-let lines = [], synced = false, drift = true, activeIdx = -2, curWords = [], wordTimes = [], curP = [], sylPace = .24;
+let lines = [], synced = false, drift = true, activeIdx = -2, curWords = [], wordTimes = [], curP = [], curRtl = false, sylPace = .24;
 let loadId = 0, userScroll = 0, offset = 0, lastLyr = null, current = null;
 // A song saved for offline: where its file starts in the song (lyric time = file time + this), and its length.
 let songShift = 0, savedDur = 0;
@@ -2891,37 +2915,37 @@ showTheme(theme);
 // ---------- themes (the top of the mood menu, and of Settings): the whole look at once — the shapes, faces and colours
 // of every button and panel, its own backdrop (drawn for Ultra and Extreme, simpler below), timeline, lyric faces, cursor,
 // the Extreme lyrics' looks. None: NetherFlow's own, with the moods. Each is its own take on a style, nobody's artwork.
-// pal: its colours (the moods step aside); font: the lyrics' pair; bar: its timeline (drawSpec); looks: Extreme lyrics'
+// pal: its colours (the moods step aside); font: the lyrics' pair (as FONT_PAIRS'); bar: its timeline (drawSpec); looks: Extreme lyrics'
 // (kinShot); badge: round the play button; msg: the home screen's words.
 const SKINS = {
   Stickman: { note: 'Ink on notebook paper: stick figures dancing to the beat, everything drawn by hand',
     pal: { name: 'Stickman', bg: '#f2eee4', a: '#e0362a', b: '#2a5bd7', ink: '#1d1b18', fx: [1, 1, 1, 1] },
-    font: { poster: "'Permanent Marker'", serif: "'Permanent Marker'", lh: 1.12 }, bar: 'Pencil',
+    font: { poster: "'Permanent Marker'", serif: "'Permanent Marker'", lh: 1.12, sc: ['Hand', 'Hand'] }, bar: 'Pencil',
     looks: ['doodle', 'sketch', 'marker', 'script', 'highlighter', 'typewriter', 'outline'], badge: 'DRAW IT LOUD ✦ STICKMAN ✦ DRAW IT LOUD ✦ STICKMAN ✦',
     msg: ['Draw silence', 'into song'] },
   Spider: { note: 'A comic book at night: a masked hero swinging through the city, halftone dots, ink lines, sound effects on the beat, frames on twos',
     pal: { name: 'Spider', bg: '#0e0716', a: '#ff2d55', b: '#2de2ff', ink: '#fff5ef', fx: [1, 1, 1, 1] },
-    font: { poster: "'Sedgwick Ave Display'", serif: "'Permanent Marker'", lh: 1.1 }, bar: 'Web',
+    font: { poster: "'Sedgwick Ave Display'", serif: "'Permanent Marker'", lh: 1.1, sc: ['Hand', 'Hand'] }, bar: 'Web',
     looks: ['comic', 'graffiti', 'collage', 'sticker', 'slam', 'split', 'slice', 'echo'], badge: 'SWING ✦ NETHERFLOW ✦ SWING ✦ NETHERFLOW ✦ SWING ✦',
     msg: ['Swing', 'into song'] },
   Blocks: { note: 'A blocky world at dusk: pixel textures, stone buttons, an experience bar',
     pal: { name: 'Blocks', bg: '#17120e', a: '#7ed321', b: '#ffd23f', ink: '#ffffff', fx: [1, 1, 1, 1] },
-    font: { poster: "'Press Start 2P'", serif: "'VT323'", lh: 1.35 }, bar: 'XP',
+    font: { poster: "'Press Start 2P'", serif: "'VT323'", lh: 1.35, sc: ['Pixel', 'Pixel'] }, bar: 'XP',
     looks: ['blocks', 'arcade', 'extrude', 'flap', 'cube', 'drop'], badge: 'PRESS PLAY ✦ BLOCKS ✦ PRESS PLAY ✦ BLOCKS ✦ PRESS PLAY ✦',
     msg: ['Build silence', 'into song'] },
   Tactical: { note: 'Sharp and tactical: an agent by the lyrics, a round timer up top, round banners in a chorus, cut corners, signal red on deep navy',
     pal: { name: 'Tactical', bg: '#0f1923', a: '#ff4655', b: '#ece8e1', ink: '#ece8e1', fx: [1, 1, 1, 1] },
-    font: { poster: "'Anton'", serif: "'Chakra Petch'", lh: 1.02 }, bar: 'Tactical',
+    font: { poster: "'Anton'", serif: "'Chakra Petch'", lh: 1.02, sc: ['Tall', 'Tech'] }, bar: 'Tactical',
     looks: ['tactical', 'stack', 'split', 'slice', 'decode', 'slam', 'focus'], badge: 'LOCK IN ✦ NETHERFLOW ✦ LOCK IN ✦ NETHERFLOW ✦ LOCK IN ✦',
     msg: ['Lock in', 'to the song'] },
   Ops: { note: 'A desert bomb site in the afternoon: smoke grenades, tracers on the kick, a round timer and the two teams up top, round banners',
     pal: { name: 'Ops', bg: '#0d1115', a: '#f0a830', b: '#6d8fd1', ink: '#e8ecef', fx: [1, 1, 1, 1] },
-    font: { poster: "'Black Ops One'", serif: "'Chakra Petch'", lh: 1.06 }, bar: 'Ops',
+    font: { poster: "'Black Ops One'", serif: "'Chakra Petch'", lh: 1.06, sc: ['Tall', 'Tech'] }, bar: 'Ops',
     looks: ['killfeed', 'decode', 'typewriter', 'track', 'stack', 'slam'], badge: 'GO GO GO ✦ NETHERFLOW ✦ GO GO GO ✦ NETHERFLOW ✦',
     msg: ['Go go go', 'into song'] },
   Redline: { pc: true, needs: 'Extreme+', note: 'Extreme+ only (picking it sets Extreme+). Real cars at full throttle: 3D night races on real circuits (their real hills, buildings, grandstands and barriers), filmed like a broadcast and cut to the beat; a night motorway in light trails while one gets ready. A rev counter round the play button, shift lights on the bass, a speedometer up top, the timeline a lap',
     pal: { name: 'Redline', bg: '#060708', a: '#ff1e2d', b: '#18c8ff', ink: '#f5f6f7', fx: [1, 1, 1, 1] },
-    font: { poster: "'Unbounded'", serif: "'Chakra Petch'", lh: 1.08 }, bar: 'Lap',
+    font: { poster: "'Unbounded'", serif: "'Chakra Petch'", lh: 1.08, sc: ['Wide', 'Tech'] }, bar: 'Lap',
     looks: ['speed', 'velocity', 'slam', 'split', 'track', 'extrude', 'slice'], badge: 'FULL THROTTLE ✦ REDLINE ✦',
     msg: ['Floor it', 'into the song'] },
 };
@@ -3475,7 +3499,7 @@ LA_HOOKS['Emoji Stack'] = {
       if (q <= 0 || q >= 1) continue; // (not being sung: syncLyrics' own fill, and no block — see the CSS)
       // the letters turn at the block's edge where it's furthest back (its slant: .07em either way at the top and bottom)
       o.blk.style.transform = `skewX(-8deg) scaleX(${q.toFixed(3)})`;
-      o.firstChild.style.backgroundImage = `linear-gradient(90deg, var(--bg) calc(${(q * 100).toFixed(1)}% - .07em), var(--dim) 0)`;
+      o.firstChild.style.backgroundImage = `linear-gradient(${curRtl ? 270 : 90}deg, var(--bg) calc(${(q * 100).toFixed(1)}% - .07em), var(--dim) 0)`;
     }
   },
   fit(cur, { ls, h, phone }) {
@@ -3519,37 +3543,42 @@ function useLanim(name) {
 // word, the line before and the Cover view's title. Bundled (fonts/pairs.css) and loaded only once picked. lh: the
 // line's line height (some faces stand taller); glow: lit tubes; script: a script face, never in capitals; colr: a colour
 // font (COLRv1), its colours following the mood (moodPalette) — its palette 0 turned to the mood's hue, 'ab' the mood's
-// two colours, true its own. ----------
+// two colours, true its own. sc: the two faces' moods for the other scripts (fonts/scripts.css), so a Hindi or Tamil line
+// keeps the pair's character: Tall bold and condensed, Wide bold and wide, Didone a high-contrast serif, Round, Fat, Soft
+// (round and lighter), Script, Hand, Tech, Pixel, Antique (old print), Serif (with true italics). ----------
 const FONT_PAIRS = [
-  { name: 'Poster', poster: "'Anton'", serif: "'Instrument Serif'" },
-  { name: 'Vogue', poster: "'Abril Fatface'", serif: "'Playfair Display'", lh: 1.08 },
-  { name: 'Neon', poster: "'Tilt Neon'", serif: "'Yellowtail'", lh: 1.08, glow: true },
-  { name: 'Arcade', poster: "'Press Start 2P'", serif: "'VT323'", lh: 1.3 },
-  { name: 'Vinyl', poster: "'Rubik Vinyl'", serif: "'DM Serif Display'", lh: 1.06 },
-  { name: 'Glitch', poster: "'Rubik Glitch'", serif: "'Space Mono'", lh: 1.06 },
-  { name: 'Graffiti', poster: "'Sedgwick Ave Display'", serif: "'Permanent Marker'", lh: 1.1 },
-  { name: 'Cyber', poster: "'Orbitron'", serif: "'Chakra Petch'", lh: 1.12 },
-  { name: 'Wide', poster: "'Unbounded'", serif: "'Cormorant Garamond'", lh: 1.1 },
-  { name: 'Stencil', poster: "'Black Ops One'", serif: "'Special Elite'", lh: 1.06 },
-  { name: 'Bubble', poster: "'Bagel Fat One'", serif: "'Pacifico'", lh: 1.08 },
-  { name: 'Melt', poster: "'Climate Crisis'", serif: "'Libre Bodoni'", lh: 1.06 },
-  { name: 'Gothic', poster: "'Pirata One'", serif: "'IM Fell English'", lh: 1.04 },
-  { name: 'Voxel', poster: "'Nabla'", serif: "'Instrument Serif'", lh: 1.12, colr: ['#ffd214', '#ff552d', '#ff9b00', '#ff9123', '#ffd214', '#ffeb6e', '#ffd214', '#ffeb6e', '#fffabe', '#ffffff'] },
-  { name: 'Hype', poster: "'Bungee Spice'", serif: "'Shrikhand'", lh: 1.06, colr: 'ab' },
-  { name: 'Glaze', poster: "'Kalnia Glaze'", serif: "'Libre Bodoni'", lh: 1.06, colr: ['#66357a', '#3b171f', '#b740af', '#ff306f', '#a762ff', '#9a8bc7', '#ff29f2', '#ff4db2', '#9a8bc7'] },
-  { name: 'Foil', poster: "'Foldit'", serif: "'Chakra Petch'", lh: 1.04, colr: true },
-  { name: 'Groove', poster: "'Fraunces'", serif: "'Fraunces'", lh: 1.04 },
-  { name: 'Epic', poster: "'Cinzel'", serif: "'Cormorant Garamond'", lh: 1.04 },
-  { name: 'Rodeo', poster: "'Sancreek'", serif: "'Yellowtail'", lh: 1.06 },
-  { name: 'Waltz', poster: "'Corinthia'", serif: "'Cormorant Garamond'", lh: 1.16, script: true },
-  { name: 'Bounce', poster: "'Shantell Sans'", serif: "'Shantell Sans'", lh: 1.1 },
-  { name: 'Varsity', poster: "'Anybody'", serif: "'Anybody'", lh: 1.02 },
-  { name: 'Marquee', poster: "'Doto'", serif: "'Space Mono'", lh: 1.1, glow: true },
-  { name: 'Gummy', poster: "'Sour Gummy'", serif: "'Sour Gummy'", lh: 1.06 },
-  { name: 'Boom', poster: "'Bangers'", serif: "'Permanent Marker'", lh: 1.04 },
-  { name: 'Letter', poster: "'Special Elite'", serif: "'Xanh Mono'", lh: 1.1 },
-  { name: 'Laser', poster: "'Tilt Prism'", serif: "'Space Mono'", lh: 1.08, glow: true },
+  { name: 'Poster', poster: "'Anton'", serif: "'Instrument Serif'", sc: ['Tall', 'Serif'] },
+  { name: 'Vogue', poster: "'Abril Fatface'", serif: "'Playfair Display'", lh: 1.08, sc: ['Didone', 'Serif'] },
+  { name: 'Neon', poster: "'Tilt Neon'", serif: "'Yellowtail'", lh: 1.08, glow: true, sc: ['Soft', 'Script'] },
+  { name: 'Arcade', poster: "'Press Start 2P'", serif: "'VT323'", lh: 1.3, sc: ['Pixel', 'Pixel'] },
+  { name: 'Vinyl', poster: "'Rubik Vinyl'", serif: "'DM Serif Display'", lh: 1.06, sc: ['Round', 'Serif'] },
+  { name: 'Glitch', poster: "'Rubik Glitch'", serif: "'Space Mono'", lh: 1.06, sc: ['Round', 'Tech'] },
+  { name: 'Graffiti', poster: "'Sedgwick Ave Display'", serif: "'Permanent Marker'", lh: 1.1, sc: ['Hand', 'Hand'] },
+  { name: 'Cyber', poster: "'Orbitron'", serif: "'Chakra Petch'", lh: 1.12, sc: ['Tech', 'Tech'] },
+  { name: 'Wide', poster: "'Unbounded'", serif: "'Cormorant Garamond'", lh: 1.1, sc: ['Wide', 'Serif'] },
+  { name: 'Stencil', poster: "'Black Ops One'", serif: "'Special Elite'", lh: 1.06, sc: ['Tall', 'Serif'] },
+  { name: 'Bubble', poster: "'Bagel Fat One'", serif: "'Pacifico'", lh: 1.08, sc: ['Fat', 'Script'] },
+  { name: 'Melt', poster: "'Climate Crisis'", serif: "'Libre Bodoni'", lh: 1.06, sc: ['Wide', 'Didone'] },
+  { name: 'Gothic', poster: "'Pirata One'", serif: "'IM Fell English'", lh: 1.04, sc: ['Antique', 'Serif'] },
+  { name: 'Voxel', poster: "'Nabla'", serif: "'Instrument Serif'", lh: 1.12, colr: ['#ffd214', '#ff552d', '#ff9b00', '#ff9123', '#ffd214', '#ffeb6e', '#ffd214', '#ffeb6e', '#fffabe', '#ffffff'], sc: ['Wide', 'Serif'] },
+  { name: 'Hype', poster: "'Bungee Spice'", serif: "'Shrikhand'", lh: 1.06, colr: 'ab', sc: ['Tall', 'Fat'] },
+  { name: 'Glaze', poster: "'Kalnia Glaze'", serif: "'Libre Bodoni'", lh: 1.06, colr: ['#66357a', '#3b171f', '#b740af', '#ff306f', '#a762ff', '#9a8bc7', '#ff29f2', '#ff4db2', '#9a8bc7'], sc: ['Didone', 'Didone'] },
+  { name: 'Foil', poster: "'Foldit'", serif: "'Chakra Petch'", lh: 1.04, colr: true, sc: ['Tech', 'Tech'] },
+  { name: 'Groove', poster: "'Fraunces'", serif: "'Fraunces'", lh: 1.04, sc: ['Fat', 'Serif'] },
+  { name: 'Epic', poster: "'Cinzel'", serif: "'Cormorant Garamond'", lh: 1.04, sc: ['Didone', 'Serif'] },
+  { name: 'Rodeo', poster: "'Sancreek'", serif: "'Yellowtail'", lh: 1.06, sc: ['Didone', 'Script'] },
+  { name: 'Waltz', poster: "'Corinthia'", serif: "'Cormorant Garamond'", lh: 1.16, script: true, sc: ['Script', 'Serif'] },
+  { name: 'Bounce', poster: "'Shantell Sans'", serif: "'Shantell Sans'", lh: 1.1, sc: ['Hand', 'Hand'] },
+  { name: 'Varsity', poster: "'Anybody'", serif: "'Anybody'", lh: 1.02, sc: ['Tall', 'Tall'] },
+  { name: 'Marquee', poster: "'Doto'", serif: "'Space Mono'", lh: 1.1, glow: true, sc: ['Pixel', 'Tech'] },
+  { name: 'Gummy', poster: "'Sour Gummy'", serif: "'Sour Gummy'", lh: 1.06, sc: ['Round', 'Soft'] },
+  { name: 'Boom', poster: "'Bangers'", serif: "'Permanent Marker'", lh: 1.04, sc: ['Tall', 'Hand'] },
+  { name: 'Letter', poster: "'Special Elite'", serif: "'Xanh Mono'", lh: 1.1, sc: ['Serif', 'Serif'] },
+  { name: 'Laser', poster: "'Tilt Prism'", serif: "'Space Mono'", lh: 1.08, glow: true, sc: ['Soft', 'Tech'] },
 ];
+// (a mood with no face of its own for a script takes the next one's here, till Tall or Serif, which have every script)
+const SC_NEXT = { Fat: 'Round', Soft: 'Round', Hand: 'Round', Script: 'Hand', Round: 'Tall', Pixel: 'Tech', Tech: 'Wide', Wide: 'Tall', Antique: 'Serif', Didone: 'Serif' };
+const scStack = m => m ? `'NF ${m}', ` + scStack(SC_NEXT[m]) : ''; // ('NF Fat', 'NF Round', 'NF Tall', )
 let fontPair = FONT_PAIRS.some(f => f.name === store.get('netherflow.font')) ? store.get('netherflow.font') : 'Poster';
 const curPair = () => SKINS[skin]?.font || FONT_PAIRS.find(x => x.name === fontPair); // (a theme's own, while it's on)
 let colrPair = false; // (a colour font's sweep is a mask: see syncLyrics)
@@ -3557,8 +3586,8 @@ function applyFontPair() {
   const f = curPair();
   colrPair = !!f.colr;
   for (const e of [stage, $('coverStage'), $('drive')]) {
-    e.style.setProperty('--poster', f.poster + ', Impact, sans-serif');
-    e.style.setProperty('--serif', f.serif + ', Georgia, serif');
+    e.style.setProperty('--poster', f.poster + ', ' + scStack(f.sc[0]) + 'Impact, sans-serif');
+    e.style.setProperty('--serif', f.serif + ', ' + scStack(f.sc[1]) + 'Georgia, serif');
     e.style.setProperty('--cur-lh', f.lh || 1.02);
     e.classList.toggle('fp-glow', !!f.glow); // (Neon: lit tubes)
     e.classList.toggle('fp-colr', colrPair);
@@ -7071,7 +7100,7 @@ function buildIntro(deck) {
     el('p', 'it-meta lbl', [$('artist').textContent, t.collectionName, t.releaseDate?.slice(0, 4), t.primaryGenreName].filter(Boolean).join(' · ')), foot);
   const wrap = el('div', 'it-wrap');
   wrap.append(sleeve, text);
-  deck.append(wrap, el('p', 'next', lyrDisp(lines[0]).text || ' '));
+  deck.append(wrap, lyrTag(el('p', 'next', lyrDisp(lines[0]).text || ' ')));
   stage.replaceChildren(deck);
   fitDeck();
   introDeck = deck; lastCd = null;
@@ -7084,7 +7113,7 @@ function buildStage(idx) {
   introDeck = null;
   if (!line) return buildIntro(deck);
   deck.classList.add('lyr'); // lyric lines: these follow the alignment setting
-  deck.append(el('p', 'prev', idx > 0 && lines[idx - 1].text ? lyrDisp(lines[idx - 1]).text : ' '));
+  deck.append(lyrTag(el('p', 'prev', idx > 0 && lines[idx - 1].text ? lyrDisp(lines[idx - 1]).text : ' ')));
 
   const shown = lyrDisp(line);
   const text = shown.text;
@@ -7092,7 +7121,8 @@ function buildStage(idx) {
   // accent = longest word, set in italic serif (only on lines with room for contrast)
   let accent = -1;
   if (text && words.length > 2) accent = words.reduce((best, w, i) => w.length > words[best].length ? i : best, 0);
-  const p = el('p', 'cur' + (!text ? ' rest' : ''));
+  const p = lyrTag(el('p', 'cur' + (!text ? ' rest' : '')), text);
+  curRtl = p.dir === 'rtl'; // (the sweep runs the way the line reads)
   p.style.setProperty('--n', Math.min(text.length || 3, 70));
   let k = 0;
   curWords = words.map((w, i) => {
@@ -7112,7 +7142,7 @@ function buildStage(idx) {
   deck.append(p);
 
   const nx = lines[idx + 1];
-  deck.append(el('p', 'next', nx ? (lyrDisp(nx).text || '♪') : ' '));
+  deck.append(lyrTag(el('p', 'next', nx ? (lyrDisp(nx).text || '♪') : ' ')));
   if (lanim === 'Cube') { // the glass cube the line is on (all its faces), swaying in step with the one before
     const box = el('div', 'cubebox');
     for (const f of ['front', 'back', 'top', 'bottom', 'left', 'right']) box.append(el('i', 'f-' + f));
@@ -7150,6 +7180,19 @@ function buildStage(idx) {
   let acc = 0;
   wordTimes = syl.map(n => { const t = line.t + span * acc / total; acc += n; return { t, e: line.t + span * acc / total }; });
 }
+// A lyric line's script, for the faces and room it gets (fonts/scripts.css; the CSS's [data-sc]): its first letter of
+// India's scripts or Sinhala's (a danda or a Vedic mark, shared by several, skipped), or Arabic's — Urdu when any of
+// Urdu's own letters is in it (the two share their block, and Urdu has its own hand, Nastaliq). '' for Latin and the rest.
+const SC_INDIC = ['deva', 'beng', 'guru', 'gujr', 'orya', 'taml', 'telu', 'knda', 'mlym', 'sinh']; // (their blocks, 128 each from U+0900)
+function scriptOf(t) {
+  if (/[\u0600-\u06FF\u0750-\u077F\u0870-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(t)) return /[\u0679\u0688\u0691\u06BA\u06BE\u06C1\u06D2]/.test(t) ? 'urdu' : 'arab';
+  const c = /[\u0900-\u0950\u0953-\u0963\u0966-\u0DFF]/.exec(t);
+  return c ? SC_INDIC[(c[0].charCodeAt(0) - 0x900) >> 7] : '';
+}
+// a lyric line told its script, and the way it reads: from its first letter, as dir=auto finds it (Hebrew, Arabic and
+// their kin's right to left). Left to right, an Arabic or Urdu line's words — a row of boxes — read backwards
+const RTL = /^[^\p{L}]*[\p{Script=Hebrew}\p{Script=Arabic}\p{Script=Syriac}\p{Script=Thaana}\p{Script=Nko}]/u;
+function lyrTag(p, text = p.textContent) { p.dir = RTL.test(text) ? 'rtl' : 'ltr'; const sc = scriptOf(text); if (sc) p.dataset.sc = sc; return p; }
 // A word's syllables, in its own script: Latin, Cyrillic and Greek by their vowels; Devanagari, Gurmukhi, Bengali,
 // Gujarati, Odia, Tamil, Telugu, Kannada and Malayalam by their aksharas (each vowel, and each consonant not joined to
 // the next by a virama: their Unicode blocks share one layout); Hangul by its blocks, kana by its morae (the small ones
@@ -7267,9 +7310,9 @@ function syncLyrics() {
     if (p === curP[i]) continue;
     curP[i] = p;
     if (!curWords[i].chs) {
-      const s = curWords[i].firstChild.style, a = (p * 118 - 18).toFixed(1), b = (p * 118).toFixed(1);
-      if (colrPair) s.webkitMaskImage = `linear-gradient(90deg, #000 ${a}%, rgb(0 0 0 / .3) ${b}%)`; // (a colour font: see .fp-colr; -webkit-: WebView 114 to 119 have no mask-image)
-      else s.backgroundImage = `linear-gradient(90deg, var(--lit) ${a}%, var(--dim) ${b}%)`;
+      const s = curWords[i].firstChild.style, a = (p * 118 - 18).toFixed(1), b = (p * 118).toFixed(1), to = curRtl ? 270 : 90;
+      if (colrPair) s.webkitMaskImage = `linear-gradient(${to}deg, #000 ${a}%, rgb(0 0 0 / .3) ${b}%)`; // (a colour font: see .fp-colr; -webkit-: WebView 114 to 119 have no mask-image)
+      else s.backgroundImage = `linear-gradient(${to}deg, var(--lit) ${a}%, var(--dim) ${b}%)`;
     }
     curWords[i].classList.toggle('now', p > 0 && p < 1);
     curWords[i].classList.toggle('on', p > 0);
@@ -17004,6 +17047,8 @@ console.assert(linkKey('https://open.spotify.com/playlist/x?si=1') === linkKey('
   console.assert(Math.abs(late[0].words[0].t - 1.2) < 1e-9 && Math.abs(late[0].words[2].t - 2) < 1e-9 && Math.abs(late[1].t - 5.2) < 1e-9, 'mergeTimed late source not moved: ' + JSON.stringify(late)); }
 console.assert(sylOf('song') === 1 && sylOf('beautiful') === 3 && sylOf('केसरिया') === 4 && sylOf('प्यार') === 2 && sylOf('ਪਿਆਰ') === 3 && sylOf('사랑해') === 3 && sylOf('きゅう') === 2 && sylOf('爱你') === 2 && sylOf('любовь') === 2, 'sylOf broken');
 console.assert(paceOf(Array.from({ length: 9 }, (_, i) => ({ t: i * 1.2, text: 'we go fast we go fast now' }))) < .2 && paceOf(Array.from({ length: 9 }, (_, i) => ({ t: i * 3, text: 'we go slow we go slow now' }))) > .28, 'paceOf broken');
+console.assert(['আমার গান।', '।ਮੇਰਾ ਦਿਲ', 'நீ தான் MY LOVE', 'ನನ್ನ', 'میرا دل ہے', 'قلبي يغني', 'Tum hi ho', ''].map(scriptOf).join() === 'beng,guru,taml,knda,urdu,arab,,', 'scriptOf broken'); // (a danda first is Devanagari's code point: not Hindi)
+console.assert([...FONT_PAIRS, ...Object.values(SKINS).map(s => s.font)].every(f => f.sc?.length === 2 && f.sc.every(m => m in SC_NEXT || m === 'Tall' || m === 'Serif')), 'a lyric pair has no moods for other scripts (sc)');
 console.assert(CREDIT_LINE.test('Mastering Engineer: John Greenham') && !CREDIT_LINE.test("I'm the bad type: make your mama sad type"), 'credit lines broken');
 console.assert(artUrl({ artworkUrl100: 'https://is1-ssl.mzstatic.com/a/100x100bb.jpg' }, 600).endsWith('/600x600bb.jpg') && artUrl({ artworkUrl100: 'https://lh3.googleusercontent.com/x=w544-h544-l90-rj' }, 120).endsWith('=w120-h120-l90-rj')
   && artUrl({ artworkUrl100: 'https://i.scdn.co/image/ab67616d0000b273f00d' }, 120).endsWith('ab67616d00001e02f00d') && artUrl({ artworkUrl100: 'https://i.scdn.co/image/ab67616d0000b273f00d' }, 600).endsWith('b273f00d')

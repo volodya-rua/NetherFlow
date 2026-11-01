@@ -1,5 +1,5 @@
 /* The lyric font pairs (Settings › Lyrics font), bundled: SIL Open Font License 1.1 or Apache License 2.0, see licenses/.
-   From Google Fonts; latin and latin-ext only (other scripts fall back to the system's fonts). Loaded only when used. */
+   From Google Fonts; latin and latin-ext (each pair's faces for other scripts: scripts.css). Loaded only when used. */
 /* Abril Fatface latin-ext */
 @font-face {
   font-family: 'Abril Fatface';
