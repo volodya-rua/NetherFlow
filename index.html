@@ -134,6 +134,7 @@ body.home .singbar { display: none; } /* (its voice slider is for the lyrics: no
 .brand-mark { flex: none; width: 39px; height: 24px; transition: transform .5s cubic-bezier(.3,1.6,.5,1); }
 .brand:hover .brand-mark { transform: scale(1.08); }
 .brand sup { font: 500 9px var(--mono); letter-spacing: .15em; color: var(--a); margin-left: 4px; }
+.wm { display: contents; } .mood .chev, .g24, #eqPreset, .gs-sublist { display: none; } /* (Glass's: see there) */
 .mood { display: flex; align-items: center; gap: 10px; }
 .mood > i { width: 14px; height: 14px; border-radius: 50%; background: conic-gradient(var(--a), var(--b), var(--ink), var(--a));
   animation: spin 4s linear infinite; }
@@ -998,6 +999,7 @@ body.sing:not(.home) .ab-bar { bottom: calc(100% + 44px); }
 .lyb.none { border-style: dashed; }
 .icon-btn { position: relative; width: 36px; height: 36px; flex: none; border-radius: 50%; display: grid; place-items: center;
   color: color-mix(in srgb, var(--ink) 72%, transparent); transition: color .2s, background-color .2s, opacity .2s; }
+:where(.skin-glass) .icon-btn { color: color-mix(in srgb, var(--ink) 88%, transparent); } /* (Glass's grey icons: 4.5 : 1 over what's behind them) */
 .icon-btn:hover { color: var(--ink); background: var(--hair); }
 .icon-btn svg { width: 16px; height: 16px; fill: currentColor; }
 .icon-btn:disabled { opacity: .22; pointer-events: none; }
@@ -1835,6 +1837,27 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
   --g-fringe: linear-gradient(90deg, transparent, rgba(255,86,120,.55) 18%, rgba(255,214,120,.5) 34%, rgba(120,255,180,.45) 50%, rgba(96,168,255,.55) 66%, rgba(176,120,255,.4) 82%, transparent);
   --g-spring: linear(0, .028, .097, .189, .292, .397, .498, .59, .673, .744, .805, .855, .896, .928, .953, .972, .986, .996, 1.003, 1.007, 1.01, 1.011, 1.011, 1.011, 1.01, 1.009, 1.008, 1.006, 1.005, 1.004, 1.003, 1.003, 1);
   --g-press: linear(0, .036, .124, .242, .372, .501, .621, .726, .816, .888, .943, .985, 1.013, 1.032, 1.042, 1.046, 1.045, 1.042, 1.037, 1.031, 1.025, 1.019, 1.014, 1.01, 1.006, 1.003, 1.001, 1, .999, .998, .998, .998, 1); }
+/* (the panels' and controls' one system — "the panels" below: two inks that carry words, one accent, five sizes, one
+   height a context, concentric radii, every row 12 at the top; on a finger one step up, 44 px and more to touch) */
+:root { --acc: #8fb4ff; --acc-rgb: 143 180 255; } /* (Glass's accent, the mood's b: the script's applyPalette writes it) */
+@property --ft { syntax: '<length>'; inherits: false; initial-value: 0px; } /* (a scrolling body's fades: the script's gpFades) */
+@property --fb { syntax: '<length>'; inherits: false; initial-value: 0px; }
+.skin-glass { --ui: system-ui, sans-serif; --display: 'Cormorant Garamond', Georgia, serif;
+  --fs-1: 12px; --lh-1: 16px; --fs-2: 13px; --lh-2: 18px; --fs-3: 15px; --lh-3: 20px; --fs-4: 17px; --lh-4: 22px; --fs-5: 22px; --lh-5: 28px;
+  --t1: #f3f6ff; --t2: rgba(235,240,255,.72); --ink-on-acc: #0b0d16; --rim-rgb: 232 240 255;
+  --f-group: rgba(255,255,255,.055); --f-row: rgba(255,255,255,.06); --f-rest: rgba(255,255,255,.08); --f-btn: rgba(255,255,255,.11);
+  --f-hover: rgba(255,255,255,.15); --f-press: rgba(255,255,255,.19); --f-thumb: rgba(255,255,255,.18); --f-well: rgba(0,0,0,.2);
+  --h-xs: 28px; --h-ctl: 32px; --h-icon: 36px; --h-btn: 40px; --h-row: 44px; --row-y: 12px; --row-x: 12px;
+  --r-panel: 24px; --p-panel: 8px; --r-group: 16px; --r-menu: 20px; --p-menu: 6px; --r-item: 14px; --spring: cubic-bezier(.3,.7,.4,1); }
+@media (pointer: coarse) { .skin-glass { --fs-1: 13px; --lh-1: 18px; --fs-2: 14px; --lh-2: 20px; --fs-3: 16px; --lh-3: 22px; --fs-4: 20px; --lh-4: 26px;
+  --h-ctl: 40px; --h-icon: 44px; --h-btn: 48px; --h-row: 52px; --row-y: 15px; --row-x: 14px; --r-panel: 28px; --r-group: 20px; } }
+/* one text face in the chrome, never in capitals or tracked (the lyrics keep theirs); numbers that change in even figures */
+.skin-glass :is(.top, .bottom, .moods, .eq, .smenu, .toast, .consent, .search, .about, .singbar, .voice-ui, .home-stage .hint, .home-stage .legal-line) { --mono: var(--ui); font-family: var(--ui); letter-spacing: 0; }
+.skin-glass :is(.lbl, .link, .seg button, .presets button, .mchip, .pill, .toast, .toast-act, .sub, .time, .row small, .kicker, .panel-back, .hist-h, .sm-head b, .legal-tabs button, .s-top, .album small, .st-hours) { text-transform: none; letter-spacing: 0; }
+.skin-glass :is(.moods, .eq, .smenu) { font: 400 var(--fs-3)/var(--lh-3) var(--ui); }
+.skin-glass :is(#cur, #dur, #off, #singPct, .stepper b, .sl-head b, .eq-graph text, #abA, #abB, .row .len, .qrow .len) { font-variant-numeric: tabular-nums; }
+.skin-glass kbd { display: none; }
+.skin-glass .jump text { font: 600 9px var(--ui); letter-spacing: 0; }
 .skin-glass ::selection { background: rgba(200,215,255,.35); color: #fff; }
 /* (no film grain: a blended layer under the glass made each lens redo it, a weak graphics chip down to 10 frames a
    second at 1080p with it, ~230 without — measured; the backdrop's own dither keeps its dark gradients from banding) */
@@ -1844,7 +1867,7 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
 .skin-glass .frame { padding-top: 16px; }
 /* the lenses: capsules over the backdrop (the dock a slab on a phone), dimmed a little in the middle, an edge of light */
 .skin-glass :is(.top-l, .mood, .files, .bar) { position: relative; --ink: #fff; color: var(--ink); } /* (Sing's bar fixed, Repeat a part's absolute: placed as they are; their words and icons full white) */
-.skin-glass :is(.top-l, .mood, .files, .bar, .singbar, .ab-bar) { border: 0; background: var(--g-clear); box-shadow: var(--g-edge), var(--g-drop); }
+.skin-glass :is(.top-l, .mood, .files, .bar) { border: 0; background: var(--g-clear); box-shadow: var(--g-edge), var(--g-drop); }
 /* (the lenses, but on Solid: a darkened edge just inside the rim, a shade inside the bottom, a soft shadow below — each
    with --g, its growing in: the script's glassGrow) */
 .skin-glass:not(.gl-solid) :is(.top-l, .mood, .files, .bar) { box-shadow: inset 0 0 2.2px 1.2px rgba(0,0,0,calc(.3 * var(--g, 1))), inset 0 -9px 14px -10px rgba(0,0,10,calc(.28 * var(--g, 1))),
@@ -1853,21 +1876,28 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
   0 18px 38px -12px rgba(0,0,0,calc(.66 * var(--g, 1))), 0 3px 8px rgba(0,0,0,calc(.3 * var(--g, 1))); }
 .skin-glass :is(.top-l, .mood, .files) { height: 46px; border-radius: 23px; }
 .skin-glass .top-l { padding: 0 20px 0 14px; flex: none; }
-.skin-glass .mood { padding: 0 20px 0 16px; gap: 10px; }
-.skin-glass .mood b { color: var(--ink); font-weight: 500; }
-.skin-glass .mood > i { width: 15px; height: 15px; animation: none; background: conic-gradient(from 200deg, #ff5f7a, #ffd27a, #8dffbf, #7fb2ff, #b88cff, #ff5f7a); box-shadow: 0 0 10px rgba(180,200,255,.5), inset 0 0 0 1.5px rgba(255,255,255,.5); }
+.skin-glass .mood { padding: 0 14px 0 18px; gap: 6px; font: 400 var(--fs-3)/1 var(--ui); }
+.skin-glass .mood b { color: var(--ink); font-weight: 600; }
+.skin-glass .mood .k { color: color-mix(in srgb, var(--ink) 88%, transparent); }
+.skin-glass .mood .chev { display: block; flex: none; width: 16px; height: 16px; fill: none; stroke: color-mix(in srgb, var(--ink) 88%, transparent); stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+@media (max-width: 900px) { .skin-glass .mood .k { display: none; } }
+.skin-glass .mood > i { display: none; }
 .skin-glass .files { padding: 0 9px; gap: 2px; flex-wrap: nowrap; } /* (the end icons a little in from the round ends: inside the band their light's held under, 4.5 : 1 over white) */
 .skin-glass .files > .link { flex: none; width: 36px; height: 36px; transition: background-color .2s, scale .44s var(--g-press); } /* (never squeezed narrower: in a narrow window the row takes the whole width instead) */
 .skin-glass :is(.files > .link, .to-home) svg { filter: drop-shadow(0 0 1.2px rgba(3,4,10,.6)); } /* (clear glass: the icons keep a faint dark halo of their own) */
 .skin-glass.view-vis :is(.top-l, .mood, .files) { background: rgba(3,4,10,.42); } /* (the visualiser, the brightest thing behind them: dimmed more) */
 .skin-glass.gl-lens :is(.top-l, .mood, .files, .bar) { background: var(--g-grain, none) 0 0 / var(--g-gs, 64px) repeat, rgba(4,6,14,.03); } /* (a lens: it holds down what's bright behind its icons and words itself — clear, the rest as bright as it is; its grain its own) */
-.skin-glass .files > .link:hover, .skin-glass .to-home:hover { background: rgba(255,255,255,.09); color: var(--ink); box-shadow: inset 0 0 0 1px rgba(255,255,255,.1); }
+@media (hover: hover) and (pointer: fine) { .skin-glass .files > .link:hover, .skin-glass .to-home:hover { background: rgba(255,255,255,.1); color: var(--ink); box-shadow: none; } }
+.skin-glass .nav-ico svg { width: 20px; height: 20px; stroke-width: 1.75; }
+.skin-glass .fs-btn > svg:not(.g24) { display: none; } .skin-glass .fs-btn > .g24 { display: block; width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+.skin-glass.fs .fs-btn > .g24-in, .skin-glass:not(.fs) .fs-btn > .g24-out { display: none; }
 .skin-glass .files > .link.hot { color: var(--ink); } /* (Search too: full white, not the pale highlight) */
 .skin-glass :is(.files > .link, .to-home, .skip, .icon-btn):active { scale: .9; transition-duration: .12s; }
 .skin-glass .files .dl-count { right: -2px; }
 .skin-glass .tg-count { right: -3px; top: -2px; }
 .skin-glass .brand { font: italic 500 27px/1 'Cormorant Garamond', Georgia, serif; letter-spacing: 0; text-shadow: 0 1px 10px rgba(0,0,0,.4); }
-.skin-glass .brand sup { color: var(--ink); }
+.skin-glass .wm { display: block; }
+.skin-glass .brand sup { margin-left: 6px; font: 600 11px/1 var(--ui); font-style: normal; color: color-mix(in srgb, var(--ink) 88%, transparent); text-shadow: none; vertical-align: baseline; letter-spacing: 0; }
 /* (going round by Tab, or on a TV: the light ring the app draws, a dark halo round it, so it shows on bright glass too) */
 .skin-glass.kb :is(.files > .link, .to-home, .brand, .skip, .icon-btn, .play, .nudge button):focus-visible { box-shadow: 0 0 0 6px rgba(3,4,10,.62); }
 .skin-glass.kb .mood:focus-visible { box-shadow: inset 0 0 2.2px 1.2px rgba(0,0,0,.3), inset 0 -9px 14px -10px rgba(0,0,10,.28), 0 7px 18px -6px rgba(0,0,0,.5), 0 0 0 7px rgba(3,4,10,.62); }
@@ -1875,13 +1905,13 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
    round end a conic about its own centre (there the angle is the edge's own), the straight runs flat, a straight line
    reading brighter than a curve. It follows the pointer (--la; on Solid it rests), brighter pressed (--pl), with the
    growing in (--g). The stops (--g-spec) and the radius (--g-r) from the script. */
-.skin-glass :is(.top-l, .mood, .files, .bar, .singbar, .ab-bar)::before { content: ''; position: absolute; inset: 0; z-index: 2; border-radius: inherit; padding: 1px; pointer-events: none;
+.skin-glass :is(.top-l, .mood, .files, .bar)::before { content: ''; position: absolute; inset: 0; z-index: 2; border-radius: inherit; padding: 1px; pointer-events: none;
   --at: .21; --ab: .14; /* (the straight runs as they are at rest, where pow() isn't known — Android WebView 114 to 119, no pointer there to move them: with it in, the whole edge went) */
   background: conic-gradient(from var(--la) at 100% 50%, var(--g-spec, #fff, #fff)) 0 0 / var(--g-r, 23px) 100% no-repeat, conic-gradient(from var(--la) at 0 50%, var(--g-spec, #fff, #fff)) 100% 0 / var(--g-r, 23px) 100% no-repeat,
     linear-gradient(rgba(255,255,255,calc(.82 * var(--at))), rgba(255,255,255,calc(.82 * var(--ab)))) 50% 0 / calc(100% - 2 * var(--g-r, 23px) + 1px) 100% no-repeat;
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
   opacity: var(--g, 1); filter: brightness(calc(1 + .3 * var(--pl))); transition: --la .45s cubic-bezier(.2,.8,.2,1); } /* (--pl set only while pressed: no filter at rest) */
-@supports (width: calc(1px * pow(2, 2))) { .skin-glass :is(.top-l, .mood, .files, .bar, .singbar, .ab-bar)::before { --c: cos(var(--la));
+@supports (width: calc(1px * pow(2, 2))) { .skin-glass :is(.top-l, .mood, .files, .bar)::before { --c: cos(var(--la));
   --at: calc(.06 + .94 * (pow(max(var(--c), 0), 12) + .55 * pow(max(-1 * var(--c), 0), 12)) + .14 * (pow(max(var(--c), 0), 1.6) + .55 * pow(max(-1 * var(--c), 0), 1.6)));
   --ab: calc(.06 + .94 * (pow(max(-1 * var(--c), 0), 12) + .55 * pow(max(var(--c), 0), 12)) + .14 * (pow(max(-1 * var(--c), 0), 1.6) + .55 * pow(max(var(--c), 0), 1.6))); } }
 /* a glint just inside the rim where it faces the light (.11–.18 of its radius in), a fainter one opposite: each round end
@@ -1907,7 +1937,7 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
 .skin-glass .ink-dark :is(.sub, .time, .nudge, .brand), .skin-glass .mood.ink-dark { text-shadow: 0 0 1px rgba(255,255,255,.5), 0 0 2px rgba(255,255,255,.35); }
 .skin-glass .ink-dark :is(.link, .to-home) svg { filter: drop-shadow(0 0 1.2px rgba(255,255,255,.5)); }
 .skin-glass .bar.ink-dark .vol::-webkit-slider-thumb { background: var(--ink); box-shadow: 0 0 6px rgba(255,255,255,.6); }
-.skin-glass .bar.ink-dark .vol::-webkit-slider-runnable-track { background: linear-gradient(90deg, transparent calc(50% - .5px), rgba(11,13,22,.55) 0 calc(50% + .5px), transparent 0) 0 0 / 100% 7px no-repeat,
+.skin-glass .bar.ink-dark .vol::-webkit-slider-runnable-track { background: linear-gradient(90deg, transparent calc(50% - .5px), rgba(11,13,22,.55) 0 calc(50% + .5px), transparent 0),
   linear-gradient(90deg, var(--ink) 0 min(var(--p), 50%), #33427a min(var(--p), 50%) var(--p), rgba(11,13,22,.22) var(--p)); }
 /* the player's dock: the timeline above it (light, not glass), the play button in it */
 .skin-glass .bottom { gap: 12px; }
@@ -1918,9 +1948,8 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
 .skin-glass .play { width: 76px; height: 76px; }
 .skin-glass .play .badge { display: none; }
 .skin-glass .core { width: 58px; height: 58px; color: #070912; scale: calc(1 + var(--bass) * .12);
-  background: radial-gradient(circle at 72% 78%, rgba(255,120,150,.42), rgba(255,220,140,.3) 9%, rgba(130,255,200,.24) 15%, rgba(120,170,255,.28) 21%, transparent 30%),
-    radial-gradient(120% 120% at 46% 28%, #f5f8ff, #e2e9fb 44%, #c9d4f0 80%, #b3c0e3);
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,.8), inset 0 -3px 7px rgba(110,140,220,.24), 0 0 0 1px rgba(0,0,0,.35), 0 8px 22px rgba(0,0,0,.5), 0 0 22px rgba(170,200,255,.22);
+  background: radial-gradient(120% 120% at 46% 28%, #f5f8ff, #e2e9fb 44%, #c9d4f0 80%, #b3c0e3);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.8), inset 0 -3px 7px rgba(110,140,220,.24), 0 6px 16px rgba(0,0,0,.45);
   transition: transform .45s var(--g-press), box-shadow .3s, background-color 1.2s; }
 .skin-glass .core::after { content: ''; position: absolute; inset: 0; z-index: 1; border-radius: 50%; pointer-events: none;
   background: linear-gradient(172deg, rgba(255,255,255,.36), rgba(255,255,255,.06) 40%, transparent 50%),
@@ -1931,28 +1960,57 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
 .skin-glass.has-art .core::after { background: linear-gradient(172deg, rgba(255,255,255,.3), rgba(255,255,255,.05) 40%, transparent 50%),
   repeating-radial-gradient(circle, transparent 0 2.2px, rgba(255,255,255,.075) 2.5px 2.8px, transparent 3.1px 3.6px); }
 .skin-glass.has-art .core svg { filter: drop-shadow(0 1px 2px rgba(0,0,0,.7)); }
-.skin-glass .play:hover .core { transform: scale(1.08); }
-.skin-glass .play:active .core { transform: scale(.92); box-shadow: inset 0 0 0 1px #fff, inset 0 -3px 7px rgba(110,140,220,.24), 0 0 0 1px rgba(0,0,0,.35), 0 8px 22px rgba(0,0,0,.5), 0 0 34px 6px rgba(200,220,255,.55); }
+@media (hover: hover) and (pointer: fine) { .skin-glass .play:hover .core { transform: scale(1.08); } }
+.skin-glass .play:active .core { transform: scale(.92); box-shadow: inset 0 0 0 1px #fff, inset 0 -3px 7px rgba(110,140,220,.24), 0 6px 16px rgba(0,0,0,.45); }
+.skin-glass .core svg { width: 18px; height: 18px; }
+.skin-glass .i-play path { d: path('M7.5 5.3v13.4a1.3 1.3 0 0 0 1.98 1.1l10.7-6.7a1.3 1.3 0 0 0 0-2.2L9.48 4.2A1.3 1.3 0 0 0 7.5 5.3z'); }
+.skin-glass .i-pause rect { y: 4.5px; width: 4.2px; height: 15px; rx: 1.3px; } .skin-glass .i-pause rect:first-child { x: 6px; } .skin-glass .i-pause rect:last-child { x: 13.8px; }
 .skin-glass .title { font: italic 500 clamp(24px, 2.6vw, 36px)/1.05 'Cormorant Garamond', Georgia, serif; letter-spacing: -.005em; }
 .skin-glass .sub > :first-child, .skin-glass .from-link { opacity: 1; } /* (all words full white: the weight tells them apart) */
-.skin-glass :is(.sub, .time, .nudge, .brand, .mood, .singbar) { text-shadow: 0 0 1px rgba(3,4,10,.6), 0 0 2px rgba(3,4,10,.45); } /* (small words on clear glass: a fine dark halo of their own — what's under them is held down by the glass itself) */
+.skin-glass :is(.sub, .time, .nudge, .brand, .mood) { text-shadow: 0 0 1px rgba(3,4,10,.6), 0 0 2px rgba(3,4,10,.45); } /* (small words on clear glass: a fine dark halo of their own — what's under them is held down by the glass itself) */
 .skin-glass .bgq small { opacity: .85; }
-.skin-glass .status { color: var(--ink); }
+.skin-glass .sub { gap: 6px; margin-top: 4px; align-items: center; font: 600 var(--fs-2)/var(--lh-2) var(--ui); color: color-mix(in srgb, var(--ink) 88%, transparent); }
+.skin-glass .sub > :first-child { max-width: none; flex: 0 1 auto; min-width: 0; }
+.skin-glass .status { color: inherit; flex: 0 1 auto; min-width: 0; }
+.skin-glass .status:not(.st-live) { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); } /* (still read out: aria-live) */
+.skin-glass .sub:has(.st-live) > .artist-link { display: none; }
+.skin-glass .sub:has(.st-saved)::after { content: ''; flex: none; width: 14px; height: 14px; background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='8.5'/%3E%3Cpath d='M12 7.8v7.6M8.8 12.4l3.2 3.2 3.2-3.2'/%3E%3C/svg%3E") center / 14px no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='8.5'/%3E%3Cpath d='M12 7.8v7.6M8.8 12.4l3.2 3.2 3.2-3.2'/%3E%3C/svg%3E") center / 14px no-repeat; }
+.skin-glass .time { justify-items: center; }
+.skin-glass .time > div:first-child { font: 600 var(--fs-2)/var(--lh-2) var(--ui); color: color-mix(in srgb, var(--ink) 88%, transparent); }
+.skin-glass #cur { color: var(--ink); }
+.skin-glass .nudge { gap: 8px; font: 600 var(--fs-1)/var(--lh-1) var(--ui); color: color-mix(in srgb, var(--ink) 88%, transparent); }
+.skin-glass #off { display: inline-block; } .skin-glass #off::first-letter { text-transform: uppercase; }
+.skin-glass .nudge button { position: relative; width: var(--h-xs); height: var(--h-xs); border: 0; border-radius: 50%; background: var(--f-rest); box-shadow: none; color: var(--ink); font-size: 0; transition: background-color .15s; }
+.skin-glass .nudge button::before { content: ''; width: 12px; height: 12px; background: currentColor; -webkit-mask: var(--ic) center / 12px no-repeat; mask: var(--ic) center / 12px no-repeat; }
+.skin-glass #later { --ic: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.75' stroke-linecap='round'%3E%3Cpath d='M6 12h12'/%3E%3C/svg%3E"); }
+.skin-glass #sooner { --ic: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.75' stroke-linecap='round'%3E%3Cpath d='M12 6v12M6 12h12'/%3E%3C/svg%3E"); }
+@media (pointer: coarse) { .skin-glass .nudge button::after { content: ''; position: absolute; inset: -8px; } }
+.skin-glass .ink-dark .nudge button { background: rgba(11,13,22,.08); }
 .skin-glass :is(#dur, .nudge) { opacity: 1; }
 .skin-glass .skip, .skin-glass :where(.bar .icon-btn) { color: var(--ink); } /* (its icons full white too, not 72 %: a pressed one keeps its own colour) */
-.skin-glass :is(.skip, .icon-btn):hover { background: rgba(255,255,255,.08); }
-.skin-glass .vol::-webkit-slider-thumb { background: #fff; box-shadow: 0 0 8px rgba(190,210,255,.8); }
-.skin-glass .vol::-webkit-slider-runnable-track { background: linear-gradient(90deg, transparent calc(50% - .5px), rgba(243,246,255,.6) 0 calc(50% + .5px), transparent 0) 0 0 / 100% 7px no-repeat,
-  linear-gradient(90deg, #fff 0 min(var(--p), 50%), #b9ccff min(var(--p), 50%) var(--p), rgba(243,246,255,.2) var(--p)); }
-/* Sing's bar and Repeat a part's: frosted glass (they've words on them, over the lyrics), over the player, not on it
-   (--g-slab, the player's height, from the script) */
-.skin-glass :is(.singbar, .ab-bar) { border-radius: 999px; background: var(--g-fringe) 50% 0 / 58% 1px no-repeat, linear-gradient(180deg, rgba(255,255,255,.06), transparent 40%), color-mix(in srgb, var(--bg) 58%, transparent);
-  -webkit-backdrop-filter: var(--g-frost); backdrop-filter: var(--g-frost); }
-.skin-glass .singbar { padding: 9px 18px; bottom: calc(var(--g-slab, 150px) + 12px); }
-body.skin-glass.sing:not(.home) .ab-bar { bottom: calc(100% + 66px); }
-.skin-glass .singbar svg { stroke: #fff; }
-.skin-glass .ab-bar .lbl { color: #fff; }
-.skin-glass .voice-ui { bottom: calc(var(--g-slab, 120px) + 14px); }
+@media (hover: hover) and (pointer: fine) { .skin-glass :is(.skip, .icon-btn):hover { background: rgba(255,255,255,.1); } .skin-glass .nudge button:hover { background: var(--f-hover); } }
+.skin-glass :is(.skip, .bar .icon-btn) { width: var(--h-icon); height: var(--h-icon); }
+.skin-glass .skip:not(.jump) svg { width: 18px; height: 18px; }
+.skin-glass .jump svg { width: 24px; height: 24px; stroke-width: 1.75; }
+.skin-glass #prevBtn path { d: path('M5.6 4.5h.4a1.1 1.1 0 0 1 1.1 1.1v12.8a1.1 1.1 0 0 1-1.1 1.1h-.4a1.1 1.1 0 0 1-1.1-1.1V5.6a1.1 1.1 0 0 1 1.1-1.1zM19.5 5.9v12.2a1.3 1.3 0 0 1-2 1.08l-8.9-6.1a1.3 1.3 0 0 1 0-2.16l8.9-6.1a1.3 1.3 0 0 1 2 1.08z'); }
+.skin-glass #nextBtn path { d: path('M18 4.5h.4a1.1 1.1 0 0 1 1.1 1.1v12.8a1.1 1.1 0 0 1-1.1 1.1h-.4a1.1 1.1 0 0 1-1.1-1.1V5.6A1.1 1.1 0 0 1 18 4.5zM4.5 5.9v12.2a1.3 1.3 0 0 0 2 1.08l8.9-6.1a1.3 1.3 0 0 0 0-2.16l-8.9-6.1a1.3 1.3 0 0 0-2 1.08z'); }
+.skin-glass .bar .icon-btn svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+.skin-glass .bar .like[aria-pressed=true] svg { fill: currentColor; }
+.skin-glass #nowMore svg { fill: currentColor; stroke: none; }
+.skin-glass #shuffleBtn svg { stroke-width: 1.75 !important; }
+.skin-glass #repeatBtn > svg:not(.g24) { display: none; } .skin-glass #repeatBtn > .g24 { display: block; }
+.skin-glass :is(.rep[data-mode=all], .rep[data-mode=one], #shuffleBtn[aria-pressed=true]) { color: var(--ink); background: radial-gradient(circle, rgba(255,255,255,.16) 15.5px, transparent 16px); }
+.skin-glass .ink-dark :is(.rep[data-mode=all], .rep[data-mode=one], #shuffleBtn[aria-pressed=true]) { background: radial-gradient(circle, rgba(11,13,22,.1) 15.5px, transparent 16px); }
+.skin-glass .singb[aria-pressed="true"] { background: radial-gradient(circle, rgba(255,255,255,.16) 15.5px, transparent 16px); } .skin-glass .singb[aria-pressed="true"] svg { stroke: currentColor; filter: none; } /* (Sing on: the dock's own on, no glow) */
+.skin-glass .rep b { font: 600 8px/1 var(--ui); }
+.skin-glass .vi .spk { fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linejoin: round; } .skin-glass .vi path:not(.spk) { stroke-width: 1.75; }
+.skin-glass .vol::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: linear-gradient(90deg, transparent calc(50% - .5px), rgba(243,246,255,.5) 0 calc(50% + .5px), transparent 0),
+  linear-gradient(90deg, var(--acc) 0 min(var(--p), 50%), rgb(var(--acc-rgb) / .5) min(var(--p), 50%) var(--p), rgba(255,255,255,.22) var(--p)); }
+.skin-glass .vol::-webkit-slider-thumb { width: 14px; height: 14px; margin-top: -5px; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.45), 0 0 0 .5px rgba(0,0,0,.25); transition: width .15s, height .15s, margin .15s; }
+@media (hover: hover) and (pointer: fine) { .skin-glass .vol:hover::-webkit-slider-thumb { width: 16px; height: 16px; margin-top: -6px; } }
+.skin-glass .vol:active::-webkit-slider-thumb { width: 22px; height: 22px; margin-top: -9px; box-shadow: 0 2px 8px rgba(0,0,0,.5); }
 /* the lenses' tiers: frost (a phone) and tint (no blur); on a computer the script sets each one's own refraction */
 .skin-glass.gl-frost :is(.top-l, .mood, .files, .bar) { -webkit-backdrop-filter: blur(14px) saturate(1.5) brightness(.82); backdrop-filter: blur(14px) saturate(1.5) brightness(.82); }
 .skin-glass.gl-frost .bar { background: rgba(4,5,11,.3); }
@@ -1961,75 +2019,439 @@ body.skin-glass.sing:not(.home) .ab-bar { bottom: calc(100% + 66px); }
   background-image: radial-gradient(circle 78px at var(--px, 50%) var(--py, 50%), rgba(255,255,255,calc(.15 * var(--pl, 0))), rgba(196,214,255,calc(.06 * var(--pl, 0))) 46%, transparent 76%), var(--g-fringe), var(--g-grain, none);
   background-size: auto, 46% 1px, var(--g-gs, 64px); background-position: 0 0, 22% 0, 0 0; background-repeat: no-repeat, no-repeat, repeat; }
 .skin-glass.gl-frost .ink-dark { -webkit-backdrop-filter: blur(14px) saturate(1.5) brightness(1.06); backdrop-filter: blur(14px) saturate(1.5) brightness(1.06); background-color: rgba(250,251,255,.22); } /* (dark ink on frost: the frost lightened, not darkened — darkened, a half-dimmed picture under it read 1.8 : 1) */
-.skin-glass:is(.gl-tint, .gl-solid) :is(.singbar, .ab-bar) { -webkit-backdrop-filter: none; backdrop-filter: none; background: var(--g-fringe) 50% 0 / 58% 1px no-repeat, color-mix(in srgb, var(--bg) 88%, transparent); }
-/* the panels: frosted glass, the same edge, a thin spectrum where the light meets their top. Each grows out of the
-   button that opened it, its shape the button's at first, and goes back into it (the script's glassMorph); opened any
-   other way, it grows from its top. While it goes back it keeps its layout (a closed panel's isn't an open one's) */
-.skin-glass :is(.moods, .eq, .smenu, .voice-ui) { border: 0; border-radius: 26px; color: var(--ink);
-  background: var(--g-fringe) 50% 0 / 62% 1px no-repeat, linear-gradient(180deg, rgba(255,255,255,.065), transparent 34%), var(--g-panel);
-  -webkit-backdrop-filter: blur(26px) saturate(1.6) brightness(.62); backdrop-filter: blur(26px) saturate(1.6) brightness(.62);
-  box-shadow: var(--g-edge), 0 34px 80px -20px rgba(0,0,0,.85), 0 0 0 1px rgba(0,0,0,.28); }
-.skin-glass .smenu { border-radius: 22px; }
-.skin-glass :is(.moods, .eq, .smenu):popover-open { animation: glIn .54s var(--g-spring) both; }
-@keyframes glIn { from { opacity: 0; transform: translateY(-14px) scale(.86, .8); } 30% { opacity: 1; } }
-.skin-glass :is(.moods, .eq, .smenu) { transform-origin: 50% 0; transition: display .32s allow-discrete, overlay .32s allow-discrete; }
-.skin-glass :is(.moods, .eq, .smenu):not(:popover-open) { pointer-events: none; } /* (going back into its button, it takes no clicks: they go to what's under it) */
-.skin-glass .moods { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 2px; }
-.skin-glass .textp { grid-template-columns: minmax(0, 1fr); }
-.skin-glass .eq { gap: 14px; }
-.skin-glass .smenu { gap: 2px; }
-/* a toast: drops in under the header (over the player there's Sing's bar and Repeat a part's) */
-.skin-glass .toast { inset: calc(var(--g-head, 70px) + 10px) auto auto 50%; border: 0; border-radius: 999px; color: #fff;
-  background: var(--g-fringe) 50% 0 / 60% 1px no-repeat, color-mix(in srgb, var(--bg) 58%, transparent);
-  -webkit-backdrop-filter: blur(22px) saturate(1.6) brightness(.6); backdrop-filter: blur(22px) saturate(1.6) brightness(.6);
-  box-shadow: var(--g-edge), 0 18px 46px -12px rgba(0,0,0,.8); }
-.skin-glass .toast:popover-open { animation: glDrop .44s var(--g-press) both; }
-@keyframes glDrop { from { opacity: 0; transform: translateY(-12px) scale(.94); } 40% { opacity: 1; } }
-.skin-glass .toast.with-act { border-radius: 22px; }
-.skin-glass .toast-act { background: linear-gradient(180deg, #fff, #dfe8ff); color: #070912; }
-.skin-glass.gl-tint :is(.moods, .eq, .smenu, .voice-ui, .toast) { -webkit-backdrop-filter: none; backdrop-filter: none; background: var(--g-fringe) 50% 0 / 62% 1px no-repeat, color-mix(in srgb, var(--bg) 92%, transparent); }
-/* inside the panels: fills (no glass on glass) — a faint pane, the pressed one lit */
-.skin-glass :is(.seg button, .presets button, .chip, .stepper .step, .nudge button, .cc-pick, .mchip) { border: 0; background: rgba(255,255,255,.055); box-shadow: inset 0 0 0 1px rgba(255,255,255,.1), inset 0 1px 0 rgba(255,255,255,.12);
-  transition: background-color .2s, box-shadow .2s, color .2s; }
-.skin-glass :is(.seg button, .presets button, .chip, .stepper .step, .nudge button, .cc-pick, .mchip):hover { background: rgba(255,255,255,.1); color: #fff; box-shadow: inset 0 0 0 1px rgba(255,255,255,.24), inset 0 1px 0 rgba(255,255,255,.3); }
-.skin-glass :is(.seg button, .presets button, .mchip)[aria-pressed=true] { background: rgba(225,234,255,.16); color: #fff;
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,.6), inset 0 1px 0 #fff, 0 0 16px rgba(170,200,255,.25); }
-.skin-glass .stepper b, .skin-glass .sl-head b, .skin-glass .panel-back, .skin-glass .hist-h, .skin-glass .consent .kicker, .skin-glass .home-now small, .skin-glass .credits .lbl { color: #dfe8ff; }
-.skin-glass .pill { background: linear-gradient(180deg, #fff, #dde7ff); color: #070912; box-shadow: inset 0 -2px 5px rgba(110,140,220,.35), 0 0 0 1px rgba(255,255,255,.6), 0 6px 18px rgba(0,0,0,.45); }
-.skin-glass .pill.ghost { background: rgba(255,255,255,.05); color: var(--ink); box-shadow: inset 0 0 0 1px rgba(255,255,255,.34), inset 0 1px 0 rgba(255,255,255,.45); }
-.skin-glass .switch { background: rgba(255,255,255,.1); box-shadow: inset 0 0 0 1px rgba(255,255,255,.16); }
-.skin-glass .switch[aria-checked=true] { background: rgba(225,234,255,.85); }
-.skin-glass :is(.row, .mi, .qrow, .cast-dev):hover, .skin-glass .row:focus-visible { background: rgba(255,255,255,.07); color: var(--ink); box-shadow: inset 0 0 0 1px rgba(255,255,255,.08); }
-.skin-glass :is(.moods, .smenu, .eq) .bgq, .skin-glass .sm-head { border-color: rgba(255,255,255,.1); }
-.skin-glass .inline-link { color: #dfe8ff; }
-.skin-glass .top-hit { border: 0; background: linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.02)); box-shadow: var(--g-edge); border-radius: 22px; }
-/* dialogs: the glass on a layer of its own behind the card (glass on the dialog itself would make it the frame for the
-   window buttons put inside it); the card's parts fade in, never the dialog (a fading dialog is cut off from behind it) */
-.skin-glass .consent { background: transparent; border: 0; box-shadow: none; }
-.skin-glass .consent::before { content: ''; position: absolute; inset: 0; z-index: -1; border-radius: inherit; pointer-events: none;
-  background: var(--g-fringe) 50% 0 / 60% 1px no-repeat, linear-gradient(180deg, rgba(255,255,255,.06), transparent 30%), color-mix(in srgb, var(--bg) 56%, transparent);
-  -webkit-backdrop-filter: blur(30px) saturate(1.5) brightness(.6); backdrop-filter: blur(30px) saturate(1.5) brightness(.6);
-  box-shadow: var(--g-edge), 0 40px 100px -20px rgba(0,0,0,.9); }
-.skin-glass .consent[open] { animation: none; }
-.skin-glass .consent[open] > *, .skin-glass .consent[open]::before { animation: show .4s both; }
-.skin-glass .consent::backdrop { background: rgba(2,3,8,.55); }
-.skin-glass.gl-tint .consent::before { -webkit-backdrop-filter: none; backdrop-filter: none; background: var(--g-fringe) 50% 0 / 60% 1px no-repeat, color-mix(in srgb, var(--bg) 94%, transparent); }
+/* the panels: the controls' own glass. On a computer each gets the dock's lens at its own size (the script's glassFit,
+   GLASS_KIND.panel: frosted in the middle and held calm under the words, a rim that bends what's behind and is lit in its
+   colour); on every tier a low tint that rises with what's behind (--gp-tint, the script's glassPanelTint), the scene's
+   colour carried through, the edge light only where the light falls (a bright arc on the lit corner, a soft glint on the
+   far one, nothing between), a lip of light inside the lit edge, a darkened edge, a shade inside the far edge and one
+   shadow. No border, no white wash, no contrast(). The dialogs' glass is a layer of their own behind the card (glass on
+   the dialog itself would make it the frame for the window buttons put inside it), their edge light another. */
+.skin-glass :is(.moods, .eq, .smenu, .voice-ui, .toast, .singbar, .ab-bar), .skin-glass .consent { --gp-tint: 20%; }
+.skin-glass.gl-frost :is(.moods, .eq, .smenu, .voice-ui, .toast, .singbar, .ab-bar), .skin-glass.gl-frost .consent { --gp-tint: 42%; }
+.skin-glass :is(.moods, .eq, .smenu, .voice-ui, .toast, .singbar, .ab-bar), .skin-glass .consent::before {
+  border: 0; color: var(--t1);
+  background: var(--g-grain, none) 0 0 / var(--g-gs, 64px) repeat, color-mix(in srgb, var(--bg) var(--gp-tint), transparent);
+  box-shadow: inset calc(sin(var(--la)) * -1.2px) calc(cos(var(--la)) * 1.2px) 1.5px -.5px rgba(255,255,255,.16), /* (the lip: light just inside the lit edge) */
+    inset 0 0 2.2px 1.2px rgba(0,0,0,.3), inset calc(sin(var(--la)) * 12px) calc(cos(var(--la)) * -12px) 20px -16px rgba(0,0,10,.42), /* (the darkened edge; a shade inside the far one) */
+    var(--gp-drop); }
+.skin-glass :is(.moods, .eq) { --gp-drop: 0 24px 56px -16px rgba(0,0,0,.62), 0 2px 6px rgba(0,0,0,.22); border-radius: var(--r-panel); padding: var(--p-panel); }
+.skin-glass .smenu { --gp-drop: 0 14px 32px -8px rgba(0,0,0,.5); border-radius: var(--r-menu); padding: var(--p-menu); }
+.skin-glass :is(.toast, .singbar, .ab-bar, .voice-ui) { --gp-drop: 0 8px 22px -6px rgba(0,0,0,.5); }
+.skin-glass .consent { --gp-drop: 0 32px 80px -20px rgba(0,0,0,.75), 0 2px 8px rgba(0,0,0,.25); background: transparent; border: 0; box-shadow: none; }
+.skin-glass .consent::before { content: ''; position: absolute; inset: 0; z-index: -1; border-radius: inherit; pointer-events: none; }
+/* the edge light: one conic about the middle, its bright lobe toward the light (--la, the pointer's on a computer), a soft
+   glint opposite, nothing between; the same, fainter, on the buttons and the segmented thumb */
+.skin-glass :is(.moods, .eq, .smenu, .voice-ui, .toast, .singbar, .ab-bar, .pill, .seg-thumb)::before, .skin-glass .consent::after { --sl: .9; --sg: .32;
+  content: ''; position: absolute; inset: 0; z-index: 3; border-radius: inherit; padding: 1px; pointer-events: none;
+  background: conic-gradient(from calc(var(--la) - 180deg), rgb(var(--rim-rgb) / var(--sg)) 0deg, rgb(var(--rim-rgb) / calc(var(--sg) * .45)) 16deg, rgb(var(--rim-rgb) / 0) 34deg 126deg,
+    rgb(var(--rim-rgb) / calc(var(--sl) * .25)) 148deg, rgb(var(--rim-rgb) / calc(var(--sl) * .68)) 166deg, rgb(var(--rim-rgb) / var(--sl)) 180deg,
+    rgb(var(--rim-rgb) / calc(var(--sl) * .68)) 194deg, rgb(var(--rim-rgb) / calc(var(--sl) * .25)) 212deg, rgb(var(--rim-rgb) / 0) 234deg 326deg,
+    rgb(var(--rim-rgb) / calc(var(--sg) * .45)) 344deg, rgb(var(--rim-rgb) / var(--sg)) 360deg);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0); }
+.skin-glass .pill::before { --sl: .42; --sg: .14; z-index: 0; }
+.skin-glass .pill:not(.ghost)::before { --sl: .85; --sg: .3; --rim-rgb: 255 255 255; }
+.skin-glass .seg-thumb::before { --sl: .5; --sg: .14; z-index: 0; }
+/* the tiers: on a computer the lens (the script's filter; till it's made, a frost); on a phone a frost of 12 (less blur
+   keeps the scene's colour, saturation carries it); no blur on tint and Solid, the tint near opaque; Solid's light at rest */
+.skin-glass.gl-lens :is(.moods, .eq, .smenu, .voice-ui, .toast, .singbar, .ab-bar) { -webkit-backdrop-filter: blur(16px) saturate(3) brightness(.8); backdrop-filter: blur(16px) saturate(3) brightness(.8); }
+.skin-glass.gl-lens .consent::before { -webkit-backdrop-filter: var(--gl-f, blur(16px) saturate(3) brightness(.8)); backdrop-filter: var(--gl-f, blur(16px) saturate(3) brightness(.8)); }
+.skin-glass.gl-frost :is(.moods, .eq, .smenu, .voice-ui, .toast, .singbar, .ab-bar), .skin-glass.gl-frost .consent::before {
+  -webkit-backdrop-filter: blur(12px) saturate(var(--fr-sat, 5)) brightness(var(--fr-bri, .64)); backdrop-filter: blur(12px) saturate(var(--fr-sat, 5)) brightness(var(--fr-bri, .64)); }
+.skin-glass:is(.gl-tint, .gl-solid) :is(.moods, .eq, .smenu, .voice-ui, .toast, .singbar, .ab-bar), .skin-glass:is(.gl-tint, .gl-solid) .consent::before { -webkit-backdrop-filter: none; backdrop-filter: none; }
+.skin-glass.gl-tint :is(.moods, .eq, .smenu, .voice-ui, .toast, .singbar, .ab-bar), .skin-glass.gl-tint .consent { --gp-tint: 90%; }
+.skin-glass.gl-solid :is(.moods, .eq, .smenu, .voice-ui, .toast, .singbar, .ab-bar), .skin-glass.gl-solid .consent { --gp-tint: 96%; }
+.skin-glass.gl-solid :is(.moods, .eq, .smenu, .voice-ui, .toast, .singbar, .ab-bar)::before, .skin-glass.gl-solid .consent::after { --sg: .2; }
 /* (a card taller than the window scrolls, and its glass — a layer the card's size — scrolled away with the first
    screenful, the words after it left over the bare page: such a card is tinted glass as a whole instead, its edge kept;
    the script's glassOver) */
-.skin-glass .consent.gl-over { background: var(--g-fringe) 50% 0 / 60% 1px no-repeat, color-mix(in srgb, var(--bg) 94%, transparent);
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,.12), inset 0 1px 0 rgba(255,255,255,.42), 0 40px 100px -20px rgba(0,0,0,.9); }
+.skin-glass .consent.gl-over { background: var(--g-grain, none) 0 0 / var(--g-gs, 64px) repeat, color-mix(in srgb, var(--bg) 94%, transparent);
+  box-shadow: inset calc(sin(var(--la)) * -1.2px) calc(cos(var(--la)) * 1.2px) 1.5px -.5px rgba(255,255,255,.16), inset 0 0 2.2px 1.2px rgba(0,0,0,.3), var(--gp-drop); }
 .skin-glass .consent.gl-over::before { display: none; }
+/* the light turns with the pointer, as the capsules' does (and the panel's going back keeps its layout: a closed panel's
+   isn't an open one's) */
+.skin-glass :is(.moods, .eq, .smenu) { transform-origin: 50% 0; transition: --la .45s cubic-bezier(.2,.8,.2,1), display .32s allow-discrete, overlay .32s allow-discrete; }
+.skin-glass .voice-ui { transition: --la .45s cubic-bezier(.2,.8,.2,1); }
+.skin-glass :is(.moods, .eq, .smenu):not(:popover-open) { pointer-events: none; } /* (going back into its button, it takes no clicks: they go to what's under it) */
+/* opened with no button to grow out of (a key, the script): from its top, the glass and its shape at once, its words
+   after (never the panel faded: its frost would turn to a dark film) */
+.skin-glass :is(.moods, .eq, .smenu):popover-open { animation: glIn .42s var(--g-spring) both; }
+.skin-glass :is(.moods, .eq, .smenu):popover-open > * { animation: glWords .42s both; }
+@keyframes glIn { from { transform: translateY(-8px) scale(.96); } }
+@keyframes glWords { 0%, 30% { opacity: 0; } 100% { opacity: 1; } }
+/* a panel: a head that stays (its title, a control at its end; Back for a finger or a remote), a body that scrolls,
+   faded only at an edge with more past it (--ft, --fb: the script's gpFades), its bar only while it scrolls or under a mouse */
+.skin-glass :is(.moods, .eq):popover-open { display: flex; flex-direction: column; gap: 0; overflow: visible; }
+.skin-glass .gp-head { flex: none; display: flex; align-items: center; gap: 8px; min-height: var(--h-row); padding: 0 6px 0 var(--row-x); }
+.skin-glass .gp-title { flex: 1; min-width: 0; margin: 0; font: 600 var(--fs-4)/var(--lh-4) var(--ui); color: var(--t1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.skin-glass .gp-back { display: none; }
+.skin-glass :is(.gp-back, .gp-up) { place-items: center; flex: none; border-radius: 50%; color: var(--t1); }
+.skin-glass .gp-back svg { width: 22px; height: 22px; } .skin-glass .gp-up svg { width: 20px; height: 20px; }
+.skin-glass .gp-up { display: grid; width: 32px; height: 32px; margin-left: -6px; }
+.skin-glass .gp-head.is-sub { gap: 4px; }
+.skin-glass :is(.gp-back, .gp-up) svg, .skin-glass .gs-v svg, .skin-glass .gs-help svg, .skin-glass .ck { fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+@media (pointer: coarse) { .skin-glass .gp-head { min-height: 52px; padding-left: 2px; gap: 2px; } .skin-glass .gp-back { display: grid; width: 44px; height: 44px; } .skin-glass .gp-up { width: 44px; height: 44px; margin-left: 0; } }
+.skin-glass.tv .gp-head { padding-left: 2px; gap: 2px; } .skin-glass.tv .gp-back { display: grid; width: 44px; height: 44px; }
+.skin-glass .gp-body { flex: 1 1 auto; min-height: 0; overflow: hidden auto; margin-right: -4px; padding-right: 4px; overscroll-behavior: contain; scroll-padding-block: 24px; /* (a control brought into sight by the keys clear of the fades) */
+  -webkit-mask: linear-gradient(transparent, #000 var(--ft), #000 calc(100% - var(--fb)), transparent); mask: linear-gradient(transparent, #000 var(--ft), #000 calc(100% - var(--fb)), transparent); transition: --ft .2s, --fb .2s; }
+.skin-glass .gp-body::-webkit-scrollbar { width: 8px; }
+.skin-glass .gp-body::-webkit-scrollbar-button { display: none; }
+.skin-glass .gp-body::-webkit-scrollbar-track { margin: 20px 0; background: transparent; }
+.skin-glass .gp-body::-webkit-scrollbar-thumb { background: transparent padding-box; border: 2px solid transparent; border-radius: 4px; }
+.skin-glass .gp-body:is(:hover, .scrolling)::-webkit-scrollbar-thumb { background: rgba(235,240,255,.3) padding-box; }
+@media (pointer: coarse) { .skin-glass .gp-body::-webkit-scrollbar { display: none; } }
+.skin-glass .smenu .gp-body { max-height: inherit; }
+/* where they open: 12 under the header, 12 over the timeline (never over the dock), each under the button it came
+   from — the chip in the middle of the window, Settings, the queue and the equalizer ending where the icons' capsule
+   ends; on a phone a sheet under the header, the dock hidden under it */
+@media (min-width: 901px) {
+  .skin-glass .top { display: grid; grid-template-columns: 1fr auto 1fr; }
+  .app.skin-glass:not(.fs) .top { padding-right: 0; }
+  .skin-glass .top-l { justify-self: start; } .skin-glass .files { justify-self: end; }
+  .app.skin-glass:not(.fs) .files { margin-right: 150px; }
+  .app.skin-glass:not(.fs) :is(.textp, .qpanel, .eq) { right: calc(var(--pad) + 150px); }
+}
+.skin-glass :is(.moods, .textp, .qpanel, .eq) { top: calc(var(--g-head, 62px) + 12px); max-height: min(600px, max(calc(100dvh - var(--g-head, 62px) - var(--g-slab, 158px) - 24px), min(300px, calc(100dvh - var(--g-head, 62px) - 24px)))); } /* (a short screen — a phone sideways, a small window — over the dock rather than a sliver; a tall one 600 at most: a lens costs by its area) */
+@media (pointer: coarse) {
+  .skin-glass :is(.textp, .qpanel, .eq) { left: 16px; right: 16px; width: auto; max-height: calc(100dvh - var(--g-head, 62px) - 24px); }
+  body.skin-glass:has(:is(.textp, .qpanel, .eq):popover-open) .bar { visibility: hidden; }
+}
+/* (the button a panel came from, while it's open: a platter — light, its icon on clear glass) */
+.skin-glass:has(#textPanel:popover-open) #textBtn, .skin-glass:has(#eqPanel:popover-open) #eqBtn, .skin-glass:has(#togetherPanel:popover-open) #togetherBtn,
+.skin-glass:has(#castPanel:popover-open) #castBtn, .skin-glass:has(#queuePanel:popover-open) #queueBtn { background: rgba(255,255,255,.1); } /* (a pressed one's .19 under a white icon over a bright scene: 4 : 1) */
+
+/* Settings and the menus: sections of rows on insets, one rhythm — 12 at the top (15 on a phone), so a one-line row is
+   44 and every title sits 12 under its row's top; a 15 title, one 13 grey line (its long note folded under it), the
+   control on the title line or full width under it */
+.skin-glass .gs-sec { margin: 0; padding: 14px var(--row-x) 6px; font: 600 var(--fs-2)/var(--lh-2) var(--ui); color: var(--t2); }
+.skin-glass .gs-sec:first-child { padding-top: 6px; }
+@media (pointer: coarse) { .skin-glass .gs-sec { padding: 16px var(--row-x) 8px; } .skin-glass .gs-sec:first-child { padding-top: 4px; } }
+.skin-glass .bgq { border-top: 0; }
+.skin-glass .gs-group { display: block; background: var(--f-group); border-radius: var(--r-group); overflow: clip; }
+.skin-glass .gs-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "t c" "h h" "x x"; align-items: start; gap: 0 12px;
+  width: 100%; min-height: var(--h-row); margin: 0; padding: var(--row-y) var(--row-x); border: 0; border-radius: 0; background: none; text-align: left; color: var(--t1); font: 400 var(--fs-3)/var(--lh-3) var(--ui); }
+.skin-glass .gs-t { grid-area: t; min-width: 0; font: 400 var(--fs-3)/var(--lh-3) var(--ui); color: var(--t1); overflow-wrap: anywhere; }
+.skin-glass .gs-row :is(.gs-d, .gs-help) { grid-area: h; margin-top: 2px; }
+.skin-glass .gs-d { display: block; min-width: 0; font: 400 var(--fs-2)/var(--lh-2) var(--ui); color: var(--t2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.skin-glass .gs-row > :is(.switch, .gs-v, .pill, .ck, .stepper) { grid-area: c; margin-block: calc((var(--lh-3) - var(--ch)) / 2); }
+.skin-glass .gs-row > :is(.seg, .acts2) { grid-area: x; margin-top: 10px; }
+.skin-glass .acts2 { display: flex; flex-wrap: wrap; gap: 8px; }
+.skin-glass .gs-v { --ch: var(--lh-3); display: inline-flex; align-items: center; gap: 2px; margin-right: -4px; font: 400 var(--fs-3)/var(--lh-3) var(--ui); color: var(--t2); white-space: nowrap; }
+.skin-glass .gs-v svg { width: 16px; height: 16px; flex: none; }
+.skin-glass .ck { --ch: 18px; width: 18px; height: 18px; color: var(--acc); stroke-width: 2; }
+.skin-glass .gs-row.is-nav { cursor: var(--cur-hand, pointer); transition: background-color .15s; }
+.skin-glass .gs-help { min-width: 0; }
+.skin-glass .gs-help > summary { list-style: none; display: inline-flex; max-width: 100%; align-items: center; gap: 4px; min-width: 0; cursor: var(--cur-hand, pointer); border-radius: 4px; }
+.skin-glass .gs-help > summary::-webkit-details-marker { display: none; }
+.skin-glass .gs-help > summary span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.skin-glass .gs-help > summary svg { flex: none; width: 12px; height: 12px; color: var(--t2); transition: rotate .2s; }
+.skin-glass .gs-help[open] > summary svg { rotate: 180deg; }
+.skin-glass .gs-help > p { margin: 6px 0 0; max-width: 60ch; font: 400 var(--fs-2)/19px var(--ui); color: var(--t2); white-space: normal; user-select: text; -webkit-user-select: text; }
+.skin-glass .gs-help { interpolate-size: allow-keywords; }
+.skin-glass .gs-help::details-content { block-size: 0; overflow: clip; transition: block-size .2s, content-visibility .2s allow-discrete; }
+.skin-glass .gs-help[open]::details-content { block-size: auto; }
+.skin-glass .gs-note { margin: 0; padding: var(--row-y) var(--row-x) 4px; font: 400 var(--fs-2)/19px var(--ui); color: var(--t2); }
+.skin-glass .gs-empty { margin: 0; padding: var(--row-y) var(--row-x); font: 400 var(--fs-3)/var(--lh-3) var(--ui); color: var(--t2); }
+/* (rows built some other way, in a group: the same inset and type) */
+.skin-glass :is(.gs-group, .gp-body) > .bgq:not(.gs-row) { margin: 0; padding: var(--row-y) var(--row-x); border: 0; gap: 8px; font: 400 var(--fs-3)/var(--lh-3) var(--ui); color: var(--t1); }
+.skin-glass :is(.gs-group, .gp-body) > .bgq:not(.gs-row) small { opacity: 1; font: 400 var(--fs-2)/var(--lh-2) var(--ui); color: var(--t2); }
+/* the segmented control: a recessed track, equal segments, a thumb of its own that slides to the pick (200 ms, then the
+   pick applies: the script's segPlace) */
+.skin-glass .seg { position: relative; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 2px; height: var(--h-ctl); padding: 2px;
+  border-radius: calc(var(--h-ctl) / 2); background: var(--f-well); }
+.skin-glass .seg.fit { grid-auto-columns: auto; } .skin-glass .seg.fit button { padding: 0 12px; }
+.skin-glass .seg-thumb { position: absolute; z-index: 0; top: 2px; left: 0; height: calc(var(--h-ctl) - 4px); width: var(--tw, 0); translate: var(--tx, 0) 0;
+  border-radius: calc(var(--h-ctl) / 2 - 2px); background: var(--f-thumb); box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 3px 8px -3px rgba(0,0,0,.4);
+  transition: translate .2s var(--spring), width .2s var(--spring); }
+.skin-glass .seg button { position: relative; z-index: 1; min-width: 0; height: calc(var(--h-ctl) - 4px); padding: 0 6px; border: 0; border-radius: calc(var(--h-ctl) / 2 - 2px);
+  background: none; box-shadow: none; font: 400 var(--fs-2)/calc(var(--h-ctl) - 4px) var(--ui); color: var(--t1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  font-variant-numeric: tabular-nums; transition: background-color .15s, scale .2s var(--spring); }
+.skin-glass .seg button[aria-pressed=true] { font-weight: 600; color: var(--t1); background: none; box-shadow: none; }
+.skin-glass .seg:not(:has(.seg-thumb)) button[aria-pressed=true] { background: var(--f-thumb); } /* (one made with no thumb) */
+/* the switch: a white knob in both states, the accent's track when on (its click slides it, then the pick applies) */
+.skin-glass .switch { --ch: 26px; position: relative; flex: none; width: 44px; height: 26px; border-radius: 13px; background: rgba(255,255,255,.16); box-shadow: inset 0 1px 2px rgba(0,0,0,.22); transition: background-color .2s; }
+.skin-glass .switch::after { top: 2px; left: 2px; width: 22px; height: 22px; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.28), 0 2px 6px -1px rgba(0,0,0,.32); transform: none; transition: translate .2s var(--spring); }
+.skin-glass .switch[aria-checked=true] { background: var(--acc); box-shadow: none; }
+.skin-glass .switch[aria-checked=true]::after { translate: 18px 0; transform: none; background: #fff; }
+@media (pointer: coarse) { .skin-glass .switch { --ch: 32px; width: 52px; height: 32px; border-radius: 16px; } .skin-glass .switch::after { width: 28px; height: 28px; } .skin-glass .switch[aria-checked=true]::after { translate: 20px 0; } }
+/* (a finger: 44 px to touch, whatever's drawn — the switch, a segment, a folded note's line, the steppers, a small button, the queue's) */
+@media (pointer: coarse) {
+  .skin-glass :is(.switch, .gs-help > summary, .stepper .step)::before, .skin-glass :is(.pill, .toast-act, .hist-h .link, .singbar .link, #abX)::after { content: ''; display: block; position: absolute; inset: min(0px, calc((100% - 44px) / 2)) min(0px, calc((100% - 44px) / 2)); height: auto; transform: none; background: none; }
+  .skin-glass .gs-help > summary { position: relative; overflow: visible; } /* (its words cut in their own box: cut here, its area to touch went with them) */
+  .skin-glass .seg button { height: calc(var(--h-ctl) + 4px); margin-block: -4px; padding-block: 4px; background-clip: content-box; } /* (a segment 44 to touch, its fill drawn 36 as before) */
+  .skin-glass .gs-row > :is(.seg, .acts2) { margin-top: 16px; } /* (under a folded note's line: each its own 44 to touch, not one over the other) */
+}
+/* the checkbox (an option a button confirms: the consent's Count me once) */
+.skin-glass :is(.chk, .consent .count-me input) { appearance: none; -webkit-appearance: none; flex: none; display: grid; place-items: center; width: 22px; height: 22px; margin: 0; border-radius: 7px;
+  background: rgba(255,255,255,.36); box-shadow: inset 0 1px 2px rgba(0,0,0,.25); cursor: var(--cur-hand, pointer); }
+.skin-glass :is(.chk, .consent .count-me input):checked { box-shadow: none; background: var(--acc) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230b0d16' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 12.5 4 4 8-9'/%3E%3C/svg%3E") 50% / 16px no-repeat; }
+/* buttons: capsules with the glass's own edge light, never a border. Primary (one a surface) the accent, lit; secondary
+   a fill; tinted (an action in a panel, a toast or a bar) the accent's tint; text buttons the accent alone */
+.skin-glass .pill { --ch: var(--h-ctl); position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: var(--h-ctl); padding: 0 14px;
+  border: 0; border-radius: calc(var(--h-ctl) / 2); color: var(--ink-on-acc); background: linear-gradient(180deg, rgb(255 255 255 / .16), rgb(255 255 255 / 0) 55%, rgb(0 0 30 / .07)), var(--acc);
+  box-shadow: none; font: 600 var(--fs-2)/1 var(--ui); white-space: nowrap; transition: background-color .15s, scale .2s var(--spring); }
+.skin-glass .pill.ghost { color: var(--t1); background: var(--f-btn); box-shadow: none; }
+.skin-glass :is(.pill, .singbar .link)[hidden] { display: none; } /* (hidden is hidden: shown as a capsule, a hidden button showed — Sing's Get AI karaoke with the AI already there or not offered, pushing Done off a phone's screen; the artist page's Play) */
+.skin-glass .pill.tinted { color: var(--acc); background: linear-gradient(rgb(var(--acc-rgb) / .16), rgb(var(--acc-rgb) / .16)), rgba(5,6,11,.3); }
+.skin-glass .pill > * { position: relative; z-index: 1; }
+.skin-glass .pill .ico { width: 16px; height: 16px; stroke: currentColor; }
+.skin-glass .link::after { display: none; }
+.skin-glass .inline-link { color: var(--t1); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; text-decoration-color: rgba(243,246,255,.5); }
+/* the stepper (Skip back / forward): two round buttons, the value between */
+.skin-glass .stepper { --ch: var(--h-ctl); display: flex; align-items: center; gap: 6px; }
+.skin-glass .stepper .step { position: relative; display: grid; place-items: center; width: var(--h-ctl); height: var(--h-ctl); border: 0; border-radius: 50%; background: var(--f-btn); color: var(--t1); box-shadow: none; font-size: 0; }
+.skin-glass .stepper .step svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; }
+.skin-glass .stepper b { min-width: 4.5ch; text-align: center; font: 600 var(--fs-3)/1 var(--ui); color: var(--t1); font-variant-numeric: tabular-nums; }
+/* a slider: a 4 px track, the accent's fill, a white thumb that grows under the pointer and while held — no glow */
+.skin-glass .sl::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: linear-gradient(90deg, var(--acc) var(--p), rgba(255,255,255,.22) var(--p)); }
+.skin-glass .sl::-webkit-slider-thumb { width: 20px; height: 20px; margin-top: -8px; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.4); transition: scale .15s; }
+.skin-glass .sl:active::-webkit-slider-thumb { scale: 1.1; box-shadow: 0 2px 8px rgba(0,0,0,.5); }
+
+/* the theme menu: the themes as tiles (each its own little picture), one line about the picked one, its background */
+.skin-glass .skins { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; padding: 2px 0 0; margin: 0; border: 0; }
+@media (max-width: 400px) { .skin-glass .skins { grid-template-columns: repeat(3, minmax(0, 1fr)); } } /* (a phone 360 wide: four to a row cut Tactical's name) */
+.skin-glass .skin-card { position: relative; align-content: center; height: 82px; padding: 8px 4px 9px; border-radius: var(--r-group); clip-path: none; box-shadow: none; transform: none; }
+.skin-glass .skin-card[aria-pressed=true] { box-shadow: inset 0 0 0 2px var(--acc), inset 0 0 0 4px rgba(5,6,11,.85); }
+.skin-glass .skin-card::after { content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; transition: background-color .15s; }
+.skin-glass .tile-note { margin: 0; padding: var(--row-y) var(--row-x) 2px; font: 400 var(--fs-2)/var(--lh-2) var(--ui); color: var(--t2); }
+
+/* list rows: the queue (and search, an artist, the library): the cover and the name never move — a row's end is a fixed
+   slot, its length at rest, its buttons under the pointer or while it's moved */
+.skin-glass .hist-h { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 32px; padding: 14px var(--row-x) 6px; font: 600 var(--fs-2)/var(--lh-2) var(--ui); color: var(--t2); }
+.skin-glass .hist-h:first-child { padding-top: 6px; }
+.skin-glass .hist-h .link { display: inline-flex; align-items: center; height: var(--h-ctl); margin: -8px 0 -8px auto; padding: 0 14px; border-radius: calc(var(--h-ctl) / 2); color: var(--acc); background: linear-gradient(rgb(var(--acc-rgb) / .16), rgb(var(--acc-rgb) / .16)), rgba(5,6,11,.3); opacity: 1; font: 600 var(--fs-2)/1 var(--ui); }
+.skin-glass .qrow { position: relative; gap: 0; min-height: 56px; padding: 0 4px 0 0; border-radius: var(--r-group); transition: background-color .15s, transform .18s cubic-bezier(.2,.9,.3,1), box-shadow .15s, scale .15s; }
+.skin-glass .qplay { gap: 12px; min-height: 56px; padding: 8px 8px; color: var(--t1); }
+.skin-glass .qplay img, .skin-glass .qplay .cov { width: 40px; height: 40px; border-radius: 8px; }
+.skin-glass .cov { display: grid; place-items: center; flex: none; background: var(--f-rest); color: var(--t2); }
+.skin-glass .cov svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+.skin-glass .qplay span { gap: 0; }
+.skin-glass .qplay b { font: italic 500 19px/22px var(--display); color: var(--t1); }
+.skin-glass .qplay small { opacity: 1; font: 400 var(--fs-2)/var(--lh-2) var(--ui); color: var(--t2); }
+.skin-glass .qend { position: relative; flex: none; display: flex; align-items: center; justify-content: flex-end; gap: 6px; width: 72px; height: 32px; }
+.skin-glass .qend .len { padding-right: 8px; font: 400 var(--fs-2)/1 var(--ui); color: var(--t2); font-variant-numeric: tabular-nums; transition: opacity .15s; }
+.skin-glass .qend .hv { position: absolute; inset: 0; display: flex; align-items: center; justify-content: flex-end; gap: 4px; opacity: 0; transition: opacity .15s; }
+.skin-glass .qend .hv .icon-btn { width: 32px; height: 32px; color: var(--t2); }
+.skin-glass .qend .hv .icon-btn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; }
+.skin-glass .qrow:is(:hover, :focus-within, .dragging) .qend .len { opacity: 0; } .skin-glass .qrow:is(:hover, :focus-within, .dragging) .qend .hv { opacity: 1; }
+@media (hover: none), (pointer: coarse) { .skin-glass .qend .len { opacity: 0; } .skin-glass .qend .hv { opacity: 1; } .skin-glass .qend:not(:has(.hv)) .len { opacity: 1; } }
+.skin-glass .qrow.dragging { background: rgba(255,255,255,.1); box-shadow: 0 12px 28px rgba(0,0,0,.45); scale: 1.02; }
+.skin-glass .eqz { display: flex; align-items: flex-end; gap: 2px; width: 14px; height: 14px; flex: none; }
+.skin-glass .eqz i { flex: 1; border-radius: 1px; background: var(--acc); }
+.skin-glass .q-empty { padding: var(--row-y) var(--row-x); opacity: 1; font: 400 var(--fs-3)/var(--lh-3) var(--ui); color: var(--t2); }
+.skin-glass .qgrip { opacity: 1; }
+.skin-glass .qgrip.tv-edit { color: var(--t1); background: rgba(255,255,255,.14); }
+
+/* the song's menu: the panel's glass; a head with its cover, the name in the display face; items 40 tall */
+.skin-glass .smenu { gap: 0; overflow: visible; }
+.skin-glass .smenu:popover-open { display: flex; flex-direction: column; }
+.skin-glass .sm-head { display: flex; align-items: center; gap: 12px; margin: 0; padding: 8px 12px 10px; border: 0; }
+.skin-glass .sm-head .cov, .skin-glass .sm-head img { width: 40px; height: 40px; border-radius: 8px; object-fit: cover; flex: none; }
+.skin-glass .sm-head > span { min-width: 0; }
+.skin-glass .sm-head b { font: italic 500 21px/23px var(--display); color: var(--t1); }
+.skin-glass .sm-head small { margin-top: 0; opacity: 1; font: 400 var(--fs-2)/var(--lh-2) var(--ui); color: var(--t2); }
+.skin-glass .mi { gap: 12px; min-height: var(--h-btn); padding: 0 12px; border-radius: var(--r-item); font: 400 var(--fs-3)/var(--lh-3) var(--ui); color: var(--t1); transition: background-color .15s; }
+.skin-glass .mi .ico { width: 20px; height: 20px; margin: 0; color: var(--t2); stroke: currentColor; stroke-width: 1.75; }
+.skin-glass .mi small { opacity: 1; color: var(--t2); font: 400 var(--fs-3)/1 var(--ui); }
+.skin-glass .mi small .ico { width: 16px; height: 16px; display: block; stroke: currentColor; }
+.skin-glass .mi:disabled { opacity: .38; }
+.skin-glass .mi-note { padding: 0 12px 8px 44px; opacity: 1; font: 400 var(--fs-2)/var(--lh-2) var(--ui); color: var(--t2); }
+
+/* a toast: one line, a capsule under the header in the middle of the window; its action inline at its end, tinted */
+.skin-glass .toast { inset: calc(var(--g-head, 62px) + 12px) 0 auto 0; margin-inline: auto; width: max-content; max-width: min(560px, calc(100vw - 32px)); translate: none; border-radius: 22px; }
+.skin-glass .toast { transition: opacity .2s, translate .2s, display .2s allow-discrete, overlay .2s allow-discrete, --la .45s cubic-bezier(.2,.8,.2,1); }
+.skin-glass .toast:not(:popover-open) { opacity: 0; translate: 0 -6px; }
+.skin-glass .toast:popover-open { display: flex; align-items: center; gap: 10px; min-height: var(--h-row); padding: 12px 20px 12px 16px; font: 600 var(--fs-3)/var(--lh-3) var(--ui); color: var(--t1); text-wrap: balance; animation: glDrop .44s var(--g-press) both; }
+.skin-glass .toast.with-act { border-radius: 22px; padding-block: 6px; padding-right: 6px; }
+.skin-glass .toast-act { position: relative; display: inline-flex; align-items: center; flex: none; height: var(--h-ctl); margin: 0 0 0 4px; padding: 0 14px; border-radius: calc(var(--h-ctl) / 2);
+  color: var(--acc); background: linear-gradient(rgb(var(--acc-rgb) / .16), rgb(var(--acc-rgb) / .16)), rgba(5,6,11,.3); font: 600 var(--fs-3)/1 var(--ui); }
+@keyframes glDrop { from { opacity: 0; transform: translateY(-12px) scale(.94); } 40% { opacity: 1; } }
+
+/* Sing's bar and Repeat a part's: one recipe, one left edge, Repeat a part 8 over Sing's, Sing's 12 over the timeline
+   (--g-slab, the player's height, from the script); their children 36 tall */
+.skin-glass :is(.singbar, .ab-bar) { height: 48px; gap: 10px; padding: 6px 6px 6px 16px; border-radius: 24px; width: min(460px, calc(100vw - 32px)); max-width: none; font: 400 var(--fs-3)/1 var(--ui); white-space: nowrap; }
+.skin-glass .singbar { bottom: calc(var(--g-slab, 150px) + 12px); }
+.skin-glass .ab-bar { bottom: calc(100% + 12px); }
+body.skin-glass.sing:not(.home) .ab-bar { bottom: calc(100% + 12px + 48px + 8px); }
+.skin-glass :is(.singbar > span, .ab-bar .lbl) { font: 600 var(--fs-3)/1 var(--ui); color: var(--t1); }
+.skin-glass .singbar svg { width: 18px; height: 18px; flex: none; stroke: currentColor; stroke-width: 1.75; }
+.skin-glass .singbar .sl { flex: 1; width: auto; min-width: 60px; }
+.skin-glass .singbar b { min-width: 34px; font: 600 var(--fs-2)/1 var(--ui); color: var(--t1); font-variant-numeric: tabular-nums; }
+.skin-glass :is(.singbar .link, .ab-bar .pill) { position: relative; display: inline-flex; align-items: center; height: 36px; padding: 0 14px; border-radius: 18px; font: 600 var(--fs-3)/1 var(--ui); font-variant-numeric: tabular-nums; }
+.skin-glass .singbar .link { color: var(--acc); background: linear-gradient(rgb(var(--acc-rgb) / .16), rgb(var(--acc-rgb) / .16)), rgba(5,6,11,.3); } .skin-glass .singbar .sing-get { background: none; padding: 0 10px; }
+.skin-glass .singbar .sing-ai:not(:empty) { font: 400 var(--fs-2)/1 var(--ui); color: var(--t2); }
+.skin-glass .ab-bar #abX { margin-left: auto; width: 36px; height: 36px; background: var(--f-rest); color: var(--t1); }
+.skin-glass .ab-bar #abX svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; }
+.skin-glass .ab-range { top: 3px; bottom: auto; height: 12px; border: 0; border-radius: 0; background: linear-gradient(var(--t1), var(--t1)) 0 0 / 2px 12px no-repeat, linear-gradient(var(--t1), var(--t1)) 100% 0 / 2px 12px no-repeat, linear-gradient(rgba(243,246,255,.55), rgba(243,246,255,.55)) 0 50% / 100% 2px no-repeat; }
+.skin-glass .voice-ui { bottom: calc(var(--g-slab, 120px) + 14px); border: 0; border-radius: 24px; }
+.skin-glass :is(.singbar, .ab-bar) { transition: opacity .2s, scale .2s, display .2s allow-discrete, --la .45s cubic-bezier(.2,.8,.2,1); }
+.skin-glass :is(.singbar, .ab-bar)[hidden] { opacity: 0; scale: .96; }
+@starting-style { .skin-glass :is(.singbar, .ab-bar):not([hidden]) { opacity: 0; scale: .96; } }
+.skin-glass .voice-ring { background: var(--acc); box-shadow: 0 0 0 calc(var(--lv, 0) * 14px) rgb(var(--acc-rgb) / .3); }
+.skin-glass .voice-text { font: italic 500 20px/1.2 var(--display); }
+.skin-glass .voice-ui small { opacity: 1; font: 400 var(--fs-2)/var(--lh-2) var(--ui); color: var(--t2); }
+/* (a finger's 44 px in the queue and on the bars, after their own sizes: put before them, the queue's lost — its grip and
+   x were 32 on a phone; Sing's voice slider 44 to touch, its track drawn as before) */
+@media (pointer: coarse) { .skin-glass :is(.qrow, .qplay) { min-height: 64px; } .skin-glass .qend { width: 96px; height: 44px; } .skin-glass .qend .hv .icon-btn { width: 44px; height: 44px; } .skin-glass .singbar .sl { height: 44px; }
+  .skin-glass .hist-h { padding-bottom: 10px; } .skin-glass .hist-h:first-child { padding-top: 10px; } } /* (a section's Clear, Turn on or Look again, 44 to touch: it hung 2 px over the row below, which took its last 4 — or, first in a panel, over the body's top edge, which cut them) */
+
+/* the equalizer: its head its name and its switch; the curve a plain line in the accent, its points the glass's dark
+   ringed in it; the presets a segmented row; headphones and loudness rows */
+.skin-glass .eq-top { flex: 1; min-width: 0; } .skin-glass .gp-head.is-sub > .eq-top { display: none; } /* (a list open: its own head, the equalizer's kept in the page) */
+.skin-glass .eq-top h3 { font: 600 var(--fs-4)/var(--lh-4) var(--ui); color: var(--t1); }
+.skin-glass #eqState { display: none; }
+.skin-glass .eq .gp-body { padding-bottom: 6px; } .skin-glass .eq .gp-body > * + * { margin-top: 12px; }
+.skin-glass #eqPresets { display: none; } .skin-glass #eqPreset { display: grid; background: var(--f-group); border-radius: var(--r-group); } .skin-glass .gs-sublist { display: block; margin: 0; }
+.skin-glass .eq.gs-sub .gp-body > :not(.gs-sublist) { display: none; }
+.skin-glass .presets { display: flex; flex-wrap: wrap; gap: 4px; padding: 2px; border-radius: calc(var(--h-ctl) / 2); background: var(--f-well); }
+.skin-glass .presets button { height: calc(var(--h-ctl) - 4px); padding: 0 12px; border: 0; border-radius: calc(var(--h-ctl) / 2 - 2px); background: none; box-shadow: none; color: var(--t1); font: 400 var(--fs-2)/1 var(--ui); }
+.skin-glass .presets button[aria-pressed=true] { background: var(--f-thumb); font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 3px 8px -3px rgba(0,0,0,.4); color: var(--t1); }
+.skin-glass .eq-graph .grid { stroke: rgba(255,255,255,.08); }
+.skin-glass .eq-graph .curve { stroke: var(--acc); stroke-width: 2; filter: none; }
+.skin-glass .eq-graph .node { fill: var(--bg); stroke: var(--acc); stroke-width: 2; }
+.skin-glass .eq-graph .node.tv-edit { r: 12; fill: #fff; stroke: #0b0d16; stroke-width: 2; }
+.skin-glass .eq-graph text { fill: var(--t2); opacity: 1; font: 600 11px var(--ui); letter-spacing: 0; }
+.skin-glass .eq-graph .db { fill: var(--t2); } .skin-glass .eq-graph .db.z { display: none; } .skin-glass #eqFill stop { stop-color: var(--acc) !important; }
+.skin-glass .eq-note { padding: 0 var(--row-x); opacity: 1; font: 400 var(--fs-2)/var(--lh-2) var(--ui); color: var(--t2); }
+.skin-glass :is(.eq-hp, .eq-loud) { gap: 0; border: 0; padding: 0; border-radius: var(--r-group); background: var(--f-group); overflow: clip; font: 400 var(--fs-3)/var(--lh-3) var(--ui); }
+.skin-glass :is(.eq-hp, .eq-loud):empty { display: none; }
+.skin-glass :is(.eq-hp, .eq-loud) > :not(.gs-row) { padding: var(--row-y) var(--row-x); }
+.skin-glass .eq-quality { opacity: 1; font: 400 var(--fs-2)/var(--lh-2) var(--ui); color: var(--t2); }
+.skin-glass .hp-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "k a" "n a"; gap: 2px 12px; align-items: center; }
+.skin-glass .hp-k { grid-area: k; font: 400 var(--fs-3)/var(--lh-3) var(--ui); color: var(--t1); }
+.skin-glass .hp-name { grid-area: n; min-width: 0; gap: 0; }
+.skin-glass .hp-name :is(b, small) { opacity: 1; font: 400 var(--fs-2)/var(--lh-2) var(--ui); letter-spacing: 0; color: var(--t2); }
+.skin-glass .hp-acts { grid-area: a; gap: 8px; margin: 0; }
+.skin-glass .hp-q { height: var(--h-btn); padding: 0 16px; border: 0; border-radius: calc(var(--h-btn) / 2); background: var(--f-rest); box-shadow: inset 0 1px 2px rgba(0,0,0,.2); font: 400 var(--fs-3)/1 var(--ui); color: var(--t1); }
+.skin-glass .hp-item { border: 0; border-radius: var(--r-item); padding: 10px 12px; }
+.skin-glass .hp-note { opacity: 1; font: 400 var(--fs-2)/var(--lh-2) var(--ui); color: var(--t2); }
+
+/* Listen together, Play on, Sync: the same rows; a device playing here has the check */
+.skin-glass .cast-dev { min-height: var(--h-row); padding: var(--row-y) var(--row-x); border: 0; border-radius: var(--r-group); font: 400 var(--fs-3)/var(--lh-3) var(--ui); color: var(--t1); }
+.skin-glass .cast-dev small { opacity: 1; color: var(--t2); font: 400 var(--fs-2)/var(--lh-2) var(--ui); }
+.skin-glass .cast-dev.on { color: var(--t1); background: var(--f-press); }
+.skin-glass .name-in { width: 100%; height: var(--h-btn); padding: 0 16px; border: 0; border-radius: calc(var(--h-btn) / 2); background: var(--f-rest); box-shadow: inset 0 1px 2px rgba(0,0,0,.2);
+  margin: 0; color: var(--t1); font: 400 var(--fs-3)/1 var(--ui); letter-spacing: 0; text-transform: none; outline: none; }
+.skin-glass .name-in::placeholder { color: var(--t2); opacity: 1; }
+.skin-glass .name-in[aria-label="Session code"] { font: 500 17px/1 'Martian Mono', ui-monospace, monospace; letter-spacing: .06em; }
+.skin-glass .name-in[aria-label="Session code"]::placeholder { font: 400 var(--fs-3)/1 var(--ui); letter-spacing: 0; }
+.skin-glass .name-in:focus { background: var(--f-hover); box-shadow: inset 0 0 0 2px var(--acc); }
+
+/* dialogs: the consent (Legal's words: a lead in t1, the rest as paragraphs in t2, Count me once a checkbox on its option
+   row), the small ones; actions at the end, 8 apart; the card stays put (the window buttons inside it), its glass grows
+   in, its words follow */
+.skin-glass .consent { border-radius: 28px; color: var(--t1); overflow-wrap: break-word; transition: display .2s allow-discrete, overlay .2s allow-discrete, --la .45s cubic-bezier(.2,.8,.2,1); }
+.skin-glass #consent { padding: 28px 28px 24px; }
+.skin-glass .consent:not([open]) > *, .skin-glass .consent:not([open])::before, .skin-glass .consent:not([open])::after { opacity: 0; transition: opacity .2s; }
+.skin-glass .consent .kicker { font: 600 var(--fs-2)/var(--lh-2) var(--ui); color: var(--t2); }
+.skin-glass .consent h2 { margin: 6px 0 14px; font: italic 500 36px/38px var(--display); letter-spacing: -.005em; color: var(--t1); }
+.skin-glass .consent p { margin: 0 0 10px; font: 400 var(--fs-3)/22px var(--ui); color: var(--t2); }
+.skin-glass .consent .c-p { display: block; margin-bottom: 10px; }
+.skin-glass .consent .c-lead { display: block; margin-bottom: 12px; font: 400 var(--fs-4)/24px var(--ui); color: var(--t1); }
+.skin-glass .consent .count-me { align-items: center; gap: 12px; margin: 16px calc(-1 * var(--row-x)) 0; padding: var(--row-y) var(--row-x); border-radius: var(--r-group); background: var(--f-group);
+  font: 400 var(--fs-3)/var(--lh-3) var(--ui); color: var(--t1); cursor: var(--cur-hand, pointer); }
+.skin-glass .consent .count-me b { font-weight: 400; color: var(--t1); }
+.skin-glass .consent .acts { flex-wrap: wrap; gap: 8px; margin-top: 20px; }
+.skin-glass .consent .acts :is(.link, .pill) { position: relative; display: inline-flex; align-items: center; justify-content: center; height: var(--h-btn); padding: 0 18px; border-radius: calc(var(--h-btn) / 2); font: 600 var(--fs-3)/1 var(--ui); }
+.skin-glass .consent .acts .link { color: var(--t1); background: var(--f-btn); }
+.skin-glass .consent .acts .link.danger { color: #ffb3bb; }
+.skin-glass .name-prompt { padding: 20px; }
+.skin-glass .name-prompt .kicker { margin: 0 0 14px; font: italic 500 28px/1.1 var(--display); color: var(--t1); }
+.skin-glass .name-prompt .acts { margin-top: 16px; }
+.skin-glass .consent[open] { animation: none; }
+.skin-glass .consent[open]::before, .skin-glass .consent[open]::after { animation: glDlg .54s var(--g-spring) both; }
+.skin-glass .consent[open] > * { animation: glDlgIn .36s both; }
+@keyframes glDlg { from { opacity: 0; transform: scale(.96); } 30% { opacity: 1; } }
+@keyframes glDlgIn { 0%, 44% { opacity: 0; } 100% { opacity: 1; } }
+.skin-glass .consent::backdrop { background: rgba(2,3,8,.55); }
+@media (pointer: coarse) { .skin-glass .consent .acts { flex-direction: column-reverse; align-items: stretch; } .skin-glass .consent .acts :is(.link, .pill) { width: 100%; } }
+
 /* the full pages (search, an artist, About): on a computer frosted glass over the backdrop, held still behind them (the
-   player hidden behind them); elsewhere deep glass, near-opaque */
-.skin-glass :is(.search, .about) { background: var(--g-fringe) 30% 0 / 50% 1px no-repeat, radial-gradient(120% 70% at 10% -10%, rgba(150,180,255,.1), transparent 60%), linear-gradient(170deg, #0a0d18, #05060b 62%); }
-.skin-glass.gl-sheets :is(.search, .about) { background: var(--g-fringe) 30% 0 / 50% 1px no-repeat, linear-gradient(180deg, color-mix(in srgb, var(--bg) 34%, transparent), color-mix(in srgb, var(--bg) 58%, transparent));
+   player hidden behind them, once the page covers it); elsewhere deep glass, near-opaque */
+.skin-glass :is(.search, .about) { background: radial-gradient(120% 70% at 10% -10%, rgba(150,180,255,.1), transparent 60%), linear-gradient(170deg, #0a0d18, #05060b 62%); }
+.skin-glass.gl-sheets :is(.search, .about) { background: linear-gradient(180deg, color-mix(in srgb, var(--bg) 34%, transparent), color-mix(in srgb, var(--bg) 58%, transparent));
   -webkit-backdrop-filter: blur(40px) saturate(1.6) brightness(.78); backdrop-filter: blur(40px) saturate(1.6) brightness(.78); }
 .skin-glass.gl-sheets :is(.search, .about)::backdrop { background: transparent; animation: none; }
-.skin-glass.gl-sheets:has(#search[open], #artistPage[open], #about[open]) .frame { visibility: hidden; }
+.skin-glass.gl-sheets:has(#search[open], #artistPage[open], #about[open]) .frame { visibility: hidden; transition: visibility 0s .3s; }
 .skin-glass.gl-sheets .lib .results { background: color-mix(in srgb, var(--bg) 30%, transparent); }
+.skin-glass :is(.search, .about)[open] { animation: glPage .42s var(--g-spring) both; }
+.skin-glass :is(.search, .about) { transition: opacity .3s, display .3s allow-discrete, overlay .3s allow-discrete; }
+.skin-glass :is(.search, .about):not([open]) { opacity: 0; }
+@keyframes glPage { from { opacity: 0; transform: scale(1.02); } }
 .skin-glass .about iframe { background: transparent; border-top-color: rgba(255,255,255,.1); }
-.skin-glass .q { font-family: 'Libre Bodoni', Georgia, serif; }
+.skin-glass .q { font-family: var(--ui); }
+.skin-glass .chip { border: 0; background: var(--f-rest); color: var(--t1); font: 400 var(--fs-2)/1 var(--ui); padding: 9px 14px; }
+.skin-glass .chip[aria-pressed=true] { background: var(--f-thumb); font-weight: 600; color: var(--t1); }
+/* Search: its field a capsule with the lens, the words in the UI face; what it shows a segmented control */
+.skin-glass .q { height: 48px; margin-top: 12px; padding: 0 16px 0 46px; border: 0; border-radius: 24px; box-shadow: inset 0 1px 2px rgba(0,0,0,.2); color: var(--t1); font: 400 17px/1 var(--ui); text-transform: none; letter-spacing: 0;
+  background: var(--f-rest) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ebf0ff' stroke-opacity='.72' stroke-width='1.75' stroke-linecap='round'%3E%3Ccircle cx='10.5' cy='10.5' r='7'/%3E%3Cpath d='m15.6 15.6 5.4 5.4'/%3E%3C/svg%3E") 16px 50% / 20px no-repeat; }
+.skin-glass .q:focus { background-color: var(--f-hover); box-shadow: inset 0 0 0 2px var(--acc); }
+.skin-glass .q::placeholder { color: var(--t2); }
+.skin-glass .s-kinds { display: inline-flex; flex-wrap: nowrap; gap: 2px; width: fit-content; max-width: calc(100% - 24px); margin: 4px 12px 10px; padding: 2px; border-radius: 16px; background: var(--f-well); overflow-x: auto; }
+.skin-glass .s-kinds::-webkit-scrollbar { display: none; }
+.skin-glass .s-kinds .chip { flex: none; height: 28px; padding: 0 12px; border-radius: 14px; background: none; font: 400 var(--fs-2)/28px var(--ui); }
+.skin-glass .s-kinds .chip[aria-pressed=true] { background: var(--f-thumb); font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 3px 8px -3px rgba(0,0,0,.4); }
+.skin-glass .s-top span { opacity: 1; color: var(--t2); }
+/* Play on: the device playing here checked on its title line (its words gone) */
+.skin-glass .cast-dev { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: 12px; }
+.skin-glass .cast-dev small { grid-column: 1; }
+.skin-glass .cast-dev.on { background: none; }
+.skin-glass .cast-dev.on small { display: none; }
+.skin-glass .cast-dev.on::after { content: ''; grid-column: 2; grid-row: 1; width: 18px; height: 18px; background: var(--acc);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 12.5 4.5 4.5L19 7.5'/%3E%3C/svg%3E") center / 18px no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 12.5 4.5 4.5L19 7.5'/%3E%3C/svg%3E") center / 18px no-repeat; }
+.skin-glass .row:focus-visible { padding-left: 12px; background: var(--f-row); color: var(--t1); border-radius: 14px; }
+@media (hover: hover) and (pointer: fine) { .skin-glass .row:hover { padding-left: 12px; background: var(--f-row); color: var(--t1); box-shadow: none; border-radius: 14px; } }
+.skin-glass .row:hover { padding-left: 12px; }
+.skin-glass .row:focus-visible { box-shadow: inset 0 0 0 2px var(--acc); }
+.skin-glass .row:is(:hover, :focus-visible) .idx, .skin-glass .ritem:has(.row:hover, .row:focus-visible) .rmore { color: inherit; }
+.skin-glass .row small { opacity: 1; font: 400 var(--fs-2)/var(--lh-2) var(--ui); color: var(--t2); }
+.skin-glass .ltile { border-radius: var(--r-group); background: var(--f-group); box-shadow: none; } .skin-glass .ltile.ghost::before { border-radius: 10px; border-color: rgba(255,255,255,.18); }
+.skin-glass .ltile .lt-ring { display: none; } /* (the library's tiles: the icon alone — no ring of words round it) */
+.skin-glass .ltile .ico { width: 24px; height: 24px; filter: none; stroke: var(--t1); stroke-width: 1.75; }
+.skin-glass .lt-n { left: 10%; bottom: 8%; font: 600 var(--fs-2)/1 var(--ui); color: var(--t2); font-variant-numeric: tabular-nums; }
+.skin-glass .top-hit { border: 0; background: var(--f-group); box-shadow: none; border-radius: 22px; }
+
+/* states: hover only where there's a mouse; pressed on every press (touch too: the script's .pressed); one selected look a
+   kind; the keyboard's ring in the accent, following each shape; on a TV the control lifts, inverted */
+@media (hover: hover) and (pointer: fine) {
+  .skin-glass .gs-row.is-nav:hover, .skin-glass :is(.qrow, .cast-dev):hover { background: var(--f-row); }
+  .skin-glass .mi:hover { background: var(--f-hover); }
+  .skin-glass .seg button:not([aria-pressed=true]):hover, .skin-glass .presets button:not([aria-pressed=true]):hover { background: rgba(255,255,255,.06); }
+  .skin-glass .switch:hover { background: rgba(255,255,255,.22); }
+  .skin-glass .switch[aria-checked=true]:hover { background: color-mix(in srgb, var(--acc), white 12%); }
+  .skin-glass .pill:not(.ghost, .tinted, :disabled):hover { background: linear-gradient(180deg, rgb(255 255 255 / .26), rgb(255 255 255 / .06) 55%, rgb(0 0 30 / .04)), var(--acc); }
+  .skin-glass :is(.pill.ghost, .stepper .step, .consent .acts .link):not(:disabled):hover { background: var(--f-hover); }
+  .skin-glass :is(.pill.tinted, .toast-act, .singbar .link, .hist-h .link):hover { background: linear-gradient(rgb(var(--acc-rgb) / .24), rgb(var(--acc-rgb) / .24)), rgba(5,6,11,.3); }
+  .skin-glass :is(.gp-back, .gp-up, .qend .icon-btn, .nudge button, #abX):hover { background: rgba(255,255,255,.1); }
+  .skin-glass .skin-card:hover::after { background: rgba(255,255,255,.06); }
+  .skin-glass .chip:hover { background: var(--f-hover); color: var(--t1); }
+}
+.skin-glass :is(.pill, .seg button, .stepper .step, .toast-act, .consent .acts .link, .singbar .link, .hist-h .link, .mi, .gs-row.is-nav).pressed { scale: .97; transition-duration: .08s; }
+.skin-glass :is(.pill.ghost, .stepper .step, .consent .acts .link).pressed { background: var(--f-press); }
+.skin-glass .pill:not(.ghost, .tinted).pressed { background: linear-gradient(180deg, rgb(0 0 30 / .06), rgb(0 0 30 / .12)), var(--acc); }
+.skin-glass :is(.pill.tinted, .toast-act, .singbar .link, .hist-h .link).pressed { background: linear-gradient(rgb(var(--acc-rgb) / .3), rgb(var(--acc-rgb) / .3)), rgba(5,6,11,.3); }
+.skin-glass .seg button.pressed { background: var(--f-press); }
+.skin-glass :is(.mi, .gs-row.is-nav).pressed { background: var(--f-press); }
+.skin-glass :is(.skip, .icon-btn, .files > .link, .to-home).pressed { scale: .92; }
+.skin-glass :is(.pill, .seg button, .switch, .mi, .stepper .step, .consent .acts .link):disabled, .skin-glass .gs-row.is-off { opacity: .38; pointer-events: none; cursor: var(--cur, default); }
+.skin-glass.kb :is(.pill, .switch, .gp-back, .gp-up, .stepper .step, .consent .acts .link, .toast-act, .singbar .link, .hist-h .link, .qend .icon-btn, #abX, .skin-card, .chip, .chk, .count-me input, .name-in):focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
+.skin-glass.kb :is(.seg button, .presets button, .gs-help > summary):focus-visible { outline: 2px solid var(--acc); outline-offset: -2px; }
+.skin-glass.kb :is(.gs-row, .mi, .qplay, .cast-dev, .row):focus-visible { outline: 0; box-shadow: inset 0 0 0 2px var(--acc); }
+.skin-glass.kb .gs-help > summary:focus-visible { outline-offset: 2px; }
+.skin-glass .sub { overflow: clip; overflow-clip-margin: 4px; }
+/* a TV, watched from across the room: the focused control lifts, a light platter with dark ink */
+.skin-glass.tv :is(.pill, .switch, .gp-back, .gp-up, .seg button, .presets button, .stepper .step, .consent .acts .link, .toast-act, .singbar .link, .hist-h .link, .qend .icon-btn, .mi, .gs-row.is-nav, .qplay, .cast-dev, .skin-card, .gs-help > summary, .chip, #abX) { transition: scale .16s, background-color .16s, color .16s, box-shadow .16s; }
+.skin-glass.tv :is(.pill, .gp-back, .gp-up, .seg button, .presets button, .stepper .step, .consent .acts .link, .toast-act, .singbar .link, .hist-h .link, .qend .icon-btn, .mi, .gs-row.is-nav, .qplay, .cast-dev, .chip, #abX):focus-visible {
+  outline: 0; scale: 1.06; background: var(--t1); color: #0b0d16; box-shadow: 0 10px 24px rgba(0,0,0,.45); z-index: 2; }
+.skin-glass.tv :is(.mi, .gs-row.is-nav, .qplay, .cast-dev):focus-visible :is(.gs-t, .gs-d, .gs-v, small, b, .ico, svg) { color: #0b0d16; }
+.skin-glass.tv .gs-row.is-nav:focus-visible { border-radius: var(--r-group); }
+.skin-glass.tv :is(.mi, .gs-row.is-nav, .qplay, .cast-dev):focus-visible { scale: 1.02; } .skin-glass.tv .gs-group:has(:focus-visible) { overflow: visible; } /* (a full-width row lifts as far as its panel's body leaves room: it was cut at its sides) */
+.skin-glass.tv .switch:focus-visible { outline: 3px solid var(--t1); outline-offset: 3px; scale: 1.06; box-shadow: 0 10px 24px rgba(0,0,0,.45); }
+.skin-glass.tv .gs-help > summary:focus-visible { outline: 0; scale: 1.04; background: var(--t1); color: #0b0d16; box-shadow: 0 10px 24px rgba(0,0,0,.45); padding: 2px 8px; margin: -2px -8px; border-radius: 10px; }
+.skin-glass.tv .gs-help > summary:focus-visible svg { color: #0b0d16; }
+.skin-glass.tv .skin-card:focus-visible { outline: 3px solid var(--t1); outline-offset: 3px; scale: 1.06; box-shadow: 0 10px 24px rgba(0,0,0,.45); }
+.skin-glass.tv .qrow:has(.qgrip.tv-edit) { translate: 0 -2px; background: rgba(255,255,255,.14); }
+
 /* the lyrics: white light, the word being sung split at its edges (red to one side, blue to the other) */
 .skin-glass .cur .w > span { --dim: color-mix(in srgb, var(--ink) 19%, transparent); }
 .skin-glass .cur .w.now > span { filter: drop-shadow(-.018em 0 0 rgba(255,70,112,.5)) drop-shadow(.018em 0 0 rgba(70,160,255,.5)) drop-shadow(0 0 .3em rgba(190,212,255,.38)); }
@@ -2038,12 +2460,13 @@ body.skin-glass.sing:not(.home) .ab-bar { bottom: calc(100% + 66px); }
 .skin-glass .msg { font-size: clamp(38px, 9vw, 150px); line-height: .94; letter-spacing: .01em; }
 .skin-glass .msg em { color: #dfe8ff; text-shadow: -.02em 0 0 rgba(255,70,112,.45), .02em 0 0 rgba(70,160,255,.45); }
 .skin-glass :is(.cta span, .hint b, .home-now em) { color: #fff; }
+.skin-glass .home-stage .hint b { font-weight: 600; }
 /* (the welcome's small words — the keys' hint, the terms' links — over the scene's bright lines: at half strength they
    read 1.4 : 1 where the light crossed them; lighter here, on a soft shade of their own, as the dock's words are) */
-.skin-glass .home-stage :is(.hint, .legal-line) { position: relative; isolation: isolate; width: fit-content; opacity: 1; color: rgba(232,238,255,.74); text-shadow: 0 0 2px rgba(3,4,10,.95), 0 0 6px rgba(3,4,10,.9); }
+.skin-glass .home-stage :is(.hint, .legal-line) { position: relative; isolation: isolate; width: fit-content; opacity: 1; font: 400 13px/18px var(--ui); color: rgba(235,240,255,.72); text-shadow: 0 0 2px rgba(3,4,10,.95), 0 0 6px rgba(3,4,10,.9); }
 .skin-glass .home-stage :is(.hint, .legal-line)::before { content: ''; position: absolute; inset: -6px -16px; z-index: -1; border-radius: 24px; pointer-events: none; background: rgba(3,4,10,.55); filter: blur(7px); }
 .skin-glass .spot-move .sm-note { opacity: .75; } /* (.6 read 4.3 : 1 on the frosted card) */
-.skin-glass .cs-line { color: #fff; text-shadow: 0 0 24px rgba(170,200,255,.45); }
+.skin-glass .cs-line { color: #fff; }
 /* the fades: never on what holds the glass (see above) — the header's and player's contents fade, not their rows; on
    the way back the lenses grow in (the script's glassGrow). Every fade: full screen, the visualiser, and Settings › Hide
    controls on the song's page (a faded row there took the glass's backdrop away: clear for the fade's 0.7 s) */
@@ -2058,9 +2481,8 @@ body.skin-glass.sing:not(.home) .ab-bar { bottom: calc(100% + 66px); }
 .skin-glass.lib-open :is(.top > *, .mid, .bottom > :not(.scrub), .scrub > *) { opacity: 0; visibility: hidden; transition: opacity .4s, visibility 0s .4s; }
 /* Solid picked in Settings › Glass: as less transparency asked for, below — nothing shows through (the controls were
    left tinted, the panels, toasts and dialogs frosted) */
-.skin-glass.gl-solid :is(.top-l, .mood, .files, .bar, .singbar, .ab-bar, .moods, .eq, .smenu, .voice-ui, .toast) { -webkit-backdrop-filter: none; backdrop-filter: none;
+.skin-glass.gl-solid :is(.top-l, .mood, .files, .bar) { -webkit-backdrop-filter: none; backdrop-filter: none;
   background: color-mix(in srgb, var(--bg) 95%, transparent); box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.55), var(--g-drop); }
-.skin-glass.gl-solid .consent::before { -webkit-backdrop-filter: none; backdrop-filter: none; background: color-mix(in srgb, var(--bg) 96%, transparent); box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.55); }
 .skin-glass.gl-solid :is(.top-l, .mood, .files, .bar)::after { display: none; }
 /* less transparency or more contrast asked for: solid, with a clear edge; forced colours: the system's */
 @media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
@@ -2077,7 +2499,7 @@ body.skin-glass.sing:not(.home) .ab-bar { bottom: calc(100% + 66px); }
     background: Canvas !important; color: CanvasText; border: 1px solid CanvasText; }
   .skin-glass .top-l { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; background: Canvas !important; color: CanvasText; }
   .skin-glass .consent::before, .skin-glass .consent.gl-over { backdrop-filter: none; background: Canvas; border: 1px solid CanvasText; }
-  .skin-glass :is(.top-l, .mood, .files, .bar, .singbar, .ab-bar)::before, .skin-glass :is(.top-l, .mood, .files, .bar)::after { display: none; }
+  .skin-glass :is(.top-l, .mood, .files, .bar, .singbar, .ab-bar, .moods, .eq, .smenu, .voice-ui, .toast, .pill, .seg-thumb)::before, .skin-glass :is(.top-l, .mood, .files, .bar)::after, .skin-glass .consent::after { display: none; }
 }
 /* a narrow window, a phone: the name bare, as NetherFlow's own has it, so the mood fits beside it (two rows, not three);
    the header's icons a row of their own, full width */
@@ -2087,7 +2509,7 @@ body.skin-glass.sing:not(.home) .ab-bar { bottom: calc(100% + 66px); }
   .skin-glass .mood { height: 42px; padding: 0 16px 0 13px; }
 }
 @media (max-width: 900px) and (forced-colors: none) { /* (and a soft shade of its own behind the bare name: the light along the top never washes it out) */
-  .skin-glass .top .top-l::after { content: ''; position: absolute; pointer-events: none; display: block; inset: -12px -22px; z-index: 0; opacity: 1; border-radius: 32px; transition: none; background: radial-gradient(closest-side, rgba(3,4,10,.58), rgba(3,4,10,.32) 72%, transparent); -webkit-mask: none; mask: none; }
+  .skin-glass .top .top-l::after { content: ''; position: absolute; pointer-events: none; display: block; inset: -12px -22px; z-index: 0; opacity: 1; border-radius: 32px; transition: none; background: radial-gradient(closest-side, rgba(3,4,10,.68), rgba(3,4,10,.42) 72%, transparent); -webkit-mask: none; mask: none; } /* (.68: the name and its FM over the brightest scenes) */
   .skin-glass .top .top-l.ink-dark::after { background: radial-gradient(closest-side, rgba(250,251,255,.62), rgba(250,251,255,.36) 72%, transparent); } /* (dark ink, over something bright: a light shade) */
   .skin-glass .top .top-l .brand { text-shadow: 0 0 2px rgba(3,4,10,.9), 0 0 7px rgba(3,4,10,.85); } /* (no glass under the bare name to hold what's bright: its own wide halo kept) */
   .skin-glass .top .top-l .to-home svg { filter: drop-shadow(0 0 2.5px rgba(3,4,10,.75)); }
@@ -2169,8 +2591,8 @@ body.skin-glass.sing:not(.home) .ab-bar { bottom: calc(100% + 66px); }
 <div class="frame">
   <header class="top">
     <div class="top-l"><button id="toHome" class="to-home nav-ico" aria-label="Back to the home screen (the song plays on)" title="Home"><svg viewBox="0 0 24 24"><path d="M14.5 5.5L8 12l6.5 6.5"/></svg></button>
-    <button id="brand" class="brand" data-legal="" aria-label="About NetherFlow"><svg class="brand-mark" viewBox="0 0 376 234" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"><path transform="translate(100 0)" d="M8 92L8 8L62 92L62 8"/><path transform="translate(186 0)" d="M82 50A37 42 0 1 1 8 50A37 42 0 1 1 82 50Z"/><path transform="translate(0 134)" d="M8 8L8 92L50 92"/><path transform="translate(74 134)" d="M82 50A37 42 0 1 1 8 50A37 42 0 1 1 82 50Z"/><path transform="translate(180 134)" d="M68.8 17.8A37 42 0 1 0 81.9 53.7L52 53.7"/><path transform="translate(286 134)" d="M82 50A37 42 0 1 1 8 50A37 42 0 1 1 82 50Z"/></g></svg>NetherFlow<sup>FM</sup></button></div>
-    <button id="mood" class="mood lbl" popovertarget="moods" title="Pick a mood (M cycles)"><i></i><span>Mood</span> <b id="moodName">Ember</b><span class="hud" aria-hidden="true"><i class="hud-l"></i><b class="hud-sl">0</b><b class="hud-t">0:00</b><b class="hud-sr">0</b><i class="hud-r"></i></span><span class="dash" aria-hidden="true"><b class="d-gear">N</b><b class="d-spd">0</b><small>KM/H</small></span></button>
+    <button id="brand" class="brand" data-legal="" aria-label="About NetherFlow"><svg class="brand-mark" viewBox="0 0 376 234" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"><path transform="translate(100 0)" d="M8 92L8 8L62 92L62 8"/><path transform="translate(186 0)" d="M82 50A37 42 0 1 1 8 50A37 42 0 1 1 82 50Z"/><path transform="translate(0 134)" d="M8 8L8 92L50 92"/><path transform="translate(74 134)" d="M82 50A37 42 0 1 1 8 50A37 42 0 1 1 82 50Z"/><path transform="translate(180 134)" d="M68.8 17.8A37 42 0 1 0 81.9 53.7L52 53.7"/><path transform="translate(286 134)" d="M82 50A37 42 0 1 1 8 50A37 42 0 1 1 82 50Z"/></g></svg><span class="wm">NetherFlow<sup>FM</sup></span></button></div>
+    <button id="mood" class="mood lbl" popovertarget="moods" title="Pick a mood (M cycles)"><i></i><span class="k">Mood</span> <b id="moodName">Ember</b><svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9.5 6 6 6-6"/></svg><span class="hud" aria-hidden="true"><i class="hud-l"></i><b class="hud-sl">0</b><b class="hud-t">0:00</b><b class="hud-sr">0</b><i class="hud-r"></i></span><span class="dash" aria-hidden="true"><b class="d-gear">N</b><b class="d-spd">0</b><small>KM/H</small></span></button>
     <nav class="files lbl">
       <!-- Search: a lens with a sound wave in it. Library: a record sliding out of its sleeve. -->
       <button id="openSearch" class="link hot nav-ico" aria-label="Search (/)" title="Search (/)"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="7"/><path d="M15.6 15.6L21 21M7.5 9.5v2M10.5 7.5v6M13.5 9v3"/></svg></button>
@@ -2182,10 +2604,12 @@ body.skin-glass.sing:not(.home) .ab-bar { bottom: calc(100% + 66px); }
       <button id="textBtn" class="link nav-ico" popovertarget="textPanel" aria-label="Settings" title="Settings"><svg viewBox="0 0 24 24"><path d="M10.11 4.95 L10.65 2.39 A9.7 9.7 0 0 1 13.35 2.39 L13.89 4.95 A7.3 7.3 0 0 1 15.65 5.68 L17.84 4.25 A9.7 9.7 0 0 1 19.75 6.16 L18.32 8.35 A7.3 7.3 0 0 1 19.05 10.11 L21.61 10.65 A9.7 9.7 0 0 1 21.61 13.35 L19.05 13.89 A7.3 7.3 0 0 1 18.32 15.65 L19.75 17.84 A9.7 9.7 0 0 1 17.84 19.75 L15.65 18.32 A7.3 7.3 0 0 1 13.89 19.05 L13.35 21.61 A9.7 9.7 0 0 1 10.65 21.61 L10.11 19.05 A7.3 7.3 0 0 1 8.35 18.32 L6.16 19.75 A9.7 9.7 0 0 1 4.25 17.84 L5.68 15.65 A7.3 7.3 0 0 1 4.95 13.89 L2.39 13.35 A9.7 9.7 0 0 1 2.39 10.65 L4.95 10.11 A7.3 7.3 0 0 1 5.68 8.35 L4.25 6.16 A9.7 9.7 0 0 1 6.16 4.25 L8.35 5.68 A7.3 7.3 0 0 1 10.11 4.95Z"/><circle cx="12" cy="12" r="3"/></svg></button>
       <button id="eqBtn" class="link fs-btn" popovertarget="eqPanel" aria-label="Equalizer" title="Equalizer">
         <svg viewBox="0 0 14 14"><path d="M2 1v12M7 1v12M12 1v12"/><path d="M.5 9h3M5.5 4h3M10.5 7h3" stroke-width="2"/></svg>
+        <svg class="g24" viewBox="0 0 24 24"><path d="M6 4v8.5M6 16.5V20M12 4v2.5M12 10.5V20M18 4v6.5M18 14.5V20"/><circle cx="6" cy="14.5" r="2"/><circle cx="12" cy="8.5" r="2"/><circle cx="18" cy="12.5" r="2"/></svg>
       </button>
       <button id="fsBtn" class="link fs-btn" aria-label="Full screen (F)" title="Full screen (F)">
         <svg class="i-enter" viewBox="0 0 14 14"><path d="M1 5V1h4M9 1h4v4M13 9v4H9M5 13H1V9"/></svg>
         <svg class="i-exit" viewBox="0 0 14 14"><path d="M5 1v4H1M13 5H9V1M9 13V9h4M1 9h4v4"/></svg>
+        <svg class="g24 g24-in" viewBox="0 0 24 24"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg><svg class="g24 g24-out" viewBox="0 0 24 24"><path d="M9 4v5H4M20 9h-5V4M15 20v-5h5M4 15h5v5"/></svg>
       </button>
     </nav>
   </header>
@@ -2238,7 +2662,7 @@ body.skin-glass.sing:not(.home) .ab-bar { bottom: calc(100% + 66px); }
       <button id="nextBtn" class="skip" aria-label="Next" disabled><svg viewBox="0 0 24 24"><path d="M16.5 4H19v16h-2.5zM4 4.8v14.4a1 1 0 0 0 1.5.86l9.9-6.76a1.5 1.5 0 0 0 0-2.6L5.5 3.94A1 1 0 0 0 4 4.8z"/></svg></button>
       <button id="fwdBtn" class="skip jump" aria-label="Forward 10 seconds" disabled><svg viewBox="0 0 24 24"><path class="arc" d="M18.8 9.2A7.6 7.6 0 1 0 19.6 13"/><path class="tip" d="M19.8 4.6v4.9h-4.9"/><text x="12" y="15.6">10</text></svg></button>
       <button id="shuffleBtn" class="icon-btn rep" aria-label="Shuffle: off" aria-pressed="false" data-mode="off"><svg viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round"><path d="M3.5 7.5h3.2c1.5 0 2.9.8 3.7 2l2.9 4.5c.8 1.2 2.2 2 3.7 2h2.5M17.5 13l3 3-3 3M3.5 16h3.2c1.1 0 2.1-.4 2.8-1.1M14.4 9.1c.7-.7 1.7-1.1 2.8-1.1h2.3M17.5 5l3 3-3 3"/></svg></button>
-      <button id="repeatBtn" class="icon-btn rep" aria-label="Repeat: off" data-mode="off"><svg viewBox="0 0 24 24"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg><b>1</b></button>
+      <button id="repeatBtn" class="icon-btn rep" aria-label="Repeat: off" data-mode="off"><svg viewBox="0 0 24 24"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg><svg class="g24" viewBox="0 0 24 24"><path d="M4.5 12.5V11a3.5 3.5 0 0 1 3.5-3.5h11M19.5 11.5V13a3.5 3.5 0 0 1-3.5 3.5H5"/><path d="m16 4.5 3 3-3 3M8 13.5l-3 3 3 3"/></svg><b>1</b></button>
       </div>
       <div class="now">
         <button id="nowCover" class="now-cover" aria-label="Show the cover" hidden></button>
@@ -2440,7 +2864,8 @@ const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls)
 const pad = n => String(n).padStart(2, '0');
 const fmt = s => isFinite(s) ? `${pad(Math.floor(s / 60))}:${pad(Math.floor(s % 60))}` : '00:00';
 const hash = s => [...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
-const status = s => { $('status').textContent = s; };
+const status = s => { const e = $('status'); e.textContent = s; e.classList.toggle('st-live', /^[●◌◇▶]/.test(s)); e.classList.toggle('st-saved', /^◆.*\bsaved\b/.test(s)); }; // (live: loading, waiting, an error — what Glass shows in place of the artist; saved: its sign after the artist)
+const fmtG = s => isFinite(s) ? `${Math.floor(s / 60)}:${pad(Math.floor(s % 60))}` : '0:00'; // (Glass's times: m:ss)
 let audio = new Audio(), audioB = new Audio(); // (songs' players: Smooth mix readies the next song in the second, and the two swap places as it blends in)
 // podcasts' episodes and audiobooks' chapters play in one of their own, never wired into this page's sound graph: their
 // hosts mostly don't let a page read their sound (and one that can't is heard as silence through the graph), and talk
@@ -3516,9 +3941,20 @@ const GLASS_LENS = [['.top-l', 'cap'], ['#mood', 'cap'], ['.files', 'cap'], ['.b
 // blurred a hair first (the filter moves whole pixels: stair-steps on sharp lines otherwise). css: done to what's behind first.
 const GLASS_KIND = {
   cap: { prof: 'drop', M: 2.75, q: 4.6, e: .06, soft: .5, base: .15, a: .56, ad: .45, edge: .42, sheen: .2, band: .34, cau: .16, w: .08, g: 1.05, sat: 1.3, css: 'saturate(1.18)' },
-  dock: { prof: 'bezel', tb: .6, D: .3, e: .05, soft: .5, frost: 12, fz: [6.4, 14], a: .64, ad: .4, edge: .4, sheen: .2, band: .3, cau: .16, w: .08, g: 1.05, sat: 1.3, css: 'saturate(1.3)' } };
+  dock: { prof: 'bezel', tb: .6, D: .3, e: .05, soft: .5, frost: 12, fz: [6.4, 14], a: .64, ad: .4, edge: .4, sheen: .2, band: .3, cau: .16, w: .08, g: 1.05, sat: 1.3, css: 'saturate(1.3)' },
+  // a panel's own (the panels, the menu, a toast, the bars, the dialogs): the dock's bezel (its rim pulling as far as it
+  // can and never fold: D under 4/9 — the slope of where each point looks stays above 0), its frost held calmer under
+  // small words (frost 12 — the dock's: at 16 the blur alone cost a 1080p frame .28 ms, measured — a .86: grey words 4.5 : 1
+  // over the lyrics' brightest white), its colour carried through (fsat: the
+  // frost saturated after the blur, so the scene's thin lights come through as soft glows; 1.6 over a picture or the
+  // music video, the script's glassPanelTint). Lean, a panel being large (at 1080p one is 836 px tall): its picture bent
+  // once (e 0: a split of a 5 px pull is a third of a pixel), neither softened nor saturated first, no light of its own (its
+  // edge lit by the stylesheet, where the light falls; the bent rim shows the scene's own colours) — six passes of its
+  // whole size fewer than the dock's recipe
+  panel: { id: 'panel', prof: 'bezel', tb: .5, D: .42, e: 0, soft: 0, frost: 12, fz: [5, 12], a: .86, ad: .4, fsat: 3, edge: 0, sheen: 0, band: .5, cau: 0, w: 0, g: 1, sat: 1, css: '' } };
+const GLASS_PANEL = '.moods, .eq, .smenu, .voice-ui, .toast, .singbar, .ab-bar, dialog.consent';
 // (the band each capsule's icons and words take, px from its middle line: half their height and 3 px)
-const GLASS_TL = { '.top-l': 12.9, '#mood': 7.8, '.files': 11.5 };
+const GLASS_TL = { '.top-l': 12.9, '#mood': 10.5, '.files': 12 }; // (#mood: its words 15 px since the chip says "Theme · Glass"; .files: its icons 20 px, were 19)
 const GLASS_TIERS = ['lens', 'frost', 'tint']; // (and SVGNS, further down: all of this runs once the script's all there)
 const glass = { tier: '', defs: null, ro: null, bounds: null, maps: new Map(), decoding: [], redo: null, n: 0, grow: 1, gi: 1, raf: 0, gpu: null, fast: false, aim: 0, px: 0, py: 0, from: null, src: new WeakMap(), hid: false, hidAt: 0, glow: '', spec: false, ink: null };
 const glassQuiet = matchMedia('(prefers-reduced-transparency: reduce), (prefers-contrast: more), (forced-colors: active)');
@@ -3573,12 +4009,18 @@ function applyGlass() {
   });
   cancelAnimationFrame(glass.raf); glass.grow = glass.gi = 1;
   for (const e of els) { cancelAnimationFrame(e.glassRaf); e.glassP = null; e.style.removeProperty('--pl'); e.style.removeProperty('transform-origin'); glassOff(e); } // (a press cut short by the change: its light gone with it — it stayed lit)
+  const pans = [...document.querySelectorAll(GLASS_PANEL)];
+  for (const p of pans) { glassOff(p); glassPanelTint(p); }
+  // (the panels: a lens each on a computer, made as one opens and when its size changes — never per frame — and gone
+  // once it's closed; their tint by what's behind them, on lens and frost)
+  glass.pro ||= new ResizeObserver(es => { for (const { target: p } of es) glassPanelOn(p); });
   glass.defs?.replaceChildren();
   if (t !== 'lens' && t !== 'frost') for (const e of els) e.classList.remove('ink-dark'); // (dark ink: over a lens or frost alone — a tint's own colour is dark)
   if (!t || t === 'solid') for (const e of all) { for (const k of ['--la', '--px', '--py', '--pl', '--g', 'scale', 'transform-origin']) e.style.removeProperty(k); e.glassLa = undefined; e.classList.remove('gl-grow'); } // (its light at rest)
-  if (!t) { glass.ro.disconnect(); for (const e of all) e.style.removeProperty('--g-r'); return; } // (the theme gone: nothing of it left behind)
+  if (!t) { glass.ro.disconnect(); glass.pro.disconnect(); for (const e of all) e.style.removeProperty('--g-r'); return; } // (the theme gone: nothing of it left behind)
   glassSpecs();
   for (const e of all) glass.ro.observe(e);
+  for (const p of pans) glass.pro.observe(p);
   if (t === 'lens') {
     if (!glass.defs) {
       const s = document.createElementNS(SVGNS, 'svg');
@@ -3587,13 +4029,14 @@ function applyGlass() {
     }
     glassGlow(); // (the press's light: decoded before a press uses it)
     for (const e of els) glassFit(e);
+    for (const p of pans) if (p.offsetWidth) glassFit(p);
   }
   glassGrow(); // (and they grow in)
   glassInkSoon();
 }
 function glassOff(e) {
   if (!e.glassKey) return;
-  e.style.removeProperty('backdrop-filter'); e.style.removeProperty('-webkit-backdrop-filter');
+  e.style.removeProperty('backdrop-filter'); e.style.removeProperty('-webkit-backdrop-filter'); e.style.removeProperty('--gl-f');
   e.glassFilter?.remove(); e.glassKey = ''; e.glassFilter = e.glassLens = null;
 }
 // (made once: the edge's light as stops round each round end — .06 + .94·lobe(12) + .14·lobe(1.6), lobe(p) = max(n·L, 0)^p
@@ -3649,7 +4092,7 @@ const glassDecoded = url => { const i = new Image(); i.src = url; glass.decoding
 // A capsule's map, h tall: made once as the narrowest one (its two round ends, a texel between), the ends and the middle
 // cut from it, so it takes three pieces whatever its width (a circle, two)
 function glassCap(h, o, tl) {
-  const key = ['cap', h, tl, o.prof].join();
+  const key = ['cap', h, tl, o.id || o.prof].join();
   if (glass.maps.has(key)) return glass.maps.get(key);
   const r = h / 2, c = Math.ceil(r), S = 2 * c + 1, Sc = glassScaleOf(r, o);
   const cv = document.createElement('canvas'); cv.width = S; cv.height = h;
@@ -3663,12 +4106,12 @@ function glassCap(h, o, tl) {
 }
 // A rounded rectangle's map (the dock in a narrow window): four corners c×c, the four edges a texel across (stretched along
 // them), the middle left to the flood under them (no move, frosted) — a few thousand texels whatever its size. k: texels
-// per px (big corners need fewer). Each [href, x, y, w, h, how it follows the width].
+// per px (big corners need fewer). Each [href, x, y, w, h, how it follows the width, how it follows the height].
 function glassRect(w, h, r, o, k) {
   const c = Math.ceil(r), Sc = glassScaleOf(r, o), out = [];
-  const piece = (x0, y0, pw, ph, ix, iy, iw, ih, a = '') => {
+  const piece = (x0, y0, pw, ph, ix, iy, iw, ih, a = '', b = '') => {
     if (iw < .5 || ih < .5) return;
-    const key = ['rect', h, r, x0 < c ? 'l' : x0 > w - c - 1 ? 'r' : 'm', y0 < c ? 't' : y0 > h - c - 1 ? 'b' : 'm', pw, ph, k, o.prof].join();
+    const key = ['rect', h, r, x0 < c ? 'l' : x0 > w - c - 1 ? 'r' : 'm', y0 < c ? 't' : y0 > h - c - 1 ? 'b' : 'm', pw, ph, k, o.id || o.prof].join();
     let href = glass.maps.get(key);
     if (!href) {
       const tw = Math.max(1, Math.round(pw * k)), th = Math.max(1, Math.round(ph * k)), cv = document.createElement('canvas'); cv.width = tw; cv.height = th;
@@ -3676,11 +4119,11 @@ function glassRect(w, h, r, o, k) {
       for (let j = 0; j < th; j++) for (let i = 0; i < tw; i++) glassEnc(im.data, (j * tw + i) * 4, glassTexel(x0 + (i + .5) * pw / tw, y0 + (j + .5) * ph / th, w, h, r, o, .4), Sc);
       g.putImageData(im, 0, 0); glass.maps.set(key, href = glassDecoded(cv.toDataURL('image/png')));
     }
-    out.push([href, ix, iy, iw, ih, a]);
+    out.push([href, ix, iy, iw, ih, a, b]);
   };
-  piece(0, 0, c, c, 0, 0, c, c); piece(w - c, 0, c, c, w - c, 0, c, c, 'r'); piece(0, h - c, c, c, 0, h - c, c, c); piece(w - c, h - c, c, c, w - c, h - c, c, c, 'r');
-  piece(w / 2 - .5, 0, 1, c, c, 0, w - 2 * c, c, 's'); piece(w / 2 - .5, h - c, 1, c, c, h - c, w - 2 * c, c, 's');
-  piece(0, h / 2 - .5, c, 1, 0, c, c, h - 2 * c); piece(w - c, h / 2 - .5, c, 1, w - c, c, c, h - 2 * c, 'r');
+  piece(0, 0, c, c, 0, 0, c, c); piece(w - c, 0, c, c, w - c, 0, c, c, 'r'); piece(0, h - c, c, c, 0, h - c, c, c, '', 'b'); piece(w - c, h - c, c, c, w - c, h - c, c, c, 'r', 'b');
+  piece(w / 2 - .5, 0, 1, c, c, 0, w - 2 * c, c, 's'); piece(w / 2 - .5, h - c, 1, c, c, h - c, w - 2 * c, c, 's', 'b');
+  piece(0, h / 2 - .5, c, 1, 0, c, c, h - 2 * c, '', 's'); piece(w - c, h / 2 - .5, c, 1, w - c, c, c, h - 2 * c, 'r', 's');
   return { Sc, pieces: out };
 }
 // (the filter's matrices: the light's colour — w + g·saturate(s) of what's behind; what holds down under the words —
@@ -3705,7 +4148,7 @@ const glassGlow = () => glass.glow ||= (() => {
 // while it's pressed: never per frame
 function glassFit(e, glow = false) {
   if (glass.tier !== 'lens') return;
-  const w = e.offsetWidth, h = e.offsetHeight, cs = getComputedStyle(e), [q, kind] = GLASS_LENS.find(([q]) => e.matches(q)), o = GLASS_KIND[kind]; // (the laid-out size: a scale in an animation doesn't change it)
+  const w = e.offsetWidth, h = e.offsetHeight, cs = getComputedStyle(e), [q, kind] = GLASS_LENS.find(([q]) => e.matches(q)) || ['', 'panel'], o = GLASS_KIND[kind]; // (the laid-out size: a scale in an animation doesn't change it; anything else, a panel)
   if (!w || !h || cs.getPropertyValue('--g-lens').trim() === '0') return glassOff(e); // (none here: the name bare on a narrow screen)
   const r = Math.min(parseFloat(cs.borderTopLeftRadius) || 0, h / 2, w / 2), dark = e.classList.contains('ink-dark'), key = [w, h, r, dark, glow].join();
   if (e.glassKey === key) return;
@@ -3717,27 +4160,39 @@ function glassFit(e, glow = false) {
     for (const im of f0.querySelectorAll('feImage[data-a]')) { if (im.dataset.a === 'r') im.setAttribute('x', w - c0); else if (im.dataset.a === 's') im.setAttribute('width', w - 2 * c0); }
     return;
   }
+  // (and its height alone, a rounded rectangle's — a panel's as a folded note opens in it: every frame of that, its bottom
+  // pieces moved down, its sides stretched; made anew each frame, 56 new pieces went into a note's .2 s)
+  const k0 = String(e.glassKey || '').split(','), k1 = key.split(',');
+  if (f0 && f0.querySelector('feFlood') && r < h / 2 - .5 && k0.length === k1.length && k0.every((v, i) => i === 1 || v === k1[i]) && 2 * c0 + 1 < h && 2 * c0 + 1 < +f0.getAttribute('height')) {
+    e.glassKey = key; f0.setAttribute('height', h);
+    for (const im of f0.querySelectorAll('feImage[data-b]')) { if (im.dataset.b === 'b') im.setAttribute('y', h - c0); else if (im.dataset.b === 's') im.setAttribute('height', h - 2 * c0); }
+    return;
+  }
   e.glassKey = key;
   const f = document.createElementNS(SVGNS, 'filter'), id = 'glf' + (++glass.n), img = [], drop = o.prof === 'drop', L = glow ? 'light2' : 'light';
   for (const [a, v] of [['id', id], ['x', 0], ['y', 0], ['width', w], ['height', h], ['filterUnits', 'userSpaceOnUse'], ['primitiveUnits', 'userSpaceOnUse'], ['color-interpolation-filters', 'sRGB']]) f.setAttribute(a, v);
-  // (a: how a piece follows the width — fixed at the left, 'r' kept at the right, 's' stretched between)
-  const put = (href, x, y, iw, ih, a = '') => { if (iw > .5 && ih > .5) img.push(`<feImage href="${href}" x="${x}" y="${y}" width="${iw}" height="${ih}" preserveAspectRatio="none" data-a="${a}" result="m${img.length}"/>`); };
+  // (a: how a piece follows the width — fixed at the left, 'r' kept at the right, 's' stretched between; b: the height —
+  // at the top, 'b' kept at the bottom, 's' stretched between)
+  const put = (href, x, y, iw, ih, a = '', b = '') => { if (iw > .5 && ih > .5) img.push(`<feImage href="${href}" x="${x}" y="${y}" width="${iw}" height="${ih}" preserveAspectRatio="none" data-a="${a}" data-b="${b}" result="m${img.length}"/>`); };
   let S, flood = '';
   if (r >= h / 2 - .5) { const T = glassCap(h, o, drop ? Math.min(.9, GLASS_TL[q] / r) : 0), c = Math.min(T.c, w / 2); S = T.Sc; put(T.l, 0, 0, c, h); put(T.m, c, 0, w - 2 * c, h, 's'); put(T.r, w - c, 0, c, h, 'r'); e.glassC = c; }
   else { const R = glassRect(w, h, r, o, r > 30 ? .6 : 1); S = R.Sc; for (const p of R.pieces) put(...p); flood = '<feFlood flood-color="rgb(128,128,0)" result="f0"/>'; e.glassC = Math.ceil(r); }
-  const dm = (s, n) => `<feDisplacementMap in="src" in2="map" scale="0" data-s="${s.toFixed(3)}" xChannelSelector="R" yChannelSelector="G" result="d${n}"/>`;
+  const SRC = o.soft ? 'src' : 'SourceGraphic', lit = o.sat === 1 && o.g === 1 && !o.w ? SRC : 'lit', dim = !drop && !glow && !o.edge && !o.sheen && !o.cau; // (dim: no light of its own — a panel's: its edge lit by the stylesheet — three passes fewer) // (no softening — a panel's: its rim's pull too small for steps to show; its light the scene's own colour as it is: a pass each fewer)
+  const dm = (s, n, res = 'd' + n) => `<feDisplacementMap in="${SRC}" in2="map" scale="0" data-s="${s.toFixed(3)}" xChannelSelector="R" yChannelSelector="G" result="${res}"/>`;
   f.innerHTML = flood + img.join('') + `<feMerge result="map">${flood && '<feMergeNode in="f0"/>'}${img.map((p, i) => `<feMergeNode in="m${i}"/>`).join('')}</feMerge>`
     // the lens: each colour bent from the same picture by a little less, the same, a little more (each bent picture with
     // one use: one used twice is drawn twice)
-    + `<feGaussianBlur in="SourceGraphic" stdDeviation="${o.soft}" result="src"/>${dm(S * (1 - o.e), 'r')}${dm(S, 'g')}${dm(S * (1 + o.e), 'b')}`
+    + (o.soft ? `<feGaussianBlur in="SourceGraphic" stdDeviation="${o.soft}" result="src"/>` : '') + (o.e ? `${dm(S * (1 - o.e), 'r')}${dm(S, 'g')}${dm(S * (1 + o.e), 'b')}`
     + `<feColorMatrix in="dr" type="matrix" values="1 0 0 0 0 ${GLM.Z} ${GLM.Z} ${GLM.A}" result="cr"/><feColorMatrix in="dg" type="matrix" values="${GLM.Z} 0 1 0 0 0 ${GLM.Z} ${GLM.A}" result="cg"/>`
     + `<feColorMatrix in="db" type="matrix" values="${GLM.Z} ${GLM.Z} 0 0 1 0 0 ${GLM.A}" result="cb"/>`
     + `<feComposite in="cr" in2="cg" operator="arithmetic" k2="1" k3="1" result="crg"/><feComposite in="crg" in2="cb" operator="arithmetic" k2="1" k3="1" result="bent"/>`
+      : dm(S, 'g', 'bent')) // (no split — a panel's: its rim pulls 5 px at most, a split of it a third of a pixel, unseen — one picture bent, seven steps fewer)
     // its light, in the colour of what's behind, where the map says — and, pressed, the light under the finger (white at its
     // core, so it shows over a dark room): both before what holds the words, so a press never washes them out
-    + `<feColorMatrix in="src" type="matrix" values="${glassSat(o.sat, o.g, o.w)}" result="lit"/>`
-    + `<feColorMatrix in="map" type="matrix" values="${glassLightV(1)}" result="lightA" data-r="lightA"/><feComposite in="lit" in2="lightA" operator="in" result="light"/>`
-    + (drop ? '' : `<feGaussianBlur in="SourceGraphic" stdDeviation="${o.frost}" result="fr"/>`) // (the dock's frost, its middle)
+    + (dim ? '' : (lit === 'lit' ? `<feColorMatrix in="${SRC}" type="matrix" values="${glassSat(o.sat, o.g, o.w)}" result="lit"/>` : '')
+      + `<feColorMatrix in="map" type="matrix" values="${glassLightV(1)}" result="lightA" data-r="lightA"/><feComposite in="${lit}" in2="lightA" operator="in" result="light"/>`)
+    + (drop ? '' : `<feGaussianBlur in="SourceGraphic" stdDeviation="${o.frost}" result="${o.fsat ? 'fr0' : 'fr'}"/>` // (the dock's frost, its middle; a panel's saturated after it)
+      + (o.fsat ? `<feColorMatrix in="fr0" type="saturate" values="${e.gpSat || o.fsat}" result="fr" data-r="fsat"/>` : ''))
     // (the finger's light the colour of what it lights: a drop's clear picture, the dock's frost — from the clear one the
     // frosted middle went sharp under it — and what holds the words knows of it, the dock's as a drop's: without it, a
     // press on the dock lit its words away, 1.5 : 1 by the finger)
@@ -3751,18 +4206,20 @@ function glassFit(e, glow = false) {
     + (drop ? `<feComposite in="bent" in2="${L}" operator="arithmetic" k2="1" k3="1" result="bl"/><feColorMatrix in="${glow ? 'kin' : 'dg'}" type="matrix" values="${glassKeepV(dark ? o.ad : o.a, dark)}" result="keep"/>`
       : `<feColorMatrix in="map" type="matrix" values="${glassZoneV(1)}" result="zone" data-r="zone"/>`
         + `<feComposite in="bent" in2="zone" operator="in" result="rim"/><feMerge result="body"><feMergeNode in="fr"/><feMergeNode in="rim"/></feMerge>`
-        + `<feComposite in="body" in2="${L}" operator="arithmetic" k2="1" k3="1" result="bl"/><feColorMatrix in="${glow ? 'kin' : 'fr'}" type="matrix" values="${glassKeepV(dark ? o.ad : o.a, dark)}" result="keep"/>`)
+        + (dim ? '' : `<feComposite in="body" in2="${L}" operator="arithmetic" k2="1" k3="1" result="bl"/>`) + `<feColorMatrix in="${glow ? 'kin' : 'fr'}" type="matrix" values="${glassKeepV(dark ? o.ad : o.a, dark)}" result="keep"/>`)
     + `<feColorMatrix in="map" type="matrix" values="${glassHoldV(1)}" result="hold" data-r="hold"/><feComposite in="keep" in2="hold" operator="arithmetic" k1="1" k3="-1" k4="1" result="keepm"/>`
-    + `<feComposite in="bl" in2="keepm" operator="arithmetic" k1="1"${dark ? ' k3="-1" k4="1"' : ''}/>`;
+    + `<feComposite in="${dim ? 'body' : 'bl'}" in2="keepm" operator="arithmetic" k1="1"${dark ? ' k3="-1" k4="1"' : ''}/>`;
   glass.defs.append(f);
   const was = e.glassFilter, by = n => f.querySelector(`[data-r=${n}]`); e.glassFilter = f;
-  e.glassLens = { dms: [...f.querySelectorAll('feDisplacementMap')].map(x => [x, +x.dataset.s]), lightA: by('lightA'), hold: by('hold'), zone: by('zone'), glowI: by('glowI'), glowK: by('glowK'), glowK2: by('glowK2') };
-  glassSet(e);
-  e.style.webkitBackdropFilter = e.style.backdropFilter = `${o.css} url(#${id})`; // (saturated first: what holds the words down is the last thing done — after it, a saturate lifted vivid colours back past it)
+  e.glassLens = { dms: [...f.querySelectorAll('feDisplacementMap')].map(x => [x, +x.dataset.s]), lightA: by('lightA'), hold: by('hold'), zone: by('zone'), glowI: by('glowI'), glowK: by('glowK'), glowK2: by('glowK2'), fsat: by('fsat') };
+  if (kind === 'panel') for (const [x, v] of e.glassLens.dms) x.setAttribute('scale', v.toFixed(2)); // (a panel: never growing in nor pressed — its morph is a transform the filter follows)
+  else glassSet(e);
+  if (e.matches('dialog')) e.style.setProperty('--gl-f', `${o.css} url(#${id})`); // (a dialog's glass is its ::before)
+  else e.style.webkitBackdropFilter = e.style.backdropFilter = `${o.css} url(#${id})`; // (saturated first: what holds the words down is the last thing done — after it, a saturate lifted vivid colours back past it)
   if (was) setTimeout(() => was.remove(), 200); // (the old one once the new is drawn: a filter pointing at nothing drops the whole backdrop filter)
   if (glass.decoding.length && !glass.redo) glass.redo = Promise.resolve().then(() => { const d = glass.decoding; glass.decoding = []; return Promise.all(d); }).then(() => {
     glass.redo = null;
-    for (const [q] of GLASS_LENS) { const x = document.querySelector(q); if (x.glassFilter) { x.glassKey = ''; glassFit(x, !!x.glassLens?.glowI); } }
+    for (const x of [...GLASS_LENS.map(([q]) => document.querySelector(q)), ...document.querySelectorAll(GLASS_PANEL)]) if (x.glassFilter) { x.glassKey = ''; glassFit(x, !!x.glassLens?.glowI); }
   });
 }
 const GLASS_REST = { sx: 1, sy: 1, k: 1, l: 1 };
@@ -3807,8 +4264,35 @@ async function glassInk() {
     const dark = e.classList.contains('ink-dark');
     if (glassInkFlip(L.sort((a, b) => a - b)[L.length >> 1] ?? 0, dark) !== dark) { e.classList.toggle('ink-dark'); glassFit(e, !!e.glassLens?.glowI); }
   }
+  for (const p of document.querySelectorAll(GLASS_PANEL)) if (p.offsetWidth) glassPanelTint(p); // (the open panels' tint: a new picture, background or view)
 }
 const glassInkFlip = (m, dark) => dark ? m > .2 : m > .28;
+// a panel shown (its size from none) or resized: its lens (a computer's), its tint; hidden: its lens gone
+function glassPanelOn(p) {
+  if (!p.offsetWidth) return glassOff(p);
+  if (!p.glassKey) glassPanelTint(p);
+  if (glass.tier === 'lens') glassFit(p);
+}
+// The tint and the colour follow what's behind a panel: L, the median luminance glassInk reads over its box (your picture
+// with its dim, the cover; else the mood's dark), at least what glassInk can't read — Extreme lyrics' big white words
+// (.5), the visualiser's burst (.25 on frost, .1 on a lens), a scene with broad bright light (GLASS_LIT, measured). Lens:
+// 20 % + 28 % × √L; frost: 42 % + 38 % × √L, its brightness .64 − .16 × √L (grey words 4.5 : 1 over the lyrics' white
+// letters, on the brightest 0.5 % behind them, over all 40 backgrounds). The frost's colour
+// saturated 3 (frost: 5) over the scenes and the visualiser, whose colour is in thin lights; 1.6 (2.4) over the Cover and
+// Pictures backgrounds and Extreme lyrics, whose colour is broad. On tint and Solid, the stylesheet's.
+const GLASS_LIT = { 'Black Hole': .2, Julia: .05 }; // (the scenes whose light behind a panel is broad and bright: Black Hole's disk, Julia's arms)
+function glassPanelTint(p) {
+  const t = glass.tier, I = glass.ink;
+  if (t !== 'lens' && t !== 'frost') { for (const k of ['--gp-tint', '--fr-bri', '--fr-sat']) p.style.removeProperty(k); return; }
+  const r = getComputedStyle(p).position === 'fixed' ? { left: p.offsetLeft, top: p.offsetTop, right: p.offsetLeft + p.offsetWidth, bottom: p.offsetTop + p.offsetHeight, width: p.offsetWidth } : p.getBoundingClientRect(), L = [], W = 64, H = I ? I.Ls.length / W : 0; // (its laid-out box: growing out of its button, its drawn one is the button's)
+  if (I && r.width) for (let y = Math.max(0, Math.floor(r.top / innerHeight * H)); y <= Math.min(H - 1, r.bottom / innerHeight * H); y++)
+    for (let x = Math.max(0, Math.floor(r.left / innerWidth * W)); x <= Math.min(W - 1, r.right / innerWidth * W); x++) L.push(I.Ls[y * W + x]);
+  const bc = body.classList, ext = kin.on && bc.contains('has-song') && !bc.contains('home'), broad = theme === 'Cover' || theme === 'Pictures' || ext;
+  const m = Math.max(L.length ? L.sort((a, b) => a - b)[L.length >> 1] : .002, ext ? .5 : 0, bc.contains('view-vis') ? (t === 'frost' ? .25 : .1) : 0, GLASS_LIT[theme] || 0);
+  const q = Math.sqrt(m);
+  if (t === 'lens') { p.style.setProperty('--gp-tint', (20 + 28 * q).toFixed(1) + '%'); p.gpSat = broad ? 1.6 : 3; p.glassLens?.fsat?.setAttribute('values', p.gpSat); }
+  else { p.style.setProperty('--gp-tint', (42 + 38 * q).toFixed(1) + '%'); p.style.setProperty('--fr-bri', (.64 - .16 * q).toFixed(3)); p.style.setProperty('--fr-sat', broad ? '2.4' : '5'); }
+}
 // a spring, 0 → 1 over t seconds: its period and its bounce (0, none; its stiffness (2π / period)², its damping from the bounce)
 function glassSpring(t, period, bounce) {
   const w = 2 * Math.PI / period, z = 1 - bounce;
@@ -3879,6 +4363,16 @@ addEventListener('pointerdown', e => {
   cap.glassRaf = requestAnimationFrame(step);
 }, true);
 
+// (Glass: a press shown on what's pressed, a finger's too — :active didn't match under touch — set on the way down, gone
+// on the way up)
+addEventListener('pointerdown', e => {
+  if (skin !== 'Glass') return;
+  const b = e.target.closest?.('button, [role=button], summary');
+  if (!b) return;
+  b.classList.add('pressed');
+  const up = () => { b.classList.remove('pressed'); removeEventListener('pointerup', up, true); removeEventListener('pointercancel', up, true); };
+  addEventListener('pointerup', up, true); addEventListener('pointercancel', up, true);
+}, true);
 // the light, on a computer: where the pointer is (the edges facing it catch it) — its angle on each piece of glass with a
 // rim, kept unwrapped (a turn past north eases a few degrees, not the long way round)
 addEventListener('pointermove', e => {
@@ -3886,7 +4380,7 @@ addEventListener('pointermove', e => {
   glass.px = e.clientX; glass.py = e.clientY;
   glass.aim ||= requestAnimationFrame(() => {
     glass.aim = 0;
-    const els = [...GLASS_LENS.map(([q]) => document.querySelector(q)), $('singBar'), $('abBar')].filter(x => x.offsetWidth);
+    const els = [...GLASS_LENS.map(([q]) => document.querySelector(q)), $('singBar'), $('abBar'), ...document.querySelectorAll('.moods:popover-open, .eq:popover-open, .smenu:popover-open, .toast:popover-open, .voice-ui:popover-open, dialog.consent[open]')].filter(x => x.offsetWidth);
     const rs = els.map(x => x.getBoundingClientRect()); // (all read, then all written: one layout)
     els.forEach((x, i) => {
       const r = rs[i], a = Math.atan2(glass.px - r.left - r.width / 2, r.top + r.height / 2 - glass.py) * 180 / Math.PI, was = x.glassLa ?? 322, d = ((a - was) % 360 + 540) % 360 - 180;
@@ -3902,7 +4396,7 @@ glassQuiet.addEventListener?.('change', () => applyGlass());
 addEventListener('click', e => { const b = e.target.closest?.('button, [role=button]'); if (b) glass.from = { el: b, t: performance.now() }; }, true);
 document.addEventListener('beforetoggle', e => {
   const p = e.target;
-  if (e.newState === 'open') for (const x of p.getAnimations?.() || []) if (x.id === 'glm') x.cancel(); // (whatever's on now: a going back left held)
+  if (e.newState === 'open') for (const x of p.getAnimations?.({ subtree: true }) || []) if (x.id === 'glm') x.cancel(); // (whatever's on now: a going back left held)
   if (!glass.tier || !motion || !p.matches?.('.moods, .eq, .smenu')) return;
   if (e.newState === 'open') {
     const f = glass.from; glass.from = null;
@@ -3911,7 +4405,7 @@ document.addEventListener('beforetoggle', e => {
   } else glassMorph(p, false);
 }, true);
 function glassMorph(p, open) {
-  for (const x of p.getAnimations()) if (x.id === 'glm') x.cancel();
+  for (const x of p.getAnimations({ subtree: true })) if (x.id === 'glm') x.cancel();
   const src = glass.src.get(p), a = src?.isConnected && src.offsetWidth && src.checkVisibility?.() !== false ? src.getBoundingClientRect() : null;
   if (open && !a) return;
   if (open) for (const x of p.getAnimations()) if (x instanceof CSSAnimation) x.cancel(); // (its own growing in: this one instead)
@@ -3924,10 +4418,12 @@ function glassMorph(p, open) {
     const t = i / 18, s = open ? glassSpring(t * dur / 1000, .42, .18) : 1 - glassSpring(t * dur / 1000, .3, 0); // (0: the button, 1: the panel)
     const sx = (from.width + (b.width - from.width) * s) / b.width, sy = (from.height + (b.height - from.height) * s) / b.height, rr = ra + (R - ra) * Math.min(1, s);
     kf.push({ offset: t, transformOrigin: '0 0', transform: `translate(${((from.left - b.left) * (1 - s)).toFixed(1)}px, ${((from.top - b.top) * (1 - s)).toFixed(1)}px) scale(${sx.toFixed(4)}, ${sy.toFixed(4)})`,
-      borderRadius: `${(rr / sx).toFixed(1)}px / ${(rr / sy).toFixed(1)}px`, opacity: open ? Math.min(1, .3 + 1.6 * s) : Math.min(1, Math.max(0, 2.2 * s)) });
+      borderRadius: `${(rr / sx).toFixed(1)}px / ${(rr / sy).toFixed(1)}px` }); // (no fade: the glass whole from its first frame — faded, its frost turned to a dark film)
   }
-  const an = p.animate(kf, { duration: dur, easing: 'linear', fill: open ? 'auto' : 'forwards', id: 'glm' });
-  if (!open) an.onfinish = () => setTimeout(() => an.cancel(), 80); // (held at the button till the panel's gone — its display kept .32 s — then let go)
+  const an = p.animate(kf, { duration: dur, easing: 'linear', fill: open ? 'auto' : 'forwards', id: 'glm' }), kids = [...p.children];
+  // (its words don't scale with the glass: opening they come in once it's most of its size, closing they're gone before it shrinks)
+  for (const c of kids) c.animate(open ? [{ opacity: 0 }, { opacity: 0, offset: .45 }, { opacity: 1, offset: .75 }, { opacity: 1 }] : [{ opacity: 1 }, { opacity: 0, offset: .3 }, { opacity: 0 }], { duration: dur, fill: open ? 'auto' : 'forwards', id: 'glm' });
+  if (!open) an.onfinish = () => setTimeout(() => { an.cancel(); for (const c of kids) for (const x of c.getAnimations()) if (x.id === 'glm') x.cancel(); }, 80); // (held at the button till the panel's gone — its display kept .32 s — then let go)
 }
 // The About page's terms (legal.html, in its own frame, with its own colours): under Glass, on the frosted page, see-through
 function glassLegal() {
@@ -3953,6 +4449,8 @@ function applySkin() {
   for (const k in SKINS) body.classList.toggle('skin-' + k.toLowerCase(), k === skin);
   body.classList.toggle('skinned', !!S);
   showTheme(S ? (THEMES.includes(bg) && !SCENES.has(bg) ? bg : skin) : ownTheme());
+  for (const id of ['moods', 'textPanel', 'queuePanel', 'togetherPanel', 'castPanel', 'syncPanel', 'eqPanel']) $(id).gpKeep?.();
+  gsConsent();
   document.querySelector('.badge textPath').textContent = S?.badge || BADGE;
   const [m1, m2] = S?.msg || ['Turn silence', 'into song'], msg = document.querySelector('.home-stage .msg');
   msg.replaceChildren(m1, el('br'), el('em', '', m2));
@@ -3973,6 +4471,18 @@ function fitHome() {
 }
 { const ro = new ResizeObserver(() => fitHome()); ro.observe($('home')); ro.observe($('home').querySelector('.home-now')); ro.observe($('recent')); } // (not the headline's own box: fitting it, it'd ask again)
 document.fonts?.ready.then(() => fitHome());
+// (the consent's words in Glass: its first sentence a lead, the rest three paragraphs — the same words, in boxes of their
+// own only while Glass is on: every other theme's paragraph stays one run of text, as it was)
+function gsConsent() {
+  const say = $('countSay'), p = say.closest('p'), split = !!p.querySelector('.c-lead');
+  if (skin === 'Glass' && !split && p.firstChild.nodeType === 3) {
+    const t = p.firstChild.data, cuts = ['for personal use. ', 'block or skip anything. ', 'those choices are yours. '].map(c => t.indexOf(c) + c.length - 1);
+    if (cuts.some(c => c < 1)) return; // (the words not as they were: left as one)
+    const box = (cls, ...k) => { const e = el('span', cls); e.append(...k); return e; };
+    p.gsText = t;
+    p.replaceChildren(box('c-lead', t.slice(0, cuts[0])), ' ', box('c-p', t.slice(cuts[0] + 1, cuts[1])), ' ', box('c-p', t.slice(cuts[1] + 1, cuts[2])), ' ', box('c-p', t.slice(cuts[2] + 1), say));
+  } else if (skin !== 'Glass' && split) p.replaceChildren(p.gsText, say);
+}
 function setSkin(name) {
   const need = SKINS[name]?.needs;
   if (need && bgq !== need && SKIN_LIST.includes(name)) { bgq = need; store.set('netherflow.bg', need); resize(); applyKin(); } // (a theme for one quality: that quality on)
@@ -3980,6 +4490,7 @@ function setSkin(name) {
   applySkin(); applyMood(); applyFontPair();
   kin.shot = null; kin.recent = []; fxDirty = true; fxGround = null; skinExtras();
   renderMoodMenu(); if ($('textPanel').matches(':popover-open')) renderTextPanel();
+  lastCur = lastDur = ''; if (!body.classList.contains('has-song')) $('cur').textContent = $('dur').textContent = (skin === 'Glass' ? fmtG : fmt)(0); // (the times in the theme's own form)
   if (activeIdx >= 0 && synced) { stage.replaceChildren(); buildStage(activeIdx); }
 }
 applySkin();
@@ -4543,6 +5054,187 @@ Upd?.addListener('open', m => { if (m.open === 'update') openUpdate(); });
 window.netherflowApp?.onNotifyClick?.(t => { if (t === 'update') openUpdate(); });
 const updDaily = () => { if (navigator.onLine && !(Upd && updNotify && upd.notes) && Date.now() - (+store.get('netherflow.updchecked') || 0) > 20 * 3600e3) updCheck(true); }; // (once a day at most, quietly; offline: not tried)
 setTimeout(updDaily, 12000); setInterval(updDaily, 3 * 3600e3); // (and again in a day for an app left open)
+// ---------- Glass: each setting a row of its own kind — an on/off a switch; two to four choices (six short ones) a
+// segmented control; more a value row opening their list in the panel; an action a button — its title, a short line
+// of what it does, the long note folded under that word for word; grouped in sections. (Other themes: as they were.) ----------
+const gsOn = () => skin === 'Glass';
+const GS_SVG = { chevR: '<path d="m9.5 5.5 6.5 6.5-6.5 6.5"/>', chevD: '<path d="m6 9.5 6 6 6-6"/>', back: '<path d="M14.5 5.5 8 12l6.5 6.5"/>', check: '<path d="m5 12.5 4.5 4.5L19 7.5"/>',
+  minus: '<path d="M6 12h12"/>', plus: '<path d="M12 6v12M6 12h12"/>', note: '<path d="M9 17.5V6.5l10-2v11"/><circle cx="6.5" cy="17.5" r="2.5"/><circle cx="16.5" cy="15.5" r="2.5"/>' };
+const gsSvg = (k, cls) => { const v = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); v.setAttribute('viewBox', '0 0 24 24'); v.setAttribute('aria-hidden', 'true'); if (cls) v.setAttribute('class', cls); v.innerHTML = GS_SVG[k]; return v; };
+// (each row's short line: what it does, not how — at most 44 characters, no full stop)
+const SET_SHORT = { Glass: 'How much shows through the glass', 'Hide controls': 'Fade the controls while a song plays', Autoplay: 'Similar songs when the list ends',
+  'Smooth mix': 'Blend songs like a DJ mix', Show: 'What the song\'s page shows', Visualiser: 'How the visualiser looks', 'Lyrics size': 'Long lines shrink to stay on screen',
+  'Romanize lyrics': 'Other scripts in Latin letters', 'Beat style': 'The ring round the record, in Cover', 'Beat on the screen edges': 'The beat along all four sides',
+  'Edge size': 'How far in from the sides', 'Skip back / forward': 'The jump buttons and the arrow keys', 'Instant start': 'Keep the first seconds of recent songs',
+  'Kept song starts': 'Delete them now', 'Hey NetherFlow': 'Hands-free voice control', 'Sync with phone': 'Likes and playlists over your Wi-Fi', 'Sync with computer': 'Likes and playlists over your Wi-Fi',
+  'Let phones and computers on this Wi-Fi play here': 'Show this TV in their Play on list', 'Lyrics on the lock screen': 'The sung line on the lock screen',
+  'Home-screen widget': 'The song and its buttons on your home screen', 'Liked songs offline': 'Save liked songs, on Wi-Fi only', 'Imported playlists': 'Read imported playlists again each day',
+  'Folders on the home screen': 'Liked songs, downloads and playlists', 'Discord status': 'The song you play, on your Discord profile', Island: 'The song in a small island over other apps',
+  'Island glow': 'A glow round the island, with the bass', 'Island position': 'Drag it anywhere; Ctrl+Alt+I from any app', 'Drive mode': 'Big, simple controls for the road',
+  'In the car': 'Drive mode by itself with Android Auto', 'Play when connected': 'Carry on when Bluetooth or a cable connects', 'Start by itself in the car': 'Open and play when the car asks',
+  'Android Auto': 'List NetherFlow with the car\'s music apps', 'Update notifications': 'Tell me when a new NetherFlow is out', 'Background beat': 'Swells and brightens with the bass' };
+const GS_TITLE = { Privacy: 'Install count', Background: 'Scene', 'Background quality': 'Quality', 'Background beat': 'Beat' };
+const GS_NOLINE = new Set(['Theme', 'Interface size', 'Lyrics alignment', 'Cursor', 'Edge look', 'Lyrics animation']); // (the title and the choices say it all)
+// [its short line, the note folded under it ('' none)]: its own line, or the note's first sentence when it has none
+function gsLine(label, note = '') {
+  if (label === 'Privacy') return [store.get(COUNTED) === '1' ? 'Counted once, with nothing about you' : 'Not counted', note];
+  if (SET_SHORT[label]) return [SET_SHORT[label], note];
+  if (GS_NOLINE.has(label) || !note) return ['', ''];
+  const first = note.split(/(?<=[.!?])\s/)[0].replace(/\.$/, '');
+  return [first, note.length > first.length + 2 || first.length > 46 ? note : ''];
+}
+function gsRow(label, note, ctrl, cls = '', tag = 'div') {
+  const q = el(tag, 'bgq gs-row' + (cls ? ' ' + cls : '')), [line, fold] = gsLine(label, note);
+  q.dataset.set = label;
+  q.append(el('span', 'gs-t', GS_TITLE[label] || label));
+  if (fold) { const d = el('details', 'gs-help'), sm = el('summary', 'gs-d'); sm.append(el('span', '', line), gsSvg('chevD')); d.append(sm, el('p', '', fold)); q.append(d); }
+  else if (line) q.append(el('span', 'gs-d', line));
+  if (ctrl) q.append(ctrl);
+  return q;
+}
+// a segmented control: its thumb slides to the pick (200 ms), then the pick applies (it draws the panel again: at once,
+// it'd cut the slide off); placed again whenever its size changes, at once
+function gsSeg(label, names, cur, pick, fit) {
+  const sg = el('div', 'seg' + (fit ? ' fit' : '')), t = el('i', 'seg-thumb');
+  sg.setAttribute('role', 'group'); sg.setAttribute('aria-label', GS_TITLE[label] || label); t.setAttribute('aria-hidden', 'true'); sg.append(t);
+  for (const name of names) {
+    const b = el('button', '', name);
+    b.setAttribute('aria-pressed', name === cur);
+    b.onclick = () => {
+      const moved = b.getAttribute('aria-pressed') !== 'true';
+      if (moved) { for (const x of sg.querySelectorAll('button')) x.setAttribute('aria-pressed', x === b); segPlace(sg); }
+      setTimeout(() => pick(name), moved && motion ? 180 : 0);
+    };
+    sg.append(b);
+  }
+  (glass.segRo ||= new ResizeObserver(es => { for (const x of es) segPlace(x.target, true); })).observe(sg);
+  return sg;
+}
+function segPlace(sg, now) {
+  if (!sg.isConnected) return glass.segRo?.unobserve(sg); // (one drawn over: no longer watched)
+  const b = sg.querySelector('button[aria-pressed=true]'), t = sg.querySelector('.seg-thumb');
+  if (!t) return;
+  if (now) { t.style.transition = 'none'; requestAnimationFrame(() => requestAnimationFrame(() => t.style.transition = '')); }
+  t.style.setProperty('--tx', (b ? b.offsetLeft : 0) + 'px'); t.style.setProperty('--tw', (b ? b.offsetWidth : 0) + 'px');
+}
+function gsSetting(label, names, cur, pick, note) {
+  const title = GS_TITLE[label] || label;
+  if (label === 'Theme') { // (the theme menu's tiles are the themes: its row opens it)
+    const q = gsRow(label, '', null, 'is-nav', 'button'), v = el('span', 'gs-v', cur);
+    v.append(gsSvg('chevR')); q.append(v); q.setAttribute('aria-label', `${title}: ${cur}`);
+    q.onclick = () => { $('textPanel').hidePopover(); $('moods').showPopover(); };
+    return q;
+  }
+  if (names.length === 1 || cur === '' && !names.includes(cur)) { // an action: a button at the end, two under the words
+    const bs = names.map(n => { const b = el('button', 'pill ghost', n); b.onclick = () => pick(n); return b; });
+    if (label === 'Privacy' && cur === names[0]) bs[0].disabled = true; // (counted: nothing to do)
+    if (bs.length === 1) return gsRow(label, note, bs[0]);
+    const box = el('div', 'acts2'); box.append(...bs);
+    return gsRow(label, note, box);
+  }
+  if (names.length === 2 && names.includes('Off')) { // on and off: a switch (on: the name that isn't Off) — it slides, then applies
+    const on = names.find(n => n !== 'Off'), sw = el('button', 'switch');
+    sw.setAttribute('role', 'switch'); sw.setAttribute('aria-checked', cur === on); sw.setAttribute('aria-label', title);
+    sw.onclick = () => { const v = sw.getAttribute('aria-checked') === 'true' ? 'Off' : on; sw.setAttribute('aria-checked', v === on); setTimeout(() => pick(v), motion ? 180 : 0); };
+    return gsRow(label, note, sw);
+  }
+  if (names.length <= 4 && names.every(n => n.length <= 14) || names.length <= 6 && names.every(n => n.length <= 5)) return gsRow(label, note, gsSeg(label, names, cur, pick));
+  const q = gsRow(label, '', null, 'is-nav', 'button'), v = el('span', 'gs-v', cur); // more: a value row, its list in the panel
+  v.append(gsSvg('chevR')); q.append(v); q.setAttribute('aria-label', `${title}: ${cur}`);
+  q.gsList = { label, names, cur, pick, note };
+  q.onclick = () => gsOpen(q);
+  return q;
+}
+// (Settings in sections: a row not listed — a hook's — goes in the one of the row before it, right after it; a label
+// ending in … matches by its start)
+const GS_GROUPS = [['Look', ['Theme', 'Agent', '3D race', 'Glass', 'Interface size', 'Cursor']],
+  ['Song page', ['Lyrics animation', 'Hide controls', 'Show', 'Visualiser', 'Lyrics size', 'Lyrics alignment', 'Romanize lyrics', 'Beat style', 'Beat on the screen edges', 'Edge look', 'Edge size']],
+  ['Playback', ['Autoplay', 'Smooth mix', 'Skip back / forward', 'Instant start', 'Kept song starts', 'Liked songs offline', 'Imported playlists']],
+  ['Voice', ['AI karaoke', 'Voice pack', 'Hey NetherFlow']],
+  ['This device', ['Island', 'Island glow', 'Island position', 'Folders on the home screen', 'Discord status', 'Lyrics on the lock screen', 'Home-screen widget', 'Sync with…', 'Let phones…']],
+  ['In the car', ['Drive mode', 'In the car', 'Forget my cars', 'Play when connected', 'Is …', 'Start by itself in the car', 'Android Auto']],
+  ['NetherFlow', ['Updates', 'Update notifications', 'Privacy']]];
+const gsHit = (x, l) => x.endsWith('…') ? l.startsWith(x.slice(0, -1)) : l === x;
+function gsGrouped(rows) {
+  const at = new Map(); let g = GS_GROUPS[0][0], prev = null;
+  for (const r of rows) {
+    const l = r.dataset?.set || '', hit = GS_GROUPS.find(([, xs]) => xs.some(x => gsHit(x, l)));
+    if (hit) g = hit[0];
+    at.set(r, { g, i: hit ? hit[1].findIndex(x => gsHit(x, l)) : (at.get(prev)?.i ?? 0) + .01 }); prev = r;
+  }
+  return GS_GROUPS.flatMap(([name]) => {
+    const rs = rows.filter(r => at.get(r).g === name).sort((a, b) => at.get(a).i - at.get(b).i);
+    if (!rs.length) return [];
+    const box = el('div', 'gs-group'); box.append(...rs);
+    return [el('h3', 'gs-sec', name), box];
+  });
+}
+// a value row's list, in its panel: its head Back and the setting's name; its choices as rows, the picked one checked on
+// its title line, each with its phrase from the note as its line; the note under the list. Esc or Back: the rows again
+const GS_SUBS = { 'Lyrics animation': note => { const g = k => (note.match(new RegExp(k + ': ([^.]+)\\.')) || [, ''])[1].split(/, | and /); const d2 = g('2D'), d3 = g('3D');
+  return [['Easy to read', n => !d2.includes(n) && !d3.includes(n)], ['2D', n => d2.includes(n)], ['3D', n => d3.includes(n)]]; } };
+function gsPhrases(names, note = '') {
+  const out = {};
+  for (const m of note.matchAll(/([A-Z][\w'’\- ]*?) \(([^)]+)\)/g)) for (const n of m[1].split(' and ')) if (names.includes(n.trim())) out[n.trim()] ??= m[2];
+  for (const n of names) { const m = note.match(new RegExp('(?:^|\\. )' + n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ': ([^.]+?)\\.(?: |$)')); if (m) out[n] ??= m[1]; }
+  for (const k in out) out[k] = out[k][0].toUpperCase() + out[k].slice(1);
+  return out;
+}
+function gsList(p, row) {
+  const { label, names, cur, pick, note } = row.gsList, ph = gsPhrases(names, note), out = [];
+  gsHead(p, GS_TITLE[label] || label, true);
+  for (const [g, f] of GS_SUBS[label]?.(note || '') || [['', () => true]]) {
+    const ns = names.filter(f);
+    if (!ns.length) continue;
+    if (g) out.push(el('h3', 'gs-sec', g));
+    const box = el('div', 'gs-group');
+    for (const n of ns) {
+      const b = el('button', 'bgq gs-row is-nav');
+      b.dataset.set = label + '|' + n;
+      b.append(el('span', 'gs-t', n), ...(ph[n] ? [el('span', 'gs-d', ph[n])] : []), ...(n === cur ? [gsSvg('check', 'ck')] : []));
+      b.setAttribute('aria-pressed', n === cur);
+      b.onclick = () => { pick(n); if (b.isConnected) p.gpRender?.(); }; // (a pick that doesn't draw its panel again: drawn here)
+      box.append(b);
+    }
+    out.push(box);
+  }
+  if (note) out.push(el('p', 'gs-note', note));
+  return out;
+}
+function gsOpen(row) {
+  const p = row.closest('.moods, .eq');
+  if (!p?.gpBody) return;
+  p.gpTop = p.gpBody.scrollTop; p.gpSub = row.dataset.set; p.gpRender?.();
+  const b = p.gpBody, sel = b.querySelector('.gs-row[aria-pressed=true]');
+  b.scrollTop = 0;
+  if (sel) b.scrollTop = Math.max(0, sel.getBoundingClientRect().top - b.getBoundingClientRect().top - 28); // (the picked one in sight, under the top fade)
+  (sel || b.querySelector('.gs-row'))?.focus({ preventScroll: true });
+  gpFades(b);
+}
+function gsUp(p) {
+  const was = p.gpSub; p.gpSub = null; p.gpRender?.();
+  if (p.gpBody) { p.gpBody.scrollTop = p.gpTop || 0; gpFades(p.gpBody); }
+  [...p.querySelectorAll('.gs-row')].find(r => r.dataset.set === was)?.focus({ preventScroll: true });
+}
+// a panel's head: Back (a finger's, a remote's) or, in a list, Back to the rows; the title; a control at its end
+function gsHead(p, title, sub, ...extra) {
+  if (!p.gpHead) return;
+  let back = p.gpBack;
+  if (sub) { back = el('button', 'gp-up'); back.append(gsSvg('back')); back.setAttribute('aria-label', 'Back to ' + (PANEL_TITLE[p.id] || 'the panel')); back.onclick = () => gsUp(p); }
+  p.gpHead.classList.toggle('is-sub', !!sub);
+  p.gpHead.replaceChildren(back, el('h2', 'gp-title', title), ...extra);
+}
+// (the focus where it was, after the panel's drawn again: the keyboard's and a remote's place kept)
+const gsFocus = p => { try { const a = document.activeElement; return a && a !== body && p.contains(a) ? tvKey(a) : null; } catch { return null; } };
+const gsRefocus = (p, k) => { try { if (k && !p.contains(document.activeElement)) [...p.querySelectorAll(FOCUSABLE)].find(x => tvKey(x) === k)?.focus({ preventScroll: true }); } catch {} };
+function gsSettings(p, rows) {
+  const box = p.gpBody || p, k = gsFocus(p), shown = setMode === 'Advanced' ? rows : rows.filter(r => CLASSIC.has(r.dataset?.set));
+  const sub = p.gpSub && shown.find(r => r.dataset.set === p.gpSub && r.gsList);
+  if (!sub) { p.gpSub = null; gsHead(p, 'Settings', false, gsSeg('Settings', ['Classic', 'Advanced'], setMode, setSetMode, true)); }
+  box.replaceChildren(...(sub ? gsList(p, sub) : gsGrouped(shown)));
+  if (p.gpBody) gpFades(p.gpBody);
+  gsRefocus(p, k);
+}
 // its row in Settings (and kept up to date in place while it's open)
 function updRow() {
   const q = el('div', 'bgq lbl upd'), mb = n => (n / 1e6).toFixed(n > 1e7 ? 0 : 1) + ' MB', v = upd.version ? ` ${upd.version}` : '';
@@ -4561,8 +5253,11 @@ function updRow() {
   }[upd.state];
   const label = { '': 'Check for updates', checking: 'Checking…', none: 'Check again', ready: `Update to ${upd.next}`, getting: `Downloading… ${Math.round(upd.frac * 100)}%`,
     got: 'Restart now', portable: 'Get the installer', deb: 'Open the release page', error: 'Try again' }[upd.state];
+  const b = label ? el('button', gsOn() && !/^(Update to|Restart now)/.test(label) ? 'pill ghost' : 'pill', label) : null; // (Glass: the primary only to update or restart)
+  if (b) { b.disabled = upd.state === 'checking' || upd.state === 'getting'; b.onclick = updGet; }
+  if (gsOn()) { const g = gsRow('Updates', note, b); g.classList.add('upd'); return g; }
   q.append(el('span', '', 'Update'), el('small', '', note));
-  if (label) { const b = el('button', 'pill', label); b.disabled = upd.state === 'checking' || upd.state === 'getting'; b.onclick = updGet; q.append(b); }
+  if (b) q.append(b);
   return q;
 }
 function updShow() { $('textPanel').querySelector('.upd')?.replaceWith(updRow()); }
@@ -4694,6 +5389,7 @@ function renderTextPanel() {
         'When Android Auto connects, or the car asks for a song, NetherFlow opens by itself behind what\'s on the phone and plays: no need to open it first. Android allows that only with NetherFlow\'s "Display over other apps" switched on (it never draws over other apps: it\'s how Android lets an app open itself in the background).'),
       settingRow('Android Auto', ['Its settings'], '', () => Capacitor.Plugins.Playback.carSettings().catch(() => toast('Android Auto isn\'t on this phone')),
         'NetherFlow isn\'t from the Play Store, so Android Auto lists it only once you allow that: in Android Auto\'s settings, tap Version 10 times (developer settings), then ⋮ › Developer settings › Unknown sources: on. Then NetherFlow is with the car\'s other music apps. It\'s Android Auto\'s own developer setting, so turning it on is your choice.')] : [])];
+  if (gsOn()) return gsSettings($('textPanel'), rows);
   $('textPanel').replaceChildren(settingRow('Settings', ['Classic', 'Advanced'], setMode, setSetMode, 'Classic: the few settings most people change. Advanced: every one of them.'),
     ...(setMode === 'Advanced' ? rows : rows.filter(r => CLASSIC.has(r.dataset?.set))));
 }
@@ -4719,11 +5415,13 @@ function stepperRow(label, min, max, cur, pick, unit, note) {
   hold(minus, -1); hold(plus, 1);
   set(cur);
   row.append(minus, val, plus);
+  if (gsOn()) { minus.append(gsSvg('minus')); plus.append(gsSvg('plus')); return gsRow(label, note, row); }
   q.append(el('span', 'sl-head', label), row, note ? el('small', '', note) : '');
   q.dataset.set = label;
   return q;
 }
 function settingRow(label, names, cur, pick, note) {
+  if (gsOn()) return gsSetting(label, names, cur, pick, note);
   const q = el('div', 'bgq lbl'), seg = el('div', 'seg');
   seg.setAttribute('role', 'group'); seg.setAttribute('aria-label', label);
   for (const name of names) {
@@ -4867,6 +5565,11 @@ let mood = 0, pal = MOODS[0], palette = [rgb(pal.bg), rgb(pal.a), rgb(pal.b), pa
 function applyPalette(m) {
   pal = m;
   for (const k of ['bg', 'a', 'b', 'ink']) root.style.setProperty('--' + k, m[k]);
+  // (Glass's one accent: the mood's b, lightened with white till its luminance is .4 or more — 3 : 1 against the glass at
+  // its brightest, and its dark label 4.5 : 1 on it)
+  const lum = c => c.reduce((s, v, k) => s + [.2126, .7152, .0722][k] * (v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4), 0);
+  let ac = rgb(m.b); for (let i = 0; i < 12 && lum(ac) < .4; i++) ac = ac.map(v => v + (1 - v) * .1);
+  root.style.setProperty('--acc', hex(ac.map(v => v * 255))); root.style.setProperty('--acc-rgb', ac.map(v => Math.round(v * 255)).join(' '));
   setCursors(m.a, m.b);
   $('moodName').textContent = m.name;
   target = [rgb(m.bg), rgb(m.a), rgb(m.b), (m.fx || [1, 1, 1, 1]).slice()];
@@ -5110,8 +5813,10 @@ function skinCards() {
   }
   return g;
 }
+const KIN_NOTE = 'The lyrics cut like a music video or an Instagram lyric edit: every word comes in as it\'s sung, in 58 looks (each theme brings its own: a doodle, comic captions, dropping blocks, tactical banners, a kill feed, speed) —chat bubbles, shattering glass, holographic foil, a slot machine, liquid filling the letters, label tape, a film title, a mix of typefaces, story text, lime green, glowing dust, a swirl, TikTok captions, a music app\'s lyrics screen, letters cut out of the cover, outline rings, a dreamy haze, velocity whips, grunge block letters, echoes, hand-drawn outlines, marker, a floor into the distance, tape glitches, a typewriter, falling letters, decoding, words flying out of the dark, extruded 3D, split halves, Y2K chrome, neon signs, an editorial stack, a highlighter, a ripple, a strobe, a turning cube, a split-flap board, letters flipping in, a tunnel, handwriting, stickers, 8-bit arcade, graffiti, a ransom-note collage, a ring, glitch slices, a rack focus, karaoke, a spotlight, a reflection, jelly — with 3D emoji popping up for words like fire, love or moon — louder for a chorus, quieter for a verse, with film scratches, glow and light leaks on the beat. Nothing is ever cut off at the edges.';
 function renderMoodMenu() {
   $('mood').querySelector('span').textContent = skin ? 'Theme' : 'Mood';
+  if (gsOn()) return gsMoodMenu();
   $('moods').replaceChildren(skinCards(), ...(skin ? [el('p', 'skin-note lbl', `${SKINS[skin].note}. The theme sets the colours: NetherFlow, above, brings the moods back.`)]
     : [...[{ name: 'Auto' }, ...MOODS].map(m => {
     const b = el('button', 'mchip'), sw = el('i');
@@ -5127,12 +5832,34 @@ function renderMoodMenu() {
     settingRow('Background', skin ? [skin, ...bgs] : bgs, theme, setTheme, (skin ? `${skin}: the theme's own (drawn in full on Ultra and Extreme). ` : '') + 'Gradient: plain and still, in the mood\'s colors — the lightest of all, for a phone that lags. Cover: the song\'s album cover, blurred into a glow. Pictures: your own, kept on this device only.'),
     ...MOOD_HOOKS.flatMap(h => h.rows?.() || []), // (the mood menu's own rows)
     settingRow('Background quality', BGQ_SHOWN, bgq, setBgq, (pcOnly ? 'Extreme is for a powerful graphics card, and unlocks Extreme lyrics. ' : '') + (fullPc ? 'Extreme+ is Extreme with each theme\'s most demanding extras: Redline races real cars round real circuits in 3D. ' : '') + 'Ultra is the sharpest (needs a strong graphics card); lower settings save battery. Off keeps the colors but stops the motion. Till you pick one, NetherFlow picks for this device, and steps down by itself if it runs slow.'),
-    ...(extremeQ() ? [settingRow('Extreme lyrics', ['Off', 'Music video'], kinetic ? 'Music video' : 'Off', setKinetic, 'The lyrics cut like a music video or an Instagram lyric edit: every word comes in as it\'s sung, in 58 looks (each theme brings its own: a doodle, comic captions, dropping blocks, tactical banners, a kill feed, speed) —chat bubbles, shattering glass, holographic foil, a slot machine, liquid filling the letters, label tape, a film title, a mix of typefaces, story text, lime green, glowing dust, a swirl, TikTok captions, a music app\'s lyrics screen, letters cut out of the cover, outline rings, a dreamy haze, velocity whips, grunge block letters, echoes, hand-drawn outlines, marker, a floor into the distance, tape glitches, a typewriter, falling letters, decoding, words flying out of the dark, extruded 3D, split halves, Y2K chrome, neon signs, an editorial stack, a highlighter, a ripple, a strobe, a turning cube, a split-flap board, letters flipping in, a tunnel, handwriting, stickers, 8-bit arcade, graffiti, a ransom-note collage, a ring, glitch slices, a rack focus, karaoke, a spotlight, a reflection, jelly — with 3D emoji popping up for words like fire, love or moon — louder for a chorus, quieter for a verse, with film scratches, glow and light leaks on the beat. Nothing is ever cut off at the edges.'),
+    ...(extremeQ() ? [settingRow('Extreme lyrics', ['Off', 'Music video'], kinetic ? 'Music video' : 'Off', setKinetic, KIN_NOTE),
       ...(kinetic ? [settingRow('Extreme look', ['Mixed', ...Object.values(KIN_NAMES)], kinLook === 'Mixed' ? 'Mixed' : KIN_NAMES[kinLook], v => setKinLook(Object.keys(KIN_NAMES).find(k => KIN_NAMES[k] === v) || 'Mixed'),
         'Mixed: a different look every few words, picked for the part of the song (the loud ones in a chorus). Or pick one look to keep for every line.'),
         settingRow('Emoji', ['On', 'Off'], kinEmojiOn ? 'On' : 'Off', setKinEmoji, '3D emoji popping up as they\'re sung: for words like fire, love, moon or dil, and the emoji in the lyrics themselves.'),
         settingRow('Music video', ['On', 'Off'], vEditOn ? 'On' : 'Off', setVEdit, 'When the song has an official music video, it plays behind the lyrics, smoothly, straight through: in time with the song when they\'re the same length, slowly drifting, in a colour grade of its own. (It streams the video too.)')] : [])] : []),
     settingRow('Background beat', ['Off', 'On'], bgBeat ? 'On' : 'Off', setBgBeat, 'The background swells and brightens with the bass of the music.'));
+}
+// (Extreme's rows, the same in both menus)
+function gsExtremeRows() { return extremeQ() ? [settingRow('Extreme lyrics', ['Off', 'Music video'], kinetic ? 'Music video' : 'Off', setKinetic, KIN_NOTE),
+  ...(kinetic ? [settingRow('Extreme look', ['Mixed', ...Object.values(KIN_NAMES)], kinLook === 'Mixed' ? 'Mixed' : KIN_NAMES[kinLook], v => setKinLook(Object.keys(KIN_NAMES).find(k => KIN_NAMES[k] === v) || 'Mixed'),
+    'Mixed: a different look every few words, picked for the part of the song (the loud ones in a chorus). Or pick one look to keep for every line.'),
+    settingRow('Emoji', ['On', 'Off'], kinEmojiOn ? 'On' : 'Off', setKinEmoji, '3D emoji popping up as they\'re sung: for words like fire, love, moon or dil, and the emoji in the lyrics themselves.'),
+    settingRow('Music video', ['On', 'Off'], vEditOn ? 'On' : 'Off', setVEdit, 'When the song has an official music video, it plays behind the lyrics, smoothly, straight through: in time with the song when they\'re the same length, slowly drifting, in a colour grade of its own. (It streams the video too.)')] : [])] : []; }
+// (Glass: the theme menu — the tiles, a line about the picked one, its background as rows; the scenes and the qualities
+// as lists in the panel)
+function gsMoodMenu() {
+  const p = $('moods'), box = p.gpBody || p, bgs = THEMES.filter(n => !SCENES.has(n)), k = gsFocus(p);
+  const rows = [settingRow('Background', [skin, ...bgs], theme, setTheme, `${skin}: the theme's own (drawn in full on Ultra and Extreme). ` + 'Gradient: plain and still, in the mood\'s colors — the lightest of all, for a phone that lags. Cover: the song\'s album cover, blurred into a glow. Pictures: your own, kept on this device only.'),
+    ...MOOD_HOOKS.flatMap(h => h.rows?.() || []),
+    settingRow('Background quality', BGQ_SHOWN, bgq, setBgq, (pcOnly ? 'Extreme is for a powerful graphics card, and unlocks Extreme lyrics. ' : '') + (fullPc ? 'Extreme+ is Extreme with each theme\'s most demanding extras: Redline races real cars round real circuits in 3D. ' : '') + 'Ultra is the sharpest (needs a strong graphics card); lower settings save battery. Off keeps the colors but stops the motion. Till you pick one, NetherFlow picks for this device, and steps down by itself if it runs slow.'),
+    ...gsExtremeRows(),
+    settingRow('Background beat', ['Off', 'On'], bgBeat ? 'On' : 'Off', setBgBeat, 'The background swells and brightens with the bass of the music.')];
+  const sub = p.gpSub && rows.find(r => r.dataset.set === p.gpSub && r.gsList);
+  if (!sub) { p.gpSub = null; gsHead(p, 'Theme'); }
+  if (sub) box.replaceChildren(...gsList(p, sub));
+  else { const grp = el('div', 'gs-group'); grp.append(...rows); box.replaceChildren(skinCards(), el('p', 'tile-note', 'Clear glass over a dark room of light'), el('h3', 'gs-sec', 'Background'), grp); }
+  if (p.gpBody) gpFades(p.gpBody);
+  gsRefocus(p, k);
 }
 
 // the cover, loaded once a song for whatever reads it — its colours (Auto), the Glass theme's ink over the Cover
@@ -6505,7 +7232,7 @@ function drawEq() {
     svgEl('path', { class: 'area', d: line + ' L600,210 L0,210 Z', fill: 'url(#eqFill)' }), ...(hp ? [svgEl('path', { class: 'hpcurve', d: hpCurve() })] : []), svgEl('path', { class: 'curve', d: line })];
   kids[0].innerHTML = '<linearGradient id="eqFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--a);stop-opacity:.35"/><stop offset="1" style="stop-color:var(--a);stop-opacity:0"/></linearGradient>';
   eqState.gains.forEach((v, i) => {
-    kids.push(svgEl('text', { class: 'db', x: EQX(i), y: EQY(v) - 16, 'text-anchor': 'middle' }, (v > 0 ? '+' : '') + v));
+    kids.push(svgEl('text', { class: v ? 'db' : 'db z', x: EQX(i), y: EQY(v) - 16, 'text-anchor': 'middle' }, (v > 0 ? '+' : '') + v)); // (z: at 0 — Glass shows a band's value only off it)
     kids.push(svgEl('text', { x: EQX(i), y: 204, 'text-anchor': 'middle' }, EQ.labels[i]));
     kids.push(svgEl('circle', { class: 'node', cx: EQX(i), cy: EQY(v), r: 8, tabindex: 0, role: 'slider', 'data-band': i,
       'aria-label': EQ.labels[i] + ' hertz', 'aria-valuemin': -12, 'aria-valuemax': 12, 'aria-valuenow': v }));
@@ -6515,6 +7242,24 @@ function drawEq() {
   $('eqSwitch').setAttribute('aria-checked', eqState.on);
   $('eqState').textContent = eqState.on ? 'On' : 'Off';
   for (const b of $('eqPresets').children) b.setAttribute('aria-pressed', b.textContent === eqState.preset);
+  if (gsOn()) gsEqRender();
+}
+// (Glass: the equalizer's presets a value row — Preset and the one picked — their list in the panel, over its rows)
+const gsEqRow = () => { const r = gsSetting('Preset', Object.keys(EQ.presets), eqState.preset || '', n => [...$('eqPresets').children].find(b => b.textContent === n)?.click(), ''); r.id = 'eqPreset'; return r; };
+function gsEqRender() {
+  const p = $('eqPanel'), old = document.getElementById('eqPreset'), row = gsEqRow();
+  if (old) old.replaceWith(row); else $('eqPresets').before(row);
+  if (!p.gpBody || !gsOn()) return;
+  let L = p.gpBody.querySelector(':scope > .gs-sublist'), k = gsFocus(p);
+  // (the list of the row opened — the presets', or Play on's or 360 sound's: it was always the presets'; and the
+  // equalizer's own head kept in the page under the list's, hidden — taken out, drawEq couldn't find its switch, and a
+  // preset picked in the list threw before it was applied or kept)
+  const sub = p.gpSub && (p.gpSub === 'Preset' ? row : [...p.gpBody.querySelectorAll('.gs-row')].find(r => r.gsList && r.dataset.set === p.gpSub && !r.closest('.gs-sublist')));
+  if (!sub) p.gpSub = null;
+  p.classList.toggle('gs-sub', !!sub);
+  if (sub) { if (!L) { L = el('div', 'gs-sublist'); p.gpBody.prepend(L); } L.replaceChildren(...gsList(p, sub)); p.gpHead.append(EQ_TOP); }
+  else if (L || p.gpHead.classList.contains('is-sub')) { L?.remove(); p.gpHead.classList.remove('is-sub'); p.gpHead.replaceChildren(p.gpBack, EQ_TOP); }
+  gsRefocus(p, k);
 }
 function setBand(i, v, focus, save = true) {
   const editing = document.activeElement?.classList?.contains('tv-edit'); // (a TV's band being changed: still, once drawn anew)
@@ -6820,7 +7565,7 @@ function castRender() {
   out.push(el('p', 'q-empty lbl', cast.note || (cast.looking ? 'Looking for TVs and speakers on your Wi-Fi…'
     : !cast.list.length ? `None found. A TV or a speaker shows here when it's on, and on the same Wi-Fi as this ${here}.`
     : cast.s ? `The song plays on ${cast.dev.name}. The lyrics, the queue and the controls stay here.` : 'Pick one: the song moves there, from where it is.')));
-  $('castPanel').replaceChildren(...out);
+  panelPut($('castPanel'), out);
 }
 // ---- this app as a TV the others cast to (Android on a TV — Fire TV, Android TV — while it's open: CastPlugin's
 // receiver, a DLNA media renderer): what a phone or a computer on the Wi-Fi sends played here — lyrics, visuals and all —
@@ -9303,7 +10048,8 @@ const ico = name => { let s = icoMade.get(name); if (!s) { s = document.createEl
 const mi = (icon, text, onclick, extra) => {
   const b = el('button', 'mi');
   b.append(ico(icon), el('span', '', text));
-  if (extra != null) b.append(el('small', '', extra));
+  if (extra === '›' && gsOn()) { const c = el('small'); c.append(ico('more')); b.append(c); } // (Glass: a chevron, not the glyph)
+  else if (extra != null) b.append(el('small', '', extra));
   if (onclick) b.onclick = onclick; else b.disabled = true;
   return b;
 };
@@ -9328,15 +10074,20 @@ function showMenu(anchor, items) {
   // through the menu to the rows under it — so it goes inside that dialog, like the window buttons
   if (m.parentElement !== home) home.append(m);
   m.dataset.for = '';
-  m.replaceChildren(...items);
+  if (gsOn()) { const box = el('div', 'gp-body'); box.append(...items); m.replaceChildren(box); } // (Glass: its words scroll inside the glass, which stays)
+  else m.replaceChildren(...items);
   if (!m.matches(':popover-open')) m.showPopover();
-  const r = anchor.getBoundingClientRect(), w = m.offsetWidth, h = m.offsetHeight;
+  const r = anchor.getBoundingClientRect(), w = m.offsetWidth, h = m.offsetHeight, bar = gsOn() && anchor.closest('.bar');
   m.style.left = Math.max(8, Math.min(innerWidth - w - 8, r.right - w)) + 'px';
-  m.style.top = (r.bottom + 6 + h <= innerHeight - 8 ? r.bottom + 6 : Math.max(8, r.top - 6 - h)) + 'px';
+  m.style.top = (bar ? Math.max(8, bar.getBoundingClientRect().top - 12 - h) : r.bottom + 6 + h <= innerHeight - 8 ? r.bottom + 6 : Math.max(8, r.top - 6 - h)) + 'px'; // (Glass: from the dock, above it, not on it)
 }
 function songMenu(t, anchor, from = {}) {
   const head = el('div', 'sm-head');
-  head.append(el('b', '', t.trackName), el('small', '', t.artistName));
+  if (gsOn()) { // (Glass: its cover, or a note's tile, beside its name)
+    const c = saved.get(t.trackId)?.coverUrl || artUrl(t, 120), cv = c ? Object.assign(el('img'), { src: c, alt: '' }) : el('span', 'cov'), tx = el('span');
+    if (!c) cv.append(gsSvg('note'));
+    tx.append(el('b', '', t.trackName), el('small', '', t.artistName)); head.append(cv, tx);
+  } else head.append(el('b', '', t.trackName), el('small', '', t.artistName));
   const main = () => showMenu(anchor, [head,
     ...(t.trackId !== current?.trackId ? [mi('next', 'Play next', () => { hideMenu(); enqueue(t, true); }),
                                           mi('queue', 'Add to queue', () => { hideMenu(); enqueue(t); })] : []),
@@ -9367,14 +10118,21 @@ function enqueue(t, first = false) {
 }
 function queueChanged() { updateSkips(); notifyNative(); prefetchNext(); if ($('queuePanel').matches(':popover-open')) renderQueue(); }
 function qrow(t, play, remove, list, at) {
-  const r = el('div', 'qrow'), b = el('button', 'qplay'), img = el('img'), txt = el('span');
+  const r = el('div', 'qrow'), b = el('button', 'qplay'), img = el('img'), txt = el('span'), g = gsOn();
   img.alt = ''; img.loading = 'lazy';
   const cover = saved.get(t.trackId)?.coverUrl || artUrl(t, 120);
   if (cover) img.src = cover;
   txt.append(el('b', '', t.trackName), el('small', 'lbl', t.artistName));
-  b.append(img, txt);
+  b.append(g && !cover ? Object.assign(el('span', 'cov'), { ariaHidden: 'true' }) : img, txt);
+  if (g && !cover) b.firstChild.append(gsSvg('note'));
   b.onclick = play;
   r.append(b);
+  // (Glass: the row's end a fixed slot — its length at rest, its buttons under the pointer or while it's moved; the
+  // playing one's meter before its length: the cover and the name never move)
+  const hv = g ? el('span', 'hv') : null;
+  if (g) { const end = el('span', 'qend'), len = t.trackTimeMillis ? fmtG(t.trackTimeMillis / 1000) : '';
+    if (t.trackId === current?.trackId) { const m = el('span', 'eqz'); m.setAttribute('aria-hidden', 'true'); for (const h of [60, 100, 40]) { const i = el('i'); i.style.height = h + '%'; m.append(i); } end.append(m); }
+    end.append(el('span', 'len', len), hv); r.append(end); }
   r.list = list; r.at = at; // (which list the row is in, and where, for moving it)
   if (list) { // a handle to drag it up or down; or, with a keyboard or a TV's remote, Enter (OK) on it, then up and down
     const grip = el('button', 'icon-btn qgrip');
@@ -9388,17 +10146,18 @@ function qrow(t, play, remove, list, at) {
       const by = e.key === 'ArrowUp' ? r.previousElementSibling : r.nextElementSibling; // (within its section, as a drag)
       if (!by?.classList.contains('qrow') || by.list !== list) return;
       list.splice(by.at, 0, ...list.splice(at, 1)); queueChanged(); renderQueue();
-      const again = [...$('queuePanel').querySelectorAll('.qgrip')].find(g => g.parentElement.list === list && g.getAttribute('aria-label') === grip.getAttribute('aria-label'));
+      const again = [...$('queuePanel').querySelectorAll('.qgrip')].find(g => g.closest('.qrow').list === list && g.getAttribute('aria-label') === grip.getAttribute('aria-label'));
       again?.classList.add('tv-edit'); again?.focus({ preventScroll: true }); again?.scrollIntoView({ block: 'nearest' });
     };
-    r.append(grip);
+    (hv || r).append(grip);
   }
   if (remove) {
     const x = el('button', 'icon-btn');
     x.append(ico('x')); x.setAttribute('aria-label', `Remove ${t.trackName} from the queue`);
     x.onclick = remove;
-    r.append(x);
+    (hv || r).append(x);
   }
+  if (hv && !hv.childElementCount) hv.remove();
   return r;
 }
 function renderQueue() {
@@ -9421,7 +10180,7 @@ function renderQueue() {
   }
   if (!current) out.push(el('p', 'q-empty lbl', 'Nothing playing yet. On any song, ⋯ › Add to queue.'));
   else if (!upNext.length && !rest.length && !(shuffling() && shufflePick()) && (!autoOn || repeat !== 'off')) out.push(el('p', 'q-empty lbl', 'Nothing up next. On any song, ⋯ › Add to queue.'));
-  $('queuePanel').replaceChildren(...out);
+  panelPut($('queuePanel'), out);
 }
 $('queuePanel').addEventListener('beforetoggle', e => { if (e.newState === 'open') renderQueue(); });
 $('togetherPanel').addEventListener('toggle', e => { if (e.newState === 'open') tgRender(); });
@@ -9742,7 +10501,7 @@ $('storyCopy').onclick = async () => {
 // near the panel's top or bottom edge the panel scrolls along. Dropped, it moves to that spot in its list.
 function dragRow(e, row, list, from) {
   e.preventDefault();
-  const grip = e.currentTarget, panel = $('queuePanel'), box = panel.getBoundingClientRect();
+  const grip = e.currentTarget, q = $('queuePanel'), panel = q.gpBody?.parentNode === q ? q.gpBody : q, box = panel.getBoundingClientRect(); // (what scrolls: Glass's body, under its head)
   const rows = []; // its section: the rows next to it with the same list
   for (let r = row; r?.classList.contains('qrow') && r.list === list; r = r.previousElementSibling) rows.unshift(r);
   for (let r = row.nextElementSibling; r?.classList.contains('qrow') && r.list === list; r = r.nextElementSibling) rows.push(r);
@@ -11139,7 +11898,7 @@ function tgRender() {
     out.push(reacts, box('tg-row', leave));
   }
   if (tg.status) out.push(el('p', 'q-empty lbl tg-status', tg.status));
-  $('togetherPanel').replaceChildren(...out); fitCode($('togetherPanel'));
+  panelPut($('togetherPanel'), out); fitCode($('togetherPanel'));
 }
 // a code to read out stays on one line, in every theme's type: smaller when it wouldn't fit beside what's next to it
 function fitCode(panel) {
@@ -11482,7 +12241,7 @@ function syncRender() {
     out.push(box('tg-row', go));
   }
   if (syStatus) out.push(el('p', 'q-empty lbl tg-status', syStatus));
-  $('syncPanel').replaceChildren(...out); fitCode($('syncPanel'));
+  panelPut($('syncPanel'), out); fitCode($('syncPanel'));
 }
 // ---------- Android extras: the line being sung on the lock screen (and the widget, and a car's display); liked songs
 // saved for offline by themselves, on Wi-Fi ----------
@@ -13251,7 +14010,8 @@ function toggleFull() {
 if (native) Capacitor.Plugins.App.addListener('backButton', () => {
   wake(); // (a press, as any key's: the controls back, their wait counted from it — not gone a moment after a panel's closed)
   const pop = document.querySelector(':popover-open:not(.toast)');
-  if (pop) pop.hidePopover();
+  if (pop?.gpSub) gsUp(pop); // (a list open in it: back to its rows)
+  else if (pop) pop.hidePopover();
   else if (topDialog()) { // the one on top
     const d = topDialog();
     if (d === $('consent')) Capacitor.Plugins.App.minimizeApp(); // not agreed yet: nothing behind it to go back to
@@ -13303,7 +14063,7 @@ function tvMove(dir) {
       if ((h ? (cx - fx) * s : (cy - fy) * s) <= 1) continue; // (not that way)
       const ahead = h ? (s > 0 ? r.left - f.right : f.left - r.right) : (s > 0 ? r.top - f.bottom : f.top - r.bottom); // the gap that way (negative: over it, like a row's ••• on the row)
       const side = h ? Math.max(0, r.top - f.bottom, f.top - r.bottom) : Math.max(0, r.left - f.right, f.left - r.right); // off to the side (0: in line)
-      if (h && side > 0) continue; // (left and right stay in the row: at its end, nowhere, as on a TV's own apps)
+      if (h && side > 0 && !(gsOn() && e.closest('.gs-row') && e.closest('.gs-row') === from.closest('.gs-row'))) continue; // (left and right stay in the row: at its end, nowhere, as on a TV's own apps. Glass: a row's switch and its folded note's line under its name are one row — down went to the switches on the right, so a note under one could never be reached, nor Island position's buttons)
       const d = Math.max(0, ahead) + side * 3 + (h ? Math.abs(cy - fy) : Math.abs(cx - fx)) / 4;
       if (d < best) { best = d; to = e; }
     }
@@ -13429,15 +14189,53 @@ function goHome(on) {
 $('homeNow').onclick = () => goHome(false);
 $('toHome').onclick = () => goHome(true);
 // ← Back atop every panel: it closes the panel, as Esc, a tap outside or the phone's Back do (kept first as the panel's
-// drawn again)
+// drawn again). Glass: a head that stays (Back for a finger or a remote, the title, a control at its end) and a body
+// that scrolls; what the panel's own code writes into it is moved into the body (gpHead, gpBody); its edges faded only
+// where there's more past them, its bar only while it scrolls; it opens at its top, and a list in it goes on closing
+const PANEL_TITLE = { moods: 'Theme', textPanel: 'Settings', queuePanel: 'Queue', togetherPanel: 'Listen together', castPanel: 'Play on', syncPanel: 'Sync', eqPanel: 'Equalizer' };
+const gpFades = b => { b.style.setProperty('--ft', b.scrollTop > 1 ? '20px' : '0px'); b.style.setProperty('--fb', b.scrollTop + b.clientHeight < b.scrollHeight - 1 ? '20px' : '0px'); };
+const gpRo = new ResizeObserver(es => { for (const x of es) gpFades(x.target); }), EQ_TOP = document.querySelector('#eqPanel .eq-top');
+// (a panel's own words drawn again — the queue, Play on, Listen together, Sync: in Glass straight into its body. Written
+// to the panel, they were moved into the body after, the body taken out and put back: the queue jumped to its top at
+// every change and a moved song's grip lost the keyboard's focus)
+function panelPut(p, kids) { const b = gsOn() && p.gpBody?.parentNode === p && p.gpBody; (b || p).replaceChildren(...kids); if (b) gpFades(b); }
 for (const id of ['moods', 'textPanel', 'queuePanel', 'togetherPanel', 'castPanel', 'syncPanel', 'eqPanel']) {
   const p = $(id), back = el('button', 'link panel-back lbl');
   back.append(ico('back'), 'Back'); back.setAttribute('aria-label', 'Back: close ' + (p.getAttribute('aria-label') || 'this panel'));
   back.onclick = () => p.hidePopover();
-  const keep = () => { if (p.firstChild !== back) p.prepend(back); };
+  const head = el('div', 'gp-head'), box = el('div', 'gp-body'), gb = el('button', 'gp-back');
+  gb.append(gsSvg('back')); gb.setAttribute('aria-label', back.getAttribute('aria-label')); gb.onclick = () => p.hidePopover();
+  const keep = () => {
+    if (gsOn()) {
+      if (!head.firstChild) head.append(gb, el('h2', 'gp-title', PANEL_TITLE[id]));
+      const top = id === 'eqPanel' && !p.gpSub && EQ_TOP; // (the equalizer's own head — its name and its switch — in the head)
+      if (top && top.parentNode !== head) head.replaceChildren(gb, top);
+      const loose = [...p.children].filter(c => c !== head && c !== box && c !== back);
+      back.remove();
+      if (!loose.length && p.firstChild === head && p.lastChild === box) return;
+      if (box.parentNode === p) box.append(...loose); else box.replaceChildren(...loose);
+      p.replaceChildren(head, box); gpFades(box);
+    } else {
+      if (head.parentNode === p || box.parentNode === p) { p.gpSub = null; p.classList.remove('gs-sub'); p.replaceChildren(...(id === 'eqPanel' ? [EQ_TOP] : []), ...box.childNodes); }
+      if (p.firstChild !== back) p.prepend(back);
+    }
+  };
+  Object.assign(p, { gpHead: head, gpBody: box, gpBack: gb, gpKeep: keep });
+  box.addEventListener('scroll', () => { gpFades(box); box.classList.add('scrolling'); clearTimeout(box.gpT); box.gpT = setTimeout(() => box.classList.remove('scrolling'), 900); }, { passive: true });
+  box.addEventListener('toggle', () => setTimeout(() => gpFades(box), 220), true); // (a note folded open or shut)
+  gpRo.observe(box);
+  p.addEventListener('beforetoggle', e => { if (e.newState !== 'open' || !gsOn()) return; if (id === 'eqPanel') gsEqRender(); requestAnimationFrame(() => { box.scrollTop = 0; gpFades(box); }); });
+  p.addEventListener('toggle', e => { if (e.newState === 'open') requestAnimationFrame(() => gpFades(box)); else if (p.gpSub) { p.gpSub = null; p.gpRender?.(); } });
   new MutationObserver(keep).observe(p, { childList: true });
   keep();
 }
+$('textPanel').gpRender = renderTextPanel; $('moods').gpRender = renderMoodMenu; $('eqPanel').gpRender = gsEqRender;
+// (a list open in a panel: Esc goes back to its rows first, then closes the panel)
+addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  const p = [...document.querySelectorAll(':popover-open')].find(x => x.gpSub);
+  if (p) { e.preventDefault(); e.stopImmediatePropagation(); gsUp(p); }
+}, true);
 $('fsBtn').onclick = toggleFull;
 document.addEventListener('fullscreenchange', () => { body.classList.toggle('fs', !!document.fullscreenElement); wake(); });
 // The controls fade out after a few still seconds — in full screen, in the Visualiser, and on the song's page while it
@@ -18043,7 +18841,7 @@ function frame(now) {
 function showTime(t, dur) {
   if (body.classList.contains('has-hud')) hudTick(t, dur); // (the themes' round timer)
   if (!dur) return;
-  const sv = Math.round(t / dur * 1000), ct = fmt(t), dd = fmt(dur);
+  const tf = skin === 'Glass' ? fmtG : fmt, sv = Math.round(t / dur * 1000), ct = tf(t), dd = tf(dur);
   if (sv !== lastSeek) { lastSeek = sv; $('seek').value = sv; $('trail').style.transform = `scaleX(${sv / 1000})`; }
   if (ct !== lastCur) { lastCur = ct; $('cur').textContent = ct; }
   if (dd !== lastDur) { lastDur = dd; $('dur').textContent = dd; }
