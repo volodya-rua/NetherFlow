@@ -3907,7 +3907,7 @@ document.addEventListener('beforetoggle', e => {
   if (e.newState === 'open') {
     const f = glass.from; glass.from = null;
     glass.src.set(p, f && performance.now() - f.t < 1000 && !p.contains(f.el) ? f.el : null);
-    queueMicrotask(() => glassMorph(p, true)); // (once it's shown, before it's drawn)
+    requestAnimationFrame(() => glassMorph(p, true)); // (once it's shown, before it's drawn — a microtask ran before it was shown when a button opened it, popovertarget: no script under it, so the panel never grew out of its button)
   } else glassMorph(p, false);
 }, true);
 function glassMorph(p, open) {
