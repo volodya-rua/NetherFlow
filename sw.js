@@ -6,7 +6,14 @@
 // when its picture does.
 const CACHE = 'netherflow-covers-1', MAX = 4000;
 const HOSTS = /^(is\d+-ssl\.mzstatic\.com|i\d?\.ytimg\.com|lh\d\.googleusercontent\.com|yt\d\.(ggpht|googleusercontent)\.com|i\.scdn\.co|mosaic\.scdn\.co|image-cdn-\w+\.spotifycdn\.com)$/;
-self.addEventListener('install', () => self.skipWaiting());
+self.addEventListener('install', e => {
+  self.skipWaiting();
+  // the page itself never comes through here (straight from the app): with it waiting on this worker, Android's web view
+  // now and then never finished opening it — a black screen at start, seen on a TV. A browser without this way of
+  // skipping a worker (a web view before 123): as before. Every later sw.js keeps this: a worker gets its routes only as
+  // it's installed, so one without it would bring the black screen back.
+  if (e.addRoutes) e.addRoutes({ condition: { requestMode: 'navigate' }, source: 'network' }).catch(() => {});
+});
 self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
 let kept = 0;
 // a server that said "too many" (429) or turned the readable copy down: left alone for a while, its covers fetched just as

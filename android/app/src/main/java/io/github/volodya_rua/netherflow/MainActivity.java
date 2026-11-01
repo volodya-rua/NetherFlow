@@ -14,15 +14,24 @@ public class MainActivity extends BridgeActivity {
 
     // The opening splash (res/values/styles.xml): Android's own, held until the page has built itself — the page says so
     // (ImmersivePlugin.splashDone, at the end of its script) — so there's one splash, straight into the app, rather than
-    // the splash, then a blank screen, then the page's own. Then faded out. 5 s at most, whatever happens.
+    // the splash, then a blank screen, then the page's own. Then faded out. 5 s at most, whatever happens (5 s more for a
+    // page loaded again: see pageStarted).
     static volatile boolean pageBuilt = false;
+    private long splashSince;
+
+    // The page not even begun 4 s after the app opened (as a rule it has in half a second): loaded again, once. Android's
+    // web view now and then never finished opening it, a black screen at start that stayed (seen on a TV), and loading it
+    // again put it right. The cause, the page waiting on the cover cache's worker, is gone (see sw.js), but an app just
+    // updated still has the old worker for a start or two. Whatever the app was opened with (a share, a car's pick,
+    // nfResume) is still there for the page then: it hadn't run to take it.
+    private boolean pageStarted;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         androidx.core.splashscreen.SplashScreen splash = androidx.core.splashscreen.SplashScreen.installSplashScreen(this);
-        final long since = android.os.SystemClock.uptimeMillis();
+        splashSince = android.os.SystemClock.uptimeMillis();
         pageBuilt = false;
-        splash.setKeepOnScreenCondition(() -> !pageBuilt && android.os.SystemClock.uptimeMillis() - since < 5000);
+        splash.setKeepOnScreenCondition(() -> !pageBuilt && android.os.SystemClock.uptimeMillis() - splashSince < 5000);
         // (the page can't draw while the splash is held, so the splash stays up, over it, until the page's first frame is
         // ready — then faded off the app itself, not off a blank screen; 0.7 s at most)
         splash.setOnExitAnimationListener(view -> {
@@ -67,16 +76,29 @@ public class MainActivity extends BridgeActivity {
                 if ("localhost".equals(q.getHost()) && "/_fs/castin".equals(q.getPath())) return CastPlugin.castInMedia(request); // (a song sent to this TV: see CastPlugin)
                 return super.shouldInterceptRequest(view, request);
             }
+            @Override
+            public void onPageStarted(WebView view, String url, android.graphics.Bitmap favicon) {
+                super.onPageStarted(view, url, favicon);
+                pageStarted = true;
+            }
             // The page's process gone (Android took its memory back with the app away — Instagram, a game, the camera — or
             // it crashed): the app built again, its page with it, and the song it was playing carried on from where it
             // was (nfResume: see UpdatePlugin.launch) — where a web view's page gone otherwise took the whole app down, the
             // music stopped, and the app opened again with nothing playing.
             @Override
             public boolean onRenderProcessGone(WebView view, android.webkit.RenderProcessGoneDetail detail) {
+                pageStarted = true; // (this page not loaded again: the app built again has its own)
                 runOnUiThread(() -> { getIntent().putExtra("nfResume", true); recreate(); });
                 return true;
             }
         });
+        // (see pageStarted: not for an app that's closing or been built again since; the splash held over it, 5 s more at most)
+        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+            if (pageStarted || isFinishing() || isDestroyed()) return;
+            android.util.Log.i("NetherFlow", "the page hadn't begun 4 s after the start: loaded again");
+            splashSince = android.os.SystemClock.uptimeMillis();
+            web.loadUrl(getBridge().getAppUrl());
+        }, 4000);
         keptDir = new java.io.File(getCacheDir(), "heads");
         // opened by itself for a car (PlaybackService.startItself): behind what's on the phone's screen — it plays from there
         if (getIntent().getBooleanExtra("nfCar", false)) { getIntent().removeExtra("nfCar"); moveTaskToBack(true); }
