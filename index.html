@@ -3865,6 +3865,9 @@ function refitLyrics() {
 }
 addEventListener('resize', refitLyrics);
 document.fonts.addEventListener('loadingdone', refitLyrics);
+// and when they're seen again after the home screen, which hides them whole: a line that came meanwhile was sized to no
+// room at all (Lens's to nothing: the line was gone till the next one)
+{ let seen = true; new ResizeObserver(() => { if (seen !== (seen = stage.clientWidth > 0) && seen) refitLyrics(); }).observe(stage); }
 
 // ---------- palette: from the album cover when possible, else a preset mood ----------
 // fx = how the backdrop moves: [zoom, swirl, speed, glow]
