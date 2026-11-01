@@ -1507,6 +1507,9 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
   width: 70px; height: 70px; }
 .skin-spider .badge text { font: 400 9px 'Permanent Marker', cursive; fill: #fff; }
 .skin-spider .cur { -webkit-text-stroke: .025em #000; paint-order: stroke fill; }
+/* (Lens scales its words up, and the line's outline with them: the sung word's came out twice as thick. Each word's its
+   own share of it instead, so it's as thick as ever once a glide's done — see .la-lens .cur .w) */
+.skin-spider.la-lens .cur .w { -webkit-text-stroke-width: calc(.025em / var(--z)); }
 .skin-spider .cur .w.em > span { --lit: var(--cap); --dim: color-mix(in srgb, var(--cap) 25%, transparent); }
 .skin-spider .cur .w.now > span { filter: drop-shadow(.06em .06em 0 #000); }
 .skin-spider .title { text-shadow: 3px 3px 0 #000; }
@@ -1544,6 +1547,7 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
 .skin-blocks :is(.skip, .icon-btn, .files > .link, .nudge button, .switch, .switch::after) { border-radius: 0; }
 .skin-blocks .switch { box-shadow: inset 0 0 0 2px #000; }
 .skin-blocks .cur { text-shadow: .1em .1em 0 rgba(20,20,20,.6); }
+.skin-blocks.la-lens .cur .w { text-shadow: calc(.1em / var(--z)) calc(.1em / var(--z)) 0 rgba(20,20,20,.6); } /* (Lens: as Spider's outline) */
 .skin-blocks .cur .w.now > span { filter: none; transform: translateY(-.08em); }
 .skin-blocks .cur .w.em > span { --lit: #ffff55; --dim: rgba(255,255,85,.25); }
 .skin-blocks .vol::-webkit-slider-thumb, .skin-blocks .sl::-webkit-slider-thumb { border-radius: 0; box-shadow: 0 0 0 2px #000; }
@@ -1591,6 +1595,7 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
 .skin-ops .title { text-transform: uppercase; }
 .skin-ops .stage-wrap { background: radial-gradient(ellipse 70% 60% at 35% 50%, rgba(8,12,16,.5), transparent 75%); }
 .skin-ops .cur { -webkit-text-stroke: .025em rgba(8,12,16,.9); paint-order: stroke fill; } /* (outlined, as a HUD's words: they read over the brightest smoke) */
+.skin-ops.la-lens .cur .w { -webkit-text-stroke-width: calc(.025em / var(--z)); } /* (Lens: as Spider's) */
 .skin-ops :is(.prev, .it-title, .it-meta, .cs-title, .msg, .cta, .hint) { text-shadow: 0 2px 16px rgba(0,0,0,.6), 0 1px 2px rgba(0,0,0,.55); }
 .skin-ops :is(.moods, .eq, .smenu, .consent) { background: rgba(13,17,21,.9); border: 1px solid rgba(255,255,255,.09); border-radius: 4px; box-shadow: inset 0 2px 0 var(--a), 0 24px 60px rgba(0,0,0,.6); }
 .skin-ops :is(.seg button, .presets button, .chip, .stepper .step, .nudge button, .mchip) { background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.12); border-radius: 3px; text-transform: uppercase; }
