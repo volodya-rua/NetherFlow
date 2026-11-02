@@ -1490,6 +1490,8 @@ body.home .home-now { display: flex; }
 .pc-art:not(.one) { grid-template-rows: 1fr 1fr; }
 /* a cover that hasn't come (yet): a square in the theme's own colours, never an empty box */
 img.nocover { background: linear-gradient(135deg, color-mix(in srgb, var(--a) 24%, var(--bg)), color-mix(in srgb, var(--a) 7%, var(--bg))); }
+/* the playing song's cover where it's drawn square: a video's picture without its black (artFit) */
+#art, #nowCover, #dvArt, #homeNow i { background-size: var(--art-size, cover); background-position: var(--art-pos, 50% 50%); }
 .lib .ap-art { border-radius: 6px; }
 .ap-art .pc-art { height: 100%; box-shadow: none; border-radius: inherit; }
 .danger { color: var(--a); }
@@ -6235,7 +6237,31 @@ function showArt(art) {
   $('dvArt').style.backgroundImage = u;
   if (body.classList.contains('home')) $('homeNow').querySelector('i').style.backgroundImage = u;
   curArt = art;
+  artFit(art);
   if (glass.tier) glassInkSoon(); // (the Cover background behind the Glass theme's lenses)
+}
+// A video's picture as the cover is 4:3, the video in the middle of it with black above and below (and a song's square
+// art in the middle of that, black at its sides too): in the play button's record it was a small square in the circle.
+// The black is cut off where the cover is drawn square (the record, the player's, Drive's, the home screen's): it fills
+// them. Only a video's picture: an album's own dark edges are its own.
+function artFit(art) {
+  root.style.removeProperty('--art-size'); root.style.removeProperty('--art-pos');
+  if (!/^https:\/\/i\d?\.ytimg\.com\//.test(art)) return;
+  artImage(art).then(img => {
+    if (art !== curArt) return;
+    const W = 96, H = Math.round(W * img.naturalHeight / img.naturalWidth) || 72, c = document.createElement('canvas'); c.width = W; c.height = H;
+    const g = c.getContext('2d', { willReadFrequently: true }); g.drawImage(img, 0, 0, W, H);
+    const d = g.getImageData(0, 0, W, H).data, lit = (x, y) => { const i = (y * W + x) * 4; return Math.max(d[i], d[i + 1], d[i + 2]) >= 40; };
+    const row = y => { for (let x = 0; x < W; x++) if (lit(x, y)) return false; return true; }, col = (x, t, b) => { for (let y = t; y < b; y++) if (lit(x, y)) return false; return true; };
+    let t = 0, b = H, l = 0, r = W;
+    while (t < H / 2 && row(t)) t++; while (b > H / 2 && row(b - 1)) b--;
+    while (l < W / 2 && col(l, t, b)) l++; while (r > W / 2 && col(r - 1, t, b)) r--;
+    const side = Math.min(r - l, b - t);
+    if (side < H * .3 || t + l + H - b + W - r < 3) return; // (all black, or no black to cut)
+    const bw = W / side, bh = H / side, at = (mid, bs) => bs > 1.001 ? (.5 - mid * bs) / (1 - bs) * 100 : 50;
+    root.style.setProperty('--art-size', `${bw * 100}% ${bh * 100}%`);
+    root.style.setProperty('--art-pos', `${at((l + r) / 2 / W, bw)}% ${at((t + b) / 2 / H, bh)}%`);
+  }).catch(() => {}); // (a picture that can't be read: drawn as it is)
 }
 // The cover, watched as it loads: one an image server turned away (YouTube's, now and then, when the app asks for many at
 // once, as a mix does) asked again another way, as the lists' covers are (see coverAgain), then its own full-size one,
@@ -12646,41 +12672,52 @@ function tile(icon, label, count, ghost) {
   if (count != null) t.append(el('b', 'lt-n', count));
   return t;
 }
-// ---------- Covers that never stay blank. A cover that didn't come (its server busy, a moment offline, a size it hasn't
-// got) is asked for again a little later, then at the server's other sizes, then once more 20 s on: a server asked
-// again a few times a second at most. Meanwhile, and if it never comes, a square in the theme's colours in its place,
-// never an empty box. A list's picture takes another of its songs' covers for one that didn't come (one big cover when
-// fewer than four come, its own tile when none). Offline: squares until the internet's back, then each asked again.
+// ---------- Covers that never stay blank: every cover picture in the page. One that didn't come (its server busy, a
+// moment offline, a size it hasn't got) is asked for again by its other addresses, a little later each time (the same
+// address again would only get back the failure the browser kept): a size a pixel smaller, a thumbnail without its
+// signed extras, the server's other sizes; then the row's own other covers (data-alt: the full-size one, the video's own
+// picture). A server is asked again a few times a second at most. Meanwhile, and if none comes, a square in the theme's
+// colours in its place, never an empty box. A list's picture takes another of its songs' covers for one that didn't come
+// (one big cover when fewer than four come, its own tile when none). Offline: squares until the internet's back, then
+// each one's own cover asked for again.
 const COVER_HOST = /^(is\d+-ssl\.mzstatic\.com|i\d?\.ytimg\.com|lh\d\.googleusercontent\.com|yt\d\.(ggpht|googleusercontent)\.com|i\.scdn\.co|mosaic\.scdn\.co|image-cdn-\w+\.spotifycdn\.com)$/; // (sw.js's)
-const coverSizes = u => [...new Set([u.replace(/=w\d+-h\d+[^/?#]*/, '=w226-h226'), u.replace(/=w\d+-h\d+[^/?#]*/, '=w120-h120'), u.replace(/\/\d+x\d+bb\./, '/100x100bb.'),
-  ...['hqdefault', 'mqdefault', 'default'].map(s => u.replace(/\/(maxres|sd|hq|mq)?default\./, `/${s}.`)), ...['1e02', '4851'].map(c => u.replace(/(i\.scdn\.co\/image\/ab67616d0000)\w{4}/, '$1' + c))])].filter(x => x !== u);
+// another address for a cover an image server turned away, its nth time ('': none): a size a pixel smaller, a thumbnail
+// without its signed extras, or the same asked anew (also the player's own cover's, watchArt)
+const coverAgain = (u, n) => n >= 2 ? '' : /googleusercontent\.com\/.*=(w\d+-h\d+|s\d+)/.test(u) ? u.replace(/=w(\d+)-h(\d+)|=s(\d+)/, (m, w, h, s) => s ? `=s${s - 1}` : `=w${w - 1}-h${h - 1}`)
+  : /ytimg\.com\/.*\?/.test(u) ? u.split('?')[0] : /ytimg\.com\//.test(u) ? u + '?nf=' + (n + 1) : '';
+const coverTries = u => [...new Set([coverAgain(u, 0), coverAgain(u, 1), u.replace(/\/(\d+)x\1bb\./, (m, n) => `/${n - 1}x${n - 1}bb.`),
+  u.replace(/=w\d+-h\d+[^/?#]*/, '=w226-h226'), u.replace(/=w\d+-h\d+[^/?#]*/, '=w120-h120'), u.replace(/\/\d+x\d+bb\./, '/100x100bb.'),
+  ...['hqdefault', 'mqdefault', 'default'].map(s => u.replace(/\/(maxres|sd|hq|mq)?default\./, `/${s}.`)), ...['1e02', '4851'].map(c => u.replace(/(i\.scdn\.co\/image\/ab67616d0000)\w{4}/, '$1' + c))])].filter(x => x && x !== u);
 const coverNext = new Map(); // server → when it may be asked again (ms)
-function coverMissed(img) {
+function coverAsk(img, from, url, wait) { // (url in from's place, wait ms on; its server's turn kept, half a minute ahead at most)
+  let host = ''; try { host = new URL(url).hostname; } catch {}
+  const now = Date.now(), at = Math.max(now + wait, Math.min(coverNext.get(host) || 0, now + 30e3));
+  coverNext.set(host, at + 300);
+  setTimeout(() => { if (img.isConnected && img.getAttribute('src') === from) img.src = url; }, at - now);
+}
+function coverMissed(img, back) { // (back: the internet's back — its own cover asked anew, not the list's next)
   const src = img.getAttribute('src') || '', blob = src.startsWith('blob:');
   let host = ''; try { host = new URL(src).hostname; } catch {}
   if (!blob && !COVER_HOST.test(host)) return; // (covers only: an emoji's is its own)
   if (!img.hasAttribute('alt')) img.alt = '';
   img.classList.add('nocover');
+  if (!navigator.onLine) return;
   const box = img.closest('.pc-art');
-  if (!navigator.onLine) return; // (asked for again when the internet's back)
-  if (box?.more?.length) { img.coverTry = null; img.src = box.more.shift(); return; }
+  if (box?.more?.length && !back) { img.coverTry = null; return coverAsk(img, src, box.more.shift(), 0); }
   let k = img.coverTry;
-  if (!k?.plan.includes(src)) k = img.coverTry = { plan: blob ? [] : [src, ...coverSizes(src), src], n: 0 }; // (a saved song's own picture: nothing else to ask)
-  if (k.n >= k.plan.length) return coverGone(img, box);
-  const url = k.plan[k.n], at = Math.max(Date.now() + (k.n === k.plan.length - 1 ? 20e3 : 1500), coverNext.get(host) || 0);
-  k.n++; coverNext.set(host, at + 300);
-  setTimeout(() => { if (img.isConnected && img.coverTry === k && img.getAttribute('src') === src) img.src = url; }, at - Date.now());
-}
-function coverGone(img, box) { // (never came: a list's picture made of those that did; a song's square stays)
-  if (!box?.fb) return;
-  img.remove();
+  if (!k?.plan.includes(src)) k = img.coverTry = { plan: blob ? [] : coverTries(src), n: 0 }; // (a saved song's own picture: nothing else to ask)
+  if (k.n < k.plan.length) return coverAsk(img, src, k.plan[k.n], Math.min(20e3, 1500 * 2 ** k.n++));
+  const alt = (img.dataset.alt || '').split(' ').filter(Boolean);
+  if (alt.length) { img.dataset.alt = alt.slice(1).join(' '); img.coverTry = null; return coverAsk(img, src, alt[0], 0); }
+  if (!box?.fb) return; // (a song's: the square stays)
+  img.remove(); // (a list's picture: made of those that came)
   const left = [...box.querySelectorAll('img')], keep = left.find(i => i.complete && i.naturalWidth) || left[0];
-  if (!keep) return box.replaceWith(box.fb());
-  box.classList.add('one'); for (const i of left) if (i !== keep) i.remove();
+  if (keep) { box.classList.add('one'); for (const i of left) if (i !== keep) i.remove(); return; }
+  const t = box.fb(); t.append(...box.querySelectorAll(':scope > :not(img)')); box.replaceWith(t); // (an import's bar kept)
 }
 document.addEventListener('error', e => { if (e.target.tagName === 'IMG') coverMissed(e.target); }, true);
 document.addEventListener('load', e => { const i = e.target; if (i.tagName === 'IMG' && i.classList.contains('nocover')) { i.classList.remove('nocover'); i.coverTry = null; } }, true);
-addEventListener('online', () => { for (const i of document.querySelectorAll('img.nocover')) { i.coverTry = null; coverMissed(i); } });
+addEventListener('online', () => { for (const i of document.querySelectorAll('img.nocover')) { i.coverTry = null; coverMissed(i, true); } });
 for (const i of document.images) if (i.complete && !i.naturalWidth && i.getAttribute('src')) coverMissed(i); // (any that failed before this was here)
 // a list's picture: its first four covers (or one); the fallback tile when it has none
 function mosaic(tracks, fallback) {
@@ -12693,14 +12730,17 @@ function mosaic(tracks, fallback) {
 }
 // the open playlist's own picture made again as its songs' covers come in (an import's, while it's open: the rows got
 // them, its picture didn't)
-let headTimer;
+// (at most every 0.7 s while an import's matches pour in; drawn again only when the covers it'd be made of change — the
+// picture drawn changes by itself as covers fail, see coverMissed)
+let headTimer = 0;
 function freshHead() {
-  clearTimeout(headTimer);
+  if (headTimer) return;
   headTimer = setTimeout(() => {
-    const v = libView, p = $('library').open && v?.kind === 'playlist' && library.playlists.find(x => x.id === v.id), was = $('libArt').lastElementChild;
+    headTimer = 0;
+    const v = libView, p = $('library').open && v?.kind === 'playlist' && library.playlists.find(x => x.id === v.id), a = $('libArt'), was = a.lastElementChild;
     if (!p || !was) return;
-    const art = mosaic(p.tracks, () => tile('note', p.name, p.tracks.length)), srcs = x => [...x.querySelectorAll('img')].map(i => i.getAttribute('src')).join();
-    if (srcs(art) !== srcs(was)) was.replaceWith(art);
+    const art = mosaic(p.tracks, () => tile('note', p.name, p.tracks.length)), k = [...art.querySelectorAll('img')].map(i => i.getAttribute('src')).join();
+    if (k !== a.dataset.k) { a.dataset.k = k; was.replaceWith(art); }
   }, 700);
 }
 // "1 song", "12 songs · 2 episodes" (Downloads holds both)
@@ -13478,23 +13518,7 @@ function dragLib(e, row, p, i, redraw) {
   grip.addEventListener('pointermove', move); grip.addEventListener('pointerup', end); grip.addEventListener('pointercancel', end);
 }
 $('openLib').onclick = () => openLibrary();
-// a cover YouTube's image server turned away (a few at a time, when a page asks for many): once more, a moment later, by
-// another of its addresses (a size a pixel smaller; a thumbnail without its signed extras), not the failed one again;
-// that failing too, or another server's: the row's next cover (data-alt: the full-size one, the video's own picture)
-// another address for a cover an image server turned away, its nth time ('': none: on to the next cover): a size a pixel
-// smaller (not the failure the browser kept), a thumbnail without its signed extras, or the same asked anew
-const coverAgain = (u, n) => n >= 2 ? '' : /googleusercontent\.com\/.*=(w\d+-h\d+|s\d+)/.test(u) ? u.replace(/=w(\d+)-h(\d+)|=s(\d+)/, (m, w, h, s) => s ? `=s${s - 1}` : `=w${w - 1}-h${h - 1}`)
-  : /ytimg\.com\/.*\?/.test(u) ? u.split('?')[0] : /ytimg\.com\//.test(u) ? u + '?nf=' + (n + 1) : '';
-document.addEventListener('error', e => {
-  const i = e.target;
-  if (i.tagName !== 'IMG' || !i.closest('#libList, .results, .ritem')) return;
-  i.style.visibility = 'hidden'; // (no broken-picture sign meanwhile: the tile's own ground)
-  const n = +(i.dataset.again || 0), alt = (i.dataset.alt || '').split(' ').filter(Boolean), again = coverAgain(i.src, n);
-  i.addEventListener('load', () => { i.style.visibility = ''; }, { once: true });
-  if (!again) { if (alt.length) { i.dataset.alt = alt.slice(1).join(' '); i.dataset.again = 0; i.src = alt[0]; } return; }
-  i.dataset.again = n + 1;
-  setTimeout(() => { i.src = again; }, 1500 * (n + 1));
-}, true);
+// (a cover that doesn't load: see coverMissed)
 $('closeLib').onclick = libBack;
 $('library').addEventListener('cancel', e => { if (libView) { e.preventDefault(); libBack(); } }); // Esc: back a step first
 $('library').addEventListener('close', () => body.classList.remove('lib-open'));
@@ -13538,7 +13562,7 @@ const playable = s => s.kind === 'song' && (s.previewUrl || fullSongs);
 // YouTube Music's never past 544, its own size: Google's image server kept turning down a cover asked bigger (600, for the
 // player), so the player's and the record's stayed an empty square while the lists, smaller, had it (the user's report)
 const artUrl = (x, size) => (x?.artworkUrl100 || '').replace('100x100bb', `${size}x${size}bb`).replace(/=w\d+-h\d+/, `=w${Math.min(size, 544)}-h${Math.min(size, 544)}`)
-  .replace(/(\/\/i\.scdn\.co\/image\/ab67616d0000)b273/, (m, a) => size <= 300 ? a + '1e02' : m).replace(/\/hqdefault\.jpg$/, m => size <= 200 ? '/mqdefault.jpg' : m);
+  .replace(/(\/\/i\.scdn\.co\/image\/ab67616d0000)b273/, (m, a) => size <= 300 ? a + '1e02' : m).replace(/\/hqdefault\.jpg$/, m => size <= 320 ? '/mqdefault.jpg' : m); // (a video's 4:3 picture has black above and below it: its 16:9 one up to a list's cover)
 
 async function searchSongs(term, signal) {
   flowPage?.visitor().catch(() => {}); // (FlowStream's visitor id, once and kept: so the first song doesn't wait for it)
