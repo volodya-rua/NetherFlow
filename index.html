@@ -9962,15 +9962,20 @@ function lyricsFor(t) {
   }
 }
 // YouTube Music's lyrics of the upload that plays; none timed there, its twin's (see twinOf) — one more lookup at most,
-// kept like the rest → [lyrics, the upload they're of]
+// kept like the rest, and a twin with none there not asked again this session (an empty answer isn't kept by the memo,
+// so each play asked it again) → [lyrics, the upload they're of]
+const ytmNone = new Set();
 async function ytmOf(vid, others, len) {
   const y = await ytmLyricsFor(vid.id).catch(() => ({})), tw = !y.lines?.length && twinOf(vid, others, len);
-  const z = tw ? await ytmLyricsFor(tw.id).catch(() => ({})) : {};
+  const z = tw && !ytmNone.has(tw.id) ? await ytmLyricsFor(tw.id).catch(() => ({})) : {};
+  if (tw && !z.lines && !z.plain) ytmNone.add(tw.id);
   return z.lines?.length ? [z, tw] : [y, vid];
 }
 // The same recording's other upload: another "- Topic" one of the song (a single's and its album's) at the length of the
-// "- Topic" upload that plays — its timed lyrics and its stream are this one's. None: null.
-const twinOf = (v, list, len = v?.dur) => / - Topic$/.test(v?.channel || '') && (list || []).find(c => c.id !== v.id && / - Topic$/.test(c.channel || '') && Math.abs((c.dur || 0) - len) <= 1) || null;
+// "- Topic" upload that plays — its timed lyrics and its stream are this one's. None: null. (By the same name and artist
+// too: every YouTube Music song comes as "<its artist> - Topic" (lib.ytMusic), so "Song (Taylor's Version)" or another
+// language's version at about that length passed for one.)
+const twinOf = (v, list, len = v?.dur) => / - Topic$/.test(v?.channel || '') && (list || []).find(c => c.id !== v.id && c.channel === v.channel && c.title === v.title && Math.abs((c.dur || 0) - len) <= 1) || null;
 // YouTube Music's own lyrics for a video (LyricFind's), kept for the session.
 const ytmLyricsFor = memo(id => api.ytmLyrics(id), v => !!(v.lines || v.plain));
 const lrcOf = ls => ls.map(l => `[${pad(Math.floor(l.t / 60))}:${(l.t % 60).toFixed(2).padStart(5, '0')}]${l.text}`).join('\n');
@@ -9984,68 +9989,44 @@ function withYtm(lyr, y, vid, want = '') {
   const theirs = { raw: text, dur: vid?.dur || 0, src: 'YouTube Music', credit: y.source || '', exact: true, kind: lrc ? 'synced lyrics' : 'plain lyrics' }; // (credit: who provides them, shown with them)
   const ours = lyr.instrumental ? '' : lyr.raw;
   if (!ours) return theirs;
-  // (a music video runs to its own cut: their timing only for the label's upload, or one whose channel isn't known.
-  // Timed to the very upload, theirs are the timing ours are lined up to whichever words show — in another script or
-  // read as another language too: measured, Punjabi in Latin letters read as Hindi, and Latin against Devanagari, kept
-  // ours 0.35–0.61 s late)
-  const own = !vid?.channel || / - Topic$/.test(vid.channel), ref = own && lrc ? y.lines : null;
   // two languages (a translation, another language's version): the song's, if its names say which; else theirs, which
   // go with the very audio that plays
   const lo = langOf(ours), lt = langOf(text);
-  if (lo && lt && !sameLang(lo, lt)) return want && sameLang(lo, want) && !sameLang(lt, want) ? { ...lyr, ref } : theirs;
-  // (the same language in two scripts — Devanagari and Latin letters, say: ours, lined up to theirs, see alignTo)
-  if (!sameScript(text, ours)) return { ...lyr, ref };
+  if (lo && lt && !sameLang(lo, lt)) return want && sameLang(lo, want) && !sameLang(lt, want) ? lyr : theirs;
+  // (the same language in two scripts — Devanagari and Latin letters, say: ours, unaligned — see alignTo for why)
+  if (!sameScript(text, ours)) return lyr;
   if (sharedPhrases(text, ours) < .2) return theirs; // ours some other song's (a mislabelled entry): theirs go with what plays
   const timedOurs = lyr.yrc || /\[\d+:\d+/.test(ours);
   if (!timedOurs) return lrc ? theirs : lyr;
-  return { ...lyr, ref, guide: lyr.yrc && !lyr.guide && lrc ? lrc : lyr.guide };
+  // (a music video runs to its own cut: their timing only for the label's upload, or one whose channel isn't known)
+  const own = !vid?.channel || / - Topic$/.test(vid.channel);
+  return { ...lyr, ref: own && lrc ? y.lines : null, guide: lyr.yrc && !lyr.guide && lrc ? lrc : lyr.guide };
 }
 // Our lyrics' timing moved onto YouTube Music's for the same recording (ref), by how far the lines both have run apart:
-// the middle of those gaps, so a chorus line paired with its other time doesn't count. A line pairs with the nearest in
-// time of their lines that has its letters, or most of its words romanized to their bones (see bones): Devanagari,
-// Gurmukhi and the same words in Latin letters pair, and so do two spellings (measured: by letters alone, 7 of a song's
-// 26 lines paired, too few, and it stayed 0.6 s late). Too few pair (a script not romanized here, Urdu's, say): the
-// shift that puts the most of our lines' starts on theirs, by timing alone, if it's clearly the one. Then a line timed
-// only as a whole (no word timing) whose words are theirs starts where theirs does, when that's close. Their gaps all
-// over the place, or no shift clearly the best: ours stay as they are.
+// the middle of those gaps, so a chorus line matched to its other time doesn't count; then a line timed only as a whole
+// (no word timing) starts where theirs does, when that's close. Their gaps all over the place: ours stay as they are.
+// (Only lines with the very same letters pair, so another script, or too few lines alike, leaves ours as they are. Lined
+// up to theirs anyway — another script's lines, or words romanized to their bones, or by timing alone — Bairan, Sahiba,
+// Pal Pal, Tauba Tauba and Aaj Ki Raat moved 0.33–0.61 s earlier, and against each song's own vocal entries (the centre
+// channel's rise at each line) ours had sat within 0.08 s of the singing and theirs, on four of them, 0.4–0.9 s before
+// it: lined up, ours came out 0.3–0.84 s early. Measured 2026-11-02; where the two agreed — Moves, both Inaams — both
+// sat within 0.16 s.)
 function alignTo(ls, ref) {
-  const key = s => ({ k: letters(s), w: new Set(romanize(s).toLowerCase().split(/\s+/).map(w => bones(letters(w))).filter(x => x.length >= 2)) });
-  const R = ref.filter(r => r.text).map(r => ({ t: r.t, ...key(r.text) })), sung = ls.filter(l => l.text);
-  const pair = l => { // (all: its words theirs both ways)
-    const a = key(l.text); let b = null;
-    for (const r of R) {
-      if (Math.abs(r.t - l.t) >= 10) continue;
-      let n = 0; if (a.w.size >= 2 && r.w.size >= 2) for (const w of a.w) if (r.w.has(w)) n++;
-      const same = !!a.k && a.k === r.k;
-      if ((same || n / Math.min(a.w.size, r.w.size) >= .6) && (!b || Math.abs(r.t - l.t) < Math.abs(b.r.t - l.t))) b = { r, all: same || n / Math.max(a.w.size, r.w.size) >= .6 };
-    }
-    return b;
-  };
-  const mid = a => a.sort((x, y) => x - y)[a.length >> 1];
-  const gaps = sung.flatMap(l => { const b = pair(l); return b ? [b.r.t - l.t] : []; }), byWords = gaps.length >= Math.max(4, sung.length * .3);
-  let sh;
-  if (byWords) { sh = mid(gaps); if (gaps.filter(g => Math.abs(g - sh) < .5).length < gaps.length * .5) return; }
-  else {
-    // (by timing: each shift from one of our lines' starts to one of theirs within 10 s, counted by how many of ours then
-    // start within 0.35 s of one of theirs — the best only if that's 60% of our lines or more, and clearly more than any
-    // other shift's: lines come at a steady pace, and a whole line off can be nearly as good. Measured on 11 songs' real
-    // line times: the right shift every time it was taken; none taken from another song's)
-    const T = R.map(r => r.t).sort((x, y) => x - y);
-    const on = x => { let lo = 0, hi = T.length; while (lo < hi) { const m = lo + hi >> 1; if (T[m] < x - .35) lo = m + 1; else hi = m; } return T[lo] <= x + .35 ? T[lo] : null; };
-    const tries = new Set(); for (const l of sung) for (const t of T) if (Math.abs(t - l.t) < 10) tries.add(Math.round((t - l.t) * 20) / 20);
-    const fits = [...tries].map(d => ({ d, g: sung.flatMap(l => { const t = on(l.t + d); return t == null ? [] : [t - l.t]; }) }));
-    const best = fits.reduce((a, f) => f.g.length > a.g.length ? f : a, { d: 0, g: [] });
-    const next = Math.max(0, ...fits.filter(f => Math.abs(f.d - best.d) > .7).map(f => f.g.length));
-    if (best.g.length < Math.max(4, sung.length * .6) || best.g.length < next * 1.25) return;
-    sh = mid(best.g);
-  }
+  const at = new Map();
+  for (const r of ref) { const k = letters(r.text); if (k) (at.get(k) || at.set(k, []).get(k)).push(r.t); }
+  const near = l => { let b = null; for (const t of at.get(letters(l.text)) || []) if (b === null || Math.abs(t - l.t) < Math.abs(b - l.t)) b = t; return b; };
+  const gaps = [];
+  for (const l of ls) if (l.text) { const b = near(l); if (b !== null && Math.abs(b - l.t) < 10) gaps.push(b - l.t); }
+  if (gaps.length < Math.max(4, ls.filter(l => l.text).length * .3)) return;
+  gaps.sort((a, b) => a - b);
+  const sh = gaps[gaps.length >> 1];
+  if (gaps.filter(g => Math.abs(g - sh) < .5).length < gaps.length * .5) return;
   for (const l of ls) {
     l.t += sh;
     if (l.end != null) l.end += sh;
     for (const w of l.words || []) { w.t += sh; if (w.e != null) w.e += sh; }
+    if (!l.words && l.text) { const b = near(l); if (b !== null && Math.abs(b - l.t) < 1.5) l.t = b; }
   }
-  // (theirs are timed by hand to this very upload: a line whose words are theirs, at their time — each of theirs once)
-  if (byWords) { const used = new Set(); for (const l of sung) if (!l.words) { const b = pair(l); if (b?.all && !used.has(b.r) && Math.abs(b.r.t - l.t) < 1.5) { used.add(b.r); l.t = b.r.t; } } }
   ls.sort((a, b) => a.t - b.t);
 }
 
@@ -19337,15 +19318,10 @@ console.assert(artUrl({ artworkUrl100: 'https://is1-ssl.mzstatic.com/a/100x100bb
 { const ref = [10, 13, 16, 19, 22, 25].map((t, i) => ({ t, text: 'line ' + i })), ls = ref.map((r, i) => ({ t: r.t + 1.3 + (i === 2 ? .6 : 0), text: r.text }));
   alignTo(ls, ref);
   console.assert(ls.every((l, i) => Math.abs(l.t - ref[i].t) < .01), 'alignTo broken: ' + ls.map(l => l.t).join()); }
-{ // (across scripts: Devanagari's lines and the same words in Latin letters by their words; Urdu's, by timing alone; and
-  // lines at a steady pace, where a whole line off is nearly as good, left as they are)
-  const ref = ['तेरा इश्क़ है पिया', 'मैं नहीं हूँ तेरे बिना', 'ज़िंदगी में तू ही है', 'प्यार दिलबर समझना', 'अंबर रंग यहाँ सजना'].map((text, i) => ({ t: 6 + i * 3.4, text }));
-  const ls = ['Tera ishq hai piya', 'Main nahi hoon tere bina', 'Zindagi mein tu hi hai', 'Pyaar dilbar samajhna', 'Ambar rang yahan sajna'].map((text, i) => ({ t: 6.6 + i * 3.4 + (i % 2) * .1, text }));
-  let at = 18; const ts = [3.1, 2.4, 4.2, 2.9, 3.6, 2.2, 5.1, 2.7, 3.3, 2.5].map(g => (at += g)), ur = ts.map(t => ({ t, text: 'میرا دل ہے' })), lu = ts.map(t => ({ t: t + .45, text: 'Mera dil hai' }));
-  const st = Array.from({ length: 20 }, (_, i) => ({ t: 10 + i * 2.7, text: 'میرا دل' })), ls2 = st.map(r => ({ t: r.t + .5, text: 'Mera dil' }));
-  alignTo(ls, ref); alignTo(lu, ur); alignTo(ls2, st);
-  console.assert(ls.every((l, i) => Math.abs(l.t - ref[i].t) < .01) && lu.every((l, i) => Math.abs(l.t - ts[i]) < .01) && ls2.every((l, i) => Math.abs(l.t - st[i].t - .5) < 1e-9),
-    'alignTo across scripts broken: ' + [ls, lu, ls2].map(a => a.slice(0, 3).map(l => l.t.toFixed(2))).join(' | ')); }
+{ // (YouTube Music's lines in another script: ours shown as they are, not lined up to theirs — see alignTo)
+  const ref = ['तेरा इश्क़ है पिया', 'मैं नहीं हूँ तेरे बिना', 'ज़िंदगी में तू ही है', 'प्यार दिलबर समझना'].map((text, i) => ({ t: 6 + i * 3.4, text }));
+  const lyr = { raw: lrcOf(['Tera ishq hai piya', 'Main nahi hoon tere bina', 'Zindagi mein tu hi hai', 'Pyaar dilbar samajhna'].map((text, i) => ({ t: 6.6 + i * 3.4, text }))), kind: 'synced lyrics' };
+  console.assert(withYtm(lyr, { lines: ref }, { id: 'x', channel: 'A - Topic' }) === lyr, 'withYtm lined ours up to another script'); }
 // shared to NetherFlow from another app (Android's share sheet): the share it was opened with, and any while it runs
 if (native) { Capacitor.Plugins.Sharing.received?.().then(r => { if (r?.text) openShared(r.text); }).catch(() => {}); Capacitor.Plugins.Sharing.addListener?.('received', m => { if (m.text) openShared(m.text); }); }
 { const on = romanizeOn; romanizeOn = true;
