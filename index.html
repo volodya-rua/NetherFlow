@@ -1561,7 +1561,7 @@ img.nocover { background: linear-gradient(135deg, color-mix(in srgb, var(--a) 24
 @keyframes drift { to { transform: scale(1.18) rotate(8deg); } }
 /* (out of the page unless it's the background chosen: even unseen, a full-screen layer is a layer to blend) */
 .theme-cover .cover-bg { display: block; opacity: 1; @starting-style { opacity: 0; } } /* the canvas stays under it, plain */
-.scene-over :is(.cover-bg, .pic-bg) { display: none !important; } /* (a scene set over the theme's) */
+.scene-over :is(.cover-bg, .pic-bg) { display: none !important; } .scene-over.theme-gradient #fx { display: block; } /* (a scene set over the theme's) */
 .theme-cover:not(.grain-still) .cover-bg { animation: drift 40s ease-in-out infinite alternate; } /* (only when it's seen) */
 /* the Custom mood's own colours (mood menu): pills like the choices beside them, each with a dot of its colour (a tap opens
    its picker) */
@@ -1810,7 +1810,7 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
 .skin-blocks .row:hover, .skin-blocks .row:focus-visible { background: rgba(255,255,255,.18); color: #fff; box-shadow: inset 0 0 0 2px #fff; }
 .skin-blocks .row:hover .idx, .skin-blocks .ritem:has(.row:hover, .row:focus-visible) .rmore { color: #ffffa0; }
 .skin-blocks :is(.search, .about, .drive) { background: linear-gradient(rgba(0,0,0,.6), rgba(0,0,0,.6)), var(--dirt, #3f2c1f) 0 0 / 64px 64px; image-rendering: pixelated; }
-.skin-blocks .q { font-size: clamp(24px, 6vw, 84px); line-height: 1.3; }
+.skin-blocks .q { font-size: clamp(24px, 6vw, 84px); line-height: 1.3; } .skin-blocks .search.typed .q { font-size: clamp(24px, 5vw, 72px); } /* (typed: never bigger than new, on a phone) */
 .skin-blocks .toast { background: #212121; color: #ffff55; border: 2px solid #555; border-radius: 0; text-shadow: 2px 2px 0 #3f3f3f; box-shadow: inset 0 0 0 2px #000, 0 8px 0 rgba(0,0,0,.3); }
 .skin-blocks .core { border-radius: 0; background: var(--a); box-shadow: inset 3px 3px 0 rgba(255,255,255,.4), inset -3px -4px 0 rgba(0,0,0,.35), 0 0 0 3px #000; }
 .skin-blocks .core i, .skin-blocks .core i::after, .skin-blocks .now-cover, .skin-blocks .row img, .skin-blocks .acard i, .skin-blocks .album img, .skin-blocks .ap-art { border-radius: 0; }
@@ -4582,8 +4582,8 @@ const glassInkSoon = () => { clearTimeout(glassInkT); glassInkT = setTimeout(() 
 async function glassInk() {
   const on = glass.tier === 'lens' || glass.tier === 'frost', bc = body.classList, seen = !(bc.contains('view-vis') && bc.contains('has-song') && !bc.contains('home'));
   let src = null, dim = 0, over = [0, 0, 0];
-  if (on && seen && theme === 'Pictures') { src = picBox().querySelector('img:not(.gone)'); dim = PIC_DIM[picDim]; over = rgb(pal.bg); }
-  else if (on && seen && theme === 'Cover' && curArt) { src = await artImage(curArt).catch(() => null); dim = .7; }
+  if (on && seen && !sceneOver && theme === 'Pictures') { src = picBox().querySelector('img:not(.gone)'); dim = PIC_DIM[picDim]; over = rgb(pal.bg); }
+  else if (on && seen && !sceneOver && theme === 'Cover' && curArt) { src = await artImage(curArt).catch(() => null); dim = .7; }
   const W = 64, H = Math.max(1, Math.round(W * innerHeight / innerWidth)), key = [src?.src, dim, over, W, H].join();
   if (glass.ink?.key !== key) {
     const Ls = new Float32Array(W * H).fill(GLM.L.reduce((a, v, k) => a + v * lin(rgb(pal.bg)[k]), 0));
@@ -7793,7 +7793,7 @@ function here() {
     const name = $('apName').textContent, album = $('artistPage').classList.contains('of-album'), a = album ? apAlbum : apData?.artist;
     return a ? { name, open: () => album ? openAlbumPage(a) : openArtist(a), keep: { k: album ? 'album' : 'artist', a, title: name } } : null;
   }
-  const q = dlg.open && $('q').value.trim();
+  const q = dlg.open && searched;
   return q ? { name: `“${q}”`, open: () => { $('q').value = q; openSearch(); runSearch(q); } } : null;
 }
 const keptKey = r => [r.k, r.id ?? r.key ?? r.a?.collectionId ?? r.a?.artistId ?? r.title].join(':');
@@ -13408,7 +13408,7 @@ function renderLibrary() {
     if (p) { // Add songs: the search, each song found with a + to add it here (see addingTo)
       const add = el('button', 'pill ghost');
       add.append(ico('plus'), 'Add songs');
-      add.onclick = () => { addingTo = p; $('library').close(); openSearch(); if ($('q').value.trim()) runSearch($('q').value.trim()); else $('sstat').textContent = `Adding to ${p.name}: search, then + on any song`; };
+      add.onclick = () => { addingTo = p; $('library').close(); openSearch(); if (searched) runSearch(searched); else $('sstat').textContent = `Adding to ${p.name}: search, then + on any song`; };
       acts.splice(2, 0, add);
     }
     if (p?.left?.length) { // (an import YouTube cut short: the rest, on a tap)
@@ -13670,7 +13670,7 @@ async function searchYouTube(term) {
 }
 
 // ---------- search ----------
-let searchCtl, qTimer;
+let searchCtl, qTimer, searched = ''; // (searched: what the results on screen are for — the box can be ahead of it)
 // Remixes, covers, live takes, sped-up and slowed edits, karaoke…: listed after the original recordings.
 // Only the title's extras count — "(Live)", "[Acoustic]", "- Remix" — so a song called "Live Forever" stays an original.
 const MODDED = /\b(re-?mix(es)?|mix|edit|live|acoustic|unplugged|cover|karaoke|instrumental|sped[ -]?up|speed up|slowed|reverb|nightcore|8d|lo-?fi|piano|orchestral|symphonic|acapella|a cappella|tribute|lullaby|rendition|bass boosted|rework|bootleg|mash-?up|demo|remake|extended|club|dub|vip|chopped|screwed|reprise|rehearsal|session|inst|off[ -]?vocal)\b|\(mr\)|伴奏|カラオケ|노래방/i; // (and Korean, Japanese, Chinese releases' own: "(Inst.)", "(MR)", Off Vocal, accompaniment, karaoke)
@@ -13735,7 +13735,7 @@ function topHit(s, list, artist, term, album) {
 // an album's page, from the search (no artist's page under it to go back to)
 function openAlbumPage(a) { apData = null; if (!$('artistPage').open) { $('artistPage').showModal(); placeWinctl(); } openAlbum(a); }
 async function runSearch(term) {
-  searchCtl?.abort();
+  searchCtl?.abort(); searched = term.trim();
   dlg.classList.toggle('typed', !!term.trim()); // (the search box smaller: room for the results)
   if (!term.trim()) return showHistory();
   const lk = linkIn(term), sid = ytIdIn(lk);
@@ -14067,7 +14067,7 @@ function row(s, i, list, from = {}) {
   // it came from, as it did, kept by the next save)
   // (one from the search: that song alone, Autoplay carrying on with songs like it — the rest of the search's list is
   // covers, karaoke takes and other songs of the name, which played next as if at random)
-  b.onclick = () => { queue = dlg.open && !from.playlist ? [s] : fromHere(list, s); queueFrom = from.playlist ? { p: from.playlist, queue } : null; playTrack(s, dlg.open ? $('q').value.trim() : ''); };
+  b.onclick = () => { queue = dlg.open && !from.playlist ? [s] : fromHere(list, s); queueFrom = from.playlist ? { p: from.playlist, queue } : null; playTrack(s, dlg.open ? searched : ''); };
   b.onpointerdown = e => { if (e.pointerType === 'mouse' && fullSongs && !saved.has(s.trackId)) videosFor(s).catch(() => {}); };
   more.append((dotsMade ||= Object.assign(document.createElement('template'), { innerHTML: DOTS }).content.firstChild).cloneNode(true));
   more.setAttribute('aria-label', `Options for ${s.trackName}`);
@@ -14241,7 +14241,7 @@ const qHit = q => { clearTimeout(qTimer); q.value = ''; showSuggest(''); runSear
 $('q').oninput = e => {
   if (composing(e)) return;
   const q = e.target, v = q.value, go = () => { if (q.value !== v) return; clearTimeout(qTimer); qTimer = setTimeout(() => runSearch(v), 280); showSuggest(v); };
-  if (qMaybe(v)) qIs(v).then(hit => { if (!hit) return go(); clearTimeout(qTimer); showSuggest(''); }); else go();
+  if (qMaybe(v)) qIs(v).then(hit => { if (q.value !== v) return; if (!hit) return go(); clearTimeout(qTimer); showSuggest(''); }); else go();
 };
 $('q').addEventListener('compositionend', e => { if (!native) $('q').oninput({ target: e.target }); });
 $('q').onkeydown = e => {
@@ -14252,7 +14252,7 @@ $('q').onkeydown = e => {
       const done = runSearch(q.value);
       if (tv) done.then(() => { if (dlg.open) $('results').querySelector('.row')?.focus(); }); // (a TV: off its keyboard, onto the songs)
     };
-    if (qMaybe(q.value)) { e.preventDefault(); qMark(q.value).then(hit => hit ? qHit(q) : run()); } else run();
+    if (qMaybe(q.value)) { e.preventDefault(); const v = q.value; qMark(v).then(hit => hit ? qHit(q) : q.value === v && run()); } else run();
   }
   if (e.key === 'ArrowDown') { e.preventDefault(); $('results').firstElementChild?.focus(); }
 };
@@ -19364,7 +19364,7 @@ function frame(now) {
   // Off (still): only redraw while the colors are changing, or after a resize; otherwise the last image stays.
   const settling = palette.some((c, i) => c.some((v, k) => Math.abs(target[i][k] - v) > 0.002));
   const style = sceneOver || THEMES.indexOf(theme), drawn = !!sceneOver || !PLAIN.has(theme); // Cover isn't drawn here: it's the blurred cover in front, on plain background; Gradient, CSS
-  if (fxOn && (!covered || held) && (theme === 'Cover' || theme === 'Pictures') && fxDirty) { fxDirty = false; fxClear(rgb(pal.bg)); }
+  if (fxOn && !sceneOver && (!covered || held) && (theme === 'Cover' || theme === 'Pictures') && fxDirty) { fxDirty = false; fxClear(rgb(pal.bg)); }
   const vis = fxOn && !covered && view === 'Visualiser' && body.classList.contains('has-song') && !body.classList.contains('home');
   if (vis !== visWas) { visWas = vis; fxDirty = true; wake(); } // (out of it: the backdrop drawn again, even a still one)
   const moving = vis || fxOn && !covered && drawn && !Q.still;
