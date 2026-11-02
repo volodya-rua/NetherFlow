@@ -2612,6 +2612,8 @@ body.skin-glass.sing:not(.home) .ab-bar { bottom: calc(100% + 12px + 48px + 8px)
 .skin-glass :is(.search, .about) { background: radial-gradient(120% 70% at 10% -10%, rgba(150,180,255,.1), transparent 60%), linear-gradient(170deg, #0a0d18, #05060b 62%); }
 .skin-glass.gl-sheets :is(.search, .about) { background: linear-gradient(180deg, color-mix(in srgb, var(--bg) 34%, transparent), color-mix(in srgb, var(--bg) 58%, transparent));
   -webkit-backdrop-filter: blur(40px) saturate(1.6) brightness(.78); backdrop-filter: blur(40px) saturate(1.6) brightness(.78); }
+.skin-glass.gl-sheets.gl-still :is(.search, .about) { -webkit-backdrop-filter: none; backdrop-filter: none; /* (its frost a still picture of the backdrop held behind it, blurred once: glassStill) */
+  background: linear-gradient(180deg, color-mix(in srgb, var(--bg) 34%, transparent), color-mix(in srgb, var(--bg) 58%, transparent)), var(--g-still) center / cover no-repeat, #05060b; }
 .skin-glass.gl-sheets :is(.search, .about)::backdrop { background: transparent; animation: none; }
 .skin-glass.gl-sheets:has(#search[open], #artistPage[open], #about[open]) .frame { visibility: hidden; transition: visibility 0s .3s; }
 .skin-glass.gl-sheets .lib .results { background: color-mix(in srgb, var(--bg) 30%, transparent); }
@@ -17094,6 +17096,29 @@ function backdropAt(w, h) {
   fxAsked.add(style);
   return fxSnap({ w, h, style, src: fxSource(style), v: fxUniforms(BGQ.Ultra), after: fxStyle >= 0 ? { ...fxUniforms(BGQ[bgq]), style: fxStyle } : null });
 }
+// A computer's full pages on Glass (search, an artist, About, the library) are frosted over the backdrop, held still
+// behind them: their frost is a still picture of it, blurred once as a page opens (and after a resize), not the same blur
+// of the same backdrop drawn again every frame (the library scrolled at 1080p dropped 25-30 frames in 4 s, measured; with
+// the still picture 2-4). A background the backdrop doesn't draw (Cover, Pictures): the live blur, as before.
+let stillTok = 0, stillUrl = '';
+async function glassStill(on) {
+  const tok = ++stillTok;
+  if (!on || !fxOn || PLAIN.has(theme)) { body.classList.remove('gl-still'); if (stillUrl) URL.revokeObjectURL(stillUrl); stillUrl = ''; return; }
+  const w = Math.ceil(innerWidth / 4), h = Math.ceil(innerHeight / 4), bmp = await backdropAt(w, h).catch(() => null);
+  if (tok !== stillTok || !bmp) return;
+  const c = document.createElement('canvas'), g = (c.width = w, c.height = h, c.getContext('2d'));
+  g.filter = 'blur(10px) saturate(1.6) brightness(.78)'; // (the live frost's, at a quarter of the size)
+  g.drawImage(bmp, -16, -16, w + 32, h + 32); // (a little past its edges: the blur pulls nothing dark in from outside)
+  bmp.close?.();
+  const blob = await new Promise(r => c.toBlob(r)), url = blob ? URL.createObjectURL(blob) : '';
+  if (!url) return;
+  const im = new Image(); im.src = url; await im.decode().catch(() => {});
+  if (tok !== stillTok) return URL.revokeObjectURL(url);
+  const was = stillUrl; stillUrl = url;
+  root.style.setProperty('--g-still', `url(${url})`); body.classList.add('gl-still');
+  if (was) setTimeout(() => URL.revokeObjectURL(was), 1000);
+}
+addEventListener('resize', () => { if (stillUrl) glassStill(true); });
 
 // ---------- Extreme lyrics: the music video (Extreme quality, computers only) ----------
 // The sung line goes up a few words at a time — a "shot" each, cut hard from one to the next — every word coming in as
@@ -19209,10 +19234,11 @@ function frame(now) {
     owed -= 1000 / 60;
   }
   const gap = (now - lastRun) / 1000, dt = Math.min(0.05, gap); lastRun = now;
-  const covered = fullPages.some(d => d.open) || glass.lib && $('library').open; // (a full-screen page over everything: the backdrop and player can't be seen — Glass's library too, but on a computer's lens tier)
+  const covered = fullPages.some(d => d.open) || !!glass.tier && $('library').open; // (a full-screen page over everything: the backdrop and player can't be seen — Glass's library too)
   // (the Glass theme on a computer: its pages are frosted glass over the backdrop — held still behind them, drawn again only
-  // when a resize has cleared it)
+  // when a resize has cleared it; the library's too, the player hidden behind it — see glassStill)
   const held = covered && body.classList.contains('gl-sheets'); // (Drive mode too: its scene held behind its veil, its drops bending it)
+  if (held !== glass.held) { glass.held = held; glassStill(held); }
   let bass = 0, mid = 0, high = 0;
   if (engine === 'audio' && analyser && !audio.paused) { // this page's own sound: into the same feed as YouTube's
     const d = new Uint8Array(analyser.frequencyBinCount);
