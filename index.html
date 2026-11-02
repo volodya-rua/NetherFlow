@@ -4360,9 +4360,10 @@ function glassRect(w, h, r, o, k) {
     }
     out.push([href, ix, iy, iw, ih, a, b]);
   };
-  // (the edges laid a px over the corners each end: where two pieces met on half a device pixel — a panel h px tall, h − c
-  // odd, at 125 % — the flood showed through that row, a line across the rim not bent and frosted; an edge's texel is
-  // the corner's own at the join, so the overlap is unseen. The width and height paths keep it: an edge is w − 2·x wide.)
+  // (the edges laid a px over the corners each end: where two pieces met on half a device pixel — at 125 %, the theme
+  // menu's bottom join, 398 px down — the flood showed through that row, a line across the rim not bent and frosted; an
+  // edge's texel is the corner's own at the join, so the overlap is unseen. The width and height paths keep it: an edge
+  // is w − 2·x wide.)
   piece(0, 0, c, c, 0, 0, c, c); piece(w - c, 0, c, c, w - c, 0, c, c, 'r'); piece(0, h - c, c, c, 0, h - c, c, c, '', 'b'); piece(w - c, h - c, c, c, w - c, h - c, c, c, 'r', 'b');
   piece(w / 2 - .5, 0, 1, c, c - 1, 0, w - 2 * c + 2, c, 's'); piece(w / 2 - .5, h - c, 1, c, c - 1, h - c, w - 2 * c + 2, c, 's', 'b');
   piece(0, h / 2 - .5, c, 1, 0, c - 1, c, h - 2 * c + 2, '', 's'); piece(w - c, h / 2 - .5, c, 1, w - c, c - 1, c, h - 2 * c + 2, 'r', 's');
