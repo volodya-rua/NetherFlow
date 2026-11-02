@@ -2220,6 +2220,7 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
 @media (hover: hover) and (pointer: fine) { .skin-glass .vol:hover::-webkit-slider-thumb { width: 16px; height: 16px; margin-top: -6px; } }
 .skin-glass .vol:active::-webkit-slider-thumb { width: 22px; height: 22px; margin-top: -9px; box-shadow: 0 2px 8px rgba(0,0,0,.5); }
 /* the lenses' tiers: frost (a phone) and tint (no blur); on a computer the script sets each one's own refraction */
+.skin-glass.gl-light { --g-grain: none; } /* (Settings › Lighter glass: no grain) */
 .skin-glass.gl-frost :is(.top-l, .mood, .files, .bar) { -webkit-backdrop-filter: blur(14px) saturate(1.5) brightness(.82); backdrop-filter: blur(14px) saturate(1.5) brightness(.82); }
 .skin-glass.gl-frost .bar { background: rgba(4,5,11,.3); }
 .skin-glass:is(.gl-tint, .gl-solid) :is(.top-l, .mood, .files, .bar) { -webkit-backdrop-filter: none; backdrop-filter: none; background: color-mix(in srgb, var(--bg) 80%, transparent); }
@@ -4223,6 +4224,17 @@ const GLASS_TIERS = ['lens', 'frost', 'tint']; // (and SVGNS, further down: all 
 const glass = { tier: '', defs: null, ro: null, bounds: null, maps: new Map(), decoding: [], redo: null, n: 0, grow: 1, gi: 1, raf: 0, gpu: null, fast: false, aim: 0, px: 0, py: 0, from: null, src: new WeakMap(), hid: false, hidAt: 0, glow: '', spec: false, ink: null };
 const glassQuiet = matchMedia('(prefers-reduced-transparency: reduce), (prefers-contrast: more), (forced-colors: active)');
 let glassPick = ['Frosted', 'Tinted', 'Solid'].includes(store.get('netherflow.glass')) ? store.get('netherflow.glass') : 'Auto', glassDrop = Math.min(2, +store.get('netherflow.glassdrop') || 0);
+// Settings › Lighter glass (the user's pick, off to start with: Glass in full): the lenses' edge not split into colours nor
+// softened first, no grain, and the backdrop drawn every other frame while Glass is on — what's behind the glass made again
+// 30 times a second instead of 60, the lenses with it (measured at 1080p on a computer: the graphics process's time a frame
+// about a quarter less)
+let glassLight = store.get('netherflow.glasslight') === 'On';
+body.classList.toggle('gl-light', glassLight);
+function setGlassLight(v) {
+  glassLight = v === 'On'; store.set('netherflow.glasslight', glassLight ? 'On' : ''); body.classList.toggle('gl-light', glassLight);
+  for (const x of [...GLASS_CTL.map(([q]) => document.querySelector(q)), ...document.querySelectorAll(GLASS_PANEL)]) if (x?.glassFilter) { x.glassKey = ''; glassFit(x, !!x.glassLens?.glowI); } // (each lens made again, as it is now)
+  renderTextPanel();
+}
 // (the graphics chip, asked once: a software one — no real chip at all — or one that's part of the processor)
 const glassChip = r => ({ soft: /swiftshader|llvmpipe|softpipe|basic render|software/i.test(r),
   igpu: /intel|radeon(\(tm\))?( \d{3,4}m| vega \d+)? graphics|vega \d+ graphics|mali|adreno|powervr/i.test(r) && !/nvidia|geforce|radeon (rx|pro)|arc\(tm\) a\d|arc a\d/i.test(r) });
@@ -4455,8 +4467,8 @@ function glassFit(e, glow = false) {
   // the morph was over. Glass sets their corners by --r-panel / --r-menu alone, which the morph doesn't touch.)
   const rest = e.matches('.moods, .eq, .smenu') ? parseFloat(cs.getPropertyValue(e.matches('.smenu') ? '--r-menu' : '--r-panel')) : NaN;
   const r = Math.min(Number.isNaN(rest) ? parseFloat(cs.borderTopLeftRadius) || 0 : rest, h / 2, w / 2), dark = e.classList.contains('ink-dark');
-  const kind = ctl ? ctl[1] : e.matches(GLASS_PANE) && r < h / 2 - .5 && Math.min(w, h) >= 2 * GLASS_KIND.pane.b + 8 ? 'pane' : 'panel', o = GLASS_KIND[kind];
-  const key = [w, h, r, dark, glow, kind].join(); // (its kind last: a pane's pieces never carried onto a panel just made lean, nor the other way)
+  const kind = ctl ? ctl[1] : e.matches(GLASS_PANE) && r < h / 2 - .5 && Math.min(w, h) >= 2 * GLASS_KIND.pane.b + 8 ? 'pane' : 'panel', o = glassLight && (GLASS_KIND[kind].e || GLASS_KIND[kind].soft) && kind !== 'pane' ? { ...GLASS_KIND[kind], e: 0, soft: 0 } : GLASS_KIND[kind]; // (Lighter glass: one picture bent, not three, nor softened first)
+  const key = [w, h, r, dark, glow, glassLight, kind].join(); // (its kind last: a pane's pieces never carried onto a panel just made lean, nor the other way)
   if (e.glassKey === key) return;
   // (its width alone changed — the back arrow growing in or out, going home and back, full screen: every frame of it —
   // the same pieces moved along, not a new filter each frame: a new one's images aren't there for its first frames)
@@ -5389,7 +5401,7 @@ const GS_SVG = { chevR: '<path d="m9.5 5.5 6.5 6.5-6.5 6.5"/>', chevD: '<path d=
   minus: '<path d="M6 12h12"/>', plus: '<path d="M12 6v12M6 12h12"/>', note: '<path d="M9 17.5V6.5l10-2v11"/><circle cx="6.5" cy="17.5" r="2.5"/><circle cx="16.5" cy="15.5" r="2.5"/>' };
 const gsSvg = (k, cls) => { const v = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); v.setAttribute('viewBox', '0 0 24 24'); v.setAttribute('aria-hidden', 'true'); if (cls) v.setAttribute('class', cls); v.innerHTML = GS_SVG[k]; return v; };
 // (each row's short line: what it does, not how — at most 44 characters, no full stop)
-const SET_SHORT = { Glass: 'How much shows through the glass', 'Hide controls': 'Fade the controls while a song plays', Autoplay: 'Similar songs when the list ends',
+const SET_SHORT = { Glass: 'How much shows through the glass', 'Lighter glass': 'Fewer effects, smoother on a slower device', 'Hide controls': 'Fade the controls while a song plays', Autoplay: 'Similar songs when the list ends',
   'Smooth mix': 'Blend songs like a DJ mix', Show: 'What the song\'s page shows', Visualiser: 'How the visualiser looks', 'Lyrics size': 'Long lines shrink to stay on screen',
   'Romanize lyrics': 'Many scripts in Latin letters, to sing along', 'Beat style': 'The ring round the record, in Cover', 'Beat on the screen edges': 'The beat along all four sides',
   'Edge size': 'How far in from the sides', 'Skip back / forward': 'The jump buttons and the arrow keys', 'Instant start': 'Keep the first seconds of recent songs',
@@ -5475,7 +5487,7 @@ function gsSetting(label, names, cur, pick, note) {
 }
 // (Settings in sections: a row not listed — a hook's — goes in the one of the row before it, right after it; a label
 // ending in … matches by its start)
-const GS_GROUPS = [['Look', ['Theme', 'Agent', '3D race', 'Glass', 'Interface size', 'Cursor']],
+const GS_GROUPS = [['Look', ['Theme', 'Agent', '3D race', 'Glass', 'Lighter glass', 'Interface size', 'Cursor']],
   ['Song page', ['Lyrics animation', 'Hide controls', 'Show', 'Visualiser', 'Lyrics size', 'Lyrics alignment', 'Romanize lyrics', 'Beat style', 'Beat on the screen edges', 'Edge look', 'Edge size']],
   ['Playback', ['Autoplay', 'Smooth mix', 'Skip back / forward', 'Instant start', 'Kept song starts', 'Liked songs offline', 'Imported playlists']],
   ['Voice', ['AI karaoke', 'Voice pack', 'Hey NetherFlow']],
@@ -5596,15 +5608,17 @@ $('textPanel').addEventListener('beforetoggle', e => { if (e.newState === 'open'
 $('textPanel').addEventListener('toggle', e => { if (e.newState === 'open' && (!upd.state || (upd.state === 'none' && Date.now() - (+store.get('netherflow.updchecked') || 0) > 3600e3))) setTimeout(() => updCheck(), 300); });
 // Settings › Hide controls: while a song plays on its page, the controls fade away after a few still seconds, leaving the
 // lyrics (see wake). Off till it's picked, but on a TV (watched from across the room, the remote put down) on: a TV's
-// known a moment after the start, so its class is asked, and the panel drawn again then (see tv). hidePick: 'On' or 'Off'
+// known a moment after the start, so its class is asked, and the panel drawn again then (see tv). hidePick: 'Off', 'Full screen' or 'On'
 // once picked, which always wins; idleTimer: the wait; held: a finger or a mouse button down; pauseWake: the moment's
 // wait after a pause; idleAt: when they went. (Here, early: the panel and setPlaying can run before wake's own part.)
 let hidePick = store.get('netherflow.autohide'), idleTimer = 0, held = false, pauseWake = 0, idleAt = 0;
-const autoHide = () => hidePick ? hidePick === 'On' : body.classList.contains('tv');
+// (Off: never by themselves; Full screen: only in full screen and the visualiser, as they always did; On: while a song plays —
+// a TV's to start with)
+const hideMode = () => ['Off', 'Full screen', 'On'].includes(hidePick) ? hidePick : body.classList.contains('tv') ? 'On' : 'Full screen';
 function setAutoHide(v) { hidePick = v; store.set('netherflow.autohide', v); wake(); renderTextPanel(); }
 // Settings, Classic: the few most people change; Advanced: every one (the user's pick, kept on this device)
 let setMode = store.get('netherflow.setmode') === 'Advanced' ? 'Advanced' : 'Classic';
-const CLASSIC = new Set(['Theme', 'Glass', 'Updates', 'Interface size', 'Show', 'Visualiser', 'Hide controls', 'Lyrics animation', 'Lyrics size', 'Autoplay', 'Smooth mix', 'Liked songs offline', 'Sync with phone', 'Sync with computer', 'Island']);
+const CLASSIC = new Set(['Theme', 'Glass', 'Lighter glass', 'Updates', 'Interface size', 'Show', 'Visualiser', 'Hide controls', 'Lyrics animation', 'Lyrics size', 'Autoplay', 'Smooth mix', 'Liked songs offline', 'Sync with phone', 'Sync with computer', 'Island']);
 function setSetMode(v) { setMode = v; store.set('netherflow.setmode', v === 'Advanced' ? v : ''); renderTextPanel(); }
 // ---------- the install count (Count me once: in "Before you press play", and Settings › Privacy) ----------
 // Roughly how many installs NetherFlow has, for the README's badge: with Count me once ticked when the terms are agreed
@@ -5662,7 +5676,8 @@ function renderTextPanel() {
       'The agent by the lyrics: a new one for each song, or always the one you pick.')] : []),
     ...(skin === 'Glass' ? [settingRow('Glass', ['Auto', 'Frosted', 'Tinted', 'Solid'], glassPick, setGlassPick,
       'How much the glass lets through. Auto: the most this device keeps smooth (on a computer, the floating controls bend the light behind them; on a phone, frosted, or on a powerful phone at High or Ultra quality its floating controls bend the light too; on Low quality or a TV, tinted). Frosted: soft frost everywhere, nothing bent. Tinted: no blur, the lightest for a slow device. Solid: nothing shows through.'
-      + (glassQuiet.matches ? ' Your system asks for less transparency or more contrast, so it\x27s solid whatever\x27s picked here.' : ''))] : []),
+      + (glassQuiet.matches ? ' Your system asks for less transparency or more contrast, so it\x27s solid whatever\x27s picked here.' : '')),
+      settingRow('Lighter glass', ['Off', 'On'], glassLight ? 'On' : 'Off', setGlassLight, 'Glass with fewer effects, for a smoother app on a slower device: the edges of the glass not split into colours, no grain, and the background behind it drawn half as often. Off: Glass in full.')] : []),
     updRow(),
     ...(window.netherflowApp?.notify || upd.ours ? [settingRow('Update notifications', ['On', 'Off'], updNotify ? 'On' : 'Off', setUpdNotify,
       native ? 'A notification when a newer NetherFlow is out, even with the app closed (Android looks once a day).' : 'A notification when a newer NetherFlow is out, while NetherFlow is open but not in front (it looks once a day).')] : []),
@@ -5670,7 +5685,7 @@ function renderTextPanel() {
     settingRow('Interface size', UI_SIZES, uiSize, setUiSize, 'Everything larger or smaller: the buttons, the text, the panels.'),
     settingRow('Show', VIEWS, view, setView, 'Cover: the record spinning, with a ring that moves to the beat. Visualiser: the whole screen moving with the music. Tap the cover in the player (or press V) to go round them. A song with no timed lyrics shows its cover by itself: tap it for the words.'),
     ...(view === 'Visualiser' ? [settingRow('Visualiser', ['Auto', ...VIS], visPick, setVis, `How the visualiser looks. Auto: a new one with each song. Tap the visualiser for the next. ${VIS_NOTE}`)] : []),
-    settingRow('Hide controls', ['Off', 'On'], autoHide() ? 'On' : 'Off', setAutoHide, 'While a song plays, the controls fade away after a few still seconds: just the lyrics, the cover or the visualiser, and a thin line for how far the song\'s got. Touch the screen, move the mouse, or press a key or the remote, and they\'re back (that first touch presses nothing). Paused, they stay. Full screen and the visualiser always do this.'),
+    settingRow('Hide controls', ['Off', 'Full screen', 'On'], hideMode(), setAutoHide, 'While a song plays, the controls fade away after a few still seconds: just the lyrics, the cover or the visualiser, and a thin line for how far the song\'s got. Touch the screen, move the mouse, or press a key or the remote, and they\'re back (that first touch presses nothing). Paused, they stay. Full screen: only in full screen and the visualiser. Off: never by themselves.'),
     settingRow('Lyrics animation', LANIMS, lanimPick, setLanim, 'How the lyrics move. Easy to read, every word big and the one being sung on a block of colour: Tower (a word a row), Lens (the sung word nearest), Pop (words and their emoji popping in), Drift (a page turning in space), Wall (a word or two a row, built into a wall), Fisheye and Fisheye Emoji (a word a row under a lens, the sung one in the middle), Emoji Stack (a few big tilted rows, with emoji). 2D: Wave, Spiral, Shatter, Fireworks. 3D: Swarm, Black Hole, Cylinder, Globe, Helix, DNA, Tornado, Knot, Möbius, Ribbon, Orbit, Atom, Tunnel, Cube.' + (kin.on ? ' (Extreme lyrics are on, in the mood menu: this is for when they\x27re off.)' : '')),
     ...(skin ? [] : [fontRow()]), // (a theme brings its own font and timeline)
     settingRow('Beat style', BEATS, beatStyle, setBeat, 'The ring round the record, in the Cover view.'),
@@ -14682,7 +14697,8 @@ document.addEventListener('fullscreenchange', () => { body.classList.toggle('fs'
 // the voice listening; a toast doesn't count), nor with a finger or the mouse button still down (the timeline held), and
 // only on the song's page: the home screen's own buttons stay pressable at the first tap. (State: see hidePick.)
 function idleOk() {
-  return (body.classList.contains('fs') || body.classList.contains('view-vis') || autoHide() && body.classList.contains('playing'))
+  const m = hideMode();
+  return (m !== 'Off' && (body.classList.contains('fs') || body.classList.contains('view-vis')) || m === 'On' && body.classList.contains('playing'))
     && body.classList.contains('has-song') && !body.classList.contains('home');
 }
 function wake() {
@@ -16215,7 +16231,7 @@ function resize() {
   fxGround = null;
   applyGlass(); // (the Glass theme's glass follows the quality)
 }
-let fxFrame = 0, fxDirty = true, fxGround = null;
+let fxFrame = 0, fxDirty = true, fxGround = null, fxEvery = 1;
 addEventListener('resize', resize); resize();
 
 // ---------- spectrum scrubber ----------
@@ -19265,14 +19281,14 @@ function frame(now) {
   if (vis !== visWas) { visWas = vis; fxDirty = true; wake(); } // (out of it: the backdrop drawn again, even a still one)
   const moving = vis || fxOn && !covered && drawn && !Q.still;
   if (vis) visFrame(Q, dt, live, kick);
-  else if (fxOn && (!covered || held && fxDirty) && drawn && !race.show && ++fxFrame % Q.every === 0 && (!Q.still || settling || fxDirty)) { // lower qualities redraw less often (none under Redline's race)
+  else if (fxOn && (!covered || held && fxDirty) && drawn && !race.show && ++fxFrame % (fxEvery = glassLight && glass.tier ? Math.max(2, Q.every) : Q.every) === 0 && (!Q.still || settling || fxDirty)) { // lower qualities redraw less often (none under Redline's race; Lighter glass, every other frame)
     fxDirty = false;
     if (style !== fxStyle && fxUse(style)) fxStyle = style; // (not ready yet: the last theme's goes on meanwhile — see fxEngine)
     if (fxStyle < 0) { fxClear(rgb(pal.bg)); fxDirty = true; } // (none ready yet: the plain background, and asked again next frame)
     else {
-      const ease = Math.min(1, 0.04 * Q.every);
+      const ease = Math.min(1, 0.04 * fxEvery);
       for (let c = 0; c < 4; c++) for (let k = 0; k < palette[c].length; k++) palette[c][k] += (target[c][k] - palette[c][k]) * ease;
-      fxT += Q.still ? 0 : dt * Q.every * palette[3][2] * (motion ? (!P.paused ? 1 : 0.35) : 0); // steady: livelier while playing
+      fxT += Q.still ? 0 : dt * fxEvery * palette[3][2] * (motion ? (!P.paused ? 1 : 0.35) : 0); // steady: livelier while playing
       paintFx(Q, bgKick, live ? kick : 0);
     }
   }
