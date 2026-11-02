@@ -1,0 +1,1 @@
+The Glass search box keeps its size while you type, instead of the words spilling out of it. Recent searches keep the search a song was picked from. With Blocks on a phone, the search words no longer grow when you start typing.

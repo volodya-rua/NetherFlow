@@ -2,6 +2,14 @@
 
 What changed in each NetherFlow release. The builds are on the [releases page](https://github.com/volodya-rua/NetherFlow/releases).
 
+## 1.6.5: Fix · the Glass search box, and what Search remembers
+
+- **The Glass search box** keeps its size while you type. Before, the words grew far bigger than the box and spilled
+  out of it as soon as anything was typed
+- **Recent searches and the player's "from"** keep the search a song was picked from, even if the box was typed in
+  again before the song was picked
+- **Blocks on a phone:** the search words no longer get bigger when you start typing
+
 ## 1.6.4: Fix · playlist covers, the play button, and a lighter Glass
 
 - **Playlist covers:** a playlist's own picture no longer stays blank while its songs show their covers. An image server

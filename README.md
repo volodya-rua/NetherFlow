@@ -51,17 +51,13 @@ need a powerful graphics card anyway), about 18 MB smaller, and it updates to Li
 
 <a id="whats-new"></a>
 
-## What's new in 1.6.4
+## What's new in 1.6.5
 
-**A fix release: playlist covers, the play button, and a lighter Glass:**
+**A fix release: the Glass search box, and what Search remembers:**
 
-- **Playlist covers** no longer stay blank while the songs inside show theirs. A cover that doesn't load is asked for
-  again, and one that never comes shows a plain square in the theme's colours
-- **The play button** fills with the song's cover even when that cover is a video's picture
-- **Lighter glass** (Settings, with the Glass theme on): fewer glass effects and the background drawn half as often, for
-  a smoother app on a slower device. Off to start with
-- **Hide controls:** Off, Full screen (to start with) or On (to start with on a TV)
-- **Glass on a computer:** the library, search, an artist's page and About take less work to draw
+- **The Glass search box** keeps its size while you type, instead of the words spilling out of it
+- **Recent searches** keep the search a song was picked from, even if you typed in the box again first
+- **Blocks on a phone:** the search words no longer grow when you start typing
 
 The full notes for this release and every earlier one are in the [changelog](CHANGELOG.md).
 
