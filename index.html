@@ -4,6 +4,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- the app's own address goes with its own requests only: YouTube Music's image server turns a cover down (429) when it
+     comes with it — and so a playlist's picture stayed blank (sw.js) -->
+<meta name="referrer" content="same-origin">
 <title>NetherFlow</title>
 <link rel="icon" href="logo.png">
 <link rel="stylesheet" href="fonts/pairs.css"> <!-- (the lyric font pairs: each loaded only once it's used) -->
@@ -1485,6 +1488,8 @@ body.home .home-now { display: flex; }
 .pc-art.one { grid-template-columns: 1fr; }
 .pc-art img, .album .pc-art img { display: block; width: 100%; height: 100%; min-width: 0; min-height: 0; aspect-ratio: auto; object-fit: cover; border-radius: 0; }
 .pc-art:not(.one) { grid-template-rows: 1fr 1fr; }
+/* a cover that hasn't come (yet): a square in the theme's own colours, never an empty box */
+img.nocover { background: linear-gradient(135deg, color-mix(in srgb, var(--a) 24%, var(--bg)), color-mix(in srgb, var(--a) 7%, var(--bg))); }
 .lib .ap-art { border-radius: 6px; }
 .ap-art .pc-art { height: 100%; box-shadow: none; border-radius: inherit; }
 .danger { color: var(--a); }
@@ -11404,6 +11409,7 @@ const coverFind = async t => {
 function placeCover(id, art) {
   for (const l of [library.liked, ...library.playlists.map(p => p.tracks)]) for (const t of l) if (t.trackId === id && !t.artworkUrl100) t.artworkUrl100 = art;
   if ($('library').open) for (const img of $('libList').querySelectorAll(`[data-tid="${CSS.escape(id)}"] img`)) img.src = artUrl({ artworkUrl100: art }, 120);
+  freshHead();
   clearTimeout(matchSave); matchSave = setTimeout(() => saveLib(false), 3000); // (kept: a restart goes on from here)
 }
 function prepPump() {
@@ -11510,6 +11516,7 @@ function placeMatch(id, m) {
   if ($('library').open) for (const r of $('libList').querySelectorAll(`[data-tid="${id}"]`)) {
     const n = row(t, +r.style.getPropertyValue('--i'), p ? p.tracks : library.liked, p ? { playlist: p } : {}); n.style.animation = 'none'; r.replaceWith(n);
   }
+  freshHead();
   clearTimeout(matchSave); matchSave = setTimeout(() => saveLib(false), 3000);
 }
 // (one link at a time: a second import while it's read would fill the same playlist twice)
@@ -12639,13 +12646,62 @@ function tile(icon, label, count, ghost) {
   if (count != null) t.append(el('b', 'lt-n', count));
   return t;
 }
+// ---------- Covers that never stay blank. A cover that didn't come (its server busy, a moment offline, a size it hasn't
+// got) is asked for again a little later, then at the server's other sizes, then once more 20 s on: a server asked
+// again a few times a second at most. Meanwhile, and if it never comes, a square in the theme's colours in its place,
+// never an empty box. A list's picture takes another of its songs' covers for one that didn't come (one big cover when
+// fewer than four come, its own tile when none). Offline: squares until the internet's back, then each asked again.
+const COVER_HOST = /^(is\d+-ssl\.mzstatic\.com|i\d?\.ytimg\.com|lh\d\.googleusercontent\.com|yt\d\.(ggpht|googleusercontent)\.com|i\.scdn\.co|mosaic\.scdn\.co|image-cdn-\w+\.spotifycdn\.com)$/; // (sw.js's)
+const coverSizes = u => [...new Set([u.replace(/=w\d+-h\d+[^/?#]*/, '=w226-h226'), u.replace(/=w\d+-h\d+[^/?#]*/, '=w120-h120'), u.replace(/\/\d+x\d+bb\./, '/100x100bb.'),
+  ...['hqdefault', 'mqdefault', 'default'].map(s => u.replace(/\/(maxres|sd|hq|mq)?default\./, `/${s}.`)), ...['1e02', '4851'].map(c => u.replace(/(i\.scdn\.co\/image\/ab67616d0000)\w{4}/, '$1' + c))])].filter(x => x !== u);
+const coverNext = new Map(); // server → when it may be asked again (ms)
+function coverMissed(img) {
+  const src = img.getAttribute('src') || '', blob = src.startsWith('blob:');
+  let host = ''; try { host = new URL(src).hostname; } catch {}
+  if (!blob && !COVER_HOST.test(host)) return; // (covers only: an emoji's is its own)
+  if (!img.hasAttribute('alt')) img.alt = '';
+  img.classList.add('nocover');
+  const box = img.closest('.pc-art');
+  if (!navigator.onLine) return; // (asked for again when the internet's back)
+  if (box?.more?.length) { img.coverTry = null; img.src = box.more.shift(); return; }
+  let k = img.coverTry;
+  if (!k?.plan.includes(src)) k = img.coverTry = { plan: blob ? [] : [src, ...coverSizes(src), src], n: 0 }; // (a saved song's own picture: nothing else to ask)
+  if (k.n >= k.plan.length) return coverGone(img, box);
+  const url = k.plan[k.n], at = Math.max(Date.now() + (k.n === k.plan.length - 1 ? 20e3 : 1500), coverNext.get(host) || 0);
+  k.n++; coverNext.set(host, at + 300);
+  setTimeout(() => { if (img.isConnected && img.coverTry === k && img.getAttribute('src') === src) img.src = url; }, at - Date.now());
+}
+function coverGone(img, box) { // (never came: a list's picture made of those that did; a song's square stays)
+  if (!box?.fb) return;
+  img.remove();
+  const left = [...box.querySelectorAll('img')], keep = left.find(i => i.complete && i.naturalWidth) || left[0];
+  if (!keep) return box.replaceWith(box.fb());
+  box.classList.add('one'); for (const i of left) if (i !== keep) i.remove();
+}
+document.addEventListener('error', e => { if (e.target.tagName === 'IMG') coverMissed(e.target); }, true);
+document.addEventListener('load', e => { const i = e.target; if (i.tagName === 'IMG' && i.classList.contains('nocover')) { i.classList.remove('nocover'); i.coverTry = null; } }, true);
+addEventListener('online', () => { for (const i of document.querySelectorAll('img.nocover')) { i.coverTry = null; coverMissed(i); } });
+for (const i of document.images) if (i.complete && !i.naturalWidth && i.getAttribute('src')) coverMissed(i); // (any that failed before this was here)
 // a list's picture: its first four covers (or one); the fallback tile when it has none
 function mosaic(tracks, fallback) {
   const covers = [...new Set(tracks.map(coverOf).filter(Boolean))];
   if (!covers.length) return fallback();
-  const box = el('div', 'pc-art' + (covers.length < 4 ? ' one' : ''));
-  for (const c of covers.slice(0, covers.length < 4 ? 1 : 4)) { const i = el('img'); i.alt = ''; i.src = c; box.append(i); }
+  const n = covers.length < 4 ? 1 : 4, box = el('div', 'pc-art' + (n === 1 ? ' one' : ''));
+  for (const c of covers.slice(0, n)) { const i = el('img'); i.alt = ''; i.src = c; box.append(i); }
+  box.more = covers.slice(n, n + 8); box.fb = fallback; // (for a cover that doesn't come)
   return box;
+}
+// the open playlist's own picture made again as its songs' covers come in (an import's, while it's open: the rows got
+// them, its picture didn't)
+let headTimer;
+function freshHead() {
+  clearTimeout(headTimer);
+  headTimer = setTimeout(() => {
+    const v = libView, p = $('library').open && v?.kind === 'playlist' && library.playlists.find(x => x.id === v.id), was = $('libArt').lastElementChild;
+    if (!p || !was) return;
+    const art = mosaic(p.tracks, () => tile('note', p.name, p.tracks.length)), srcs = x => [...x.querySelectorAll('img')].map(i => i.getAttribute('src')).join();
+    if (srcs(art) !== srcs(was)) was.replaceWith(art);
+  }, 700);
 }
 // "1 song", "12 songs · 2 episodes" (Downloads holds both)
 const counted = ts => { const e = ts.filter(t => t.kind === 'episode').length, s = ts.length - e, n = (k, w) => `${k} ${w}${k === 1 ? '' : 's'}`; return [(s || !e) && n(s, 'song'), e && n(e, 'episode')].filter(Boolean); };
