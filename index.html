@@ -1304,12 +1304,16 @@ body.home .home-stage .msg { font-size: clamp(56px, min(15vw, 24cqh), 240px); } 
 .skin-glass .drive .dv-prog { font: 600 clamp(14px, 2.2vmin, 19px)/1 var(--ui); font-variant-numeric: tabular-nums; }
 .skin-glass .drive .dv-prog .lbl { font: inherit; }
 /* its page: deep glass where nothing is drawn behind it (a phone, the car, a TV: as Search's and About's); on a computer's
-   lens tier the scene held still behind a veil (its words 4.5 : 1 — the script holds the scene and hides the player) */
+   lens tier the scene held still behind a veil (its words 4.5 : 1 — the script holds the scene and hides the player), the
+   veil darker over something bright (--dv-dim, the script's glassVeil: your own picture at Picture dim Off read 3.0 : 1) */
 .skin-glass .drive { background: radial-gradient(120% 70% at 10% -10%, rgba(150,180,255,.1), transparent 60%), linear-gradient(170deg, #0a0d18, #05060b 62%); }
-.skin-glass.gl-sheets .drive { background: linear-gradient(180deg, rgba(5,6,11,.66), rgba(5,6,11,.48) 46%, rgba(5,6,11,.64)); }
+.skin-glass.gl-sheets .drive { background: linear-gradient(rgba(5,6,11,var(--dv-dim, 0)), rgba(5,6,11,var(--dv-dim, 0))), linear-gradient(180deg, rgba(5,6,11,.66), rgba(5,6,11,.48) 46%, rgba(5,6,11,.64)); }
 .skin-glass.gl-sheets .drive::backdrop { background: transparent; }
+/* (its two small lines, the artist and up next, whole and with a halo of their own, as the bare name's: over a scene's
+   bright lines — Bloom, Hyperbolic, Synapse, Rosette — at .7 and .78 they read 3.6 : 1 through the veil) */
+.skin-glass.gl-sheets .drive :is(.dv-artist, .dv-upnext) { opacity: 1; text-shadow: 0 0 2px rgba(3,4,10,.9), 0 0 7px rgba(3,4,10,.85); }
 .skin-glass.gl-sheets .drive[open] { animation-fill-mode: backwards; } /* (its fade not held once it's done: held at its end, the page stayed a layer of its own, and its drops bent only its veil) */
-.skin-glass.gl-sheets:has(#drive[open]) :is(.frame, .to-home, #viz, #kin, #vedc) { visibility: hidden; transition: visibility 0s .3s; } /* (the back arrow too: it's made visible by a rule of its own, and showed through the veil; and the canvases over the scene — the cover's ring, Extreme lyrics, the music video — their last picture held there) */
+.skin-glass.gl-sheets:has(#drive[open]) :is(.frame, .to-home, #viz, #kin, #vedc, #singBar, #abBar) { visibility: hidden; transition: visibility 0s .3s; } /* (the back arrow too: it's made visible by a rule of its own, and showed through the veil; and the canvases over the scene — the cover's ring, Extreme lyrics, the music video — their last picture held there; and Sing's and Repeat a part's bars, behind the transport, bent by its drops) */
 /* its buttons and chips: glass. On a computer's lens tier clear drops (the script's lens: the capsules' drop, M 3.2 on the
    big round ones); elsewhere glass with nothing to bend, a little white. The capsules' edge light and glints (--g-r from
    the script), a glow inside, a shade inside the bottom, a deep shadow. Exit loses its outline. */
@@ -2230,7 +2234,6 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
 .skin-glass .consent.gl-over { background: var(--g-grain, none) 0 0 / var(--g-gs, 64px) repeat, color-mix(in srgb, var(--bg) 94%, transparent);
   box-shadow: inset calc(sin(var(--la)) * -1.4px) calc(cos(var(--la)) * 1.4px) 1.6px -.4px rgba(255,255,255,.22), inset calc(sin(var(--la)) * 1.2px) calc(cos(var(--la)) * -1.2px) 1.6px -.6px rgba(255,255,255,.1), inset 0 0 2.2px 1.2px rgba(0,0,0,.3), var(--gp-drop); }
 .skin-glass .consent.gl-over::before { display: none; }
-.skin-glass.gl-sheets #consent[open] { animation-fill-mode: backwards; } /* (the terms' fade not held once it's done: held at its end, the card stayed a layer of its own, and its lens saw nothing behind it) */
 /* glints at a panel's four corners (Settings, the theme menu, the queue and the other big panels, the song's menu): the
    capsules' own glint, .95 toward the light and .5 opposite, in the ring .1r–.24r inside each arc (r the panel's own
    corner: --r-panel, 28 px on a finger; a menu's --r-menu), each corner showing the part on its own arc, so they turn with
@@ -4251,6 +4254,15 @@ function glassDrive() {
     glassOff(e);
     if (on) { glass.ro.observe(e); glassFit(e); } else { glass.ro?.unobserve(e); e.style.removeProperty('--g-r'); }
   }
+  glassVeil();
+}
+// (Drive's veil, on a computer's lens tier, darker over something bright behind it — its words 4.5 : 1 over any of it:
+// your own picture or the cover as glassInk reads them, the brightest tenth of the window; a scene with broad light, GLASS_LIT)
+function glassVeil() {
+  const d = $('drive'), Ls = glass.ink?.Ls;
+  if (!glass.tier || !d.open) return d.style.removeProperty('--dv-dim');
+  const m = Math.max(Ls ? [...Ls].sort((a, b) => a - b)[Math.floor(Ls.length * .9)] : 0, GLASS_LIT[theme] || 0);
+  d.style.setProperty('--dv-dim', Math.min(.3, 1.2 * m).toFixed(3));
 }
 function glassOff(e) {
   if (!e.glassKey) return;
@@ -4345,9 +4357,12 @@ function glassRect(w, h, r, o, k) {
     }
     out.push([href, ix, iy, iw, ih, a, b]);
   };
+  // (the edges laid a px over the corners each end: where two pieces met on half a device pixel — a panel h px tall, h − c
+  // odd, at 125 % — the flood showed through that row, a line across the rim not bent and frosted; an edge's texel is
+  // the corner's own at the join, so the overlap is unseen. The width and height paths keep it: an edge is w − 2·x wide.)
   piece(0, 0, c, c, 0, 0, c, c); piece(w - c, 0, c, c, w - c, 0, c, c, 'r'); piece(0, h - c, c, c, 0, h - c, c, c, '', 'b'); piece(w - c, h - c, c, c, w - c, h - c, c, c, 'r', 'b');
-  piece(w / 2 - .5, 0, 1, c, c, 0, w - 2 * c, c, 's'); piece(w / 2 - .5, h - c, 1, c, c, h - c, w - 2 * c, c, 's', 'b');
-  piece(0, h / 2 - .5, c, 1, 0, c, c, h - 2 * c, '', 's'); piece(w - c, h / 2 - .5, c, 1, w - c, c, c, h - 2 * c, 'r', 's');
+  piece(w / 2 - .5, 0, 1, c, c - 1, 0, w - 2 * c + 2, c, 's'); piece(w / 2 - .5, h - c, 1, c, c - 1, h - c, w - 2 * c + 2, c, 's', 'b');
+  piece(0, h / 2 - .5, c, 1, 0, c - 1, c, h - 2 * c + 2, '', 's'); piece(w - c, h / 2 - .5, c, 1, w - c, c - 1, c, h - 2 * c + 2, 'r', 's');
   return { Sc, pieces: out, c };
 }
 // (the filter's matrices: the light's colour — w + g·saturate(s) of what's behind; what holds down under the words —
@@ -4387,7 +4402,7 @@ function glassFit(e, glow = false) {
   const f0 = e.glassFilter, c0 = e.glassC;
   if (f0 && e.glassKey.slice(e.glassKey.indexOf(',')) === key.slice(key.indexOf(',')) && 2 * c0 + 1 < w && 2 * c0 + 1 < +f0.getAttribute('width')) {
     e.glassKey = key; f0.setAttribute('width', w);
-    for (const im of f0.querySelectorAll('feImage[data-a]')) { if (im.dataset.a === 'r') im.setAttribute('x', w - c0); else if (im.dataset.a === 's') im.setAttribute('width', w - 2 * c0); }
+    for (const im of f0.querySelectorAll('feImage[data-a]')) { if (im.dataset.a === 'r') im.setAttribute('x', w - c0); else if (im.dataset.a === 's') im.setAttribute('width', w - 2 * +im.getAttribute('x')); } // (a stretched piece as wide as w less twice where it starts: a capsule's c, a rounded rectangle's edge c − 1)
     return;
   }
   // (and its height alone, a rounded rectangle's — a panel's as a folded note opens in it: every frame of that, its bottom
@@ -4395,7 +4410,7 @@ function glassFit(e, glow = false) {
   const k0 = String(e.glassKey || '').split(','), k1 = key.split(',');
   if (f0 && f0.querySelector('feFlood') && r < h / 2 - .5 && k0.length === k1.length && k0.every((v, i) => i === 1 || v === k1[i]) && 2 * c0 + 1 < h && 2 * c0 + 1 < +f0.getAttribute('height')) {
     e.glassKey = key; f0.setAttribute('height', h);
-    for (const im of f0.querySelectorAll('feImage[data-b]')) { if (im.dataset.b === 'b') im.setAttribute('y', h - c0); else if (im.dataset.b === 's') im.setAttribute('height', h - 2 * c0); }
+    for (const im of f0.querySelectorAll('feImage[data-b]')) { if (im.dataset.b === 'b') im.setAttribute('y', h - c0); else if (im.dataset.b === 's') im.setAttribute('height', h - 2 * +im.getAttribute('y')); }
     return;
   }
   e.glassKey = key;
@@ -4514,6 +4529,7 @@ async function glassInk() {
     if (glassInkFlip(L.sort((a, b) => a - b)[L.length >> 1] ?? 0, dark) !== dark) { e.classList.toggle('ink-dark'); glassFit(e, !!e.glassLens?.glowI); }
   }
   for (const p of document.querySelectorAll(GLASS_PANEL)) if (p.offsetWidth) glassPanelTint(p); // (the open panels' tint: a new picture, background or view)
+  glassVeil(); // (and Drive's veil)
 }
 const glassInkFlip = (m, dark) => dark ? m > .2 : m > .28;
 // a panel shown (its size from none) or resized: its lens (a computer's), its tint; hidden: its lens gone
