@@ -1357,7 +1357,10 @@ body.home .home-stage .msg { font-size: clamp(56px, min(15vw, 24cqh), 240px); } 
     rgb(var(--rim-rgb) / calc(var(--sg) * .45)) 340.3deg, rgb(var(--rim-rgb) / var(--sg)) 360deg);
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0); }
 .skin-glass.gl-solid .drive :is(.dv-btn:not(.dv-main), .dv-small, .dv-exit) { background: color-mix(in srgb, var(--bg) 80%, #fff 8%); }
-@media (forced-colors: active) { .skin-glass .drive :is(.dv-btn, .dv-small, .dv-exit, .dv-art)::before, .skin-glass .drive :is(.dv-btn, .dv-small, .dv-exit, .dv-main)::after { display: none; } }
+@media (forced-colors: active) { .skin-glass .drive :is(.dv-btn, .dv-small, .dv-exit, .dv-art)::before, .skin-glass .drive :is(.dv-btn, .dv-small, .dv-exit, .dv-main)::after { display: none; }
+  /* (each button outlined, as the other glass is here — Exit had lost its outline — and play's icon in the text's colour: its
+     pearl gone, its dark icon was dark on the dark page) */
+  .skin-glass .drive :is(.dv-btn:not(.dv-main), .dv-small, .dv-exit), .skin-glass .drive .dv-main { border: 1px solid CanvasText; } .skin-glass .drive .dv-main svg { fill: CanvasText; stroke: CanvasText; } }
 .home-now { display: none; margin-top: 3.2vh; align-items: center; gap: 14px; max-width: 100%; text-align: left; animation: fade 1s .3s both; }
 body.home .home-now { display: flex; }
 .home-now i { flex: none; width: 46px; height: 46px; border-radius: 10px; background: color-mix(in srgb, var(--ink) 12%, transparent) center / cover;
