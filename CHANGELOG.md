@@ -17,9 +17,9 @@ What changed in each NetherFlow release. The builds are on the [releases page](h
 - **Hide controls** (Settings › Hide controls): while a song plays, the header, the timeline and the buttons fade away
   after a few seconds, leaving a thin line for how far the song's got. A touch, the mouse, a key or the remote brings
   them back. Off unless you turn it on, and on to start with on a TV
-- **Count me once:** a box in "Before you press play" that adds 1 to a public count of installs, with nothing about you.
-  It's ticked in NetherFlow's own releases and unticked in builds made by others; untick it to skip it. The Terms and
-  Privacy text now say how it works, so you'll be asked to agree once more
+- **Count me once:** a box in "Before you press play" that adds 1 to a public count of installs, with nothing about
+  you. It's ticked in NetherFlow's own releases and unticked in Android builds made by others; untick it to skip it.
+  The Terms and Privacy text now say how it works, so you'll be asked to agree once more
 - **Fixed:** the playing song's cover shows again on PC, by the title and on the play button's record. Lens lyrics
   glide smoothly on phones and come back right after the home screen. A TV remote reaches Count me once, and comes
   back to the setting just picked. Some Android TVs no longer open to a black screen now and then. Drive mode fits on
