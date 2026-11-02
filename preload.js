@@ -1,12 +1,16 @@
 // NetherFlow - Copyright (C) 2026 Volodya.rua - GNU GPL v3 only, with additional terms (credit, name and logo): see LICENSE and NOTICE.
 // Gives the page its window buttons (it draws its own; the native ones don't match the look).
 const { contextBridge, ipcRenderer, webFrame } = require('electron');
+// main.js's arguments for the page: from the environment main.js sets before any page starts (a page opened in its
+// service worker's process, each start after the first, has none of the window's own in process.argv), else the window's
+// own (a test harness sets no environment)
+const nfArgs = (() => { try { const a = JSON.parse(process.env.NETHERFLOW_WINDOW_ARGS || 'null'); if (Array.isArray(a)) return a; } catch {} return process.argv; })();
 contextBridge.exposeInMainWorld('netherflowApp', {
-  lite: process.argv.includes('--nf-lite'), // NetherFlow Lite: no Extreme+ (see main.js)
-  portMoved: process.argv.includes('--nf-port-moved'), // its usual port was taken: the library and settings kept there aren't here (see main.js)
-  release: process.argv.includes('--nf-release'), // NetherFlow as installed: packaged, not run from the source, a test harness or a CI machine (the page's Count me once counts only there)
-  country: (process.argv.find(a => a.startsWith('--nf-country=')) || '').slice(13), // Windows' own region (its language often has none, or another country's)
-  version: (process.argv.find(a => a.startsWith('--nf-version=')) || '').slice(13), // the app's version (Settings › Update says it)
+  lite: nfArgs.includes('--nf-lite'), // NetherFlow Lite: no Extreme+ (see main.js)
+  portMoved: nfArgs.includes('--nf-port-moved'), // its usual port was taken: the library and settings kept there aren't here (see main.js)
+  release: nfArgs.includes('--nf-release'), // NetherFlow as installed: packaged, not run from the source, a test harness or a CI machine (the page's Count me once counts only there)
+  country: (nfArgs.find(a => a.startsWith('--nf-country=')) || '').slice(13), // Windows' own region (its language often has none, or another country's)
+  version: (nfArgs.find(a => a.startsWith('--nf-version=')) || '').slice(13), // the app's version (Settings › Update says it)
   win: action => ipcRenderer.send('win', action), // 'min' | 'max' | 'close'
   zoom: f => webFrame.setZoomFactor(f), // the interface's size (Settings › Interface size), as the browser's own zoom
   onMaximized: cb => ipcRenderer.on('maximized', (_, on) => cb(on)),

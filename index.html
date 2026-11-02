@@ -1347,6 +1347,8 @@ body.home .home-stage .msg { font-size: clamp(56px, min(15vw, 24cqh), 240px); } 
 .skin-glass .drive .dv-upnext { opacity: .78; }
 .skin-glass .drive .dv-prog { font: 600 clamp(14px, 2.2vmin, 19px)/1 var(--ui); font-variant-numeric: tabular-nums; }
 .skin-glass .drive .dv-prog .lbl { font: inherit; }
+/* (in a short window's two columns its title held to its row's width too: Glass's face is wider than the others', and at 800 x 600 'MIDNIGHT' broke in the middle, MIDNIG / HT; a phone, a TV and a big window keep their size) */
+@media (orientation: landscape) and (max-height: 720px) { .skin-glass .drive .dv-song { container-type: inline-size; } .skin-glass .drive .dv-title { font-size: min(max(clamp(24px, 9.5vw, 34px), min(7vmin, 92px)), 7.5vh, 9.5cqi); } }
 /* its page: deep glass where nothing is drawn behind it (a phone, the car, a TV: as Search's and About's); on a computer's
    lens tier the scene held still behind a veil (its words 4.5 : 1 — the script holds the scene and hides the player), the
    veil darker over something bright (--dv-dim, the script's glassVeil: your own picture at Picture dim Off read 3.0 : 1) */

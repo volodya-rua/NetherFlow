@@ -334,6 +334,11 @@ app.whenReady().then(async () => {
 
   // 1280×820, or as much as the screen has free (a 1366×768 laptop: else the player sat under the taskbar)
   const free = screen.getPrimaryDisplay().workAreaSize;
+  // The page's arguments (see preload.js), as the window's own and in the environment, which every page process started
+  // from here takes with it: a page opened in its service worker's process (each start after the first, once sw.js is
+  // there) has none of the window's own — Lite offered Extreme+ and Redline, and Count me once never counted
+  const nfArgs = [...(LITE ? ['--nf-lite'] : []), ...(port !== PORT ? ['--nf-port-moved'] : []), ...(app.isPackaged && !process.env.CI ? ['--nf-release'] : []), '--nf-country=' + ((await COUNTRY) || app.getLocaleCountryCode() || ''), '--nf-version=' + app.getVersion()];
+  process.env.NETHERFLOW_WINDOW_ARGS = JSON.stringify(nfArgs);
   win = new BrowserWindow({
     width: Math.min(1280, free.width), height: Math.min(820, free.height), minWidth: Math.min(420, free.width), minHeight: Math.min(620, free.height), show: false,
     title: 'NetherFlow', icon: path.join(__dirname, 'icon.png'), backgroundColor: '#0b0503',
@@ -341,7 +346,7 @@ app.whenReady().then(async () => {
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       backgroundThrottling: false, // keep timers at full speed when minimized (the next song readied, Smooth mix on time)
-      additionalArguments: [...(LITE ? ['--nf-lite'] : []), ...(port !== PORT ? ['--nf-port-moved'] : []), ...(app.isPackaged && !process.env.CI ? ['--nf-release'] : []), '--nf-country=' + ((await COUNTRY) || app.getLocaleCountryCode() || ''), '--nf-version=' + app.getVersion()], // (see preload.js: lite, portMoved, release, country)
+      additionalArguments: nfArgs, // (see preload.js: lite, portMoved, release, country)
     },
   });
   win.removeMenu();
