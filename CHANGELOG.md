@@ -19,9 +19,10 @@ What changed in each NetherFlow release. The builds are on the [releases page](h
 
 ## 1.6.3: Glass, 19 new lyric fonts, and controls that get out of the way
 
-- **Glass:** a new theme (the seventh on a computer, the sixth on a phone). On a computer the header's buttons and the
-  player are clear drops of glass that bend the light behind them: what's under them magnified, curving round their
-  edges with a thin rainbow, and Settings and the menus are glass panels with an edge that bends what's behind them.
+- **Glass:** a new theme (the seventh on a computer, the sixth on a phone). On a computer the header's buttons are clear
+  drops of glass that bend the light behind them, and the player's rim bends it too: what's under them magnified,
+  curving round their edges with a thin rainbow, and Settings and the menus are glass panels with an edge that bends
+  what's behind them.
   On phones they're frosted glass, and on a powerful phone at High or Ultra quality the controls bend the light too.
   It has its own scene of light through rippled glass, its own typefaces (Libre Bodoni and Cormorant Garamond) and two
   lyric looks of its own, Prism and Frost. Settings › Glass picks Auto, Frosted, Tinted or Solid
