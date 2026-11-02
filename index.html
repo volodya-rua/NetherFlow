@@ -3959,7 +3959,7 @@ const SKINS = {
     font: { poster: "'Unbounded'", serif: "'Chakra Petch'", lh: 1.08, sc: ['Wide', 'Tech'] }, bar: 'Lap',
     looks: ['speed', 'velocity', 'slam', 'split', 'track', 'extrude', 'slice'], badge: 'FULL THROTTLE ✦ REDLINE ✦',
     msg: ['Floor it', 'into the song'] },
-  Glass: { note: 'Clear glass over a dark room of light: on a computer the floating controls are lenses that bend what passes under them (each a clear drop: magnified, packed tighter toward the rim, the edge splitting the light into a thin spectrum, its words turning dark over something bright), on a phone frosted; the panels frosted glass that grows out of the button you press; light through rippled glass in caustics behind, moving with the music',
+  Glass: { note: 'Clear glass over a dark room of light: on a computer the floating controls are lenses that bend what passes under them (magnified in the middle, packed tighter toward the rim, the edge splitting the light into a thin spectrum) and the panels frosted glass with an edge that bends, growing out of the button you press; on a phone frosted, or on a powerful phone at High or Ultra quality the floating controls bend the light too; light through rippled glass in caustics behind, moving with the music',
     pal: { name: 'Glass', bg: '#05060b', a: '#e8efff', b: '#8fb4ff', ink: '#f3f6ff', fx: [1, 1, 1, 1] },
     font: { poster: "'Libre Bodoni'", serif: "'Cormorant Garamond'", lh: 1.06, sc: ['Didone', 'Serif'] }, bar: 'Beam',
     looks: ['prism', 'frost', 'chrome', 'holo', 'focus', 'dreamy', 'outline'], badge: 'SPLIT THE LIGHT ✦ GLASS ✦ SPLIT THE LIGHT ✦ GLASS ✦',
@@ -5648,7 +5648,7 @@ function renderTextPanel() {
     ...(skin === 'Tactical' ? [settingRow('Agent', ['Each song', ...AGENTS.map(a => a.name)], agentPick || 'Each song', setAgent,
       'The agent by the lyrics: a new one for each song, or always the one you pick.')] : []),
     ...(skin === 'Glass' ? [settingRow('Glass', ['Auto', 'Frosted', 'Tinted', 'Solid'], glassPick, setGlassPick,
-      'How much the glass lets through. Auto: the most this device keeps smooth (on a computer, the floating controls bend the light behind them; on a phone, frosted; on Low quality or a TV, tinted). Frosted: soft frost everywhere, nothing bent. Tinted: no blur, the lightest for a slow device. Solid: nothing shows through.'
+      'How much the glass lets through. Auto: the most this device keeps smooth (on a computer, the floating controls bend the light behind them; on a phone, frosted, or on a powerful phone at High or Ultra quality its floating controls bend the light too; on Low quality or a TV, tinted). Frosted: soft frost everywhere, nothing bent. Tinted: no blur, the lightest for a slow device. Solid: nothing shows through.'
       + (glassQuiet.matches ? ' Your system asks for less transparency or more contrast, so it\x27s solid whatever\x27s picked here.' : ''))] : []),
     updRow(),
     ...(window.netherflowApp?.notify || upd.ours ? [settingRow('Update notifications', ['On', 'Off'], updNotify ? 'On' : 'Off', setUpdNotify,

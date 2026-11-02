@@ -56,15 +56,16 @@ need a powerful graphics card anyway), about 18 MB smaller, and it updates to Li
 **Glass, lyrics in more typefaces, and controls that get out of the way:**
 
 - **Glass**, a new theme: on a computer the header's buttons and the player are clear drops of glass that bend the
-  light behind them, over a scene of light through rippled glass; on a phone they're frosted. Settings › Glass picks
-  Auto, Frosted, Tinted or Solid
+  light behind them, over a scene of light through rippled glass; on a phone they're frosted, or bend the light too on
+  a powerful phone at High or Ultra quality. Settings › Glass picks Auto, Frosted, Tinted or Solid
 - **19 new lyric font pairs** (32 in all), and lyrics in Hindi, Marathi, Bengali, Punjabi, Gujarati, Tamil, Telugu,
   Kannada, Malayalam, Arabic and Urdu in typefaces of their own, on phones too
 - **Hide controls:** while a song plays, the header and the buttons fade away after a few seconds, and a touch, the
   mouse, a key or the remote brings them back. On to start with on a TV
 - **Count me once** adds 1 to a public count of installs, with nothing about you. It's ticked in NetherFlow's own
   releases; untick it to skip it
-- **Fixed:** the playing song's cover on PC, Lens lyrics on phones, and a black screen at start on some Android TVs
+- **Fixed:** the playing song's cover on PC, Lens lyrics on phones, Drive mode on phones, and a black screen at start
+  on some Android TVs
 
 > [!NOTE]
 > The terms and privacy policy now describe Count me once, so you're asked to accept them again.
@@ -159,7 +160,7 @@ The full notes for this release and every earlier one are in the [changelog](CHA
 ## Themes
 
 One tap changes the whole app: every button, the colours, the fonts, the cursor, the timeline, the background, even how
-the lyrics come in. There are six (five on Android).
+the lyrics come in. There are seven (six on Android).
 
 <table>
   <tr>
@@ -171,6 +172,9 @@ the lyrics come in. There are six (five on Android).
     <td width="33%" valign="top"><img src="docs/media/themes/tactical.webp" alt="The Tactical theme"><br><b>Tactical</b><br><sub>One of six agents of its own next to the lyrics, a round timer, ACE and CLUTCH banners</sub></td>
     <td width="33%" valign="top"><img src="docs/media/themes/ops.webp" alt="The Ops theme"><br><b>Ops</b><br><sub>A desert bomb site, smoke and tracers on the kick, the lyrics as a kill feed</sub></td>
     <td width="33%" valign="top"><img src="docs/media/themes/redline.webp" alt="The Redline theme"><br><b>Redline</b> <sub>· Windows, Extreme+</sub><br><sub>Real cars on real circuits in 3D, a rev counter round the play button</sub></td>
+  </tr>
+  <tr>
+    <td width="33%" valign="top"><img src="docs/media/themes/glass.webp" alt="The Glass theme"><br><b>Glass</b><br><sub>Clear glass over a dark room of light; on a computer the floating controls bend the light behind them</sub></td>
   </tr>
 </table>
 

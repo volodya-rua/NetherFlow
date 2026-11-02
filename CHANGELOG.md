@@ -6,9 +6,10 @@ What changed in each NetherFlow release. The builds are on the [releases page](h
 
 - **Glass:** a new theme (the seventh on a computer, the sixth on a phone). On a computer the header's buttons and the
   player are clear drops of glass that bend the light behind them: what's under them magnified, curving round their
-  edges with a thin rainbow. On phones they're frosted glass. It has its own scene of light through rippled glass, its
-  own typefaces (Libre Bodoni and Cormorant Garamond) and two lyric looks of its own, Prism and Frost. Settings ›
-  Glass picks Auto, Frosted, Tinted or Solid
+  edges with a thin rainbow, and Settings and the menus are glass panels with an edge that bends what's behind them.
+  On phones they're frosted glass, and on a powerful phone at High or Ultra quality the controls bend the light too.
+  It has its own scene of light through rippled glass, its own typefaces (Libre Bodoni and Cormorant Garamond) and two
+  lyric looks of its own, Prism and Frost. Settings › Glass picks Auto, Frosted, Tinted or Solid
 - **19 new lyric font pairs:** Voxel, Hype, Glaze, Foil, Groove, Epic, Rodeo, Waltz, Bounce, Varsity, Marquee, Gummy,
   Boom, Letter, Laser, Disco, Deco, Haunt and Brush, 32 in all
 - **Lyrics in your script:** lyrics in Hindi, Marathi, Bengali, Punjabi, Gujarati, Tamil, Telugu, Kannada, Malayalam,
@@ -19,9 +20,10 @@ What changed in each NetherFlow release. The builds are on the [releases page](h
 - **Count me once:** a box in "Before you press play" that adds 1 to a public count of installs, with nothing about you.
   It's ticked in NetherFlow's own releases and unticked in builds made by others; untick it to skip it. The Terms and
   Privacy text now say how it works, so you'll be asked to agree once more
-- **Fixed:** the playing song's cover shows again on PC, by the title and on the play button's record. Lens lyrics glide
-  smoothly on phones and come back right after the home screen. A TV remote reaches Count me once, and comes back to
-  the setting just picked. Some Android TVs no longer open to a black screen now and then
+- **Fixed:** the playing song's cover shows again on PC, by the title and on the play button's record. Lens lyrics
+  glide smoothly on phones and come back right after the home screen. A TV remote reaches Count me once, and comes
+  back to the setting just picked. Some Android TVs no longer open to a black screen now and then. Drive mode fits on
+  phone screens at large text sizes too, and keeps right-to-left names whole
 
 ## 1.6.2: Voice control, Android Auto, a visualiser, and lyrics you can read
 
