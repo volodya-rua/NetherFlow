@@ -19,6 +19,10 @@ let kept = 0;
 // a server that said "too many" (429) or turned the readable copy down: left alone for a while, its covers fetched just as
 // they would be — asking twice each time doubled what Google's image server saw, and it turned more covers down
 const resting = new Map(); // host → until (ms)
+// asked for without the app's address as the page it's for: YouTube Music's image server (yt3) answers a cover asked for
+// with it 429, "too many", every time, and the same cover without it 200 — on the computer and the phone alike — and the
+// first 429 left every cover of that server to itself for 10 minutes: blank playlist covers
+const BARE = { credentials: 'omit', referrerPolicy: 'no-referrer' };
 self.addEventListener('fetch', e => {
   const r = e.request;
   if (r.method !== 'GET' || r.destination !== 'image') return;
@@ -27,13 +31,13 @@ self.addEventListener('fetch', e => {
   e.respondWith((async () => {
     const c = await caches.open(CACHE), hit = await c.match(r.url);
     if (hit) return hit;
-    if ((resting.get(u.hostname) || 0) > Date.now()) return fetch(r);
+    if ((resting.get(u.hostname) || 0) > Date.now()) return fetch(r.url, { ...BARE, mode: r.mode });
     try {
-      const res = await fetch(r.url, { mode: 'cors', credentials: 'omit' }); // (a readable copy, to keep: an opaque one counts as megabytes against the device's room)
+      const res = await fetch(r.url, { ...BARE, mode: 'cors' }); // (a readable copy, to keep: an opaque one counts as megabytes against the device's room)
       if (res.ok) { e.waitUntil(c.put(r.url, res.clone()).then(() => ++kept % 200 || prune(c)).catch(() => {})); return res; }
       if (res.status === 429 || res.status >= 500) resting.set(u.hostname, Date.now() + 10 * 60e3);
     } catch { resting.set(u.hostname, Date.now() + 10 * 60e3); }
-    return fetch(r); // (a server that doesn't allow that, or didn't answer: as it would have been, not kept)
+    return fetch(r.url, { ...BARE, mode: r.mode }); // (a server that doesn't allow that, or didn't answer: as it would have been, not kept)
   })());
 });
 async function prune(c) { const keys = await c.keys(); for (const k of keys.slice(0, Math.max(0, keys.length - MAX))) await c.delete(k); }
