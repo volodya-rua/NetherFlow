@@ -1165,20 +1165,49 @@ body:not(.has-song) .home-stage, body.home .home-stage { display: flex; }
 body.home #stage, body.home .cover-stage, body.home #viz, body.home .map { display: none !important; }
 body.home .mid { grid-template: minmax(0, 1fr) / minmax(0, 1fr); } /* (the song map's row and column go too) */
 body.home .home-stage .msg { font-size: clamp(56px, min(15vw, 24cqh), 240px); } /* room for the song playing */
-/* Drive mode: big, high-contrast controls; nothing else moving */
+/* Drive mode: big, high-contrast controls; nothing else moving. Its one column is the screen's width, whatever is in it
+   (a grid's auto column grows to its widest row's unbreakable words — up next, the small buttons — and every row ran
+   past the screen with it): a row's words are cut with an ellipsis, wrap, or leave their buttons' icons. Too tall for
+   the screen (a phone on its side at a big Interface size), it scrolls rather than its rows running into each other.
+   (The lyric line's row: max-content, as tall as its words. Auto, with no height to spare, a row gets only its line's
+   min-height, two lines, and a third ran over the times.) */
 .drive { position: fixed; inset: 0; width: 100%; height: 100%; max-width: none; max-height: none; margin: 0; border: 0; padding: 22px var(--pad) 28px;
   background: #050505; color: #fff; touch-action: pan-y; }
-.drive[open] { display: grid; grid-template-rows: auto minmax(0, 1fr) auto auto auto auto; gap: 3vh; animation: show .3s both; }
-/* (in full screen the window buttons have no use; out of it, they and Exit each get their own room) */
+.drive[open] { display: grid; grid-template: auto 1fr max-content auto auto auto / minmax(0, 1fr); gap: 3vh; animation: show .3s both; }
+/* (in full screen the window buttons have no use; out of it, they get their room right of Exit — see .dv-exit) */
 .drive:fullscreen .winctl { display: none; }
-.app .drive:not(:fullscreen) .dv-top { padding-right: 140px; }
 .drive::backdrop { background: #000; }
-.dv-top { display: flex; justify-content: space-between; align-items: center; }
-.dv-top span { display: flex; align-items: center; gap: 10px; color: var(--a); font-size: 13px; }
-.dv-clock { font: 400 clamp(22px, 4vmin, 40px)/1 var(--poster); letter-spacing: .05em; font-variant-numeric: tabular-nums; }
-.dv-upnext { margin: 14px 0 0; font-size: clamp(12px, 1.9vmin, 17px); opacity: .6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* the top row: the clock in its middle, the label and Exit either side; on a narrow screen, the clock on a line of its
+   own under them (the label and Exit with the clock between need more than a phone's width in a wide lyric font or the
+   phone's larger text) */
+.dv-top { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 10px 12px; }
+.dv-top span { display: flex; align-items: center; gap: 10px; min-width: 0; color: var(--a); font-size: 13px; }
+.dv-top span b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: inherit; }
+.dv-clock { font: 400 min(clamp(22px, 4vmin, 40px), max(16px, 7vw))/1 var(--poster); letter-spacing: .05em; font-variant-numeric: tabular-nums; white-space: nowrap; }
+@media (max-width: 599.98px) {
+  .dv-top { grid-template-columns: minmax(0, 1fr) auto; }
+  .dv-clock { grid-area: 2 / 1 / 3 / 3; justify-self: center; }
+  .dv-exit { padding-block: 11px; }
+}
+/* (a computer's window out of full screen: its buttons' room right of Exit, so the clock on a line of its own a
+   little sooner) */
+.app:not(.fs) .drive:not(:fullscreen) .dv-exit { margin-right: 140px; }
+@media (max-width: 799.98px) {
+  .app:not(.fs) .drive:not(:fullscreen) .dv-top { grid-template-columns: minmax(0, 1fr) auto; }
+  .app:not(.fs) .drive:not(:fullscreen) .dv-clock { grid-area: 2 / 1 / 3 / 3; justify-self: center; }
+}
+@media (max-width: 399.98px) { /* (narrower still — a big Interface size — no room beside Exit: the room above it) */
+  .app:not(.fs) .drive:not(:fullscreen) { padding-top: 48px; }
+  .app:not(.fs) .drive:not(:fullscreen) .dv-exit { margin-right: 0; }
+}
+.dv-upnext { margin: calc(14px - .3em) -.2em -.3em; padding: .3em .2em; font-size: clamp(12px, 1.9vmin, 17px); opacity: .6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* (it and the artist: one line each, cut with an ellipsis — and that cut clips, so room round their letters inside it,
+   taken back by the margins: a Devanagari vowel sign before its letter, the end of an Arabic name, Thai's tone marks in
+   Blocks' face, were cut. One line: nothing under it to show) */
 .dv-upnext b { color: var(--a); font-weight: 500; }
-.dv-prog { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 16px; font-size: clamp(13px, 2vmin, 18px); font-variant-numeric: tabular-nums; }
+.dv-prog { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: clamp(8px, 4vw, 16px); font-size: clamp(13px, 2vmin, 18px); font-variant-numeric: tabular-nums; }
+/* (a tiny screen: the times either end over a bar of the whole width) */
+@media (max-width: 259.98px) { .dv-prog i { grid-area: 2 / 1 / 3 / 4; } #dvLeft { grid-column: 3; } }
 .dv-prog i { height: 8px; border-radius: 4px; background: rgba(255,255,255,.12); overflow: hidden; }
 .dv-prog b { display: block; height: 100%; width: 0; border-radius: inherit; background: linear-gradient(90deg, var(--b), var(--a)); box-shadow: 0 0 14px var(--a); }
 .dv-like { display: inline-flex; align-items: center; gap: 8px; }
@@ -1195,29 +1224,119 @@ body.home .home-stage .msg { font-size: clamp(56px, min(15vw, 24cqh), 240px); } 
 .voice-ring { grid-row: span 2; width: 38px; height: 38px; border-radius: 50%; background: var(--a); box-shadow: 0 0 0 calc(var(--lv, 0) * 14px) color-mix(in srgb, var(--a) 32%, transparent); transition: box-shadow .08s; }
 .voice-text { margin: 0; font: italic 400 20px/1.2 var(--serif); min-height: 1.2em; overflow-wrap: anywhere; }
 .voice-ui small { opacity: .7; }
-.dv-like svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linejoin: round; }
+.dv-small svg { width: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .dv-like.on { background: color-mix(in srgb, var(--a) 24%, transparent); color: var(--a); }
 .dv-like.on svg { fill: currentColor; }
-.dv-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--a); box-shadow: 0 0 12px var(--a); }
-.dv-exit { padding: 14px 26px; border: 2px solid rgba(255,255,255,.35); border-radius: 999px; font-size: 14px; }
-.dv-song { display: flex; align-items: center; gap: clamp(16px, 3vw, 36px); min-height: 0; }
-.dv-art { flex: none; width: clamp(96px, 22vmin, 260px); aspect-ratio: 1; border-radius: 14px; background: #222 center / cover; }
+.dv-like:disabled { opacity: .35; }
+.dv-dot { flex: none; width: 9px; height: 9px; border-radius: 50%; background: var(--a); box-shadow: 0 0 12px var(--a); }
+.dv-exit { justify-self: end; padding: 14px 26px; border: 2px solid rgba(255,255,255,.35); border-radius: 999px; font-size: 14px; white-space: nowrap; }
+.dv-song { display: flex; align-items: center; gap: clamp(12px, 3vw, 36px); }
+.dv-art { flex: none; width: max(min(96px, 26.7vw), min(22vmin, 260px)); aspect-ratio: 1; border-radius: 14px; background: #222 center / cover; }
 .dv-text { min-width: 0; }
-.dv-title { margin: 0; font: 400 clamp(34px, 7vmin, 92px)/1 var(--poster); text-transform: uppercase; overflow-wrap: anywhere;
+.dv-title { margin: -.35em -.15em 0; padding: .35em .15em 0; font: 400 max(clamp(24px, 9.5vw, 34px), min(7vmin, 92px))/1 var(--poster); text-transform: uppercase; overflow-wrap: anywhere;
   display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-.dv-artist { margin: 12px 0 0; font-size: clamp(14px, 2.4vmin, 22px); opacity: .7; }
-.dv-line { margin: 0; min-height: 2.4em; font: italic 400 clamp(22px, 4vmin, 44px)/1.15 var(--serif); color: var(--a); overflow-wrap: anywhere; }
-.dv-ctl { display: flex; justify-content: center; align-items: center; gap: clamp(18px, 5vw, 64px); }
-.dv-btn { display: grid; place-items: center; width: clamp(84px, 22vw, 130px); aspect-ratio: 1; border-radius: 50%; background: rgba(255,255,255,.1);
+/* (its clamp clips: room above the first line and at the sides, which the negative margins take back — an accented
+   capital's mark, a Devanagari vowel sign, were cut there. None below: the line after the clamp's would show) */
+.dv-artist { margin: calc(12px - .3em) -.2em -.3em; padding: .3em .2em; font-size: clamp(14px, 2.4vmin, 22px); opacity: .7; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dv-line { margin: -.5em -.25em 0; padding: .5em .25em 0; min-height: calc(2lh + .5em); font: italic 400 clamp(22px, 4vmin, 44px)/normal var(--serif);
+  color: var(--a); overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; align-self: start; }
+/* (three lines at most, two under 850 px tall — most phones: a long line pushed the transport off the screen. That clamp
+   clips, so its letters get their room: each line its face's own height — a script's fallback face makes its line taller
+   (at a set 1.15 the clamp cut the tops and tails of Telugu, Tamil, Arabic and Thai, an accented capital's mark; and three
+   of Telugu's taller lines took the small buttons off a 360 × 800 phone) — and room above the first line and at the sides
+   (an italic's overhang), which the negative margins take back. None below: the box ends at its last line, never
+   stretched by its row — min-height two lines exactly — or the line after the clamp's shows) */
+@media (max-height: 849.98px) { .dv-line { -webkit-line-clamp: 2; } }
+/* the transport: its sizes as before, but never more than the row's width can hold (cqi: hundredths of the row's width) */
+.dv-ctl { display: flex; justify-content: center; align-items: center; container-type: inline-size; }
+.dv-btn { display: grid; place-items: center; width: min(clamp(84px, 22vw, 130px), 26cqi); aspect-ratio: 1; border-radius: 50%; background: rgba(255,255,255,.1);
   touch-action: manipulation; }
 .dv-btn svg { width: 46%; height: 46%; fill: #fff; stroke: #fff; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
-.dv-main { width: clamp(120px, 34vw, 190px); background: var(--a); }
+.dv-main { width: min(clamp(120px, 34vw, 190px), 38cqi); margin-inline: min(clamp(18px, 5vw, 64px), 5cqi); background: var(--a); }
 .dv-main svg { fill: var(--bg); stroke: var(--bg); }
 .dv-main .i-pause, .playing .dv-main .i-play { display: none; }
 .playing .dv-main .i-pause { display: block; }
 .dv-btn:active { scale: .94; }
-.dv-skip { display: flex; justify-content: center; gap: 18px; }
-.dv-small { padding: 16px 28px; border-radius: 999px; background: rgba(255,255,255,.08); font-size: 14px; touch-action: manipulation; }
+/* the small buttons (back, Like, Speak, forward): in one row while they fit, else each narrower; on a phone held upright
+   (with the height for it) two by two, the skips over Like and Speak (Like the whole width when Speak isn't there). A
+   button too narrow for its words keeps its icon: the words wrap onto a second line the button's height leaves out, so
+   it's never squeezed taller. */
+.dv-skip { display: flex; justify-content: center; gap: 12px; }
+.dv-small { display: flex; flex: 0 1 auto; flex-wrap: wrap; justify-content: center; align-items: center; align-content: flex-start; gap: 0 8px; min-width: 0;
+  height: 52px; padding: 0 24px; overflow: hidden; white-space: nowrap; border-radius: 999px; background: rgba(255,255,255,.08); font-size: 14px; touch-action: manipulation; }
+/* (each part — icon, words — the button's whole height: the icon's line, alone, still fills the button, so words wrapped
+   off it stay out of sight; and each part in the middle of it by its height, not by a line height, which a phone's larger
+   text makes taller: at 1.3 a 52 px line was 68 px and every icon and word sat low) */
+.dv-small > * { flex: none; height: 100%; display: flex; align-items: center; }
+#dvFwd { flex-direction: row-reverse; } /* (its arrow after its words: the arrow's the part kept) */
+/* (short of room, Like and Speak give up their words first — their icons say it — and the skips keep "10 s") */
+.dv-skip .dv-like { flex: 1 1 48px; min-width: 48px; max-width: max-content; }
+/* (a phone held upright: its height spent a little more carefully — the two-by-two buttons only where there's height
+   for them, else one row, unless that row's buttons would be too small to tap) */
+@media (max-width: 599.98px) and (orientation: portrait) {
+  .drive[open] { gap: min(2.6vh, 18px); }
+  .dv-artist, .dv-upnext { margin-top: calc(8px - .3em); }
+  .dv-small { padding-inline: 10px; }
+}
+@media (max-width: 599.98px) and (orientation: portrait) and (max-height: 699.98px) { .dv-title { -webkit-line-clamp: 2; } }
+/* (shorter still — a big Interface size — less room round everything, so the transport stays on the first screen) */
+@media (orientation: portrait) and (max-height: 599.98px) {
+  .drive { padding-block: 12px 14px; }
+  .drive[open] { gap: 2vh; }
+  .dv-exit { padding-block: 8px; }
+}
+@media (orientation: portrait) and (max-height: 459.98px) { /* (and the least needed gives way: up next, the lyric's second line) */
+  .dv-upnext { display: none; }
+  .dv-line { -webkit-line-clamp: 1; min-height: calc(1lh + .5em); }
+}
+@media (max-width: 599.98px) and (orientation: portrait) and (min-height: 760px), (max-width: 299.98px) {
+  .dv-skip { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .dv-small { padding-inline: 4px; column-gap: 6px; } /* (a 240 px wide screen's half: "10 s" still beside its arrow at the phone's larger text) */
+  .dv-skip .dv-like { order: 1; max-width: none; }
+  .dv-skip:has(#dvVoice[hidden]) #dvLike { grid-column: 1 / -1; }
+}
+/* a short, wide screen (a phone on its side, a TV, a computer's window under 720 px tall or at a big Interface size): the
+   song and its line on the left, the transport and the small buttons on the right, the timeline under both, the buttons
+   and the title sized to the height too (in one column the song's row had no height left: the cover and the title ran
+   over the rows round them). From 540 px tall (a TV) there's room for the small buttons' words: across the bottom (at 480
+   with the phone's larger text they ran off it); and there too when the right column is too narrow for them. Shorter than
+   300 px (a phone on its side at a big Interface size): tighter still, the title on one line (in one column there, the
+   transport was off the screen). */
+@media (orientation: landscape) and (max-height: 720px) {
+  .drive[open] { grid-template: "top top" auto "song ctl" 1fr "line skip" max-content "prog prog" auto / minmax(0, 1fr) minmax(0, 1fr); column-gap: var(--pad); }
+  .dv-top { grid-area: top; } .dv-song { grid-area: song; } .dv-line { grid-area: line; } .dv-ctl { grid-area: ctl; } .dv-skip { grid-area: skip; } .dv-prog { grid-area: prog; }
+  .dv-art { width: min(max(min(96px, 26.7vw), min(22vmin, 260px)), 30vh); }
+  .dv-title { font-size: min(max(clamp(24px, 9.5vw, 34px), min(7vmin, 92px)), 7.5vh); }
+  .dv-btn { width: min(clamp(84px, 22vw, 130px), 26cqi, 24vh); }
+  .dv-main { width: min(clamp(120px, 34vw, 190px), 38cqi, 36vh); }
+  .dv-small { padding-inline: 10px; }
+  .dv-artist, .dv-upnext { margin-top: calc(8px - .3em); }
+}
+@media (orientation: landscape) and (min-height: 540px) and (max-height: 720px) {
+  .drive[open] { grid-template: "top top" auto "song ctl" 1fr "line ctl" max-content "prog prog" auto "skip skip" auto / minmax(0, 1fr) minmax(0, 1fr); }
+  .dv-small { padding-inline: 24px; }
+}
+@media (orientation: landscape) and (max-width: 489.98px) {
+  .drive[open] { grid-template: "top top" auto "song ctl" 1fr "line ctl" max-content "prog prog" auto "skip skip" auto / minmax(0, 1fr) minmax(0, 1fr); }
+}
+@media (orientation: landscape) and (max-height: 420px) {
+  .drive { padding-block: 14px 16px; }
+  .dv-title { -webkit-line-clamp: 2; }
+  .dv-artist, .dv-upnext { margin-top: calc(8px - .3em); }
+  .dv-line { font-size: min(clamp(22px, 4vmin, 44px), 5.5vh); }
+  .dv-exit { padding-block: 11px; }
+}
+@media (orientation: landscape) and (max-height: 420px) and (min-width: 480px) { /* (the clock back in the middle: there's the width) */
+  .dv-top { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); }
+  .dv-clock { grid-area: auto; }
+}
+@media (orientation: landscape) and (max-height: 299.98px) {
+  .drive { padding-block: 8px 10px; }
+  .dv-title { -webkit-line-clamp: 1; }
+  .dv-exit { padding: 8px 18px; }
+  .dv-skip { gap: 8px; }
+  .dv-small { height: 44px; }
+}
 .home-now { display: none; margin-top: 3.2vh; align-items: center; gap: 14px; max-width: 100%; text-align: left; animation: fade 1s .3s both; }
 body.home .home-now { display: flex; }
 .home-now i { flex: none; width: 46px; height: 46px; border-radius: 10px; background: color-mix(in srgb, var(--ink) 12%, transparent) center / cover;
@@ -1540,6 +1659,15 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
 .skin-stickman .switch { border: 2px solid var(--ink); border-radius: var(--hand2); }
 .skin-stickman :is(.winctl button:hover) { background: rgba(0,0,0,.07); color: var(--ink); }
 .skin-stickman :is(.search, .about, .drive) { background: repeating-linear-gradient(transparent 0 27px, #bcd0ec 27px 28px) 0 14px, #f4f0e6; }
+/* (Drive on the paper: in ink, its buttons drawn in ink as the theme's others are — its own white words and white-tinted
+   buttons couldn't be read there) */
+.skin-stickman .drive { color: var(--ink); }
+.skin-stickman :is(.dv-small, .dv-exit) { border: 2px solid var(--ink); border-radius: var(--hand2); }
+.skin-stickman :is(.dv-small, .dv-exit):not(.on) { background: none; } /* (Liked keeps its tint) */
+.skin-stickman .dv-btn:not(.dv-main) { background: none; }
+.skin-stickman .dv-btn { border-radius: 52% 48% 55% 45% / 47% 55% 45% 53%; box-shadow: 0 0 0 2px var(--ink), 3px 4px 0 rgba(29,27,24,.25); }
+.skin-stickman .dv-btn:not(.dv-main) svg { fill: var(--ink); stroke: var(--ink); }
+.skin-stickman .dv-prog i { background: color-mix(in srgb, var(--ink) 14%, transparent); }
 .skin-stickman .results { border-top: 2px solid var(--ink); }
 .skin-stickman .row { border-bottom: 1px dashed color-mix(in srgb, var(--ink) 30%, transparent); }
 .skin-stickman .cur .w > span { --dim: color-mix(in srgb, var(--ink) 18%, transparent); }
@@ -2823,8 +2951,8 @@ body.skin-glass.sing:not(.home) .ab-bar { bottom: calc(100% + 12px + 48px + 8px)
 </dialog>
 
 <dialog id="drive" class="drive" aria-label="Drive mode">
-  <div class="dv-top"><span class="lbl"><i class="dv-dot"></i>Drive mode</span><b id="dvClock" class="dv-clock"></b><button id="driveExit" class="dv-exit lbl">Exit</button></div>
-  <div class="dv-song"><i id="dvArt" class="dv-art"></i><div class="dv-text"><p id="dvTitle" class="dv-title"></p><p id="dvArtist" class="dv-artist lbl"></p><p id="dvUpNext" class="dv-upnext lbl"></p></div></div>
+  <div class="dv-top"><span class="lbl"><i class="dv-dot"></i><b>Drive mode</b></span><b id="dvClock" class="dv-clock"></b><button id="driveExit" class="dv-exit lbl">Exit</button></div>
+  <div class="dv-song"><i id="dvArt" class="dv-art"></i><div class="dv-text"><p id="dvTitle" class="dv-title" dir="auto"></p><p id="dvArtist" class="dv-artist lbl" dir="auto"></p><p id="dvUpNext" class="dv-upnext lbl"></p></div></div>
   <p id="dvLine" class="dv-line" dir="auto" aria-live="off"></p>
   <div class="dv-prog" aria-hidden="true"><span id="dvCur" class="lbl"></span><i><b id="dvBar"></b></i><span id="dvLeft" class="lbl"></span></div>
   <div class="dv-ctl">
@@ -2832,7 +2960,7 @@ body.skin-glass.sing:not(.home) .ab-bar { bottom: calc(100% + 12px + 48px + 8px)
     <button id="dvPlay" class="dv-btn dv-main" aria-label="Play or pause"><svg class="i-play" viewBox="0 0 24 24"><path d="M7 4.5v15L19.5 12z"/></svg><svg class="i-pause" viewBox="0 0 24 24"><path d="M7.5 4.5v15M16.5 4.5v15"/></svg></button>
     <button id="dvNext" class="dv-btn" aria-label="Next song"><svg viewBox="0 0 24 24"><path d="M18 5v14M5 5.5 15 12 5 18.5z"/></svg></button>
   </div>
-  <div class="dv-skip"><button id="dvBack" class="dv-small lbl"></button><button id="dvLike" class="dv-small dv-like lbl" aria-label="Like this song"><svg viewBox="0 0 24 24"><path d="M12 20.5s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.6a4.3 4.3 0 0 1 7.5 2.7c0 5.6-7.5 10.2-7.5 10.2z"/></svg>Like</button><button id="dvVoice" class="dv-small dv-like lbl" aria-label="Speak: a song, or what to do" hidden><svg aria-hidden="true" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg>Speak</button><button id="dvFwd" class="dv-small lbl"></button></div>
+  <div class="dv-skip"><button id="dvBack" class="dv-small lbl"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3M6.7 3v3.7h3.7"/></svg><span></span></button><button id="dvLike" class="dv-small dv-like lbl" aria-label="Like this song"><svg viewBox="0 0 24 24"><path d="M12 20.5s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.6a4.3 4.3 0 0 1 7.5 2.7c0 5.6-7.5 10.2-7.5 10.2z"/></svg><span>Like</span></button><button id="dvVoice" class="dv-small dv-like lbl" aria-label="Speak: a song, or what to do" hidden><svg aria-hidden="true" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg><span>Speak</span></button><button id="dvFwd" class="dv-small lbl"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3M17.3 3v3.7h-3.7"/></svg><span></span></button></div>
 </dialog>
 
 <dialog id="search" class="search" aria-label="Search songs">
@@ -14138,7 +14266,9 @@ const tvWatch = new MutationObserver(() => { if (!tvLandSoon) tvLandSoon = reque
 let driveFull = false;
 function openDrive() {
   if ($('drive').open) return;
-  $('dvBack').textContent = '⟲ ' + jump + ' s'; $('dvFwd').textContent = jump + ' s ⟳';
+  // (the skips' words; a button too narrow for them keeps its arrow — see .dv-small)
+  $('dvBack').lastChild.textContent = $('dvFwd').lastChild.textContent = jump + ' s';
+  $('dvBack').setAttribute('aria-label', `Back ${jump} seconds`); $('dvFwd').setAttribute('aria-label', `Forward ${jump} seconds`);
   $('dvLine').textContent = $('csLine').textContent; // (the line being sung now; then each next one)
   $('drive').showModal(); placeWinctl();
   updateDrive(); clearInterval(driveTick); driveTick = setInterval(updateDrive, 250);
@@ -14161,7 +14291,9 @@ function updateDrive() {
   $('dvBar').style.width = (dur ? t / dur * 100 : 0).toFixed(2) + '%';
   const n = nextUp()[0];
   $('dvUpNext').replaceChildren(...(n ? ['Up next · ', el('b', '', n.trackName)] : []));
+  $('dvUpNext').dir = n && RTL.test(n.trackName) ? 'rtl' : 'ltr'; // (a right-to-left name cut at its end, not its start — as the title and artist, dir=auto)
   $('dvLike').classList.toggle('on', isLiked(current));
+  $('dvLike').disabled = !current || current.kind === 'episode'; // (a podcast's episode, an audiobook's chapter: no liking it, as on the main screen — see updateLikeBtn)
 }
 $('dvLike').onclick = () => { if (current) { toggleLike(current); updateDrive(); } };
 $('driveExit').onclick = () => $('drive').close();
