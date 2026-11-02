@@ -2,6 +2,21 @@
 
 What changed in each NetherFlow release. The builds are on the [releases page](https://github.com/volodya-rua/NetherFlow/releases).
 
+## 1.6.4: Fix · playlist covers, the play button, and a lighter Glass
+
+- **Playlist covers:** a playlist's own picture no longer stays blank while its songs show their covers. An image server
+  turned some covers down, and the app then left that server alone for a while; covers are now asked for without the
+  app's own address going with them. A cover that doesn't come is asked for again, at its other sizes, and one that
+  never comes shows a plain square in the theme's colours instead of an empty box. A playlist's picture also fills in
+  as an import brings its songs' covers
+- **The play button:** a song whose cover is a video's picture now fills the round play button, not a small square in
+  the middle of it
+- **Lighter glass** (Settings, with the Glass theme on): fewer glass effects and the background drawn half as often, for
+  a smoother app on a slower device. Off to start with: Glass in full
+- **Hide controls:** Off, Full screen (to start with) or On (to start with on a TV)
+- **Glass on a computer:** the library, search, an artist's page and About take less work for the graphics chip to draw
+  (the blur behind them isn't drawn again every frame)
+
 ## 1.6.3: Glass, 19 new lyric fonts, and controls that get out of the way
 
 - **Glass:** a new theme (the seventh on a computer, the sixth on a phone). On a computer the header's buttons and the

@@ -51,24 +51,17 @@ need a powerful graphics card anyway), about 18 MB smaller, and it updates to Li
 
 <a id="whats-new"></a>
 
-## What's new in 1.6.3
+## What's new in 1.6.4
 
-**Glass, lyrics in more typefaces, and controls that get out of the way:**
+**A fix release: playlist covers, the play button, and a lighter Glass:**
 
-- **Glass**, a new theme: on a computer the header's buttons and the player are clear drops of glass that bend the
-  light behind them, over a scene of light through rippled glass; on a phone they're frosted, or bend the light too on
-  a powerful phone at High or Ultra quality. Settings › Glass picks Auto, Frosted, Tinted or Solid
-- **19 new lyric font pairs** (32 in all), and lyrics in Hindi, Marathi, Bengali, Punjabi, Gujarati, Tamil, Telugu,
-  Kannada, Malayalam, Arabic and Urdu in typefaces of their own, on phones too
-- **Hide controls:** while a song plays, the header and the buttons fade away after a few seconds, and a touch, the
-  mouse, a key or the remote brings them back. On to start with on a TV
-- **Count me once** adds 1 to a public count of installs, with nothing about you. It's ticked in NetherFlow's own
-  releases; untick it to skip it
-- **Fixed:** the playing song's cover on PC, Lens lyrics on phones, Drive mode on phones, and a black screen at start
-  on some Android TVs
-
-> [!NOTE]
-> The terms and privacy policy now describe Count me once, so you're asked to accept them again.
+- **Playlist covers** no longer stay blank while the songs inside show theirs. A cover that doesn't load is asked for
+  again, and one that never comes shows a plain square in the theme's colours
+- **The play button** fills with the song's cover even when that cover is a video's picture
+- **Lighter glass** (Settings, with the Glass theme on): fewer glass effects and the background drawn half as often, for
+  a smoother app on a slower device. Off to start with
+- **Hide controls:** Off, Full screen (to start with) or On (to start with on a TV)
+- **Glass on a computer:** the library, search, an artist's page and About take less work to draw
 
 The full notes for this release and every earlier one are in the [changelog](CHANGELOG.md).
 
