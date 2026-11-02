@@ -4489,7 +4489,7 @@ function setSkin(name) {
   skin = SKIN_LIST.includes(name) ? name : ''; store.set('netherflow.skin', skin); store.set('netherflow.skinbg', '');
   applySkin(); applyMood(); applyFontPair();
   kin.shot = null; kin.recent = []; fxDirty = true; fxGround = null; skinExtras();
-  renderMoodMenu(); if ($('textPanel').matches(':popover-open')) renderTextPanel();
+  renderMoodMenu(); renderHp(); if ($('textPanel').matches(':popover-open')) renderTextPanel(); // (the headphones' row in this theme's form too)
   lastCur = lastDur = ''; if (!body.classList.contains('has-song')) $('cur').textContent = $('dur').textContent = (skin === 'Glass' ? fmtG : fmt)(0); // (the times in the theme's own form)
   if (activeIdx >= 0 && synced) { stage.replaceChildren(); buildStage(activeIdx); }
 }
@@ -5064,16 +5064,17 @@ const gsSvg = (k, cls) => { const v = document.createElementNS('http://www.w3.or
 // (each row's short line: what it does, not how — at most 44 characters, no full stop)
 const SET_SHORT = { Glass: 'How much shows through the glass', 'Hide controls': 'Fade the controls while a song plays', Autoplay: 'Similar songs when the list ends',
   'Smooth mix': 'Blend songs like a DJ mix', Show: 'What the song\'s page shows', Visualiser: 'How the visualiser looks', 'Lyrics size': 'Long lines shrink to stay on screen',
-  'Romanize lyrics': 'Other scripts in Latin letters', 'Beat style': 'The ring round the record, in Cover', 'Beat on the screen edges': 'The beat along all four sides',
+  'Romanize lyrics': 'Many scripts in Latin letters, to sing along', 'Beat style': 'The ring round the record, in Cover', 'Beat on the screen edges': 'The beat along all four sides',
   'Edge size': 'How far in from the sides', 'Skip back / forward': 'The jump buttons and the arrow keys', 'Instant start': 'Keep the first seconds of recent songs',
   'Kept song starts': 'Delete them now', 'Hey NetherFlow': 'Hands-free voice control', 'Sync with phone': 'Likes and playlists over your Wi-Fi', 'Sync with computer': 'Likes and playlists over your Wi-Fi',
   'Let phones and computers on this Wi-Fi play here': 'Show this TV in their Play on list', 'Lyrics on the lock screen': 'The sung line on the lock screen',
-  'Home-screen widget': 'The song and its buttons on your home screen', 'Liked songs offline': 'Save liked songs, on Wi-Fi only', 'Imported playlists': 'Read imported playlists again each day',
+  'Home-screen widget': 'The song and its buttons on your home screen', 'Liked songs offline': native ? 'Save liked songs, on Wi-Fi only' : 'Save liked songs to play offline', 'Imported playlists': 'Read imported playlists again each day',
   'Folders on the home screen': 'Liked songs, downloads and playlists', 'Discord status': 'The song you play, on your Discord profile', Island: 'The song in a small island over other apps',
   'Island glow': 'A glow round the island, with the bass', 'Island position': 'Drag it anywhere; Ctrl+Alt+I from any app', 'Drive mode': 'Big, simple controls for the road',
-  'In the car': 'Drive mode by itself with Android Auto', 'Play when connected': 'Carry on when Bluetooth or a cable connects', 'Start by itself in the car': 'Open and play when the car asks',
-  'Android Auto': 'List NetherFlow with the car\'s music apps', 'Update notifications': 'Tell me when a new NetherFlow is out', 'Background beat': 'Swells and brightens with the bass' };
-const GS_TITLE = { Privacy: 'Install count', Background: 'Scene', 'Background quality': 'Quality', 'Background beat': 'Beat' };
+  'In the car': 'Drive mode by itself when your car connects', 'Play when connected': 'Carry on when Bluetooth or a cable connects', 'Start by itself in the car': 'Open and play when the car asks',
+  'Android Auto': 'List NetherFlow with the car\'s music apps', 'AI karaoke': 'The singer taken out by AI, on this device', 'Voice pack': 'Speech recognition on this computer',
+  'Forget my cars': 'Car Bluetooth names, kept on this phone only', 'Music video': 'Streams the song\'s video behind the lyrics', 'Your pictures': 'Your own, kept on this device only', 'Update notifications': 'Tell me when a new NetherFlow is out', 'Background beat': 'Swells and brightens with the bass' };
+const GS_TITLE = { Privacy: 'Install count', Updates: 'Update', Background: 'Scene', 'Background quality': 'Quality', 'Background beat': 'Beat' };
 const GS_NOLINE = new Set(['Theme', 'Interface size', 'Lyrics alignment', 'Cursor', 'Edge look', 'Lyrics animation']); // (the title and the choices say it all)
 // [its short line, the note folded under it ('' none)]: its own line, or the note's first sentence when it has none
 function gsLine(label, note = '') {
@@ -5368,7 +5369,7 @@ function renderTextPanel() {
       'While NetherFlow is open on this TV, it shows in their Play on a TV or speaker list. Anyone on the same Wi-Fi can play on it (each time, this TV says who): on a shared Wi-Fi — a hotel, a dorm — turn it off.')] : []),
     ...(native ? [settingRow('Lyrics on the lock screen', ['Off', 'On'], lockLyrics ? 'On' : 'Off', setLockLyrics, 'The line being sung under the song\'s name on the lock screen, in the notification, on the widget and on a car\'s display.')] : []),
     ...(native && matchMedia('(pointer: coarse)').matches ? [settingRow('Home-screen widget', ['Add'], '', addWidget, 'The song playing, its cover and its buttons, on your phone\'s home screen. Or: touch and hold the home screen, then Widgets, then NetherFlow.')] : []),
-    settingRow('Liked songs offline', ['Off', 'On Wi-Fi'], likedOffline ? 'On Wi-Fi' : 'Off', setLikedOffline, 'Songs you like are saved on this device by themselves, a few at a time, only on Wi-Fi: they play with no connection.'),
+    settingRow('Liked songs offline', ['Off', native ? 'On Wi-Fi' : 'On'], likedOffline ? native ? 'On Wi-Fi' : 'On' : 'Off', setLikedOffline, native ? 'Songs you like are saved on this device by themselves, a few at a time, only on Wi-Fi: they play with no connection.' : 'Songs you like are saved on this device by themselves, a few at a time (on a phone, only on Wi-Fi): they play with no connection.'), // (only a phone looks at the connection: a computer saves on any)
     settingRow('Imported playlists', ['Kept in sync', 'As imported'], syncLists ? 'Kept in sync' : 'As imported', setSyncLists, 'Kept in sync: about once a day, NetherFlow reads each playlist you imported again from where it came from (Spotify, Apple Music or YouTube, which see your IP address when it does) and adds the songs new in it. Songs you took out stay out. As imported: never read again.'),
     settingRow('Folders on the home screen', ['Off', 'On'], folders ? 'On' : 'Off', setFolders, 'Liked songs, downloads and your playlists, under the buttons at the top of the home screen. Hidden while a song plays.'),
     ...(window.netherflowApp?.presence ? [settingRow('Discord status', ['Off', 'On'], discordOn ? 'On' : 'Off', setDiscord, 'The song you\'re playing on your Discord profile ("Listening to…", with its cover and a link to it), while the Discord app is open. Your friends there see it.')] : []),
@@ -12251,7 +12252,7 @@ function addWidget() {
     .catch(() => toast('Your phone doesn\'t let apps add it: touch and hold your home screen, then Widgets, then NetherFlow', 7000));
 }
 function setLockLyrics(v) { lockLyrics = v === 'On'; store.set('netherflow.locklyrics', lockLyrics ? 'On' : ''); notifyNative(); renderTextPanel(); }
-function setLikedOffline(v) { likedOffline = v === 'On Wi-Fi'; store.set('netherflow.likedoff', likedOffline ? 'On' : ''); renderTextPanel(); if (likedOffline) autoSaveLiked(); }
+function setLikedOffline(v) { likedOffline = v === 'On Wi-Fi' || v === 'On'; store.set('netherflow.likedoff', likedOffline ? 'On' : ''); renderTextPanel(); if (likedOffline) autoSaveLiked(); }
 let lockLine = -2;
 setInterval(() => { if (!native || !lockLyrics || !current || !synced) return; const i = lockIdx(); if (i !== lockLine) { lockLine = i; notifyNative(); } }, 400);
 const autoTried = new Set();
