@@ -6889,9 +6889,16 @@ async function fsStream(vid, q = streamQ()) { // → { src (for a player, or a d
   const s = await fetch('/api/fs/audio?' + new URLSearchParams({ id: vid, q })).then(async r => r.ok ? r.json() : Promise.reject(Object.assign(new Error('no stream'), { code: (await r.json().catch(() => ({}))).error })));
   return { src: '/api/fs/media?' + new URLSearchParams({ id: vid, q, g: best ? keptG() : 'off' }), loudnessDb: s.loudnessDb || 0, dur: s.duration || 0, fmt: { itag: s.itag, mime: s.mime || '', bitrate: s.bitrate || 0 } };
 }
-async function fsPlay(v, id) {
-  const s = await fsStream(v.id);
+// twin: the same recording's other upload (see twinOf) — Best asked for and this one has no Opus 251, the twin's stream
+// when it has (one more lookup, only then); never another recording for its sound
+async function fsPlay(v, id, twin = null) {
+  let s = await fsStream(v.id);
   if (id !== loadId) return;
+  if (twin && streamQ() === 'best' && s.fmt?.itag && s.fmt.itag !== 251) {
+    const s2 = await fsStream(twin.id).catch(() => null);
+    if (id !== loadId) return;
+    if (s2?.fmt?.itag === 251) { v = twin; s = s2; }
+  }
   if (v.cache && v.dur && s.dur && Math.abs(s.dur - v.dur) > 8) { cacheBad.add(v.key); forgetVids(current); throw new Error('shared match wrong length'); } // (don't trust it — search instead)
   useEngine('audio');
   fsVid = v.id; fsLoud = s.loudnessDb; fsFmt = s.fmt; // (fsFmt: its format, for the Equalizer panel's "playing now")
@@ -9913,15 +9920,17 @@ for (const k in CURVES) PLACE[k] = curvePlace;
 // ---------- loading songs ----------
 // Starts fetching a song's lyrics right away. Call the result with the length of what actually plays
 // (that upload or recording is the clock) to get the lyrics that fit it best.
-// vid: the upload that plays ({ id, channel }), for YouTube Music's lyrics of it (see withYtm).
+// vid: the upload that plays ({ id, channel }), for YouTube Music's lyrics of it (see withYtm); others: the song's other
+// uploads found (see twinOf).
 function lyricsFor(t) {
   const dur = (t.trackTimeMillis || 0) / 1000, alts = lyricsAlts(t);
   const lyrics = fetchLyrics(t.artistName, t.trackName, dur, alts), timed = fetchWords(t.artistName, t.trackName, dur);
-  return Object.assign(async (playing, vid) => {
+  return Object.assign(async (playing, vid, others = []) => {
     // (asked alongside the others; given up on after 5 s, so it never holds the lyrics up for long)
-    const ytm = vid?.id && fullSongs ? Promise.race([ytmLyricsFor(vid.id).catch(() => ({})), new Promise(r => setTimeout(r, 5000, {}))]) : {};
+    const ytm = vid?.id && fullSongs ? Promise.race([ytmOf(vid, others, playing), new Promise(r => setTimeout(r, 5000, [{}, vid]))]) : [{}, vid];
     const want = songLang(t) || tagLang(vid?.title); // (the song's language, as its names — or its upload's — say)
-    return withYtm(await pick(playing, want), await ytm, vid, want);
+    const lyr = await pick(playing, want), [y, by] = await ytm;
+    return withYtm(lyr, y, by, want);
   }, { early: lyrics }); // (early: the open database's own answer, as soon as it's in — see playTrack)
   async function pick(playing, want) {
     // lyrics in another language than the song's (a translation, another language's version of a film song): not its
@@ -9934,6 +9943,7 @@ function lyricsFor(t) {
     }
     // the lyrics site knows it has no words: anything else found for it is some other song's (a mislabelled upload)
     if (lyr.instrumental) return lyr;
+    const busy = lyrUnsure(lyr); // (no answer from it: whatever's found elsewhere stands in, till it answers — see playTrack)
     let w = await timed;
     if (off(lyr)) lyr = { raw: '', dur: 0, kind: 'no lyrics found' };
     if (off(w)) w = null;
@@ -9948,9 +9958,24 @@ function lyricsFor(t) {
     // the spaces go); line-timed lyrics from there only when there are none from the usual source.
     if (w && (w.yrc || !lyr.raw) && (!playing || Math.abs(w.dur - playing) <= Math.max(2, Math.abs((lyr.dur || dur) - playing))))
       lyr = w.yrc ? { ...w, guide: lyr.raw } : w;
-    return lyr;
+    return busy && lyr.raw ? { ...lyr, retry: true } : lyr;
   }
 }
+// YouTube Music's lyrics of the upload that plays; none timed there, its twin's (see twinOf) — one more lookup at most,
+// kept like the rest, and a twin with none there not asked again this session (an empty answer isn't kept by the memo,
+// so each play asked it again) → [lyrics, the upload they're of]
+const ytmNone = new Set();
+async function ytmOf(vid, others, len) {
+  const y = await ytmLyricsFor(vid.id).catch(() => ({})), tw = !y.lines?.length && twinOf(vid, others, len);
+  const z = tw && !ytmNone.has(tw.id) ? await ytmLyricsFor(tw.id).catch(() => ({})) : {};
+  if (tw && !z.lines && !z.plain) ytmNone.add(tw.id);
+  return z.lines?.length ? [z, tw] : [y, vid];
+}
+// The same recording's other upload: another "- Topic" one of the song (a single's and its album's) at the length of the
+// "- Topic" upload that plays — its timed lyrics and its stream are this one's. None: null. (By the same name and artist
+// too: every YouTube Music song comes as "<its artist> - Topic" (lib.ytMusic), so "Song (Taylor's Version)" or another
+// language's version at about that length passed for one.)
+const twinOf = (v, list, len = v?.dur) => / - Topic$/.test(v?.channel || '') && (list || []).find(c => c.id !== v.id && c.channel === v.channel && c.title === v.title && Math.abs((c.dur || 0) - len) <= 1) || null;
 // YouTube Music's own lyrics for a video (LyricFind's), kept for the session.
 const ytmLyricsFor = memo(id => api.ytmLyrics(id), v => !!(v.lines || v.plain));
 const lrcOf = ls => ls.map(l => `[${pad(Math.floor(l.t / 60))}:${(l.t % 60).toFixed(2).padStart(5, '0')}]${l.text}`).join('\n');
@@ -9968,7 +9993,7 @@ function withYtm(lyr, y, vid, want = '') {
   // go with the very audio that plays
   const lo = langOf(ours), lt = langOf(text);
   if (lo && lt && !sameLang(lo, lt)) return want && sameLang(lo, want) && !sameLang(lt, want) ? lyr : theirs;
-  // (the same language in two scripts — Devanagari and Latin letters, say: ours, unaligned)
+  // (the same language in two scripts — Devanagari and Latin letters, say: ours, unaligned — see alignTo for why)
   if (!sameScript(text, ours)) return lyr;
   if (sharedPhrases(text, ours) < .2) return theirs; // ours some other song's (a mislabelled entry): theirs go with what plays
   const timedOurs = lyr.yrc || /\[\d+:\d+/.test(ours);
@@ -9980,6 +10005,12 @@ function withYtm(lyr, y, vid, want = '') {
 // Our lyrics' timing moved onto YouTube Music's for the same recording (ref), by how far the lines both have run apart:
 // the middle of those gaps, so a chorus line matched to its other time doesn't count; then a line timed only as a whole
 // (no word timing) starts where theirs does, when that's close. Their gaps all over the place: ours stay as they are.
+// (Only lines with the very same letters pair, so another script, or too few lines alike, leaves ours as they are. Lined
+// up to theirs anyway — another script's lines, or words romanized to their bones, or by timing alone — Bairan, Sahiba,
+// Pal Pal, Tauba Tauba and Aaj Ki Raat moved 0.33–0.61 s earlier, and against each song's own vocal entries (the centre
+// channel's rise at each line) ours had sat within 0.08 s of the singing and theirs, on four of them, 0.4–0.9 s before
+// it: lined up, ours came out 0.3–0.84 s early. Measured 2026-11-02; where the two agreed — Moves, both Inaams — both
+// sat within 0.16 s.)
 function alignTo(ls, ref) {
   const at = new Map();
   for (const r of ref) { const k = letters(r.text); if (k) (at.get(k) || at.set(k, []).get(k)).push(r.t); }
@@ -10062,10 +10093,10 @@ async function playTrack(t, term = '', queued = false, stay = false, mixed = nul
     else if (vids.length) {
       // try the uploads in turn (three at most); one that won't play — or a shared id of the wrong length — gives way to
       // the next. YouTube limiting this connection: stop (another would be refused the same way).
-      const tryList = async list => { let picked = null; ytQueue = list.slice(1); for (let v = list[0], n = 0; v && !fsVid && id === loadId && n < 3; v = ytQueue.shift(), n++) { let e = await fsPlay(v, id).then(() => null, e => e);
+      const tryList = async list => { let picked = null; ytQueue = list.slice(1); for (let v = list[0], n = 0; v && !fsVid && id === loadId && n < 3; v = ytQueue.shift(), n++) { let e = await fsPlay(v, id, twinOf(v, list)).then(() => null, e => e);
         // (the song's best upload, refused: once more a moment later before another — a refusal that lasted a second skipped it)
-        if (!fsVid && !n && e && id === loadId && !noteLimited(e) && !/wrong length/.test(e.message)) { await new Promise(r => setTimeout(r, 1500)); if (id === loadId) e = await fsPlay(v, id).then(() => null, e => e); }
-        if (fsVid) { picked = v; break; } if (noteLimited(e)) break; } return picked; };
+        if (!fsVid && !n && e && id === loadId && !noteLimited(e) && !/wrong length/.test(e.message)) { await new Promise(r => setTimeout(r, 1500)); if (id === loadId) e = await fsPlay(v, id, twinOf(v, list)).then(() => null, e => e); }
+        if (fsVid) { picked = list.find(x => x.id === fsVid) || v; break; } if (noteLimited(e)) break; } return picked; }; // (picked: its twin, if that's what plays — see fsPlay)
       vid = await tryList(vids);
       if (!fsVid && vids[0]?.cache && !ytLimited() && id === loadId) { forgetVids(t); const real = await videosFor(t).catch(() => []); if (real[0] && !real[0].cache) vid = await tryList(real); } // (the shared id didn't fit: a real search, and that's remembered)
       if (id !== loadId) return;
@@ -10101,7 +10132,7 @@ async function playTrack(t, term = '', queued = false, stay = false, mixed = nul
     early = l; status(`${source} · synced lyrics`); setLines(l.raw);
   }, () => {});
   // (Audius's: YouTube Music's lyrics of the label's upload for their words, not their timing)
-  const lyrVid = au ? vids[0] && { ...vids[0], channel: 'Audius' } : vid, lyr = await lyrics(playLen, lyrVid);
+  const lyrVid = au ? vids[0] && { ...vids[0], channel: 'Audius' } : vid, lyr = await lyrics(playLen, lyrVid, vids);
   if (id !== loadId) return;
   const same = early && lyr.raw === early.raw && !lyr.yrc && !lyr.ref; // (the full answer is what's shown already: left as it is)
   early = early || false;
@@ -10113,11 +10144,13 @@ async function playTrack(t, term = '', queued = false, stay = false, mixed = nul
       ...(unsure && { note: !online ? 'you\'re offline: no lyrics till you\'re back' : last ? 'the lyrics site is busy: play it again in a while' : 'the lyrics site is busy: trying again in a moment' }) });
   };
   if (!same) show(lyr);
-  // (the lyrics site busy throughout, or the connection blipped: asked once more a little later, shown if found)
-  if (lyrUnsure(lyr) && !lyr.raw && navigator.onLine) setTimeout(async () => {
+  // (the lyrics site busy throughout, or the connection blipped: asked once more a little later, shown if found — and so
+  // when another source's stood in for it: measured, a song's timing from one of those, half a second late and some
+  // lines 2–7 s out, kept all song while the site's own had answered by then)
+  if ((lyrUnsure(lyr) && !lyr.raw || lyr.retry) && navigator.onLine) setTimeout(async () => {
     if (id !== loadId) return;
-    const l = await lyricsFor(t)(playLen, lyrVid).catch(() => null);
-    if (id === loadId && l) show(l, true);
+    const l = await lyricsFor(t)(playLen, lyrVid, vids).catch(() => null);
+    if (id === loadId && l && !(lyr.retry && (l.retry || !l.raw))) show(l, true);
   }, 6000);
   setTimeout(() => id === loadId && prefetchNext(), 15000); // (once it's been listened to a while: skipping on fast, nothing's looked up for nothing — and the next's still ready long before it's needed)
 }
@@ -19285,6 +19318,10 @@ console.assert(artUrl({ artworkUrl100: 'https://is1-ssl.mzstatic.com/a/100x100bb
 { const ref = [10, 13, 16, 19, 22, 25].map((t, i) => ({ t, text: 'line ' + i })), ls = ref.map((r, i) => ({ t: r.t + 1.3 + (i === 2 ? .6 : 0), text: r.text }));
   alignTo(ls, ref);
   console.assert(ls.every((l, i) => Math.abs(l.t - ref[i].t) < .01), 'alignTo broken: ' + ls.map(l => l.t).join()); }
+{ // (YouTube Music's lines in another script: ours shown as they are, not lined up to theirs — see alignTo)
+  const ref = ['तेरा इश्क़ है पिया', 'मैं नहीं हूँ तेरे बिना', 'ज़िंदगी में तू ही है', 'प्यार दिलबर समझना'].map((text, i) => ({ t: 6 + i * 3.4, text }));
+  const lyr = { raw: lrcOf(['Tera ishq hai piya', 'Main nahi hoon tere bina', 'Zindagi mein tu hi hai', 'Pyaar dilbar samajhna'].map((text, i) => ({ t: 6.6 + i * 3.4, text }))), kind: 'synced lyrics' };
+  console.assert(withYtm(lyr, { lines: ref }, { id: 'x', channel: 'A - Topic' }) === lyr, 'withYtm lined ours up to another script'); }
 // shared to NetherFlow from another app (Android's share sheet): the share it was opened with, and any while it runs
 if (native) { Capacitor.Plugins.Sharing.received?.().then(r => { if (r?.text) openShared(r.text); }).catch(() => {}); Capacitor.Plugins.Sharing.addListener?.('received', m => { if (m.text) openShared(m.text); }); }
 { const on = romanizeOn; romanizeOn = true;
