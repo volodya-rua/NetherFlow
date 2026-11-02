@@ -1337,6 +1337,74 @@ body.home .home-stage .msg { font-size: clamp(56px, min(15vw, 24cqh), 240px); } 
   .dv-skip { gap: 8px; }
   .dv-small { height: 44px; }
 }
+/* Drive mode in Glass. Its type: one face in the chrome (the song's name, the clock and the line keep theirs); the times
+   the row's own size — they are .lbl spans, and .lbl's 10.5 px beat the row's font */
+.skin-glass .drive { --mono: var(--ui); }
+.skin-glass .drive :is(.lbl, .dv-exit, .dv-small, .dv-artist, .dv-upnext, .dv-prog, .dv-top span) { font-family: var(--ui); letter-spacing: 0; text-transform: none; }
+.skin-glass .drive :is(.dv-exit, .dv-small) { font-weight: 600; font-size: 15px; }
+.skin-glass .drive .dv-top span { font: 600 15px/1 var(--ui); }
+.skin-glass .drive .dv-artist { font-weight: 600; }
+.skin-glass .drive .dv-upnext { opacity: .78; }
+.skin-glass .drive .dv-prog { font: 600 clamp(14px, 2.2vmin, 19px)/1 var(--ui); font-variant-numeric: tabular-nums; }
+.skin-glass .drive .dv-prog .lbl { font: inherit; }
+/* its page: deep glass where nothing is drawn behind it (a phone, the car, a TV: as Search's and About's); on a computer's
+   lens tier the scene held still behind a veil (its words 4.5 : 1 — the script holds the scene and hides the player), the
+   veil darker over something bright (--dv-dim, the script's glassVeil: your own picture at Picture dim Off read 3.0 : 1) */
+.skin-glass .drive { background: radial-gradient(120% 70% at 10% -10%, rgba(150,180,255,.1), transparent 60%), linear-gradient(170deg, #0a0d18, #05060b 62%); }
+.skin-glass.gl-sheets .drive { background: linear-gradient(rgba(5,6,11,var(--dv-dim, 0)), rgba(5,6,11,var(--dv-dim, 0))), linear-gradient(180deg, rgba(5,6,11,.66), rgba(5,6,11,.48) 46%, rgba(5,6,11,.64)); }
+.skin-glass.gl-sheets .drive::backdrop { background: transparent; }
+/* (its two small lines, the artist and up next, whole and with a halo of their own, as the bare name's: over a scene's
+   bright lines — Bloom, Hyperbolic, Synapse, Rosette — at .7 and .78 they read 3.6 : 1 through the veil) */
+.skin-glass.gl-sheets .drive :is(.dv-artist, .dv-upnext) { opacity: 1; text-shadow: 0 0 2px rgba(3,4,10,.9), 0 0 7px rgba(3,4,10,.85); }
+.skin-glass.gl-sheets .drive[open] { animation-fill-mode: backwards; } /* (its fade not held once it's done: held at its end, the page stayed a layer of its own, and its drops bent only its veil) */
+.skin-glass.gl-sheets:has(#drive[open]) :is(.frame, .to-home, #viz, #kin, #vedc, #singBar, #abBar) { visibility: hidden; transition: visibility 0s .3s; } /* (the back arrow too: it's made visible by a rule of its own, and showed through the veil; and the canvases over the scene — the cover's ring, Extreme lyrics, the music video — their last picture held there; and Sing's and Repeat a part's bars, behind the transport, bent by its drops) */
+/* its buttons and chips: glass. On a computer's lens tier clear drops (the script's lens: the capsules' drop, M 3.2 on the
+   big round ones); elsewhere glass with nothing to bend, a little white. The capsules' edge light and glints (--g-r from
+   the script), a glow inside, a shade inside the bottom, a deep shadow. Exit loses its outline. */
+.skin-glass .drive .dv-btn { border-radius: 999px; } /* (a circle the script reads as one: 50 % read as 50 px) */
+.skin-glass .drive :is(.dv-btn:not(.dv-main), .dv-small, .dv-exit) { position: relative; border: 0; background: var(--g-grain, none) 0 0 / var(--g-gs, 64px) repeat, rgba(255,255,255,.08);
+  box-shadow: inset 0 0 2.2px 1.2px rgba(0,0,0,.3), inset 0 0 22px -8px rgba(214,226,255,.12), inset 0 -12px 18px -12px rgba(0,0,10,.36), 0 14px 32px -10px rgba(0,0,0,.62), 0 2px 6px rgba(0,0,0,.3); }
+.skin-glass.gl-sheets .drive :is(.dv-btn:not(.dv-main), .dv-small, .dv-exit) { background: var(--g-grain, none) 0 0 / var(--g-gs, 64px) repeat, rgba(4,6,14,.03); }
+.skin-glass .drive .dv-like.on { background: linear-gradient(rgb(var(--acc-rgb) / .2), rgb(var(--acc-rgb) / .2)), rgba(255,255,255,.08); color: var(--acc); }
+.skin-glass .drive :is(.dv-btn, .dv-small, .dv-exit) > * { position: relative; z-index: 3; }
+.skin-glass .drive :is(.dv-btn:not(.dv-main), .dv-small, .dv-exit)::before { content: ''; position: absolute; inset: 0; z-index: 2; border-radius: inherit; padding: 1px; pointer-events: none;
+  --at: .21; --ab: .14;
+  background: conic-gradient(from var(--la) at 100% 50%, var(--g-spec, #fff, #fff)) 0 0 / var(--g-r, 23px) 100% no-repeat, conic-gradient(from var(--la) at 0 50%, var(--g-spec, #fff, #fff)) 100% 0 / var(--g-r, 23px) 100% no-repeat,
+    linear-gradient(rgba(255,255,255,calc(.82 * var(--at))), rgba(255,255,255,calc(.82 * var(--ab)))) 50% 0 / calc(100% - 2 * var(--g-r, 23px) + 1px) 100% no-repeat;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0); }
+.skin-glass:not(.gl-solid) .drive :is(.dv-btn:not(.dv-main), .dv-small, .dv-exit)::after { content: ''; position: absolute; inset: 0; z-index: 2; border-radius: inherit; pointer-events: none;
+  --gd: calc(2 * var(--g-r, 23px)); --g0: calc(.11 * var(--g-r, 23px)); --g1: calc(.18 * var(--g-r, 23px));
+  --ring: transparent calc(100% - var(--g1)), #000 calc(100% - var(--g1) + .5px), #000 calc(100% - var(--g0) - .5px), transparent calc(100% - var(--g0));
+  background: conic-gradient(from calc(var(--la) - 15deg), transparent, rgba(255,255,255,.25) 8.25deg, rgba(255,255,255,.82) 15deg, rgba(255,255,255,.25) 21.75deg, transparent 30deg) 0 0 / var(--gd) var(--gd) no-repeat,
+    conic-gradient(from calc(var(--la) + 163.5deg), transparent, rgba(255,255,255,.2) 16.5deg, transparent 33deg) 0 0 / var(--gd) var(--gd) no-repeat,
+    conic-gradient(from calc(var(--la) - 15deg), transparent, rgba(255,255,255,.25) 8.25deg, rgba(255,255,255,.82) 15deg, rgba(255,255,255,.25) 21.75deg, transparent 30deg) 100% 0 / var(--gd) var(--gd) no-repeat,
+    conic-gradient(from calc(var(--la) + 163.5deg), transparent, rgba(255,255,255,.2) 16.5deg, transparent 33deg) 100% 0 / var(--gd) var(--gd) no-repeat;
+  -webkit-mask: radial-gradient(circle farthest-side at 100% 50%, var(--ring)) 0 0 / var(--g-r, 23px) 100% no-repeat, radial-gradient(circle farthest-side at 0 50%, var(--ring)) 100% 0 / var(--g-r, 23px) 100% no-repeat;
+  mask: radial-gradient(circle farthest-side at 100% 50%, var(--ring)) 0 0 / var(--g-r, 23px) 100% no-repeat, radial-gradient(circle farthest-side at 0 50%, var(--ring)) 100% 0 / var(--g-r, 23px) 100% no-repeat; }
+/* play: the dock's own play core, as it is — its pearl, its ring of light, its dark icon — at Drive's size (opaque: no lens
+   under it; nothing moving with the beat) */
+.skin-glass .drive .dv-main { position: relative; color: #070912; background: radial-gradient(120% 120% at 46% 28%, #f5f8ff, #e2e9fb 44%, #c9d4f0 80%, #b3c0e3);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.8), inset 0 -10px 23px rgba(110,140,220,.24), 0 14px 32px -10px rgba(0,0,0,.62), 0 2px 6px rgba(0,0,0,.3); }
+.skin-glass .drive .dv-main::after { content: ''; position: absolute; inset: 0; z-index: 1; border-radius: 50%; pointer-events: none;
+  background: linear-gradient(172deg, rgba(255,255,255,.36), rgba(255,255,255,.06) 40%, transparent 50%),
+    radial-gradient(circle, transparent 74%, rgba(255,255,255,.5) 79%, rgba(150,175,235,.12) 84%, transparent 88%); }
+.skin-glass .drive .dv-main svg { fill: #070912; stroke: #070912; }
+/* a song with no cover: a frosted tile with the panels' edge light, not a flat grey square (frosted only where there's a
+   scene behind to frost: a computer's lens tier) */
+.skin-glass:not(.has-art) .drive .dv-art { position: relative; background: var(--g-grain, none) 0 0 / var(--g-gs, 64px) repeat, rgba(255,255,255,.05);
+  box-shadow: inset 0 0 22px -8px rgba(214,226,255,.12), inset 0 -12px 18px -12px rgba(0,0,10,.36), 0 14px 32px -10px rgba(0,0,0,.62), 0 2px 6px rgba(0,0,0,.3); }
+.skin-glass.gl-sheets:not(.has-art) .drive .dv-art { -webkit-backdrop-filter: blur(14px) saturate(1.5) brightness(.9); backdrop-filter: blur(14px) saturate(1.5) brightness(.9); }
+.skin-glass:not(.has-art) .drive .dv-art::before { --sl: 1; --sg: .66; content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 1px; pointer-events: none;
+  background: conic-gradient(from calc(var(--la) - 180deg), rgb(var(--rim-rgb) / var(--sg)) 0deg, rgb(var(--rim-rgb) / calc(var(--sg) * .45)) 19.7deg, rgb(var(--rim-rgb) / 0) 42deg 112deg,
+    rgb(var(--rim-rgb) / calc(var(--sl) * .25)) 134deg, rgb(var(--rim-rgb) / calc(var(--sl) * .68)) 157deg, rgb(var(--rim-rgb) / var(--sl)) 180deg,
+    rgb(var(--rim-rgb) / calc(var(--sl) * .68)) 203deg, rgb(var(--rim-rgb) / calc(var(--sl) * .25)) 226deg, rgb(var(--rim-rgb) / 0) 248deg 318deg,
+    rgb(var(--rim-rgb) / calc(var(--sg) * .45)) 340.3deg, rgb(var(--rim-rgb) / var(--sg)) 360deg);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0); }
+.skin-glass.gl-solid .drive :is(.dv-btn:not(.dv-main), .dv-small, .dv-exit) { background: color-mix(in srgb, var(--bg) 80%, #fff 8%); }
+@media (forced-colors: active) { .skin-glass .drive :is(.dv-btn, .dv-small, .dv-exit, .dv-art)::before, .skin-glass .drive :is(.dv-btn, .dv-small, .dv-exit, .dv-main)::after { display: none; }
+  /* (each button outlined, as the other glass is here — Exit had lost its outline — and play's icon in the text's colour: its
+     pearl gone, its dark icon was dark on the dark page) */
+  .skin-glass .drive :is(.dv-btn:not(.dv-main), .dv-small, .dv-exit), .skin-glass .drive .dv-main { border: 1px solid CanvasText; } .skin-glass .drive .dv-main svg { fill: CanvasText; stroke: CanvasText; } }
 .home-now { display: none; margin-top: 3.2vh; align-items: center; gap: 14px; max-width: 100%; text-align: left; animation: fade 1s .3s both; }
 body.home .home-now { display: flex; }
 .home-now i { flex: none; width: 46px; height: 46px; border-radius: 10px; background: color-mix(in srgb, var(--ink) 12%, transparent) center / cover;
@@ -1945,9 +2013,10 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
      spreading from the finger. They grow in, their bending rising first, rather than fading in. The panels, Sing's and Repeat a part's
      bars, toasts and dialogs are frosted glass with the same edge and a thin spectrum where the light meets their top;
      a panel grows out of the button that opened it, and goes back into it. The play button a lens, tinted by the cover.
-     Tiers (body classes, from the script): gl-lens (the lenses), gl-frost (blur: a phone), gl-tint (no blur: Low
-     quality, a TV, a software graphics chip, a slow device), gl-solid (less transparency or more contrast asked for,
-     forced colours, or Settings › Glass › Solid). Glass is never stacked on glass, and nothing that holds it ever fades:
+     Tiers (body classes, from the script): gl-lens (the lenses: a computer's, with gl-sheets — its panels and full pages
+     glass over the backdrop too — or a phone's that can afford them, on its controls alone), gl-frost (blur: a phone),
+     gl-tint (no blur: Low quality, a TV, a software graphics chip, a slow device), gl-solid (less transparency or more
+     contrast asked for, forced colours, or Settings › Glass › Solid). Glass is never stacked on glass, and nothing that holds it ever fades:
      a fade on an ancestor (opacity, a filter, a mask) would cut the glass off from what's behind it, so here only the
      glass itself or what's in it fades. Nothing in the glass moves by itself (no spinning dot or record, no streak): an
      animation there redraws every lens at the screen's own rate, 240 times a second on a fast one, where the page's own
@@ -2149,23 +2218,32 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
 .skin-glass.gl-frost .ink-dark { -webkit-backdrop-filter: blur(14px) saturate(1.5) brightness(1.06); backdrop-filter: blur(14px) saturate(1.5) brightness(1.06); background-color: rgba(250,251,255,.22); } /* (dark ink on frost: the frost lightened, not darkened — darkened, a half-dimmed picture under it read 1.8 : 1) */
 /* the panels: the controls' own glass. On a computer each gets the dock's lens at its own size (the script's glassFit,
    GLASS_KIND.panel: frosted in the middle and held calm under the words, a rim that bends what's behind and is lit in its
-   colour); on every tier a low tint that rises with what's behind (--gp-tint, the script's glassPanelTint), the scene's
-   colour carried through, the edge light only where the light falls (a bright arc on the lit corner, a soft glint on the
-   far one, nothing between), a lip of light inside the lit edge, a darkened edge, a shade inside the far edge and one
-   shadow. No border, no white wash, no contrast(). The dialogs' glass is a layer of their own behind the card (glass on
-   the dialog itself would make it the frame for the window buttons put inside it), their edge light another. */
+   colour; Settings, the theme menu and the other big panels the pane lens: a 60 px edge band that bends what's behind,
+   never folded, the body frosted from the bent picture); on every tier a low tint that rises with what's behind
+   (--gp-tint, the script's glassPanelTint), the scene's colour carried through, the edge light where the light falls
+   (a bright arc on the lit corner, a real second one on the far corner, nothing between), glints at the corners, a lip
+   of light inside each edge, a darkened edge over something bright, a soft glow inside, a shade inside the far edge and
+   a deep two-layer shadow. No border, no white wash, no contrast(). The dialogs' glass is a layer of their own behind
+   the card (glass on the dialog itself would make it the frame for the window buttons put inside it), their edge light
+   another. */
 .skin-glass :is(.moods, .eq, .smenu, .voice-ui, .toast, .singbar, .ab-bar), .skin-glass .consent { --gp-tint: 20%; }
-.skin-glass.gl-frost :is(.moods, .eq, .smenu, .voice-ui, .toast, .singbar, .ab-bar), .skin-glass.gl-frost .consent { --gp-tint: 42%; }
+.skin-glass.gl-frost :is(.moods, .eq, .smenu, .voice-ui, .toast, .singbar, .ab-bar), .skin-glass.gl-frost .consent,
+.skin-glass.gl-lens:not(.gl-sheets) :is(.moods, .eq, .smenu, .voice-ui, .toast, .singbar, .ab-bar), .skin-glass.gl-lens:not(.gl-sheets) .consent { --gp-tint: 42%; } /* (a phone's lens is its controls': its panels frosted) */
 .skin-glass :is(.moods, .eq, .smenu, .voice-ui, .toast, .singbar, .ab-bar), .skin-glass .consent::before {
   border: 0; color: var(--t1);
   background: var(--g-grain, none) 0 0 / var(--g-gs, 64px) repeat, color-mix(in srgb, var(--bg) var(--gp-tint), transparent);
-  box-shadow: inset calc(sin(var(--la)) * -1.2px) calc(cos(var(--la)) * 1.2px) 1.5px -.5px rgba(255,255,255,.16), /* (the lip: light just inside the lit edge) */
-    inset 0 0 2.2px 1.2px rgba(0,0,0,.3), inset calc(sin(var(--la)) * 12px) calc(cos(var(--la)) * -12px) 20px -16px rgba(0,0,10,.42), /* (the darkened edge; a shade inside the far one) */
-    var(--gp-drop); }
-.skin-glass :is(.moods, .eq) { --gp-drop: 0 24px 56px -16px rgba(0,0,0,.62), 0 2px 6px rgba(0,0,0,.22); border-radius: var(--r-panel); padding: var(--p-panel); }
-.skin-glass .smenu { --gp-drop: 0 14px 32px -8px rgba(0,0,0,.5); border-radius: var(--r-menu); padding: var(--p-menu); }
-.skin-glass :is(.toast, .singbar, .ab-bar, .voice-ui) { --gp-drop: 0 8px 22px -6px rgba(0,0,0,.5); }
-.skin-glass .consent { --gp-drop: 0 32px 80px -20px rgba(0,0,0,.75), 0 2px 8px rgba(0,0,0,.25); background: transparent; border: 0; box-shadow: none; }
+  box-shadow: inset calc(sin(var(--la)) * -1.4px) calc(cos(var(--la)) * 1.4px) 1.6px -.4px rgba(255,255,255,.22), /* (the lips: light just inside the lit edge, and fainter the far one) */
+    inset calc(sin(var(--la)) * 1.2px) calc(cos(var(--la)) * -1.2px) 1.6px -.6px rgba(255,255,255,.1),
+    inset 0 0 2.2px 1.2px rgba(0,0,0,calc(.3 * var(--g-bt, 0))), /* (the darkened edge, only over something bright: --g-bt, the script's glassPanelTint; 1 on tint and Solid) */
+    inset 0 0 28px -12px rgba(214,226,255,.09), /* (a soft glow inside the edge) */
+    var(--gp-shade), var(--gp-drop); }
+.skin-glass :is(.moods, .eq, .smenu, .voice-ui, .toast, .singbar, .ab-bar), .skin-glass .consent { --gp-shade: inset calc(sin(var(--la)) * 16px) calc(cos(var(--la)) * -16px) 26px -18px rgba(0,0,10,.5); } /* (the shade inside the far edge) */
+.skin-glass :is(.toast, .singbar, .ab-bar) { --gp-shade: inset calc(sin(var(--la)) * 10px) calc(cos(var(--la)) * -10px) 16px -12px rgba(0,0,10,.42); } /* (a 44–48 px capsule: a little smaller) */
+.skin-glass :is(.moods, .eq) { --gp-drop: 0 30px 70px -18px rgba(0,0,0,.7), 0 3px 10px rgba(0,0,0,.28); border-radius: var(--r-panel); padding: var(--p-panel); }
+.skin-glass .smenu { --gp-drop: 0 18px 42px -10px rgba(0,0,0,.6), 0 2px 7px rgba(0,0,0,.26); border-radius: var(--r-menu); padding: var(--p-menu); }
+.skin-glass :is(.toast, .singbar, .ab-bar, .voice-ui) { --gp-drop: 0 12px 28px -8px rgba(0,0,0,.58), 0 2px 6px rgba(0,0,0,.24); }
+.skin-glass .consent { --gp-drop: 0 36px 90px -22px rgba(0,0,0,.78), 0 3px 10px rgba(0,0,0,.28); background: transparent; border: 0; box-shadow: none; }
+.skin-glass:is(.gl-tint, .gl-solid) :is(.moods, .eq, .smenu, .voice-ui, .toast, .singbar, .ab-bar), .skin-glass:is(.gl-tint, .gl-solid) .consent { --g-bt: 1; }
 .skin-glass .consent::before { content: ''; position: absolute; inset: 0; z-index: -1; border-radius: inherit; pointer-events: none; }
 /* the edge light: one conic about the middle, its bright lobe toward the light (--la, the pointer's on a computer), a soft
    glint opposite, nothing between; the same, fainter, on the buttons and the segmented thumb */
@@ -2176,6 +2254,13 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
     rgb(var(--rim-rgb) / calc(var(--sl) * .68)) 194deg, rgb(var(--rim-rgb) / calc(var(--sl) * .25)) 212deg, rgb(var(--rim-rgb) / 0) 234deg 326deg,
     rgb(var(--rim-rgb) / calc(var(--sg) * .45)) 344deg, rgb(var(--rim-rgb) / var(--sg)) 360deg);
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0); }
+/* (the panels' own: two-sided, the bright lobe toward the light 46° each way, a real second one opposite (.66, 42°),
+   nothing between — the buttons' and the segmented thumb's stay as they are) */
+.skin-glass :is(.moods, .eq, .smenu, .voice-ui, .toast, .singbar, .ab-bar)::before, .skin-glass .consent::after { --sl: 1; --sg: .66;
+  background: conic-gradient(from calc(var(--la) - 180deg), rgb(var(--rim-rgb) / var(--sg)) 0deg, rgb(var(--rim-rgb) / calc(var(--sg) * .45)) 19.7deg, rgb(var(--rim-rgb) / 0) 42deg 112deg,
+    rgb(var(--rim-rgb) / calc(var(--sl) * .25)) 134deg, rgb(var(--rim-rgb) / calc(var(--sl) * .68)) 157deg, rgb(var(--rim-rgb) / var(--sl)) 180deg,
+    rgb(var(--rim-rgb) / calc(var(--sl) * .68)) 203deg, rgb(var(--rim-rgb) / calc(var(--sl) * .25)) 226deg, rgb(var(--rim-rgb) / 0) 248deg 318deg,
+    rgb(var(--rim-rgb) / calc(var(--sg) * .45)) 340.3deg, rgb(var(--rim-rgb) / var(--sg)) 360deg); }
 .skin-glass .pill::before { --sl: .42; --sg: .14; z-index: 0; }
 .skin-glass .pill:not(.ghost)::before { --sl: .85; --sg: .3; --rim-rgb: 255 255 255; }
 .skin-glass .seg-thumb::before { --sl: .5; --sg: .14; z-index: 0; }
@@ -2183,18 +2268,36 @@ input:not([type]), input[type="text"], input[type="search"], input[type="email"]
    keeps the scene's colour, saturation carries it); no blur on tint and Solid, the tint near opaque; Solid's light at rest */
 .skin-glass.gl-lens :is(.moods, .eq, .smenu, .voice-ui, .toast, .singbar, .ab-bar) { -webkit-backdrop-filter: blur(16px) saturate(3) brightness(.8); backdrop-filter: blur(16px) saturate(3) brightness(.8); }
 .skin-glass.gl-lens .consent::before { -webkit-backdrop-filter: var(--gl-f, blur(16px) saturate(3) brightness(.8)); backdrop-filter: var(--gl-f, blur(16px) saturate(3) brightness(.8)); }
-.skin-glass.gl-frost :is(.moods, .eq, .smenu, .voice-ui, .toast, .singbar, .ab-bar), .skin-glass.gl-frost .consent::before {
+.skin-glass.gl-frost :is(.moods, .eq, .smenu, .voice-ui, .toast, .singbar, .ab-bar), .skin-glass.gl-frost .consent::before,
+.skin-glass.gl-lens:not(.gl-sheets) :is(.moods, .eq, .smenu, .voice-ui, .toast, .singbar, .ab-bar), .skin-glass.gl-lens:not(.gl-sheets) .consent::before { /* (a phone's lens: its panels frosted) */
   -webkit-backdrop-filter: blur(12px) saturate(var(--fr-sat, 5)) brightness(var(--fr-bri, .64)); backdrop-filter: blur(12px) saturate(var(--fr-sat, 5)) brightness(var(--fr-bri, .64)); }
 .skin-glass:is(.gl-tint, .gl-solid) :is(.moods, .eq, .smenu, .voice-ui, .toast, .singbar, .ab-bar), .skin-glass:is(.gl-tint, .gl-solid) .consent::before { -webkit-backdrop-filter: none; backdrop-filter: none; }
 .skin-glass.gl-tint :is(.moods, .eq, .smenu, .voice-ui, .toast, .singbar, .ab-bar), .skin-glass.gl-tint .consent { --gp-tint: 90%; }
 .skin-glass.gl-solid :is(.moods, .eq, .smenu, .voice-ui, .toast, .singbar, .ab-bar), .skin-glass.gl-solid .consent { --gp-tint: 96%; }
-.skin-glass.gl-solid :is(.moods, .eq, .smenu, .voice-ui, .toast, .singbar, .ab-bar)::before, .skin-glass.gl-solid .consent::after { --sg: .2; }
+.skin-glass.gl-solid :is(.moods, .eq, .smenu, .voice-ui, .toast, .singbar, .ab-bar)::before, .skin-glass.gl-solid .consent::after { --sl: .9; --sg: .2; }
 /* (a card taller than the window scrolls, and its glass — a layer the card's size — scrolled away with the first
    screenful, the words after it left over the bare page: such a card is tinted glass as a whole instead, its edge kept;
    the script's glassOver) */
 .skin-glass .consent.gl-over { background: var(--g-grain, none) 0 0 / var(--g-gs, 64px) repeat, color-mix(in srgb, var(--bg) 94%, transparent);
-  box-shadow: inset calc(sin(var(--la)) * -1.2px) calc(cos(var(--la)) * 1.2px) 1.5px -.5px rgba(255,255,255,.16), inset 0 0 2.2px 1.2px rgba(0,0,0,.3), var(--gp-drop); }
+  box-shadow: inset calc(sin(var(--la)) * -1.4px) calc(cos(var(--la)) * 1.4px) 1.6px -.4px rgba(255,255,255,.22), inset calc(sin(var(--la)) * 1.2px) calc(cos(var(--la)) * -1.2px) 1.6px -.6px rgba(255,255,255,.1), inset 0 0 2.2px 1.2px rgba(0,0,0,.3), var(--gp-drop); }
 .skin-glass .consent.gl-over::before { display: none; }
+/* glints at a panel's four corners (Settings, the theme menu, the queue and the other big panels, the song's menu): the
+   capsules' own glint, .95 toward the light and .5 opposite, in the ring .1r–.24r inside each arc (r the panel's own
+   corner: --r-panel, 28 px on a finger; a menu's --r-menu), each corner showing the part on its own arc, so they turn with
+   the light. Lens and frost only (tint is flat; Solid at rest). A dialog's ::after is its edge light: none there. */
+.skin-glass:is(.gl-lens, .gl-frost) :is(.moods, .eq, .smenu)::after { --gr: var(--r-panel); --gd: calc(2 * var(--gr)); --g0: calc(.1 * var(--gr)); --g1: calc(.24 * var(--gr));
+  --ring: transparent calc(100% - var(--g1)), #000 calc(100% - var(--g1) + .5px), #000 calc(100% - var(--g0) - .5px), transparent calc(100% - var(--g0));
+  --lit: conic-gradient(from calc(var(--la) - 18deg), transparent, rgba(255,255,255,.285) 10.1deg, rgba(255,255,255,.95) 18deg, rgba(255,255,255,.285) 25.9deg, transparent 36deg);
+  --far: conic-gradient(from calc(var(--la) + 162deg), transparent, rgba(255,255,255,.15) 10.1deg, rgba(255,255,255,.5) 18deg, rgba(255,255,255,.15) 25.9deg, transparent 36deg);
+  content: ''; position: absolute; inset: 0; z-index: 3; border-radius: inherit; pointer-events: none;
+  background: var(--lit) 0 0 / var(--gd) var(--gd) no-repeat, var(--far) 0 0 / var(--gd) var(--gd) no-repeat, var(--lit) 100% 0 / var(--gd) var(--gd) no-repeat, var(--far) 100% 0 / var(--gd) var(--gd) no-repeat,
+    var(--lit) 0 100% / var(--gd) var(--gd) no-repeat, var(--far) 0 100% / var(--gd) var(--gd) no-repeat, var(--lit) 100% 100% / var(--gd) var(--gd) no-repeat, var(--far) 100% 100% / var(--gd) var(--gd) no-repeat;
+  -webkit-mask: radial-gradient(circle farthest-side at 100% 100%, var(--ring)) 0 0 / var(--gr) var(--gr) no-repeat, radial-gradient(circle farthest-side at 0 100%, var(--ring)) 100% 0 / var(--gr) var(--gr) no-repeat,
+    radial-gradient(circle farthest-side at 100% 0, var(--ring)) 0 100% / var(--gr) var(--gr) no-repeat, radial-gradient(circle farthest-side at 0 0, var(--ring)) 100% 100% / var(--gr) var(--gr) no-repeat;
+  mask: radial-gradient(circle farthest-side at 100% 100%, var(--ring)) 0 0 / var(--gr) var(--gr) no-repeat, radial-gradient(circle farthest-side at 0 100%, var(--ring)) 100% 0 / var(--gr) var(--gr) no-repeat,
+    radial-gradient(circle farthest-side at 100% 0, var(--ring)) 0 100% / var(--gr) var(--gr) no-repeat, radial-gradient(circle farthest-side at 0 0, var(--ring)) 100% 100% / var(--gr) var(--gr) no-repeat; }
+.skin-glass:is(.gl-lens, .gl-frost) .smenu::after { --gr: var(--r-menu); } /* (as specific as the rule above, and after it) */
+@media (forced-colors: active) { .skin-glass :is(.moods, .eq, .smenu)::after { display: none; } }
 /* the light turns with the pointer, as the capsules' does (and the panel's going back keeps its layout: a closed panel's
    isn't an open one's) */
 .skin-glass :is(.moods, .eq, .smenu) { transform-origin: 50% 0; transition: --la .45s cubic-bezier(.2,.8,.2,1), display .32s allow-discrete, overlay .32s allow-discrete; }
@@ -4057,7 +4160,13 @@ const pixTex = (cols, s) => {
 // it gives up a level of glass before any of the backdrop (stepDown), remembered till a quality or a glass is picked. A
 // computer whose graphics chip is part of its processor gets frost on a screen faster than 150 Hz: the lenses are drawn
 // again at the screen's own rate, and at 240 Hz that was more than such a chip could do (measured: 10 frames a second shown).
+// A phone that can afford it (lensPhone) gets the lens on its controls alone, its panels and pages frosted (gl-sheets: a
+// computer's lens, whose panels and full pages are glass over the backdrop too).
 const GLASS_LENS = [['.top-l', 'cap'], ['#mood', 'cap'], ['.files', 'cap'], ['.bar', 'dock']];
+// (Drive mode's glass, while it's open: the big round buttons clear drops (more magnified than the header's), the chips
+// and Exit the capsules; play is the dock's own opaque core, no lens. --g-r on every tier, their lens on a computer's)
+const GLASS_DRIVE = [['#dvPrev', 'dvdrop'], ['#dvNext', 'dvdrop'], ['#driveExit', 'cap'], ['#dvBack', 'cap'], ['#dvLike', 'cap'], ['#dvVoice', 'cap'], ['#dvFwd', 'cap']];
+const GLASS_CTL = [...GLASS_LENS, ...GLASS_DRIVE];
 // Each kind of lens. drop (the header's capsules): the whole body one magnifier — a point t of the way out from its middle
 // line looks at s(t) = t/M + (1 − 1/M)·t^q of the way: what's under the middle M times bigger, packed tighter toward the
 // rim, never folded (s always rises: no mirrored band, no smear). bezel (the dock): flat inside and frosted (frost: the
@@ -4069,7 +4178,7 @@ const GLASS_LENS = [['.top-l', 'cap'], ['#mood', 'cap'], ['.files', 'cap'], ['.b
 // blurred a hair first (the filter moves whole pixels: stair-steps on sharp lines otherwise). css: done to what's behind first.
 const GLASS_KIND = {
   cap: { prof: 'drop', M: 2.75, q: 4.6, e: .06, soft: .5, base: .15, a: .56, ad: .45, edge: .42, sheen: .2, band: .34, cau: .16, w: .08, g: 1.05, sat: 1.3, css: 'saturate(1.18)' },
-  dock: { prof: 'bezel', tb: .6, D: .3, e: .05, soft: .5, frost: 12, fz: [6.4, 14], a: .64, ad: .4, edge: .4, sheen: .2, band: .3, cau: .16, w: .08, g: 1.05, sat: 1.3, css: 'saturate(1.3)' },
+  dock: { prof: 'bezel', tb: .55, D: .40, e: .05, soft: .5, frost: 12, fz: [6.4, 14], a: .64, ad: .4, edge: .4, sheen: .26, band: .3, cau: .16, w: .08, g: 1.05, sat: 1.3, css: 'saturate(1.3)' },
   // a panel's own (the panels, the menu, a toast, the bars, the dialogs): the dock's bezel (its rim pulling as far as it
   // can and never fold: D under 4/9 — the slope of where each point looks stays above 0), its frost held calmer under
   // small words (frost 12 — the dock's: at 16 the blur alone cost a 1080p frame .28 ms, measured — a .86: grey words 4.5 : 1
@@ -4079,8 +4188,22 @@ const GLASS_KIND = {
   // once (e 0: a split of a 5 px pull is a third of a pixel), neither softened nor saturated first, no light of its own (its
   // edge lit by the stylesheet, where the light falls; the bent rim shows the scene's own colours) — six passes of its
   // whole size fewer than the dock's recipe
-  panel: { id: 'panel', prof: 'bezel', tb: .5, D: .42, e: 0, soft: 0, frost: 12, fz: [5, 12], a: .86, ad: .4, fsat: 3, edge: 0, sheen: 0, band: .5, cau: 0, w: 0, g: 1, sat: 1, css: '' } };
+  panel: { id: 'panel', prof: 'bezel', tb: .5, D: .42, e: 0, soft: 0, frost: 12, fz: [5, 12], a: .86, ad: .4, fsat: 3, edge: 0, sheen: 0, band: .5, cau: 0, w: 0, g: 1, sat: 1, css: '' },
+  // a big panel's own (Settings, the theme menu, Listen together, Play on, the terms: GLASS_PANE): the dock's bezel, its band
+  // b px wide whatever its corners — its direction from corners of radius b, so a band wider than the corner never
+  // creases — pulling at most D·b (D .40: the slope of where each point looks never under .1, a fold never near), the
+  // stretch's peak 2b/3 in, under the frost; its clear rim to fz[1] (19.5: the words start further in), lit there in the
+  // colour of what's behind (edge, sheen sw px deep, caustic cd in and cw wide); split red a little less and blue a little
+  // more, softened a hair first; its frost of the bent picture, held by a tone curve topped at .29 (tone): no hold under
+  // the words — the curve is the hold, and a bright light behind stays the brightest thing, only lower
+  pane: { id: 'pane', prof: 'bezel', b: 60, D: .40, eR: .015, eB: .03, soft: .5, frost: 12, fz: [13, 19.5], fsat: 3,
+    tone: '0 .087 .142 .181 .209 .230 .247 .261 .272 .282 .290', // (x·.29·1.35 / (x + .35), x = 0, .1, … 1)
+    edge: .44, sheen: .24, sw: 20, cau: .16, cd: 6, cw: 3, w: .16, g: 1.1, sat: 1.5, css: '' } };
+GLASS_KIND.dvdrop = { ...GLASS_KIND.cap, id: 'dvdrop', M: 3.2 }; // (Drive's big round buttons: the capsules' drop, more magnified)
 const GLASS_PANEL = '.moods, .eq, .smenu, .voice-ui, .toast, .singbar, .ab-bar, dialog.consent';
+// (the panels whose words start clear of the pane lens's clear rim — 19.5 px — measured: qa/s-grff-panels.js. A panel
+// joins only once measured there; a capsule or a panel under 2·b + 8 px either way stays lean)
+const GLASS_PANE = '#textPanel, #moods, #togetherPanel, #castPanel, #consent';
 // (the band each capsule's icons and words take, px from its middle line: half their height and 3 px)
 const GLASS_TL = { '.top-l': 12.9, '#mood': 10.5, '.files': 12 }; // (#mood: its words 15 px since the chip says "Theme · Glass"; .files: its icons 20 px, were 19)
 const GLASS_TIERS = ['lens', 'frost', 'tint']; // (and SVGNS, further down: all of this runs once the script's all there)
@@ -4098,13 +4221,19 @@ function glassGpu() {
     return g ? glassChip(r) : { soft: true, igpu: false };
   } catch { return { soft: false, igpu: false }; }
 }
+// (a phone that can afford the lens on its controls: WebView 120 or later (the whole of Glass's CSS), about 8 GB or more
+// and 8 cores — with Quality on High or Ultra and Glass on Auto; frames falling short still give it up, see stepDown.
+// The lens draws on WebView 113 to 156 exactly as on a computer, measured; it costs a phone about twice frost's drawing)
+const lensPhone = native && (+(navigator.userAgent.match(/Chrome\/(\d+)/) || [])[1] || 0) >= 120
+  && (navigator.deviceMemory || 0) >= 8 && (navigator.hardwareConcurrency || 0) >= 8;
 function glassTier() {
   if (skin !== 'Glass') return '';
   if (glassQuiet.matches || glassPick === 'Solid') return 'solid';
   if (glassPick !== 'Auto') return glassPick === 'Frosted' ? 'frost' : 'tint';
   glass.gpu ||= pcOnly ? glassGpu() : { soft: false, igpu: false }; // (a computer's alone: on a phone the WebGL context it makes held the page 50–230 ms at every start, measured, and a phone has no software WebGL — a blocked chip gets none, fxOn false)
   if (!fxOn || glass.gpu.soft || bgq === 'Low' || tv) return 'tint';
-  return GLASS_TIERS[Math.min(2, (pcOnly && !(glass.gpu.igpu && glass.fast) ? 0 : 1) + glassDrop)];
+  const lens = pcOnly ? !(glass.gpu.igpu && glass.fast) : lensPhone && (bgq === 'High' || bgq === 'Ultra');
+  return GLASS_TIERS[Math.min(2, (lens ? 0 : 1) + glassDrop)];
 }
 function setGlassPick(v) { glassPick = v; store.set('netherflow.glass', v === 'Auto' ? '' : v); glassDrop = 0; store.set('netherflow.glassdrop', ''); applyGlass(); renderTextPanel(); }
 function glassDown() { // (frames falling short: a level of the glass given up, if it has one to give — true if it had)
@@ -4112,10 +4241,10 @@ function glassDown() { // (frames falling short: a level of the glass given up, 
   glassDrop++; store.set('netherflow.glassdrop', glassDrop); applyGlass(); return true;
 }
 function applyGlass() {
-  const t = glassTier();
+  const t = glassTier(), sheets = t === 'lens' && pcOnly; // (a computer's lens: its panels and full pages glass over the backdrop too; a phone's, its controls alone)
   for (const k of ['lens', 'frost', 'tint', 'solid']) body.classList.toggle('gl-' + k, t === k);
-  body.classList.toggle('gl-sheets', t === 'lens'); // (the full pages frosted over the backdrop, held still behind them)
-  glass.lib = !!t && t !== 'lens'; // (the library deep glass, near-opaque, as the other full pages: nothing drawn behind it — see frame)
+  body.classList.toggle('gl-sheets', sheets); // (the full pages frosted over the backdrop, held still behind them)
+  glass.lib = !!t && !sheets; // (the library deep glass, near-opaque, as the other full pages: nothing drawn behind it — see frame)
   if (t === glass.tier) return;
   const was = glass.tier; glass.tier = t;
   // (where the player starts and the header ends: Sing's bar and the voice sit over the one, a toast drops in under the other)
@@ -4131,7 +4260,7 @@ function applyGlass() {
   glass.ro ||= new ResizeObserver(es => {
     for (const { target: e } of es) {
       if (e.offsetHeight) e.style.setProperty('--g-r', Math.min(parseFloat(getComputedStyle(e).borderTopLeftRadius) || 0, e.offsetHeight / 2) + 'px');
-      if (els.includes(e)) glassFit(e, !!e.glassLens?.glowI);
+      if (els.includes(e) || e.closest('#drive')) glassFit(e, !!e.glassLens?.glowI);
     }
     glassInkSoon();
   });
@@ -4145,7 +4274,7 @@ function applyGlass() {
   glass.defs?.replaceChildren();
   if (t !== 'lens' && t !== 'frost') for (const e of els) e.classList.remove('ink-dark'); // (dark ink: over a lens or frost alone — a tint's own colour is dark)
   if (!t || t === 'solid') for (const e of all) { for (const k of ['--la', '--px', '--py', '--pl', '--g', 'scale', 'transform-origin']) e.style.removeProperty(k); e.glassLa = undefined; e.classList.remove('gl-grow'); } // (its light at rest)
-  if (!t) { glass.ro.disconnect(); glass.pro.disconnect(); for (const e of all) e.style.removeProperty('--g-r'); return; } // (the theme gone: nothing of it left behind)
+  if (!t) { glass.ro.disconnect(); glass.pro.disconnect(); for (const e of all) e.style.removeProperty('--g-r'); glassDrive(); return; } // (the theme gone: nothing of it left behind)
   glassSpecs();
   for (const e of all) glass.ro.observe(e);
   for (const p of pans) glass.pro.observe(p);
@@ -4159,8 +4288,28 @@ function applyGlass() {
     for (const e of els) glassFit(e);
     for (const p of pans) if (p.offsetWidth) glassFit(p);
   }
+  glassDrive(); // (Drive mode open: its buttons' glass for the new tier)
   glassGrow(); // (and they grow in)
   glassInkSoon();
+}
+// Drive mode's buttons, as it opens or closes or the tier changes under it: their radius for their light on every tier,
+// their lens on a computer's (glassFit) — made again when their size changes, never per frame
+function glassDrive() {
+  const on = !!glass.tier && $('drive').open;
+  for (const [q] of GLASS_DRIVE) {
+    const e = document.querySelector(q);
+    glassOff(e);
+    if (on) { glass.ro.observe(e); glassFit(e); } else { glass.ro?.unobserve(e); e.style.removeProperty('--g-r'); }
+  }
+  glassVeil();
+}
+// (Drive's veil, on a computer's lens tier, darker over something bright behind it — its words 4.5 : 1 over any of it:
+// your own picture or the cover as glassInk reads them, the brightest tenth of the window; a scene with broad light, GLASS_LIT)
+function glassVeil() {
+  const d = $('drive'), Ls = glass.ink?.Ls;
+  if (!glass.tier || !d.open) return d.style.removeProperty('--dv-dim');
+  const m = Math.max(Ls ? [...Ls].sort((a, b) => a - b)[Math.floor(Ls.length * .9)] : 0, GLASS_LIT[theme] || 0);
+  d.style.setProperty('--dv-dim', Math.min(.3, 1.2 * m).toFixed(3));
 }
 function glassOff(e) {
   if (!e.glassKey) return;
@@ -4188,7 +4337,7 @@ const glassSmooth = (a, b, x) => { const u = Math.min(1, Math.max(0, (x - a) / (
 function glassPull(d, r, o) {
   if (d <= 0) return 0;
   if (o.prof === 'drop') { const t = Math.max(0, 1 - d / r); return (t - (t / o.M + (1 - 1 / o.M) * t ** o.q)) * r; }
-  const b = (1 - o.tb) * r, u = 1 - d / b;
+  const b = o.b || (1 - o.tb) * r, u = 1 - d / b;
   return u <= 0 ? 0 : o.D * b * 6.75 * u * u * (1 - u);
 }
 // One texel of a map, at (x, y) in a w×h shape with corners of radius r (a capsule: r = h/2): [pull, nx, ny, net] — net,
@@ -4202,8 +4351,12 @@ function glassTexel(x, y, w, h, r, o, tl) {
   if (dist > 1e-6) { nx /= dist; ny /= dist; d = r - dist; }
   else { const m = Math.min(x, w - x, y, h - y); d = r + Math.min(x - r, w - r - x, y - r, h - r - y); [nx, ny] = m === x ? [-1, 0] : m === w - x ? [1, 0] : m === y ? [0, -1] : [0, 1]; }
   if (d <= 0) return [0, 0, 0, 0];
-  const t = Math.min(1, Math.max(0, 1 - d / r)), band = o.band * r;
-  const light = o.edge * Math.exp(-(((d - .5) / .7) ** 2)) + (d < band ? o.sheen * (1 - d / band) ** 3 : 0) + o.cau * Math.max(ny, 0) ** 2 * Math.exp(-(((d - .2 * r) / (.09 * r)) ** 2));
+  if (o.b) { // (the pane: its direction from corners of radius b — a band wider than its corner never creases)
+    const R = Math.min(o.b, w / 2, h / 2);
+    if (R > r) { const gx = Math.min(Math.max(x, R), w - R), gy = Math.min(Math.max(y, R), h - R), vx = x - gx, vy = y - gy, vd = Math.hypot(vx, vy); if (vd > 1e-6) { nx = vx / vd; ny = vy / vd; } }
+  }
+  const t = Math.min(1, Math.max(0, 1 - d / r)), band = o.b ? o.sw : o.band * r, cd = o.b ? o.cd : .2 * r, cw = o.b ? o.cw : .09 * r;
+  const light = o.edge * Math.exp(-(((d - .5) / .7) ** 2)) + (d < band ? o.sheen * (1 - d / band) ** 3 : 0) + o.cau * Math.max(ny, 0) ** 2 * Math.exp(-(((d - cd) / cw) ** 2));
   const hold = o.prof === 'drop' ? (1 - (1 - o.base) * glassSmooth(tl, tl + .3, t)) * (1 - glassSmooth(.76, .9, t)) : glassSmooth(o.fz[0], o.fz[1], d);
   return [glassPull(d, r, o), nx, ny, light - hold];
 }
@@ -4212,7 +4365,8 @@ const glassEnc = (D, k, [p, nx, ny, net], S) => {
   D[k] = Math.round(255 * (.5 - nx * p / S)); D[k + 1] = Math.round(255 * (.5 - ny * p / S));
   D[k + 2] = Math.round(255 * (.5 + .5 * Math.max(-1, Math.min(1, net)))); D[k + 3] = 255;
 };
-const glassScaleOf = (r, o) => { let P = 1e-3; for (let k = 0; k <= 2000; k++) P = Math.max(P, glassPull(r * k / 2000, r, o)); return 2 * P * 1.02; };
+// (the farthest any texel looks: sampled over the band's own width when it's wider than the corner — the pane's)
+const glassScaleOf = (r, o) => { const R = Math.max(r, o.b || 0); let P = 1e-3; for (let k = 0; k <= 2000; k++) P = Math.max(P, glassPull(R * k / 2000, r, o)); return 2 * P * 1.02; };
 // every new piece decoded before a filter uses it: a filter made while its image was still loading never took it up (on
 // the first page drawn of a fresh start, one end of each capsule bent wrongly, through waits and changes, till its filter
 // was made again) — so each new piece is decoded, and the lenses made again once all are (glassFit)
@@ -4234,9 +4388,10 @@ function glassCap(h, o, tl) {
 }
 // A rounded rectangle's map (the dock in a narrow window): four corners c×c, the four edges a texel across (stretched along
 // them), the middle left to the flood under them (no move, frosted) — a few thousand texels whatever its size. k: texels
-// per px (big corners need fewer). Each [href, x, y, w, h, how it follows the width, how it follows the height].
+// per px (big corners need fewer). Each [href, x, y, w, h, how it follows the width, how it follows the height]. A
+// pane's corners are as big as its band and its light reach (60 px), whatever its radius.
 function glassRect(w, h, r, o, k) {
-  const c = Math.ceil(r), Sc = glassScaleOf(r, o), out = [];
+  const c = Math.ceil(o.b ? Math.max(r, o.b, o.fz[1], o.sw, o.cd + 3 * o.cw) : r), Sc = glassScaleOf(r, o), out = [];
   const piece = (x0, y0, pw, ph, ix, iy, iw, ih, a = '', b = '') => {
     if (iw < .5 || ih < .5) return;
     const key = ['rect', h, r, x0 < c ? 'l' : x0 > w - c - 1 ? 'r' : 'm', y0 < c ? 't' : y0 > h - c - 1 ? 'b' : 'm', pw, ph, k, o.id || o.prof].join();
@@ -4249,10 +4404,14 @@ function glassRect(w, h, r, o, k) {
     }
     out.push([href, ix, iy, iw, ih, a, b]);
   };
+  // (the edges laid a px over the corners each end: where two pieces met on half a device pixel — at 125 %, the theme
+  // menu's bottom join, 398 px down — the flood showed through that row, a line across the rim not bent and frosted; an
+  // edge's texel is the corner's own at the join, so the overlap is unseen. The width and height paths keep it: an edge
+  // is w − 2·x wide.)
   piece(0, 0, c, c, 0, 0, c, c); piece(w - c, 0, c, c, w - c, 0, c, c, 'r'); piece(0, h - c, c, c, 0, h - c, c, c, '', 'b'); piece(w - c, h - c, c, c, w - c, h - c, c, c, 'r', 'b');
-  piece(w / 2 - .5, 0, 1, c, c, 0, w - 2 * c, c, 's'); piece(w / 2 - .5, h - c, 1, c, c, h - c, w - 2 * c, c, 's', 'b');
-  piece(0, h / 2 - .5, c, 1, 0, c, c, h - 2 * c, '', 's'); piece(w - c, h / 2 - .5, c, 1, w - c, c, c, h - 2 * c, 'r', 's');
-  return { Sc, pieces: out };
+  piece(w / 2 - .5, 0, 1, c, c - 1, 0, w - 2 * c + 2, c, 's'); piece(w / 2 - .5, h - c, 1, c, c - 1, h - c, w - 2 * c + 2, c, 's', 'b');
+  piece(0, h / 2 - .5, c, 1, 0, c - 1, c, h - 2 * c + 2, '', 's'); piece(w - c, h / 2 - .5, c, 1, w - c, c - 1, c, h - 2 * c + 2, 'r', 's');
+  return { Sc, pieces: out, c };
 }
 // (the filter's matrices: the light's colour — w + g·saturate(s) of what's behind; what holds down under the words —
 // white ink 1 − a·luma, dark ink (1 − a) + a·luma, used as 1 − (1 − what's behind)·keep; how much of the map's light shows
@@ -4276,16 +4435,22 @@ const glassGlow = () => glass.glow ||= (() => {
 // while it's pressed: never per frame
 function glassFit(e, glow = false) {
   if (glass.tier !== 'lens') return;
-  const w = e.offsetWidth, h = e.offsetHeight, cs = getComputedStyle(e), [q, kind] = GLASS_LENS.find(([q]) => e.matches(q)) || ['', 'panel'], o = GLASS_KIND[kind]; // (the laid-out size: a scale in an animation doesn't change it; anything else, a panel)
-  if (!w || !h || cs.getPropertyValue('--g-lens').trim() === '0') return glassOff(e); // (none here: the name bare on a narrow screen)
-  const r = Math.min(parseFloat(cs.borderTopLeftRadius) || 0, h / 2, w / 2), dark = e.classList.contains('ink-dark'), key = [w, h, r, dark, glow].join();
+  const w = e.offsetWidth, h = e.offsetHeight, cs = getComputedStyle(e), ctl = GLASS_CTL.find(([q]) => e.matches(q)), q = ctl?.[0] || ''; // (the laid-out size: a scale in an animation doesn't change it; anything else, a panel)
+  if (!w || !h || cs.getPropertyValue('--g-lens').trim() === '0' || !pcOnly && !GLASS_LENS.includes(ctl)) return glassOff(e); // (none here: the name bare on a narrow screen; a phone's panels and Drive mode, frosted — see glassTier)
+  // (a panel's own corners, not its morph's: glassMorph animates border-radius from the button's, and the panel's
+  // ResizeObserver fitted its lens mid-morph — Settings' for 190 px corners, the queue's 168 — never fitted again once
+  // the morph was over. Glass sets their corners by --r-panel / --r-menu alone, which the morph doesn't touch.)
+  const rest = e.matches('.moods, .eq, .smenu') ? parseFloat(cs.getPropertyValue(e.matches('.smenu') ? '--r-menu' : '--r-panel')) : NaN;
+  const r = Math.min(Number.isNaN(rest) ? parseFloat(cs.borderTopLeftRadius) || 0 : rest, h / 2, w / 2), dark = e.classList.contains('ink-dark');
+  const kind = ctl ? ctl[1] : e.matches(GLASS_PANE) && r < h / 2 - .5 && Math.min(w, h) >= 2 * GLASS_KIND.pane.b + 8 ? 'pane' : 'panel', o = GLASS_KIND[kind];
+  const key = [w, h, r, dark, glow, kind].join(); // (its kind last: a pane's pieces never carried onto a panel just made lean, nor the other way)
   if (e.glassKey === key) return;
   // (its width alone changed — the back arrow growing in or out, going home and back, full screen: every frame of it —
   // the same pieces moved along, not a new filter each frame: a new one's images aren't there for its first frames)
   const f0 = e.glassFilter, c0 = e.glassC;
   if (f0 && e.glassKey.slice(e.glassKey.indexOf(',')) === key.slice(key.indexOf(',')) && 2 * c0 + 1 < w && 2 * c0 + 1 < +f0.getAttribute('width')) {
     e.glassKey = key; f0.setAttribute('width', w);
-    for (const im of f0.querySelectorAll('feImage[data-a]')) { if (im.dataset.a === 'r') im.setAttribute('x', w - c0); else if (im.dataset.a === 's') im.setAttribute('width', w - 2 * c0); }
+    for (const im of f0.querySelectorAll('feImage[data-a]')) { if (im.dataset.a === 'r') im.setAttribute('x', w - c0); else if (im.dataset.a === 's') im.setAttribute('width', w - 2 * +im.getAttribute('x')); } // (a stretched piece as wide as w less twice where it starts: a capsule's c, a rounded rectangle's edge c − 1)
     return;
   }
   // (and its height alone, a rounded rectangle's — a panel's as a folded note opens in it: every frame of that, its bottom
@@ -4293,7 +4458,7 @@ function glassFit(e, glow = false) {
   const k0 = String(e.glassKey || '').split(','), k1 = key.split(',');
   if (f0 && f0.querySelector('feFlood') && r < h / 2 - .5 && k0.length === k1.length && k0.every((v, i) => i === 1 || v === k1[i]) && 2 * c0 + 1 < h && 2 * c0 + 1 < +f0.getAttribute('height')) {
     e.glassKey = key; f0.setAttribute('height', h);
-    for (const im of f0.querySelectorAll('feImage[data-b]')) { if (im.dataset.b === 'b') im.setAttribute('y', h - c0); else if (im.dataset.b === 's') im.setAttribute('height', h - 2 * c0); }
+    for (const im of f0.querySelectorAll('feImage[data-b]')) { if (im.dataset.b === 'b') im.setAttribute('y', h - c0); else if (im.dataset.b === 's') im.setAttribute('height', h - 2 * +im.getAttribute('y')); }
     return;
   }
   e.glassKey = key;
@@ -4303,11 +4468,30 @@ function glassFit(e, glow = false) {
   // at the top, 'b' kept at the bottom, 's' stretched between)
   const put = (href, x, y, iw, ih, a = '', b = '') => { if (iw > .5 && ih > .5) img.push(`<feImage href="${href}" x="${x}" y="${y}" width="${iw}" height="${ih}" preserveAspectRatio="none" data-a="${a}" data-b="${b}" result="m${img.length}"/>`); };
   let S, flood = '';
-  if (r >= h / 2 - .5) { const T = glassCap(h, o, drop ? Math.min(.9, GLASS_TL[q] / r) : 0), c = Math.min(T.c, w / 2); S = T.Sc; put(T.l, 0, 0, c, h); put(T.m, c, 0, w - 2 * c, h, 's'); put(T.r, w - c, 0, c, h, 'r'); e.glassC = c; }
-  else { const R = glassRect(w, h, r, o, r > 30 ? .6 : 1); S = R.Sc; for (const p of R.pieces) put(...p); flood = '<feFlood flood-color="rgb(128,128,0)" result="f0"/>'; e.glassC = Math.ceil(r); }
+  // (a drop's band its icons and words take, as a share of its radius: half their height and 3 px — the header's measured;
+  // Drive's round buttons from their own size, the icon 46 % of the button; its chips and Exit from their words)
+  const half = GLASS_TL[q] ?? (e.matches('.dv-btn') ? .46 * r + 3 : parseFloat(cs.fontSize) * .68 + 3);
+  if (r >= h / 2 - .5) { const T = glassCap(h, o, drop ? Math.min(.9, half / r) : 0), c = Math.min(T.c, w / 2); S = T.Sc; put(T.l, 0, 0, c, h); put(T.m, c, 0, w - 2 * c, h, 's'); put(T.r, w - c, 0, c, h, 'r'); e.glassC = c; }
+  else { const R = glassRect(w, h, r, o, r > 30 ? .6 : 1); S = R.Sc; for (const p of R.pieces) put(...p); flood = '<feFlood flood-color="rgb(128,128,0)" result="f0"/>'; e.glassC = R.c; }
   const SRC = o.soft ? 'src' : 'SourceGraphic', lit = o.sat === 1 && o.g === 1 && !o.w ? SRC : 'lit', dim = !drop && !glow && !o.edge && !o.sheen && !o.cau; // (dim: no light of its own — a panel's: its edge lit by the stylesheet — three passes fewer) // (no softening — a panel's: its rim's pull too small for steps to show; its light the scene's own colour as it is: a pass each fewer)
   const dm = (s, n, res = 'd' + n) => `<feDisplacementMap in="${SRC}" in2="map" scale="0" data-s="${s.toFixed(3)}" xChannelSelector="R" yChannelSelector="G" result="${res}"/>`;
-  f.innerHTML = flood + img.join('') + `<feMerge result="map">${flood && '<feMergeNode in="f0"/>'}${img.map((p, i) => `<feMergeNode in="m${i}"/>`).join('')}</feMerge>`
+  const map = flood + img.join('') + `<feMerge result="map">${flood && '<feMergeNode in="f0"/>'}${img.map((p, i) => `<feMergeNode in="m${i}"/>`).join('')}</feMerge>`;
+  // (the pane: its picture softened a hair, bent and split into colour; its light in the colour of what's behind on the
+  // clear rim only; its frost of the bent picture — green's: blurred and saturated, a split one turned into a blue blob —
+  // so the band's bend shows through the frost; saturated (fsat, glassPanelTint's); then the tone curve. 21 steps)
+  if (kind === 'pane') f.innerHTML = map + `<feGaussianBlur in="SourceGraphic" stdDeviation="${o.soft}" result="src"/>`
+    + dm(S * (1 - o.eR), 'r') + dm(S, 'g') + dm(S * (1 + o.eB), 'b')
+    + `<feColorMatrix in="dr" type="matrix" values="1 0 0 0 0 ${GLM.Z} ${GLM.Z} ${GLM.A}" result="cr"/><feColorMatrix in="dg" type="matrix" values="${GLM.Z} 0 1 0 0 0 ${GLM.Z} ${GLM.A}" result="cg"/>`
+    + `<feColorMatrix in="db" type="matrix" values="${GLM.Z} ${GLM.Z} 0 0 1 0 0 ${GLM.A}" result="cb"/>`
+    + `<feComposite in="cr" in2="cg" operator="arithmetic" k2="1" k3="1" result="crg"/><feComposite in="crg" in2="cb" operator="arithmetic" k2="1" k3="1" result="bent"/>`
+    + `<feColorMatrix in="SourceGraphic" type="matrix" values="${glassSat(o.sat, o.g, o.w)}" result="lit"/>`
+    + `<feColorMatrix in="map" type="matrix" values="${glassLightV(1)}" result="lightA" data-r="lightA"/><feComposite in="lit" in2="lightA" operator="in" result="light"/>`
+    + `<feComposite in="bent" in2="light" operator="arithmetic" k2="1" k3="1" result="rimL"/>`
+    + `<feColorMatrix in="map" type="matrix" values="${glassZoneV(1)}" result="zone" data-r="zone"/><feComposite in="rimL" in2="zone" operator="in" result="rim"/>`
+    + `<feGaussianBlur in="dg" stdDeviation="${o.frost}" result="fr0"/><feColorMatrix in="fr0" type="saturate" values="${e.gpSat || o.fsat}" result="fr1" data-r="fsat"/>`
+    + `<feComponentTransfer in="fr1" result="fr">${['R', 'G', 'B'].map(c => `<feFunc${c} type="table" tableValues="${o.tone}"/>`).join('')}</feComponentTransfer>`
+    + `<feMerge><feMergeNode in="fr"/><feMergeNode in="rim"/></feMerge>`;
+  else f.innerHTML = map
     // the lens: each colour bent from the same picture by a little less, the same, a little more (each bent picture with
     // one use: one used twice is drawn twice)
     + (o.soft ? `<feGaussianBlur in="SourceGraphic" stdDeviation="${o.soft}" result="src"/>` : '') + (o.e ? `${dm(S * (1 - o.e), 'r')}${dm(S, 'g')}${dm(S * (1 + o.e), 'b')}`
@@ -4340,14 +4524,14 @@ function glassFit(e, glow = false) {
   glass.defs.append(f);
   const was = e.glassFilter, by = n => f.querySelector(`[data-r=${n}]`); e.glassFilter = f;
   e.glassLens = { dms: [...f.querySelectorAll('feDisplacementMap')].map(x => [x, +x.dataset.s]), lightA: by('lightA'), hold: by('hold'), zone: by('zone'), glowI: by('glowI'), glowK: by('glowK'), glowK2: by('glowK2'), fsat: by('fsat') };
-  if (kind === 'panel') for (const [x, v] of e.glassLens.dms) x.setAttribute('scale', v.toFixed(2)); // (a panel: never growing in nor pressed — its morph is a transform the filter follows)
+  if (!GLASS_LENS.includes(ctl)) for (const [x, v] of e.glassLens.dms) x.setAttribute('scale', v.toFixed(2)); // (a panel, Drive's buttons: never growing in nor pressed — a panel's morph is a transform the filter follows)
   else glassSet(e);
   if (e.matches('dialog')) e.style.setProperty('--gl-f', `${o.css} url(#${id})`); // (a dialog's glass is its ::before)
   else e.style.webkitBackdropFilter = e.style.backdropFilter = `${o.css} url(#${id})`; // (saturated first: what holds the words down is the last thing done — after it, a saturate lifted vivid colours back past it)
   if (was) setTimeout(() => was.remove(), 200); // (the old one once the new is drawn: a filter pointing at nothing drops the whole backdrop filter)
   if (glass.decoding.length && !glass.redo) glass.redo = Promise.resolve().then(() => { const d = glass.decoding; glass.decoding = []; return Promise.all(d); }).then(() => {
     glass.redo = null;
-    for (const x of [...GLASS_LENS.map(([q]) => document.querySelector(q)), ...document.querySelectorAll(GLASS_PANEL)]) if (x.glassFilter) { x.glassKey = ''; glassFit(x, !!x.glassLens?.glowI); }
+    for (const x of [...GLASS_CTL.map(([q]) => document.querySelector(q)), ...document.querySelectorAll(GLASS_PANEL)]) if (x.glassFilter) { x.glassKey = ''; glassFit(x, !!x.glassLens?.glowI); }
   });
 }
 const GLASS_REST = { sx: 1, sy: 1, k: 1, l: 1 };
@@ -4393,6 +4577,7 @@ async function glassInk() {
     if (glassInkFlip(L.sort((a, b) => a - b)[L.length >> 1] ?? 0, dark) !== dark) { e.classList.toggle('ink-dark'); glassFit(e, !!e.glassLens?.glowI); }
   }
   for (const p of document.querySelectorAll(GLASS_PANEL)) if (p.offsetWidth) glassPanelTint(p); // (the open panels' tint: a new picture, background or view)
+  glassVeil(); // (and Drive's veil)
 }
 const glassInkFlip = (m, dark) => dark ? m > .2 : m > .28;
 // a panel shown (its size from none) or resized: its lens (a computer's), its tint; hidden: its lens gone
@@ -4410,14 +4595,15 @@ function glassPanelOn(p) {
 // Pictures backgrounds and Extreme lyrics, whose colour is broad. On tint and Solid, the stylesheet's.
 const GLASS_LIT = { 'Black Hole': .2, Julia: .05 }; // (the scenes whose light behind a panel is broad and bright: Black Hole's disk, Julia's arms)
 function glassPanelTint(p) {
-  const t = glass.tier, I = glass.ink;
-  if (t !== 'lens' && t !== 'frost') { for (const k of ['--gp-tint', '--fr-bri', '--fr-sat']) p.style.removeProperty(k); return; }
+  const t = glass.tier === 'lens' && !pcOnly ? 'frost' : glass.tier, I = glass.ink; // (a phone's panels frosted on its lens tier too: see glassTier)
+  if (t !== 'lens' && t !== 'frost') { for (const k of ['--gp-tint', '--fr-bri', '--fr-sat', '--g-bt']) p.style.removeProperty(k); return; }
   const r = getComputedStyle(p).position === 'fixed' ? { left: p.offsetLeft, top: p.offsetTop, right: p.offsetLeft + p.offsetWidth, bottom: p.offsetTop + p.offsetHeight, width: p.offsetWidth } : p.getBoundingClientRect(), L = [], W = 64, H = I ? I.Ls.length / W : 0; // (its laid-out box: growing out of its button, its drawn one is the button's)
   if (I && r.width) for (let y = Math.max(0, Math.floor(r.top / innerHeight * H)); y <= Math.min(H - 1, r.bottom / innerHeight * H); y++)
     for (let x = Math.max(0, Math.floor(r.left / innerWidth * W)); x <= Math.min(W - 1, r.right / innerWidth * W); x++) L.push(I.Ls[y * W + x]);
   const bc = body.classList, ext = kin.on && bc.contains('has-song') && !bc.contains('home'), broad = theme === 'Cover' || theme === 'Pictures' || ext;
   const m = Math.max(L.length ? L.sort((a, b) => a - b)[L.length >> 1] : .002, ext ? .5 : 0, bc.contains('view-vis') ? (t === 'frost' ? .25 : .1) : 0, GLASS_LIT[theme] || 0);
   const q = Math.sqrt(m);
+  p.style.setProperty('--g-bt', glassSmooth(.40, .95, m).toFixed(3)); // (the bright gate: its dark edge only over something bright — 0 over the scenes, about .86 over a bright picture)
   if (t === 'lens') { p.style.setProperty('--gp-tint', (20 + 28 * q).toFixed(1) + '%'); p.gpSat = broad ? 1.6 : 3; p.glassLens?.fsat?.setAttribute('values', p.gpSat); }
   else { p.style.setProperty('--gp-tint', (42 + 38 * q).toFixed(1) + '%'); p.style.setProperty('--fr-bri', (.64 - .16 * q).toFixed(3)); p.style.setProperty('--fr-sat', broad ? '2.4' : '5'); }
 }
@@ -14270,7 +14456,7 @@ function openDrive() {
   $('dvBack').lastChild.textContent = $('dvFwd').lastChild.textContent = jump + ' s';
   $('dvBack').setAttribute('aria-label', `Back ${jump} seconds`); $('dvFwd').setAttribute('aria-label', `Forward ${jump} seconds`);
   $('dvLine').textContent = $('csLine').textContent; // (the line being sung now; then each next one)
-  $('drive').showModal(); placeWinctl();
+  $('drive').showModal(); placeWinctl(); glassDrive();
   updateDrive(); clearInterval(driveTick); driveTick = setInterval(updateDrive, 250);
   // full screen: on a phone, as the rest of the app does it; on a computer, this page itself (made the whole page, the
   // app would cover this page)
@@ -14280,7 +14466,7 @@ function openDrive() {
 }
 $('drive').addEventListener('close', () => {
   if (driveFull) Immersive ? body.classList.contains('fs') && toggleFull() : document.fullscreenElement && document.exitFullscreen().catch(() => {});
-  driveFull = false; keepAwake(); clearInterval(driveTick);
+  driveFull = false; keepAwake(); clearInterval(driveTick); glassDrive();
 });
 // the clock, how far the song's got, what's up next, and whether it's liked
 let driveTick = 0;
@@ -18909,7 +19095,7 @@ function frame(now) {
   const covered = fullPages.some(d => d.open) || glass.lib && $('library').open; // (a full-screen page over everything: the backdrop and player can't be seen — Glass's library too, but on a computer's lens tier)
   // (the Glass theme on a computer: its pages are frosted glass over the backdrop — held still behind them, drawn again only
   // when a resize has cleared it)
-  const held = covered && body.classList.contains('gl-sheets') && !$('drive').open;
+  const held = covered && body.classList.contains('gl-sheets'); // (Drive mode too: its scene held behind its veil, its drops bending it)
   let bass = 0, mid = 0, high = 0;
   if (engine === 'audio' && analyser && !audio.paused) { // this page's own sound: into the same feed as YouTube's
     const d = new Uint8Array(analyser.frequencyBinCount);
@@ -18981,13 +19167,16 @@ function showTime(t, dur) {
 }
 // The backdrop too much for this device: under ~40 frames a second (a phone: 50), twice running, over 2.5 seconds of
 // drawing it, a quality step down (and from Low to a still picture under ~24; a phone: 30), remembered. Only while the
-// quality's the app's own pick, not the user's.
+// quality's the app's own pick, not the user's (but for Glass's lens on a phone: see glassGives).
 const speed = { n: 0, s: 0, slow: 0 };
 // (On Android the page's own frame clock runs on even when the screen can't keep up — at twice the frames it really shows —
 // so there the frames Android drew are asked for too, and the fewer counts.)
 const frameRate = native ? () => Capacitor.Plugins.Immersive.frameRate().then(r => r, () => ({ fps: Infinity, janky: 0 })) : () => Promise.resolve({ fps: Infinity, janky: 0 });
+// (Glass's lens on a phone, on the quality you picked — High or Ultra, always your own pick there — still gives way when
+// the frames fall short: the glass alone, a level down to frost, never your quality)
+const glassGives = () => !pcOnly && glassPick === 'Auto' && glass.tier === 'lens';
 function checkSpeed(gap, moving) {
-  if (!moving || store.get('netherflow.bg')) { speed.n = speed.s = speed.slow = 0; return; }
+  if (!moving || store.get('netherflow.bg') && !glassGives()) { speed.n = speed.s = speed.slow = 0; return; }
   if (!speed.n++) frameRate(); // (counting from now)
   speed.s += Math.min(gap, .1); // (one long pause — a song loading, say — counted as a short one)
   if (speed.s < 2.5) return;
@@ -19000,11 +19189,12 @@ function checkSpeed(gap, moving) {
 function stepDown(fps, janky = 0) {
   const [ok, still] = native ? [50, 30] : [40, 24]; // (a phone, judged by what it really shows, held to more: lag shows more there)
   const next = (fps < ok || janky > .1) && { Ultra: 'High', High: 'Balanced', Balanced: 'Low' }[bgq] || ((fps < still || janky > .1) && bgq === 'Low' ? 'Off' : '');
-  if (store.get('netherflow.bg')) return;
+  const mine = !!store.get('netherflow.bg');
+  if (mine && !glassGives()) return;
   speed.slow = next ? speed.slow + 1 : 0;
   if (speed.slow < 2) return; // (once could be a passing hitch)
   speed.slow = 0;
-  if (glassDown()) return; // (Glass: a level of its glass given up before any of the backdrop, remembered as the quality is)
+  if (glassDown() || mine) return; // (Glass: a level of its glass given up before any of the backdrop, remembered as the quality is — your own quality never)
   bgq = next; store.set('netherflow.bgauto', next); resize(); renderMoodMenu();
 }
 
